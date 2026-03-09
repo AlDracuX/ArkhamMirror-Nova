@@ -1,0 +1,71 @@
+# =============================================================================
+# SHATTERED - Code Quality Checks
+# =============================================================================
+# Runs on PRs and pushes to main. Catches issues before merge.
+# =============================================================================
+
+name: Code Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python-lint:
+    name: Python Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Ruff lint
+        run: ruff check packages/
+
+      - name: Ruff format check
+        run: ruff format packages/ --check
+
+  pmat-quality:
+    name: PMAT Quality Gate
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Advisory — don't block PRs yet
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PMAT
+        run: |
+          curl -sSf https://raw.githubusercontent.com/paiml/paiml-mcp-agent-toolkit/main/install.sh | sh \
+            || cargo install pmat
+
+      - name: PMAT complexity check
+        run: pmat analyze complexity --project-path .
+
+      - name: PMAT technical debt check
+        run: pmat analyze satd --path .
+
+  shell-lint:
+    name: Shell UI Lint & Format
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/arkham-shard-shell
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/arkham-shard-shell/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier check
+        run: npm run format
