@@ -50,7 +50,7 @@ class CasemapShard(ArkhamShard):
         self.frame = frame
         self._db = frame.database
         await self._create_schema()
-        self._subscribe_events()
+        await self._subscribe_events()
         init_api(shard=self, event_bus=frame.events)
         logger.info("Casemap shard initialized")
 
@@ -128,11 +128,11 @@ class CasemapShard(ArkhamShard):
 
     # === Events ===
 
-    def _subscribe_events(self) -> None:
+    async def _subscribe_events(self) -> None:
         try:
-            self.frame.events.subscribe("claims.created", self._handle_claim_created)
-            self.frame.events.subscribe("contradictions.found", self._handle_contradiction)
-            self.frame.events.subscribe("document.processed", self._handle_document)
+            await self.frame.events.subscribe("claims.created", self._handle_claim_created)
+            await self.frame.events.subscribe("contradictions.found", self._handle_contradiction)
+            await self.frame.events.subscribe("document.processed", self._handle_document)
         except Exception as e:
             logger.debug(f"Event subscription skipped: {e}")
 
@@ -155,8 +155,8 @@ class CasemapShard(ArkhamShard):
             INSERT INTO arkham_casemap.legal_theories
             (id, tenant_id, title, claim_type, description, statutory_basis,
              respondent_ids, status, notes, metadata)
-            VALUES (%(id)s, %(tid)s, %(title)s, %(ct)s, %(desc)s, %(stat)s,
-                    %(resp)s, %(status)s, %(notes)s, %(meta)s)
+            VALUES (:id, :tid, :title, :ct, :desc, :stat,
+                    :resp, :status, :notes, :meta)
         """, {
             "id": theory_id, "tid": tenant_id,
             "title": data.get("title", ""),
@@ -181,7 +181,7 @@ class CasemapShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         row = await self._db.fetch_one("""
             SELECT * FROM arkham_casemap.legal_theories
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, {"id": theory_id, "tid": tenant_id})
         if not row:
             return None
@@ -190,21 +190,21 @@ class CasemapShard(ArkhamShard):
     async def list_theories(self, filters: Optional[TheoryFilter] = None,
                              limit: int = 100, offset: int = 0) -> List[LegalTheory]:
         tenant_id = str(self.get_tenant_id())
-        conditions = ["tenant_id = %(tid)s"]
+        conditions = ["tenant_id = :tid"]
         params: Dict[str, Any] = {"tid": tenant_id}
 
         if filters:
             if filters.claim_type:
-                conditions.append("claim_type = %(ct)s")
+                conditions.append("claim_type = :ct")
                 params["ct"] = filters.claim_type.value
             if filters.status:
-                conditions.append("status = %(status)s")
+                conditions.append("status = :status")
                 params["status"] = filters.status.value
             if filters.search_text:
-                conditions.append("(title ILIKE %(search)s OR description ILIKE %(search)s)")
+                conditions.append("(title ILIKE :search OR description ILIKE :search)")
                 params["search"] = f"%{filters.search_text}%"
             if filters.min_strength is not None:
-                conditions.append("overall_strength >= %(min_str)s")
+                conditions.append("overall_strength >= :min_str")
                 params["min_str"] = filters.min_strength
 
         where = " AND ".join(conditions)
@@ -215,7 +215,7 @@ class CasemapShard(ArkhamShard):
             SELECT * FROM arkham_casemap.legal_theories
             WHERE {where}
             ORDER BY created_at DESC
-            LIMIT %(limit)s OFFSET %(offset)s
+            LIMIT :limit OFFSET :offset
         """, params)
         return [self._row_to_theory(r) for r in rows]
 
@@ -223,7 +223,7 @@ class CasemapShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_casemap.legal_theories
-            WHERE tenant_id = %(tid)s
+            WHERE tenant_id = :tid
         """, {"tid": tenant_id})
         return row["cnt"] if row else 0
 
@@ -234,20 +234,20 @@ class CasemapShard(ArkhamShard):
 
         for f in ["title", "claim_type", "description", "statutory_basis", "status", "notes"]:
             if f in data:
-                sets.append(f"{f} = %({f})s")
+                sets.append(f"{f} = :{f}")
                 params[f] = data[f]
         if "respondent_ids" in data:
-            sets.append("respondent_ids = %(resp)s")
+            sets.append("respondent_ids = :resp")
             params["resp"] = json.dumps(data["respondent_ids"])
         if "metadata" in data:
-            sets.append("metadata = %(meta)s")
+            sets.append("metadata = :meta")
             params["meta"] = json.dumps(data["metadata"])
 
         set_clause = ", ".join(sets)
         await self._db.execute(f"""
             UPDATE arkham_casemap.legal_theories
             SET {set_clause}
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, params)
 
         await self.frame.events.emit("casemap.theory.updated", {
@@ -260,7 +260,7 @@ class CasemapShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         await self._db.execute("""
             DELETE FROM arkham_casemap.legal_theories
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, {"id": theory_id, "tid": tenant_id})
 
         await self.frame.events.emit("casemap.theory.deleted", {
@@ -278,7 +278,7 @@ class CasemapShard(ArkhamShard):
         row = await self._db.fetch_one("""
             SELECT COALESCE(MAX(display_order), 0) + 1 as next_ord
             FROM arkham_casemap.legal_elements
-            WHERE theory_id = %(tid_theory)s AND tenant_id = %(tid)s
+            WHERE theory_id = :tid_theory AND tenant_id = :tid
         """, {"tid_theory": theory_id, "tid": tenant_id})
         order = row["next_ord"] if row else 1
 
@@ -286,8 +286,8 @@ class CasemapShard(ArkhamShard):
             INSERT INTO arkham_casemap.legal_elements
             (id, tenant_id, theory_id, title, description, burden, status,
              required, statutory_reference, notes, display_order)
-            VALUES (%(id)s, %(tid)s, %(theory_id)s, %(title)s, %(desc)s, %(burden)s,
-                    %(status)s, %(req)s, %(stat_ref)s, %(notes)s, %(order)s)
+            VALUES (:id, :tid, :theory_id, :title, :desc, :burden,
+                    :status, :req, :stat_ref, :notes, :order)
         """, {
             "id": elem_id, "tid": tenant_id,
             "theory_id": theory_id,
@@ -313,7 +313,7 @@ class CasemapShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         row = await self._db.fetch_one("""
             SELECT * FROM arkham_casemap.legal_elements
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, {"id": element_id, "tid": tenant_id})
         if not row:
             return None
@@ -323,7 +323,7 @@ class CasemapShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         rows = await self._db.fetch_all("""
             SELECT * FROM arkham_casemap.legal_elements
-            WHERE theory_id = %(theory_id)s AND tenant_id = %(tid)s
+            WHERE theory_id = :theory_id AND tenant_id = :tid
             ORDER BY display_order ASC
         """, {"theory_id": theory_id, "tid": tenant_id})
         return [self._row_to_element(r) for r in rows]
@@ -335,20 +335,20 @@ class CasemapShard(ArkhamShard):
 
         for f in ["title", "description", "burden", "status", "statutory_reference", "notes"]:
             if f in data:
-                sets.append(f"{f} = %({f})s")
+                sets.append(f"{f} = :{f}")
                 params[f] = data[f]
         if "required" in data:
-            sets.append("required = %(req)s")
+            sets.append("required = :req")
             params["req"] = data["required"]
         if "display_order" in data:
-            sets.append("display_order = %(order)s")
+            sets.append("display_order = :order")
             params["order"] = data["display_order"]
 
         set_clause = ", ".join(sets)
         await self._db.execute(f"""
             UPDATE arkham_casemap.legal_elements
             SET {set_clause}
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, params)
 
         return await self.get_element(element_id)
@@ -357,7 +357,7 @@ class CasemapShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         await self._db.execute("""
             DELETE FROM arkham_casemap.legal_elements
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, {"id": element_id, "tid": tenant_id})
         return True
 
@@ -371,8 +371,8 @@ class CasemapShard(ArkhamShard):
             INSERT INTO arkham_casemap.evidence_links
             (id, tenant_id, element_id, document_id, witness_id, description,
              strength, source_reference, supports_element, notes)
-            VALUES (%(id)s, %(tid)s, %(eid)s, %(doc_id)s, %(wit_id)s, %(desc)s,
-                    %(strength)s, %(src_ref)s, %(supports)s, %(notes)s)
+            VALUES (:id, :tid, :eid, :doc_id, :wit_id, :desc,
+                    :strength, :src_ref, :supports, :notes)
         """, {
             "id": link_id, "tid": tenant_id,
             "eid": element_id,
@@ -405,7 +405,7 @@ class CasemapShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         rows = await self._db.fetch_all("""
             SELECT * FROM arkham_casemap.evidence_links
-            WHERE element_id = %(eid)s AND tenant_id = %(tid)s
+            WHERE element_id = :eid AND tenant_id = :tid
             ORDER BY created_at DESC
         """, {"eid": element_id, "tid": tenant_id})
         return [self._row_to_evidence(r) for r in rows]
@@ -414,7 +414,7 @@ class CasemapShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         await self._db.execute("""
             DELETE FROM arkham_casemap.evidence_links
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, {"id": link_id, "tid": tenant_id})
         return True
 
@@ -469,8 +469,8 @@ class CasemapShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         await self._db.execute("""
             UPDATE arkham_casemap.legal_theories
-            SET overall_strength = %(strength)s, updated_at = NOW()
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            SET overall_strength = :strength, updated_at = NOW()
+            WHERE id = :id AND tenant_id = :tid
         """, {"strength": assessment.overall_score, "id": theory_id, "tid": tenant_id})
 
         await self.frame.events.emit("casemap.strength.updated", {

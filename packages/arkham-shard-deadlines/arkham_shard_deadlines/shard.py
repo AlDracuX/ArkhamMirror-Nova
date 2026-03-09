@@ -198,7 +198,7 @@ class DeadlinesShard(ArkhamShard):
 
         row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_deadlines.deadline_rules
-            WHERE tenant_id = %(tid)s
+            WHERE tenant_id = :tid
         """, {"tid": tenant_id})
 
         if row and row["cnt"] > 0:
@@ -209,8 +209,8 @@ class DeadlinesShard(ArkhamShard):
                 INSERT INTO arkham_deadlines.deadline_rules
                 (id, tenant_id, name, description, case_type, deadline_type,
                  days_from_trigger, trigger_event, working_days_only)
-                VALUES (%(id)s, %(tid)s, %(name)s, %(desc)s, %(ct)s, %(dt)s,
-                        %(days)s, %(trigger)s, %(wd)s)
+                VALUES (:id, :tid, :name, :desc, :ct, :dt,
+                        :days, :trigger, :wd)
             """, {
                 "id": str(uuid.uuid4()),
                 "tid": tenant_id,
@@ -282,11 +282,11 @@ class DeadlinesShard(ArkhamShard):
              source_document, source_order_date, rule_reference,
              auto_calculated, calculation_base_date, calculation_days,
              notes, linked_document_ids, metadata)
-            VALUES (%(id)s, %(tid)s, %(title)s, %(desc)s, %(date)s, %(time)s,
-                    %(type)s, %(status)s, %(urgency)s, %(ct)s, %(ref)s,
-                    %(src_doc)s, %(src_date)s, %(rule_ref)s,
-                    %(auto)s, %(calc_base)s, %(calc_days)s,
-                    %(notes)s, %(doc_ids)s, %(meta)s)
+            VALUES (:id, :tid, :title, :desc, :date, :time,
+                    :type, :status, :urgency, :ct, :ref,
+                    :src_doc, :src_date, :rule_ref,
+                    :auto, :calc_base, :calc_days,
+                    :notes, :doc_ids, :meta)
         """, {
             "id": dl_id,
             "tid": tenant_id,
@@ -323,7 +323,7 @@ class DeadlinesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         row = await self._db.fetch_one("""
             SELECT * FROM arkham_deadlines.deadlines
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, {"id": dl_id, "tid": tenant_id})
         if not row:
             return None
@@ -332,30 +332,30 @@ class DeadlinesShard(ArkhamShard):
     async def list_deadlines(self, filters: Optional[DeadlineFilter] = None,
                               limit: int = 100, offset: int = 0) -> List[Deadline]:
         tenant_id = str(self.get_tenant_id())
-        conditions = ["tenant_id = %(tid)s"]
+        conditions = ["tenant_id = :tid"]
         params: Dict[str, Any] = {"tid": tenant_id}
 
         if filters:
             if filters.status:
-                conditions.append("status = %(status)s")
+                conditions.append("status = :status")
                 params["status"] = filters.status.value
             if filters.deadline_type:
-                conditions.append("deadline_type = %(dtype)s")
+                conditions.append("deadline_type = :dtype")
                 params["dtype"] = filters.deadline_type.value
             if filters.case_type:
-                conditions.append("case_type = %(ctype)s")
+                conditions.append("case_type = :ctype")
                 params["ctype"] = filters.case_type.value
             if filters.urgency:
-                conditions.append("urgency = %(urgency)s")
+                conditions.append("urgency = :urgency")
                 params["urgency"] = filters.urgency.value
             if filters.from_date:
-                conditions.append("deadline_date >= %(from_date)s")
+                conditions.append("deadline_date >= :from_date")
                 params["from_date"] = filters.from_date
             if filters.to_date:
-                conditions.append("deadline_date <= %(to_date)s")
+                conditions.append("deadline_date <= :to_date")
                 params["to_date"] = filters.to_date
             if filters.search_text:
-                conditions.append("(title ILIKE %(search)s OR description ILIKE %(search)s OR notes ILIKE %(search)s)")
+                conditions.append("(title ILIKE :search OR description ILIKE :search OR notes ILIKE :search)")
                 params["search"] = f"%{filters.search_text}%"
             if not filters.show_completed:
                 conditions.append("status NOT IN ('completed', 'waived')")
@@ -368,7 +368,7 @@ class DeadlinesShard(ArkhamShard):
             SELECT * FROM arkham_deadlines.deadlines
             WHERE {where}
             ORDER BY deadline_date ASC
-            LIMIT %(limit)s OFFSET %(offset)s
+            LIMIT :limit OFFSET :offset
         """, params)
 
         return [self._row_to_deadline(r) for r in rows]
@@ -378,8 +378,8 @@ class DeadlinesShard(ArkhamShard):
         cutoff = date.today() + timedelta(days=days)
         rows = await self._db.fetch_all("""
             SELECT * FROM arkham_deadlines.deadlines
-            WHERE tenant_id = %(tid)s
-              AND deadline_date <= %(cutoff)s
+            WHERE tenant_id = :tid
+              AND deadline_date <= :cutoff
               AND status NOT IN ('completed', 'waived')
             ORDER BY deadline_date ASC
         """, {"tid": tenant_id, "cutoff": cutoff})
@@ -390,8 +390,8 @@ class DeadlinesShard(ArkhamShard):
         cutoff = date.today() + timedelta(days=30)
         row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_deadlines.deadlines
-            WHERE tenant_id = %(tid)s
-              AND deadline_date <= %(cutoff)s
+            WHERE tenant_id = :tid
+              AND deadline_date <= :cutoff
               AND status NOT IN ('completed', 'waived')
         """, {"tid": tenant_id, "cutoff": cutoff})
         return row["cnt"] if row else 0
@@ -408,32 +408,32 @@ class DeadlinesShard(ArkhamShard):
         ]
         for f in simple_fields:
             if f in data:
-                sets.append(f"{f} = %({f})s")
+                sets.append(f"{f} = :{f}")
                 params[f] = data[f]
 
         if "deadline_date" in data:
             dl_date = data["deadline_date"]
             if isinstance(dl_date, str):
                 dl_date = date.fromisoformat(dl_date)
-            sets.append("deadline_date = %(dl_date)s")
+            sets.append("deadline_date = :dl_date")
             params["dl_date"] = dl_date
             urgency = self.calculate_urgency(dl_date)
-            sets.append("urgency = %(urgency)s")
+            sets.append("urgency = :urgency")
             params["urgency"] = urgency.value
 
         if "linked_document_ids" in data:
-            sets.append("linked_document_ids = %(doc_ids)s")
+            sets.append("linked_document_ids = :doc_ids")
             params["doc_ids"] = json.dumps(data["linked_document_ids"])
 
         if "metadata" in data:
-            sets.append("metadata = %(meta)s")
+            sets.append("metadata = :meta")
             params["meta"] = json.dumps(data["metadata"])
 
         set_clause = ", ".join(sets)
         await self._db.execute(f"""
             UPDATE arkham_deadlines.deadlines
             SET {set_clause}
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, params)
 
         await self.frame.events.emit("deadlines.deadline.updated", {
@@ -446,8 +446,8 @@ class DeadlinesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         await self._db.execute("""
             UPDATE arkham_deadlines.deadlines
-            SET status = 'completed', completed_at = NOW(), completed_by = %(by)s, updated_at = NOW()
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            SET status = 'completed', completed_at = NOW(), completed_by = :by, updated_at = NOW()
+            WHERE id = :id AND tenant_id = :tid
         """, {"id": dl_id, "tid": tenant_id, "by": completed_by})
 
         await self.frame.events.emit("deadlines.deadline.completed", {
@@ -461,10 +461,10 @@ class DeadlinesShard(ArkhamShard):
         urgency = self.calculate_urgency(new_date)
         await self._db.execute("""
             UPDATE arkham_deadlines.deadlines
-            SET deadline_date = %(new_date)s, urgency = %(urgency)s,
-                status = 'extended', notes = notes || E'\n[Extended] ' || %(reason)s,
+            SET deadline_date = :new_date, urgency = :urgency,
+                status = 'extended', notes = notes || E'\n[Extended] ' || :reason,
                 updated_at = NOW()
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, {"id": dl_id, "tid": tenant_id, "new_date": new_date,
               "urgency": urgency.value, "reason": reason})
         return await self.get_deadline(dl_id)
@@ -473,7 +473,7 @@ class DeadlinesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         await self._db.execute("""
             DELETE FROM arkham_deadlines.deadlines
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, {"id": dl_id, "tid": tenant_id})
         return True
 
@@ -486,8 +486,8 @@ class DeadlinesShard(ArkhamShard):
         # Find overdue, non-completed deadlines
         rows = await self._db.fetch_all("""
             SELECT * FROM arkham_deadlines.deadlines
-            WHERE tenant_id = %(tid)s
-              AND deadline_date < %(today)s
+            WHERE tenant_id = :tid
+              AND deadline_date < :today
               AND status IN ('pending', 'in_progress')
         """, {"tid": tenant_id, "today": today})
 
@@ -497,7 +497,7 @@ class DeadlinesShard(ArkhamShard):
             await self._db.execute("""
                 UPDATE arkham_deadlines.deadlines
                 SET status = 'breached', urgency = 'overdue', updated_at = NOW()
-                WHERE id = %(id)s AND tenant_id = %(tid)s
+                WHERE id = :id AND tenant_id = :tid
             """, {"id": dl_id, "tid": tenant_id})
 
             await self.frame.events.emit("deadlines.deadline.breached", {
@@ -517,7 +517,7 @@ class DeadlinesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         rows = await self._db.fetch_all("""
             SELECT id, deadline_date FROM arkham_deadlines.deadlines
-            WHERE tenant_id = %(tid)s AND status IN ('pending', 'in_progress')
+            WHERE tenant_id = :tid AND status IN ('pending', 'in_progress')
         """, {"tid": tenant_id})
 
         count = 0
@@ -525,8 +525,8 @@ class DeadlinesShard(ArkhamShard):
             urgency = self.calculate_urgency(row["deadline_date"])
             await self._db.execute("""
                 UPDATE arkham_deadlines.deadlines
-                SET urgency = %(urgency)s, updated_at = NOW()
-                WHERE id = %(id)s
+                SET urgency = :urgency, updated_at = NOW()
+                WHERE id = :id
             """, {"id": str(row["id"]), "urgency": urgency.value})
             count += 1
         return count
@@ -537,7 +537,7 @@ class DeadlinesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         rows = await self._db.fetch_all("""
             SELECT * FROM arkham_deadlines.deadline_rules
-            WHERE tenant_id = %(tid)s ORDER BY case_type, name
+            WHERE tenant_id = :tid ORDER BY case_type, name
         """, {"tid": tenant_id})
         return [self._row_to_rule(r) for r in rows]
 
@@ -548,8 +548,8 @@ class DeadlinesShard(ArkhamShard):
             INSERT INTO arkham_deadlines.deadline_rules
             (id, tenant_id, name, description, case_type, deadline_type,
              days_from_trigger, trigger_event, working_days_only)
-            VALUES (%(id)s, %(tid)s, %(name)s, %(desc)s, %(ct)s, %(dt)s,
-                    %(days)s, %(trigger)s, %(wd)s)
+            VALUES (:id, :tid, :name, :desc, :ct, :dt,
+                    :days, :trigger, :wd)
         """, {
             "id": rule_id, "tid": tenant_id,
             "name": data.get("name", ""),
@@ -566,7 +566,7 @@ class DeadlinesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         row = await self._db.fetch_one("""
             SELECT * FROM arkham_deadlines.deadline_rules
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, {"id": rule_id, "tid": tenant_id})
         if not row:
             return {"error": "Rule not found"}
@@ -630,7 +630,7 @@ class DeadlinesShard(ArkhamShard):
         rows = await self._db.fetch_all("""
             SELECT status, urgency, case_type, COUNT(*) as cnt
             FROM arkham_deadlines.deadlines
-            WHERE tenant_id = %(tid)s
+            WHERE tenant_id = :tid
             GROUP BY status, urgency, case_type
         """, {"tid": tenant_id})
 
@@ -649,7 +649,7 @@ class DeadlinesShard(ArkhamShard):
         # Next deadline
         next_row = await self._db.fetch_one("""
             SELECT * FROM arkham_deadlines.deadlines
-            WHERE tenant_id = %(tid)s AND status IN ('pending', 'in_progress')
+            WHERE tenant_id = :tid AND status IN ('pending', 'in_progress')
             ORDER BY deadline_date ASC LIMIT 1
         """, {"tid": tenant_id})
         if next_row:

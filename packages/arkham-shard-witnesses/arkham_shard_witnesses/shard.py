@@ -49,7 +49,7 @@ class WitnessesShard(ArkhamShard):
         self.frame = frame
         self._db = frame.database
         await self._create_schema()
-        self._subscribe_events()
+        await self._subscribe_events()
         init_api(shard=self, event_bus=frame.events)
         logger.info("Witnesses shard initialized")
 
@@ -136,11 +136,11 @@ class WitnessesShard(ArkhamShard):
 
     # === Events ===
 
-    def _subscribe_events(self) -> None:
+    async def _subscribe_events(self) -> None:
         try:
-            self.frame.events.subscribe("entity.created", self._handle_entity_created)
-            self.frame.events.subscribe("credibility.scored", self._handle_credibility_scored)
-            self.frame.events.subscribe("contradictions.found", self._handle_contradiction_found)
+            await self.frame.events.subscribe("entity.created", self._handle_entity_created)
+            await self.frame.events.subscribe("credibility.scored", self._handle_credibility_scored)
+            await self.frame.events.subscribe("contradictions.found", self._handle_contradiction_found)
         except Exception as e:
             logger.debug(f"Event subscription skipped: {e}")
 
@@ -165,10 +165,10 @@ class WitnessesShard(ArkhamShard):
             (id, tenant_id, name, role, status, party, organization, position,
              contact_info, notes, credibility_level, credibility_notes,
              linked_entity_id, linked_document_ids, created_at, updated_at, metadata)
-            VALUES (%(id)s, %(tenant_id)s, %(name)s, %(role)s, %(status)s, %(party)s,
-                    %(organization)s, %(position)s, %(contact_info)s, %(notes)s,
-                    %(credibility_level)s, %(credibility_notes)s, %(linked_entity_id)s,
-                    %(linked_document_ids)s, %(created_at)s, %(updated_at)s, %(metadata)s)
+            VALUES (:id, :tenant_id, :name, :role, :status, :party,
+                    :organization, :position, :contact_info, :notes,
+                    :credibility_level, :credibility_notes, :linked_entity_id,
+                    :linked_document_ids, :created_at, :updated_at, :metadata)
         """, {
             "id": witness_id,
             "tenant_id": tenant_id,
@@ -201,7 +201,7 @@ class WitnessesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         row = await self._db.fetch_one("""
             SELECT * FROM arkham_witnesses.witnesses
-            WHERE id = %(id)s AND tenant_id = %(tenant_id)s
+            WHERE id = :id AND tenant_id = :tenant_id
         """, {"id": witness_id, "tenant_id": tenant_id})
 
         if not row:
@@ -211,24 +211,24 @@ class WitnessesShard(ArkhamShard):
     async def list_witnesses(self, filters: Optional[WitnessFilter] = None,
                               limit: int = 100, offset: int = 0) -> List[Witness]:
         tenant_id = str(self.get_tenant_id())
-        conditions = ["tenant_id = %(tenant_id)s"]
+        conditions = ["tenant_id = :tenant_id"]
         params: Dict[str, Any] = {"tenant_id": tenant_id}
 
         if filters:
             if filters.role:
-                conditions.append("role = %(role)s")
+                conditions.append("role = :role")
                 params["role"] = filters.role.value
             if filters.status:
-                conditions.append("status = %(status)s")
+                conditions.append("status = :status")
                 params["status"] = filters.status.value
             if filters.party:
-                conditions.append("party = %(party)s")
+                conditions.append("party = :party")
                 params["party"] = filters.party.value
             if filters.credibility_level:
-                conditions.append("credibility_level = %(cred)s")
+                conditions.append("credibility_level = :cred")
                 params["cred"] = filters.credibility_level.value
             if filters.search_text:
-                conditions.append("(name ILIKE %(search)s OR notes ILIKE %(search)s OR organization ILIKE %(search)s)")
+                conditions.append("(name ILIKE :search OR notes ILIKE :search OR organization ILIKE :search)")
                 params["search"] = f"%{filters.search_text}%"
 
         where = " AND ".join(conditions)
@@ -239,7 +239,7 @@ class WitnessesShard(ArkhamShard):
             SELECT * FROM arkham_witnesses.witnesses
             WHERE {where}
             ORDER BY created_at DESC
-            LIMIT %(limit)s OFFSET %(offset)s
+            LIMIT :limit OFFSET :offset
         """, params)
 
         return [self._row_to_witness(r) for r in rows]
@@ -248,7 +248,7 @@ class WitnessesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_witnesses.witnesses
-            WHERE tenant_id = %(tenant_id)s
+            WHERE tenant_id = :tenant_id
         """, {"tenant_id": tenant_id})
         return row["cnt"] if row else 0
 
@@ -265,24 +265,24 @@ class WitnessesShard(ArkhamShard):
         }
         for key, col in field_map.items():
             if key in data:
-                sets.append(f"{col} = %({key})s")
+                sets.append(f"{col} = :{key}")
                 params[key] = data[key]
 
         if "contact_info" in data:
-            sets.append("contact_info = %(contact_info)s")
+            sets.append("contact_info = :contact_info")
             params["contact_info"] = json.dumps(data["contact_info"])
         if "linked_document_ids" in data:
-            sets.append("linked_document_ids = %(linked_document_ids)s")
+            sets.append("linked_document_ids = :linked_document_ids")
             params["linked_document_ids"] = json.dumps(data["linked_document_ids"])
         if "metadata" in data:
-            sets.append("metadata = %(metadata)s")
+            sets.append("metadata = :metadata")
             params["metadata"] = json.dumps(data["metadata"])
 
         set_clause = ", ".join(sets)
         await self._db.execute(f"""
             UPDATE arkham_witnesses.witnesses
             SET {set_clause}
-            WHERE id = %(id)s AND tenant_id = %(tenant_id)s
+            WHERE id = :id AND tenant_id = :tenant_id
         """, params)
 
         await self.frame.events.emit("witnesses.witness.updated", {
@@ -295,7 +295,7 @@ class WitnessesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         await self._db.execute("""
             DELETE FROM arkham_witnesses.witnesses
-            WHERE id = %(id)s AND tenant_id = %(tenant_id)s
+            WHERE id = :id AND tenant_id = :tenant_id
         """, {"id": witness_id, "tenant_id": tenant_id})
 
         await self.frame.events.emit("witnesses.witness.deleted", {
@@ -313,7 +313,7 @@ class WitnessesShard(ArkhamShard):
         row = await self._db.fetch_one("""
             SELECT COALESCE(MAX(version), 0) + 1 as next_ver
             FROM arkham_witnesses.witness_statements
-            WHERE witness_id = %(wid)s AND tenant_id = %(tid)s
+            WHERE witness_id = :wid AND tenant_id = :tid
         """, {"wid": witness_id, "tid": tenant_id})
         version = row["next_ver"] if row else 1
 
@@ -321,8 +321,8 @@ class WitnessesShard(ArkhamShard):
             INSERT INTO arkham_witnesses.witness_statements
             (id, tenant_id, witness_id, version, title, content, status,
              key_points, contradictions_found, filed_date, created_at, updated_at)
-            VALUES (%(id)s, %(tid)s, %(wid)s, %(version)s, %(title)s, %(content)s,
-                    %(status)s, %(key_points)s, %(contradictions)s, %(filed_date)s,
+            VALUES (:id, :tid, :wid, :version, :title, :content,
+                    :status, :key_points, :contradictions, :filed_date,
                     NOW(), NOW())
         """, {
             "id": stmt_id,
@@ -341,7 +341,7 @@ class WitnessesShard(ArkhamShard):
         await self._db.execute("""
             UPDATE arkham_witnesses.witnesses
             SET status = 'statement_taken', updated_at = NOW()
-            WHERE id = %(wid)s AND tenant_id = %(tid)s
+            WHERE id = :wid AND tenant_id = :tid
         """, {"wid": witness_id, "tid": tenant_id})
 
         await self.frame.events.emit("witnesses.statement.added", {
@@ -356,7 +356,7 @@ class WitnessesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         row = await self._db.fetch_one("""
             SELECT * FROM arkham_witnesses.witness_statements
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, {"id": statement_id, "tid": tenant_id})
         if not row:
             return None
@@ -366,7 +366,7 @@ class WitnessesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         rows = await self._db.fetch_all("""
             SELECT * FROM arkham_witnesses.witness_statements
-            WHERE witness_id = %(wid)s AND tenant_id = %(tid)s
+            WHERE witness_id = :wid AND tenant_id = :tid
             ORDER BY version DESC
         """, {"wid": witness_id, "tid": tenant_id})
         return [self._row_to_statement(r) for r in rows]
@@ -378,23 +378,23 @@ class WitnessesShard(ArkhamShard):
 
         for key in ["title", "content", "status"]:
             if key in data:
-                sets.append(f"{key} = %({key})s")
+                sets.append(f"{key} = :{key}")
                 params[key] = data[key]
         if "key_points" in data:
-            sets.append("key_points = %(kp)s")
+            sets.append("key_points = :kp")
             params["kp"] = json.dumps(data["key_points"])
         if "contradictions_found" in data:
-            sets.append("contradictions_found = %(cf)s")
+            sets.append("contradictions_found = :cf")
             params["cf"] = json.dumps(data["contradictions_found"])
         if "filed_date" in data:
-            sets.append("filed_date = %(fd)s")
+            sets.append("filed_date = :fd")
             params["fd"] = data["filed_date"]
 
         set_clause = ", ".join(sets)
         await self._db.execute(f"""
             UPDATE arkham_witnesses.witness_statements
             SET {set_clause}
-            WHERE id = %(id)s AND tenant_id = %(tid)s
+            WHERE id = :id AND tenant_id = :tid
         """, params)
 
         await self.frame.events.emit("witnesses.statement.updated", {
@@ -413,8 +413,8 @@ class WitnessesShard(ArkhamShard):
             INSERT INTO arkham_witnesses.cross_exam_notes
             (id, tenant_id, witness_id, statement_id, topic, question,
              expected_answer, actual_answer, effectiveness, notes, created_at)
-            VALUES (%(id)s, %(tid)s, %(wid)s, %(sid)s, %(topic)s, %(question)s,
-                    %(expected)s, %(actual)s, %(effectiveness)s, %(notes)s, NOW())
+            VALUES (:id, :tid, :wid, :sid, :topic, :question,
+                    :expected, :actual, :effectiveness, :notes, NOW())
         """, {
             "id": note_id,
             "tid": tenant_id,
@@ -442,7 +442,7 @@ class WitnessesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         rows = await self._db.fetch_all("""
             SELECT * FROM arkham_witnesses.cross_exam_notes
-            WHERE witness_id = %(wid)s AND tenant_id = %(tid)s
+            WHERE witness_id = :wid AND tenant_id = :tid
             ORDER BY created_at DESC
         """, {"wid": witness_id, "tid": tenant_id})
         return [self._row_to_cross_exam(r) for r in rows]
@@ -462,12 +462,12 @@ class WitnessesShard(ArkhamShard):
 
         stmt_row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_witnesses.witness_statements
-            WHERE witness_id = %(wid)s AND tenant_id = %(tid)s
+            WHERE witness_id = :wid AND tenant_id = :tid
         """, {"wid": witness_id, "tid": tenant_id})
 
         note_row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_witnesses.cross_exam_notes
-            WHERE witness_id = %(wid)s AND tenant_id = %(tid)s
+            WHERE witness_id = :wid AND tenant_id = :tid
         """, {"wid": witness_id, "tid": tenant_id})
 
         return {
@@ -487,7 +487,7 @@ class WitnessesShard(ArkhamShard):
         rows = await self._db.fetch_all("""
             SELECT role, status, party, COUNT(*) as cnt
             FROM arkham_witnesses.witnesses
-            WHERE tenant_id = %(tid)s
+            WHERE tenant_id = :tid
             GROUP BY role, status, party
         """, {"tid": tenant_id})
 
@@ -500,13 +500,13 @@ class WitnessesShard(ArkhamShard):
 
         stmt_row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_witnesses.witness_statements
-            WHERE tenant_id = %(tid)s
+            WHERE tenant_id = :tid
         """, {"tid": tenant_id})
         stats.total_statements = stmt_row["cnt"] if stmt_row else 0
 
         note_row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_witnesses.cross_exam_notes
-            WHERE tenant_id = %(tid)s
+            WHERE tenant_id = :tid
         """, {"tid": tenant_id})
         stats.total_cross_exam_notes = note_row["cnt"] if note_row else 0
 
