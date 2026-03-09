@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, UserPlus, FileText, Shield, Search, Filter, ChevronRight, Trash2, Edit } from 'lucide-react';
+import { Users, UserPlus, Search, ChevronRight } from 'lucide-react';
 
 interface Witness {
   id: string;

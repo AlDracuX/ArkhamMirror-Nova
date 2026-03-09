@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock, AlertTriangle, Calendar, Plus, CheckCircle, XCircle, ChevronRight } from 'lucide-react';
+import { Clock, AlertTriangle, Calendar, Plus, ChevronRight } from 'lucide-react';
 
 interface Deadline {
   id: string;

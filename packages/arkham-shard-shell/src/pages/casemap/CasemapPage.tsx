@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Map, Scale, Plus, BarChart3, Grid3X3, ChevronRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { Map, Scale, Plus, BarChart3, Grid3X3, ChevronRight } from 'lucide-react';
 
 interface Theory {
   id: string;
