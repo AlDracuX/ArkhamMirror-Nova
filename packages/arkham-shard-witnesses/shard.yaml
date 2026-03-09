@@ -1,0 +1,72 @@
+# Witnesses Shard - Witness Management and Credibility Tracking
+# Production Manifest v1.0
+name: witnesses
+version: "0.1.0"
+description: Witness management and credibility tracking for litigation
+entry_point: arkham_shard_witnesses:WitnessesShard
+api_prefix: /api/witnesses
+requires_frame: ">=0.1.0"
+
+navigation:
+  category: Analysis
+  order: 38
+  icon: Users
+  label: Witnesses
+  route: /witnesses
+  badge_endpoint: /api/witnesses/count
+  badge_type: count
+  sub_routes:
+    - id: list
+      label: All Witnesses
+      route: /witnesses
+      icon: List
+    - id: new
+      label: Add Witness
+      route: /witnesses/new
+      icon: UserPlus
+    - id: statements
+      label: Statements
+      route: /witnesses/statements
+      icon: FileText
+
+dependencies:
+  services:
+    - database
+    - events
+  optional:
+    - llm
+  shards: []
+
+capabilities:
+  - witness_management
+  - statement_versioning
+  - credibility_tracking
+  - cross_examination_prep
+  - testimony_analysis
+
+events:
+  publishes:
+    - witnesses.witness.created
+    - witnesses.witness.updated
+    - witnesses.witness.deleted
+    - witnesses.statement.added
+    - witnesses.statement.updated
+    - witnesses.credibility.scored
+  subscribes:
+    - entity.created
+    - credibility.scored
+    - document.processed
+    - contradictions.found
+
+state:
+  strategy: url
+  url_params:
+    - witnessId
+    - statementId
+    - tab
+  local_keys:
+    - sort_order
+    - show_archived
+
+ui:
+  has_custom_ui: true

@@ -5,3 +5,6 @@ export { SearchPage } from './search';
 export { ParsePage } from './parse';
 export { ContradictionsPage, ContradictionDetail } from './contradictions';
 export { AnomaliesPage, AnomalyDetail } from './anomalies';
+export { WitnessesPage } from './witnesses';
+export { DeadlinesPage } from './deadlines';
+export { CasemapPage } from './casemap';

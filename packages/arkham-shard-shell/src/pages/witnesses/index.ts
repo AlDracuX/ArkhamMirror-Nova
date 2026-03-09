@@ -1,0 +1,1 @@
+export { WitnessesPage } from './WitnessesPage';

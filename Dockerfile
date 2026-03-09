@@ -79,10 +79,14 @@ COPY packages/arkham-shard-summary/ ./packages/arkham-shard-summary/
 COPY packages/arkham-shard-templates/ ./packages/arkham-shard-templates/
 COPY packages/arkham-shard-timeline/ ./packages/arkham-shard-timeline/
 COPY packages/arkham-shard-media-forensics/ ./packages/arkham-shard-media-forensics/
+COPY packages/arkham-shard-witnesses/ ./packages/arkham-shard-witnesses/
+COPY packages/arkham-shard-deadlines/ ./packages/arkham-shard-deadlines/
+COPY packages/arkham-shard-casemap/ ./packages/arkham-shard-casemap/
 
-# Install CPU-only PyTorch BEFORE shards to avoid downloading ~3GB of CUDA libraries
-# This must come before sentence-transformers (used by arkham-shard-embed)
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+# Install PyTorch - GPU-enabled by default for Legion (NVIDIA)
+# For CPU-only: change to --index-url https://download.pytorch.org/whl/cpu
+ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu121
+RUN pip install --no-cache-dir torch --index-url ${TORCH_INDEX_URL}
 
 # Install each shard (continue on error for optional shards)
 RUN for shard_dir in ./packages/arkham-shard-*/; do \
@@ -100,10 +104,10 @@ RUN python -m spacy download en_core_web_sm || echo "spaCy model download skippe
 # -----------------------------------------------------------------------------
 FROM python:3.11-slim AS runtime
 
-LABEL org.opencontainers.image.source="https://github.com/mantisfury/ArkhamMirror"
-LABEL org.opencontainers.image.description="SHATTERED - Modular Document Analysis Platform"
+LABEL org.opencontainers.image.source="https://github.com/AlDracuX/ArkhamMirror-Nova"
+LABEL org.opencontainers.image.description="ArkhamMirror-Nova - Litigation Analysis Platform"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.title="Shattered KANDOR"
+LABEL org.opencontainers.image.title="ArkhamMirror-Nova"
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -149,6 +153,9 @@ COPY packages/arkham-shard-summary/shard.yaml /app/manifests/summary.yaml
 COPY packages/arkham-shard-templates/shard.yaml /app/manifests/templates.yaml
 COPY packages/arkham-shard-timeline/shard.yaml /app/manifests/timeline.yaml
 COPY packages/arkham-shard-media-forensics/shard.yaml /app/manifests/media-forensics.yaml
+COPY packages/arkham-shard-witnesses/shard.yaml /app/manifests/witnesses.yaml
+COPY packages/arkham-shard-deadlines/shard.yaml /app/manifests/deadlines.yaml
+COPY packages/arkham-shard-casemap/shard.yaml /app/manifests/casemap.yaml
 
 WORKDIR /app
 

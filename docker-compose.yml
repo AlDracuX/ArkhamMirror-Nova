@@ -56,6 +56,14 @@ services:
         condition: service_healthy
     networks:
       - shattered-net
+    # GPU support for Legion (NVIDIA)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     # For connecting to LLM on host machine (LM Studio, Ollama, etc)
     extra_hosts:
       - "host.docker.internal:host-gateway"

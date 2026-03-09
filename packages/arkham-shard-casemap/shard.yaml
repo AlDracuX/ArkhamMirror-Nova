@@ -1,0 +1,78 @@
+# Casemap Shard - Legal Case Theory Mapping
+# Production Manifest v1.0
+name: casemap
+version: "0.1.0"
+description: Legal case theory mapping with evidence linkage and burden tracking
+entry_point: arkham_shard_casemap:CasemapShard
+api_prefix: /api/casemap
+requires_frame: ">=0.1.0"
+
+navigation:
+  category: Analysis
+  order: 31
+  icon: Map
+  label: Case Map
+  route: /casemap
+  badge_endpoint: /api/casemap/theories/count
+  badge_type: count
+  sub_routes:
+    - id: theories
+      label: Legal Theories
+      route: /casemap/theories
+      icon: Scale
+    - id: new
+      label: New Theory
+      route: /casemap/new
+      icon: Plus
+    - id: matrix
+      label: Evidence Matrix
+      route: /casemap/matrix
+      icon: Grid3X3
+    - id: strengths
+      label: Strengths Analysis
+      route: /casemap/strengths
+      icon: BarChart3
+
+dependencies:
+  services:
+    - database
+    - events
+  optional:
+    - llm
+  shards: []
+
+capabilities:
+  - theory_management
+  - element_tracking
+  - evidence_linkage
+  - burden_tracking
+  - strength_analysis
+  - gap_identification
+
+events:
+  publishes:
+    - casemap.theory.created
+    - casemap.theory.updated
+    - casemap.theory.deleted
+    - casemap.element.created
+    - casemap.evidence.linked
+    - casemap.strength.updated
+    - casemap.gap.identified
+  subscribes:
+    - claims.created
+    - contradictions.found
+    - document.processed
+
+state:
+  strategy: url
+  url_params:
+    - theoryId
+    - elementId
+    - tab
+    - view
+  local_keys:
+    - show_weak_elements
+    - matrix_zoom
+
+ui:
+  has_custom_ui: true

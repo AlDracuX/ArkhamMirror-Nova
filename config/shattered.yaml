@@ -43,6 +43,14 @@ shards:
   anomalies: true
   summary: true
 
+  # Media
+  media-forensics: true
+
+  # Legal
+  witnesses: true
+  deadlines: true
+  casemap: true
+
   # Visualization
   graph: true
   timeline: true

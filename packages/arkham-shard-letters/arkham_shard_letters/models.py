@@ -22,6 +22,19 @@ class LetterType(str, Enum):
     INQUIRY = "inquiry"                 # Information inquiry
     RESPONSE = "response"               # Response letter
     CUSTOM = "custom"                   # Custom letter type
+    # Legal / Tribunal types
+    ET1 = "et1"                         # Employment Tribunal claim form
+    ET3 = "et3"                         # Employment Tribunal response
+    WITNESS_STATEMENT = "witness_statement"  # Formal witness statement
+    SCHEDULE_OF_LOSS = "schedule_of_loss"    # Itemized damages calculation
+    SKELETON_ARGUMENT = "skeleton_argument"  # EAT skeleton argument
+    SCOTT_SCHEDULE = "scott_schedule"   # Point-by-point dispute matrix
+    CMH_AGENDA = "cmh_agenda"           # Case management hearing agenda
+    COSTS_APPLICATION = "costs_application"  # Costs/wasted costs application
+    SAR = "sar"                         # Subject Access Request (GDPR)
+    STRIKE_OUT = "strike_out"           # Strike-out application (Rule 37)
+    UNLESS_ORDER = "unless_order"       # Unless order response
+    RECONSIDERATION = "reconsideration" # Reconsideration application
 
 
 class LetterStatus(str, Enum):

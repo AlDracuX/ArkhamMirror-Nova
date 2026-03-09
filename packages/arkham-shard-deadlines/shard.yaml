@@ -1,0 +1,72 @@
+# Deadlines Shard - Legal Deadline Tracking
+# Production Manifest v1.0
+name: deadlines
+version: "0.1.0"
+description: Legal deadline tracking with urgency scoring and countdown
+entry_point: arkham_shard_deadlines:DeadlinesShard
+api_prefix: /api/deadlines
+requires_frame: ">=0.1.0"
+
+navigation:
+  category: System
+  order: 15
+  icon: Clock
+  label: Deadlines
+  route: /deadlines
+  badge_endpoint: /api/deadlines/upcoming/count
+  badge_type: count
+  sub_routes:
+    - id: upcoming
+      label: Upcoming
+      route: /deadlines/upcoming
+      icon: AlertTriangle
+    - id: all
+      label: All Deadlines
+      route: /deadlines/all
+      icon: List
+    - id: new
+      label: New Deadline
+      route: /deadlines/new
+      icon: Plus
+    - id: calendar
+      label: Calendar
+      route: /deadlines/calendar
+      icon: Calendar
+
+dependencies:
+  services:
+    - database
+    - events
+  optional:
+    - llm
+  shards: []
+
+capabilities:
+  - deadline_tracking
+  - urgency_scoring
+  - auto_calculation
+  - ics_export
+  - countdown_display
+  - breach_detection
+
+events:
+  publishes:
+    - deadlines.deadline.created
+    - deadlines.deadline.updated
+    - deadlines.deadline.completed
+    - deadlines.deadline.approaching
+    - deadlines.deadline.breached
+  subscribes: []
+
+state:
+  strategy: url
+  url_params:
+    - deadlineId
+    - view
+    - filter
+  local_keys:
+    - show_completed
+    - sort_by
+
+ui:
+  has_custom_ui: true
