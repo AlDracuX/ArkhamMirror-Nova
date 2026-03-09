@@ -264,11 +264,15 @@ class EmbedShard(ArkhamShard):
             # Ensure collection exists before upserting
             model_info = self.embedding_manager.get_model_info()
             if not await vectors_service.collection_exists(collection_name):
-                logger.info(f"Creating {collection_name} collection with {model_info.dimensions} dimensions")
-                await vectors_service.create_collection(
-                    name=collection_name,
-                    vector_size=model_info.dimensions,
-                )
+                try:
+                    logger.info(f"Creating {collection_name} collection with {model_info.dimensions} dimensions")
+                    await vectors_service.create_collection(
+                        name=collection_name,
+                        vector_size=model_info.dimensions,
+                    )
+                except Exception:
+                    # Race condition: another handler created it first
+                    pass
 
             # Upsert to vector store
             await vectors_service.upsert(
