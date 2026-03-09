@@ -85,8 +85,8 @@ COPY packages/arkham-shard-casemap/ ./packages/arkham-shard-casemap/
 
 # Install PyTorch - GPU-enabled by default for Legion (NVIDIA)
 # For CPU-only: change to --index-url https://download.pytorch.org/whl/cpu
-ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu121
-RUN pip install --no-cache-dir torch --index-url ${TORCH_INDEX_URL}
+ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124
+RUN pip install --no-cache-dir "torch>=2.6" --index-url ${TORCH_INDEX_URL}
 
 # Install each shard (continue on error for optional shards)
 RUN for shard_dir in ./packages/arkham-shard-*/; do \
