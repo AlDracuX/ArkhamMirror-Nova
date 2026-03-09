@@ -33,9 +33,20 @@ from .models import (
 
 router = APIRouter(prefix="/api/templates", tags=["templates"])
 
+# Module-level state for test injection
+_shard_instance: "TemplatesShard | None" = None
+
+
+def set_shard(shard):
+    """Set the shard instance (used by tests)."""
+    global _shard_instance
+    _shard_instance = shard
+
 
 def get_shard(request: Request) -> "TemplatesShard":
     """Get the templates shard instance from app state."""
+    if _shard_instance is not None:
+        return _shard_instance
     shard = getattr(request.app.state, "templates_shard", None)
     if not shard:
         raise HTTPException(status_code=503, detail="Templates shard not available")

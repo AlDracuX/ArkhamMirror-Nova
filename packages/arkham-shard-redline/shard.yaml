@@ -1,0 +1,59 @@
+# Redline Shard - Redline
+# Production Manifest v1.0
+# Compliant with shard_manifest_schema_prod.md
+
+name: redline
+version: "0.1.0"
+description: Document version comparison and semantic diff
+entry_point: arkham_shard_redline:RedlineShard
+api_prefix: /api/redline
+requires_frame: ">=0.1.0"
+
+# Navigation - Shell integration
+navigation:
+  category: Analysis
+  order: 35
+  icon: FileDiff
+  label: Redline
+  route: /redline
+  badge_endpoint: /api/redline/items/count
+  badge_type: count
+  sub_routes: []
+
+# Dependencies - Frame service names
+dependencies:
+  services:
+    - database
+    - events
+  optional:
+    - llm
+    - vectors
+  shards: []
+
+# Capabilities
+capabilities:
+  - item_management
+  - data_export
+
+# Events - Format: {shard}.{entity}.{action}
+events:
+  publishes:
+    - redline.change.detected
+    - redline.silent_edit.flagged
+    - redline.comparison.created
+  subscribes:
+    - documents.processed
+    - parse.completed
+
+# State Management
+state:
+  strategy: url
+  url_params:
+    - itemId
+    - tab
+    - view
+  local_keys: []
+
+# UI Configuration
+ui:
+  has_custom_ui: true

@@ -1,0 +1,157 @@
+"""Oracle Shard - Legal research and authority search assistant."""
+
+import logging
+from typing import Any, Dict, List, Optional
+
+from arkham_frame.shard_interface import ArkhamShard
+
+from .api import init_api, router
+
+logger = logging.getLogger(__name__)
+
+
+class OracleShard(ArkhamShard):
+    """
+    Oracle shard for ArkhamFrame.
+
+    Legal research and authority search assistant
+    """
+
+    name = "oracle"
+    version = "0.1.0"
+    description = "Legal research and authority search assistant"
+
+    def __init__(self):
+        super().__init__()  # Auto-loads manifest from shard.yaml
+        self._frame = None
+        self._db = None
+        self._event_bus = None
+        self._llm_service = None
+        self._vectors_service = None
+
+    async def initialize(self, frame) -> None:
+        """Initialize the Oracle shard with Frame services."""
+        self._frame = frame
+
+        logger.info("Initializing Oracle Shard...")
+
+        # Get Frame services
+        self._db = frame.database
+        self._event_bus = frame.get_service("events")
+        self._llm_service = frame.get_service("llm")
+        self._vectors_service = frame.get_service("vectors")
+
+        # Create database schema
+        await self._create_schema()
+
+        # Subscribe to events
+        if self._event_bus:
+            await self._event_bus.subscribe("casemap.theory.updated", self.handle_theory_updated)
+            await self._event_bus.subscribe("claims.created", self.handle_claims_created)
+
+        # Initialize API with our instances
+        init_api(
+            db=self._db,
+            event_bus=self._event_bus,
+            llm_service=self._llm_service,
+            shard=self,
+        )
+
+        # Register self in app state for API access
+        if hasattr(frame, "app") and frame.app:
+            frame.app.state.oracle_shard = self
+            logger.debug("Oracle Shard registered on app.state")
+
+        logger.info("Oracle Shard initialized")
+
+    async def shutdown(self) -> None:
+        """Clean up shard resources."""
+        logger.info("Shutting down Oracle Shard...")
+        if self._event_bus:
+            await self._event_bus.unsubscribe("casemap.theory.updated", self.handle_theory_updated)
+            await self._event_bus.unsubscribe("claims.created", self.handle_claims_created)
+        logger.info("Oracle Shard shutdown complete")
+
+    async def handle_theory_updated(self, event_data: Dict[str, Any]) -> None:
+        """Handle case theory updated event."""
+        logger.info("Oracle Shard: Case theory updated, researching relevant authorities")
+
+    async def handle_claims_created(self, event_data: Dict[str, Any]) -> None:
+        """Handle claims created event."""
+        logger.info("Oracle Shard: New claims created, mapping to legal tests")
+
+    def get_routes(self):
+        """Return FastAPI router for this shard."""
+        return router
+
+    # --- Database Schema ---
+
+    async def _create_schema(self) -> None:
+        """Create database schema for Oracle tables."""
+        if not self._db:
+            logger.warning("Database service not available - persistence disabled")
+            return
+
+        try:
+            # Create schema
+            await self._db.execute("CREATE SCHEMA IF NOT EXISTS arkham_oracle")
+
+            # Create tables
+            await self._db.execute("""
+                CREATE TABLE IF NOT EXISTS arkham_oracle.authorities (
+                    id TEXT PRIMARY KEY,
+                    tenant_id UUID,
+                    title TEXT NOT NULL,
+                    citation TEXT,
+                    type TEXT,
+                    jurisdiction TEXT,
+                    binding_status TEXT,
+                    summary TEXT,
+                    ratio_decidendi TEXT,
+                    metadata JSONB DEFAULT '{}',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            await self._db.execute("""
+                CREATE TABLE IF NOT EXISTS arkham_oracle.research_sessions (
+                    id TEXT PRIMARY KEY,
+                    project_id TEXT NOT NULL,
+                    query TEXT NOT NULL,
+                    findings JSONB DEFAULT '[]',
+                    authority_ids JSONB DEFAULT '[]',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            await self._db.execute("""
+                CREATE TABLE IF NOT EXISTS arkham_oracle.case_summaries (
+                    id TEXT PRIMARY KEY,
+                    authority_id TEXT REFERENCES arkham_oracle.authorities(id) ON DELETE CASCADE,
+                    facts TEXT,
+                    decision TEXT,
+                    legal_principles JSONB DEFAULT '[]'
+                )
+            """)
+
+            await self._db.execute("""
+                CREATE TABLE IF NOT EXISTS arkham_oracle.authority_chains (
+                    id TEXT PRIMARY KEY,
+                    source_authority_id TEXT REFERENCES arkham_oracle.authorities(id) ON DELETE CASCADE,
+                    cited_authority_id TEXT REFERENCES arkham_oracle.authorities(id) ON DELETE CASCADE,
+                    relationship_type TEXT
+                )
+            """)
+
+            # Indexes
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_oracle_research_project ON arkham_oracle.research_sessions(project_id)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_oracle_authorities_citation ON arkham_oracle.authorities(citation)"
+            )
+
+            logger.info("Oracle database schema created")
+
+        except Exception as e:
+            logger.error(f"Failed to create Oracle schema: {e}")

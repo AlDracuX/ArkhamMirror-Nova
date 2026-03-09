@@ -1,4 +1,4 @@
-# Media Forensics Shard
+# arkham-shard-media-forensics
 
 Media metadata extraction and forensic analysis for images within the SHATTERED framework.
 

@@ -25,9 +25,20 @@ from .models import (
 
 router = APIRouter(prefix="/api/summary", tags=["summary"])
 
+# Module-level state for test injection
+_shard_instance = None
+
+
+def init_api(shard=None):
+    """Initialize API with shard instance (used by tests)."""
+    global _shard_instance
+    _shard_instance = shard
+
 
 def get_shard(request: Request):
     """Get the shard instance from app state."""
+    if _shard_instance is not None:
+        return _shard_instance
     shard = getattr(request.app.state, "summary_shard", None)
     if not shard:
         raise HTTPException(status_code=503, detail="Summary shard not available")

@@ -1,3 +1,0 @@
-"""
-Claims Shard - Test Suite
-"""

@@ -1,0 +1,59 @@
+# Oracle Shard - Oracle
+# Production Manifest v1.0
+# Compliant with shard_manifest_schema_prod.md
+
+name: oracle
+version: "0.1.0"
+description: Legal research and authority search assistant
+entry_point: arkham_shard_oracle:OracleShard
+api_prefix: /api/oracle
+requires_frame: ">=0.1.0"
+
+# Navigation - Shell integration
+navigation:
+  category: Analysis
+  order: 41
+  icon: BookMarked
+  label: Oracle
+  route: /oracle
+  badge_endpoint: /api/oracle/items/count
+  badge_type: count
+  sub_routes: []
+
+# Dependencies - Frame service names
+dependencies:
+  services:
+    - database
+    - events
+  optional:
+    - llm
+    - vectors
+  shards: []
+
+# Capabilities
+capabilities:
+  - item_management
+  - data_export
+
+# Events - Format: {shard}.{entity}.{action}
+events:
+  publishes:
+    - oracle.authority.found
+    - oracle.research.completed
+    - oracle.research.started
+  subscribes:
+    - casemap.theory.updated
+    - claims.created
+
+# State Management
+state:
+  strategy: url
+  url_params:
+    - itemId
+    - tab
+    - view
+  local_keys: []
+
+# UI Configuration
+ui:
+  has_custom_ui: true

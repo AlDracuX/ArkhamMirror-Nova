@@ -1,0 +1,1 @@
+export { BurdenMapPage } from './BurdenMapPage';

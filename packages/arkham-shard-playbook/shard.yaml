@@ -1,0 +1,59 @@
+# Playbook Shard - Playbook
+# Production Manifest v1.0
+# Compliant with shard_manifest_schema_prod.md
+
+name: playbook
+version: "0.1.0"
+description: Litigation strategy and scenario planner
+entry_point: arkham_shard_playbook:PlaybookShard
+api_prefix: /api/playbook
+requires_frame: ">=0.1.0"
+
+# Navigation - Shell integration
+navigation:
+  category: System
+  order: 14
+  icon: Target
+  label: Playbook
+  route: /playbook
+  badge_endpoint: /api/playbook/items/count
+  badge_type: count
+  sub_routes: []
+
+# Dependencies - Frame service names
+dependencies:
+  services:
+    - database
+    - events
+  optional:
+    - llm
+    - vectors
+  shards: []
+
+# Capabilities
+capabilities:
+  - item_management
+  - data_export
+
+# Events - Format: {shard}.{entity}.{action}
+events:
+  publishes:
+    - playbook.scenario.modeled
+    - playbook.strategy.updated
+  subscribes:
+    - casemap.theory.updated
+    - burden.gap.critical
+    - deadlines.approaching
+
+# State Management
+state:
+  strategy: url
+  url_params:
+    - itemId
+    - tab
+    - view
+  local_keys: []
+
+# UI Configuration
+ui:
+  has_custom_ui: true

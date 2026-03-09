@@ -1,0 +1,57 @@
+# Chain Shard - Chain
+# Production Manifest v1.0
+# Compliant with shard_manifest_schema_prod.md
+
+name: chain
+version: "0.1.0"
+description: Cryptographic evidence chain of custody
+entry_point: arkham_shard_chain:ChainShard
+api_prefix: /api/chain
+requires_frame: ">=0.1.0"
+
+# Navigation - Shell integration
+navigation:
+  category: Data
+  order: 12
+  icon: Link
+  label: Chain
+  route: /chain
+  badge_endpoint: /api/chain/items/count
+  badge_type: count
+  sub_routes: []
+
+# Dependencies - Frame service names
+dependencies:
+  services:
+    - database
+    - events
+  optional:
+    - llm
+    - vectors
+  shards: []
+
+# Capabilities
+capabilities:
+  - item_management
+  - data_export
+
+# Events - Format: {shard}.{entity}.{action}
+events:
+  publishes:
+    - chain.item.created
+    - chain.item.updated
+    - chain.item.deleted
+  subscribes: []
+
+# State Management
+state:
+  strategy: url
+  url_params:
+    - itemId
+    - tab
+    - view
+  local_keys: []
+
+# UI Configuration
+ui:
+  has_custom_ui: true

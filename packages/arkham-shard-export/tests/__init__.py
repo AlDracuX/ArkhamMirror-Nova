@@ -1,3 +1,0 @@
-"""
-Export Shard - Tests Package
-"""

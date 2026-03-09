@@ -1,3 +1,0 @@
-"""
-Projects Shard - Tests Package
-"""

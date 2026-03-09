@@ -1,3 +1,0 @@
-"""
-Reports Shard - Test Suite
-"""

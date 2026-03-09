@@ -1,0 +1,57 @@
+# Comms Shard - Comms
+# Production Manifest v1.0
+# Compliant with shard_manifest_schema_prod.md
+
+name: comms
+version: "0.1.0"
+description: Email and message thread reconstruction
+entry_point: arkham_shard_comms:CommsShard
+api_prefix: /api/comms
+requires_frame: ">=0.1.0"
+
+# Navigation - Shell integration
+navigation:
+  category: Analysis
+  order: 36
+  icon: MessageSquare
+  label: Comms
+  route: /comms
+  badge_endpoint: /api/comms/items/count
+  badge_type: count
+  sub_routes: []
+
+# Dependencies - Frame service names
+dependencies:
+  services:
+    - database
+    - events
+  optional:
+    - llm
+    - vectors
+  shards: []
+
+# Capabilities
+capabilities:
+  - item_management
+  - data_export
+
+# Events - Format: {shard}.{entity}.{action}
+events:
+  publishes:
+    - comms.item.created
+    - comms.item.updated
+    - comms.item.deleted
+  subscribes: []
+
+# State Management
+state:
+  strategy: url
+  url_params:
+    - itemId
+    - tab
+    - view
+  local_keys: []
+
+# UI Configuration
+ui:
+  has_custom_ui: true

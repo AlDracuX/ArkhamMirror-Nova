@@ -81,6 +81,8 @@ import { ProvenancePage } from './pages/provenance';
 import { MediaForensicsPage } from './pages/media-forensics';
 
 // Wave 4 shard imports
+import { ComparatorPage, DisclosurePage, ChainPage, AuditTrailPage, CrossExamPage, BundlePage, BurdenMapPage, CommsPage, SkeletonPage, RulesPage, CostsPage, SentimentPage, RedlinePage, StrategistPage, PlaybookPage, OraclePage, RespondentIntelPage, DigestPage } from './pages';
+
 import { ExportPage } from './pages/export';
 import { ReportsPage } from './pages/reports';
 import { LettersPage } from './pages/letters';
@@ -89,6 +91,11 @@ import { LettersPage } from './pages/letters';
 import { PacketsPage } from './pages/packets';
 import { TemplatesPage } from './pages/templates';
 import { SummaryPage } from './pages/summary';
+
+
+
+
+
 
 export function App() {
   return (
@@ -236,6 +243,25 @@ export function App() {
                         {/* Wave 6 shards */}
                         {/* Media Forensics shard */}
                         <Route path="/media-forensics" element={<MediaForensicsPage />} />
+                        {/* Future Shards (18) */}
+                        <Route path="/comparator" element={<ComparatorPage />} />
+                        <Route path="/disclosure" element={<DisclosurePage />} />
+                        <Route path="/chain" element={<ChainPage />} />
+                        <Route path="/audit-trail" element={<AuditTrailPage />} />
+                        <Route path="/crossexam" element={<CrossExamPage />} />
+                        <Route path="/bundle" element={<BundlePage />} />
+                        <Route path="/burden-map" element={<BurdenMapPage />} />
+                        <Route path="/comms" element={<CommsPage />} />
+                        <Route path="/skeleton" element={<SkeletonPage />} />
+                        <Route path="/rules" element={<RulesPage />} />
+                        <Route path="/costs" element={<CostsPage />} />
+                        <Route path="/sentiment" element={<SentimentPage />} />
+                        <Route path="/redline" element={<RedlinePage />} />
+                        <Route path="/strategist" element={<StrategistPage />} />
+                        <Route path="/playbook" element={<PlaybookPage />} />
+                        <Route path="/oracle" element={<OraclePage />} />
+                        <Route path="/respondent-intel" element={<RespondentIntelPage />} />
+                        <Route path="/digest" element={<DigestPage />} />
 
                         {/* Catch-all: try to render shard with generic UI */}
                         <Route path="*" element={<GenericShardPage />} />

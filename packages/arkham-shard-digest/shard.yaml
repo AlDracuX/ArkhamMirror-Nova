@@ -1,0 +1,56 @@
+# Digest Shard - Digest
+# Production Manifest v1.0
+# Compliant with shard_manifest_schema_prod.md
+
+name: digest
+version: "0.1.0"
+description: ADHD-optimized daily briefings and case summaries
+entry_point: arkham_shard_digest:DigestShard
+api_prefix: /api/digest
+requires_frame: ">=0.1.0"
+
+# Navigation - Shell integration
+navigation:
+  category: Export
+  order: 53
+  icon: Newspaper
+  label: Digest
+  route: /digest
+  badge_endpoint: /api/digest/items/count
+  badge_type: count
+  sub_routes: []
+
+# Dependencies - Frame service names
+dependencies:
+  services:
+    - database
+    - events
+  optional:
+    - llm
+    - vectors
+  shards: []
+
+# Capabilities
+capabilities:
+  - item_management
+  - data_export
+
+# Events - Format: {shard}.{entity}.{action}
+events:
+  publishes:
+    - digest.briefing.generated
+  subscribes:
+    - "*.*.*"
+
+# State Management
+state:
+  strategy: url
+  url_params:
+    - itemId
+    - tab
+    - view
+  local_keys: []
+
+# UI Configuration
+ui:
+  has_custom_ui: true

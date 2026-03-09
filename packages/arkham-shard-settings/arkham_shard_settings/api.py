@@ -14,12 +14,37 @@ if TYPE_CHECKING:
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
+# Module-level state for test injection
+_shard_instance: "SettingsShard | None" = None
+
+
+def init_api(db=None, event_bus=None, storage=None, shard=None):
+    """Initialize API with dependencies (used by tests)."""
+    global _shard_instance
+    if shard is not None:
+        _shard_instance = shard
+        return
+    # Create a minimal shard-like object for backwards compat
+    from types import SimpleNamespace
+
+    _shard_instance = SimpleNamespace(
+        _db=db,
+        _event_bus=event_bus,
+        _storage=storage,
+        _settings_cache={},
+        _profiles_cache={},
+        _backups={},
+        version="0.1.0",
+    )
+
 
 # === Helper to get shard instance ===
 
 
 def get_shard(request: Request) -> "SettingsShard":
     """Get the settings shard instance from app state."""
+    if _shard_instance is not None:
+        return _shard_instance
     shard = getattr(request.app.state, "settings_shard", None)
     if not shard:
         raise HTTPException(status_code=503, detail="Settings shard not available")

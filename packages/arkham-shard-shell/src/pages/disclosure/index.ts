@@ -1,0 +1,1 @@
+export { DisclosurePage } from './DisclosurePage';

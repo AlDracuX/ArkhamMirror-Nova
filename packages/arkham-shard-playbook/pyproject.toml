@@ -1,0 +1,22 @@
+[project]
+name = "arkham-shard-playbook"
+version = "0.1.0"
+description = "Litigation strategy and scenario planner"
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "arkham-frame>=0.1.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "black", "mypy"]
+
+[project.entry-points."arkham.shards"]
+playbook = "arkham_shard_playbook:PlaybookShard"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

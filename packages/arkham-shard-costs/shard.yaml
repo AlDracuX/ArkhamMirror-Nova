@@ -1,0 +1,57 @@
+# Costs Shard - Costs
+# Production Manifest v1.0
+# Compliant with shard_manifest_schema_prod.md
+
+name: costs
+version: "0.1.0"
+description: Litigation costs and conduct tracker
+entry_point: arkham_shard_costs:CostsShard
+api_prefix: /api/costs
+requires_frame: ">=0.1.0"
+
+# Navigation - Shell integration
+navigation:
+  category: Litigation
+  order: 18
+  icon: PoundSterling
+  label: Costs
+  route: /costs
+  badge_endpoint: /api/costs/items/count
+  badge_type: count
+  sub_routes: []
+
+# Dependencies - Frame service names
+dependencies:
+  services:
+    - database
+    - events
+  optional:
+    - llm
+    - vectors
+  shards: []
+
+# Capabilities
+capabilities:
+  - item_management
+  - data_export
+
+# Events - Format: {shard}.{entity}.{action}
+events:
+  publishes:
+    - costs.item.created
+    - costs.item.updated
+    - costs.item.deleted
+  subscribes: []
+
+# State Management
+state:
+  strategy: url
+  url_params:
+    - itemId
+    - tab
+    - view
+  local_keys: []
+
+# UI Configuration
+ui:
+  has_custom_ui: true

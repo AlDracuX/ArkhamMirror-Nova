@@ -1,0 +1,59 @@
+# Strategist Shard - Strategist
+# Production Manifest v1.0
+# Compliant with shard_manifest_schema_prod.md
+
+name: strategist
+version: "0.1.0"
+description: AI-powered adversarial modeling and red-teaming
+entry_point: arkham_shard_strategist:StrategistShard
+api_prefix: /api/strategist
+requires_frame: ">=0.1.0"
+
+# Navigation - Shell integration
+navigation:
+  category: Analysis
+  order: 42
+  icon: Shield
+  label: Strategist
+  route: /strategist
+  badge_endpoint: /api/strategist/items/count
+  badge_type: count
+  sub_routes: []
+
+# Dependencies - Frame service names
+dependencies:
+  services:
+    - database
+    - events
+  optional:
+    - llm
+    - vectors
+  shards: []
+
+# Capabilities
+capabilities:
+  - item_management
+  - data_export
+
+# Events - Format: {shard}.{entity}.{action}
+events:
+  publishes:
+    - strategist.prediction.generated
+    - strategist.weakness.found
+  subscribes:
+    - playbook.strategy.updated
+    - respondent.profile.updated
+    - witnesses.statement.created
+
+# State Management
+state:
+  strategy: url
+  url_params:
+    - itemId
+    - tab
+    - view
+  local_keys: []
+
+# UI Configuration
+ui:
+  has_custom_ui: true
