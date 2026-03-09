@@ -328,7 +328,10 @@ class VectorService:
             from sentence_transformers import SentenceTransformer
 
             def _load_model():
-                return SentenceTransformer(model_name)
+                import os
+                device = os.environ.get("EMBED_DEVICE", "")
+                kwargs = {"device": device} if device else {}
+                return SentenceTransformer(model_name, **kwargs)
 
             logger.info(f"Loading embedding model '{model_name}' (this may download on first use)...")
             self._embedding_model = await asyncio.to_thread(_load_model)
