@@ -47,6 +47,7 @@ class WitnessesShard(ArkhamShard):
 
     async def initialize(self, frame) -> None:
         self.frame = frame
+        self._db = frame.database
         await self._create_schema()
         self._subscribe_events()
         init_api(shard=self, event_bus=frame.events)
@@ -61,10 +62,10 @@ class WitnessesShard(ArkhamShard):
     # === Schema ===
 
     async def _create_schema(self) -> None:
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE SCHEMA IF NOT EXISTS arkham_witnesses
         """)
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE TABLE IF NOT EXISTS arkham_witnesses.witnesses (
                 id UUID PRIMARY KEY,
                 tenant_id UUID NOT NULL,
@@ -85,7 +86,7 @@ class WitnessesShard(ArkhamShard):
                 metadata JSONB DEFAULT '{}'
             )
         """)
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE TABLE IF NOT EXISTS arkham_witnesses.witness_statements (
                 id UUID PRIMARY KEY,
                 tenant_id UUID NOT NULL,
@@ -101,7 +102,7 @@ class WitnessesShard(ArkhamShard):
                 updated_at TIMESTAMP DEFAULT NOW()
             )
         """)
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE TABLE IF NOT EXISTS arkham_witnesses.cross_exam_notes (
                 id UUID PRIMARY KEY,
                 tenant_id UUID NOT NULL,
@@ -116,19 +117,19 @@ class WitnessesShard(ArkhamShard):
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE INDEX IF NOT EXISTS idx_witnesses_tenant
             ON arkham_witnesses.witnesses(tenant_id)
         """)
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE INDEX IF NOT EXISTS idx_witnesses_tenant_party
             ON arkham_witnesses.witnesses(tenant_id, party)
         """)
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE INDEX IF NOT EXISTS idx_statements_witness
             ON arkham_witnesses.witness_statements(witness_id)
         """)
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE INDEX IF NOT EXISTS idx_cross_exam_witness
             ON arkham_witnesses.cross_exam_notes(witness_id)
         """)
@@ -159,7 +160,7 @@ class WitnessesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
         now = datetime.utcnow()
 
-        await self.frame.db.execute("""
+        await self._db.execute("""
             INSERT INTO arkham_witnesses.witnesses
             (id, tenant_id, name, role, status, party, organization, position,
              contact_info, notes, credibility_level, credibility_notes,
@@ -198,7 +199,7 @@ class WitnessesShard(ArkhamShard):
 
     async def get_witness(self, witness_id: str) -> Optional[Witness]:
         tenant_id = str(self.get_tenant_id())
-        row = await self.frame.db.fetchrow("""
+        row = await self._db.fetch_one("""
             SELECT * FROM arkham_witnesses.witnesses
             WHERE id = %(id)s AND tenant_id = %(tenant_id)s
         """, {"id": witness_id, "tenant_id": tenant_id})
@@ -234,7 +235,7 @@ class WitnessesShard(ArkhamShard):
         params["limit"] = limit
         params["offset"] = offset
 
-        rows = await self.frame.db.fetch(f"""
+        rows = await self._db.fetch_all(f"""
             SELECT * FROM arkham_witnesses.witnesses
             WHERE {where}
             ORDER BY created_at DESC
@@ -245,7 +246,7 @@ class WitnessesShard(ArkhamShard):
 
     async def count_witnesses(self) -> int:
         tenant_id = str(self.get_tenant_id())
-        row = await self.frame.db.fetchrow("""
+        row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_witnesses.witnesses
             WHERE tenant_id = %(tenant_id)s
         """, {"tenant_id": tenant_id})
@@ -278,7 +279,7 @@ class WitnessesShard(ArkhamShard):
             params["metadata"] = json.dumps(data["metadata"])
 
         set_clause = ", ".join(sets)
-        await self.frame.db.execute(f"""
+        await self._db.execute(f"""
             UPDATE arkham_witnesses.witnesses
             SET {set_clause}
             WHERE id = %(id)s AND tenant_id = %(tenant_id)s
@@ -292,7 +293,7 @@ class WitnessesShard(ArkhamShard):
 
     async def delete_witness(self, witness_id: str) -> bool:
         tenant_id = str(self.get_tenant_id())
-        await self.frame.db.execute("""
+        await self._db.execute("""
             DELETE FROM arkham_witnesses.witnesses
             WHERE id = %(id)s AND tenant_id = %(tenant_id)s
         """, {"id": witness_id, "tenant_id": tenant_id})
@@ -309,14 +310,14 @@ class WitnessesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
 
         # Auto-increment version
-        row = await self.frame.db.fetchrow("""
+        row = await self._db.fetch_one("""
             SELECT COALESCE(MAX(version), 0) + 1 as next_ver
             FROM arkham_witnesses.witness_statements
             WHERE witness_id = %(wid)s AND tenant_id = %(tid)s
         """, {"wid": witness_id, "tid": tenant_id})
         version = row["next_ver"] if row else 1
 
-        await self.frame.db.execute("""
+        await self._db.execute("""
             INSERT INTO arkham_witnesses.witness_statements
             (id, tenant_id, witness_id, version, title, content, status,
              key_points, contradictions_found, filed_date, created_at, updated_at)
@@ -337,7 +338,7 @@ class WitnessesShard(ArkhamShard):
         })
 
         # Update witness status
-        await self.frame.db.execute("""
+        await self._db.execute("""
             UPDATE arkham_witnesses.witnesses
             SET status = 'statement_taken', updated_at = NOW()
             WHERE id = %(wid)s AND tenant_id = %(tid)s
@@ -353,7 +354,7 @@ class WitnessesShard(ArkhamShard):
 
     async def get_statement(self, statement_id: str) -> Optional[WitnessStatement]:
         tenant_id = str(self.get_tenant_id())
-        row = await self.frame.db.fetchrow("""
+        row = await self._db.fetch_one("""
             SELECT * FROM arkham_witnesses.witness_statements
             WHERE id = %(id)s AND tenant_id = %(tid)s
         """, {"id": statement_id, "tid": tenant_id})
@@ -363,7 +364,7 @@ class WitnessesShard(ArkhamShard):
 
     async def list_statements(self, witness_id: str) -> List[WitnessStatement]:
         tenant_id = str(self.get_tenant_id())
-        rows = await self.frame.db.fetch("""
+        rows = await self._db.fetch_all("""
             SELECT * FROM arkham_witnesses.witness_statements
             WHERE witness_id = %(wid)s AND tenant_id = %(tid)s
             ORDER BY version DESC
@@ -390,7 +391,7 @@ class WitnessesShard(ArkhamShard):
             params["fd"] = data["filed_date"]
 
         set_clause = ", ".join(sets)
-        await self.frame.db.execute(f"""
+        await self._db.execute(f"""
             UPDATE arkham_witnesses.witness_statements
             SET {set_clause}
             WHERE id = %(id)s AND tenant_id = %(tid)s
@@ -408,7 +409,7 @@ class WitnessesShard(ArkhamShard):
         note_id = str(uuid.uuid4())
         tenant_id = str(self.get_tenant_id())
 
-        await self.frame.db.execute("""
+        await self._db.execute("""
             INSERT INTO arkham_witnesses.cross_exam_notes
             (id, tenant_id, witness_id, statement_id, topic, question,
              expected_answer, actual_answer, effectiveness, notes, created_at)
@@ -439,7 +440,7 @@ class WitnessesShard(ArkhamShard):
 
     async def list_cross_exam_notes(self, witness_id: str) -> List[CrossExamNote]:
         tenant_id = str(self.get_tenant_id())
-        rows = await self.frame.db.fetch("""
+        rows = await self._db.fetch_all("""
             SELECT * FROM arkham_witnesses.cross_exam_notes
             WHERE witness_id = %(wid)s AND tenant_id = %(tid)s
             ORDER BY created_at DESC
@@ -459,12 +460,12 @@ class WitnessesShard(ArkhamShard):
         if not witness:
             return {}
 
-        stmt_row = await self.frame.db.fetchrow("""
+        stmt_row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_witnesses.witness_statements
             WHERE witness_id = %(wid)s AND tenant_id = %(tid)s
         """, {"wid": witness_id, "tid": tenant_id})
 
-        note_row = await self.frame.db.fetchrow("""
+        note_row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_witnesses.cross_exam_notes
             WHERE witness_id = %(wid)s AND tenant_id = %(tid)s
         """, {"wid": witness_id, "tid": tenant_id})
@@ -483,7 +484,7 @@ class WitnessesShard(ArkhamShard):
 
     async def get_stats(self) -> WitnessStats:
         tenant_id = str(self.get_tenant_id())
-        rows = await self.frame.db.fetch("""
+        rows = await self._db.fetch_all("""
             SELECT role, status, party, COUNT(*) as cnt
             FROM arkham_witnesses.witnesses
             WHERE tenant_id = %(tid)s
@@ -497,13 +498,13 @@ class WitnessesShard(ArkhamShard):
             stats.by_status[r["status"]] = stats.by_status.get(r["status"], 0) + r["cnt"]
             stats.by_party[r["party"]] = stats.by_party.get(r["party"], 0) + r["cnt"]
 
-        stmt_row = await self.frame.db.fetchrow("""
+        stmt_row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_witnesses.witness_statements
             WHERE tenant_id = %(tid)s
         """, {"tid": tenant_id})
         stats.total_statements = stmt_row["cnt"] if stmt_row else 0
 
-        note_row = await self.frame.db.fetchrow("""
+        note_row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_witnesses.cross_exam_notes
             WHERE tenant_id = %(tid)s
         """, {"tid": tenant_id})

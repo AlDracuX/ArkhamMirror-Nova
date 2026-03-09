@@ -48,6 +48,7 @@ class CasemapShard(ArkhamShard):
 
     async def initialize(self, frame) -> None:
         self.frame = frame
+        self._db = frame.database
         await self._create_schema()
         self._subscribe_events()
         init_api(shard=self, event_bus=frame.events)
@@ -62,8 +63,8 @@ class CasemapShard(ArkhamShard):
     # === Schema ===
 
     async def _create_schema(self) -> None:
-        await self.frame.db.execute("CREATE SCHEMA IF NOT EXISTS arkham_casemap")
-        await self.frame.db.execute("""
+        await self._db.execute("CREATE SCHEMA IF NOT EXISTS arkham_casemap")
+        await self._db.execute("""
             CREATE TABLE IF NOT EXISTS arkham_casemap.legal_theories (
                 id UUID PRIMARY KEY,
                 tenant_id UUID NOT NULL,
@@ -80,7 +81,7 @@ class CasemapShard(ArkhamShard):
                 metadata JSONB DEFAULT '{}'
             )
         """)
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE TABLE IF NOT EXISTS arkham_casemap.legal_elements (
                 id UUID PRIMARY KEY,
                 tenant_id UUID NOT NULL,
@@ -97,7 +98,7 @@ class CasemapShard(ArkhamShard):
                 updated_at TIMESTAMP DEFAULT NOW()
             )
         """)
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE TABLE IF NOT EXISTS arkham_casemap.evidence_links (
                 id UUID PRIMARY KEY,
                 tenant_id UUID NOT NULL,
@@ -112,15 +113,15 @@ class CasemapShard(ArkhamShard):
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE INDEX IF NOT EXISTS idx_theories_tenant
             ON arkham_casemap.legal_theories(tenant_id)
         """)
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE INDEX IF NOT EXISTS idx_elements_theory
             ON arkham_casemap.legal_elements(tenant_id, theory_id)
         """)
-        await self.frame.db.execute("""
+        await self._db.execute("""
             CREATE INDEX IF NOT EXISTS idx_evidence_element
             ON arkham_casemap.evidence_links(tenant_id, element_id)
         """)
@@ -150,7 +151,7 @@ class CasemapShard(ArkhamShard):
         theory_id = str(uuid.uuid4())
         tenant_id = str(self.get_tenant_id())
 
-        await self.frame.db.execute("""
+        await self._db.execute("""
             INSERT INTO arkham_casemap.legal_theories
             (id, tenant_id, title, claim_type, description, statutory_basis,
              respondent_ids, status, notes, metadata)
@@ -178,7 +179,7 @@ class CasemapShard(ArkhamShard):
 
     async def get_theory(self, theory_id: str) -> Optional[LegalTheory]:
         tenant_id = str(self.get_tenant_id())
-        row = await self.frame.db.fetchrow("""
+        row = await self._db.fetch_one("""
             SELECT * FROM arkham_casemap.legal_theories
             WHERE id = %(id)s AND tenant_id = %(tid)s
         """, {"id": theory_id, "tid": tenant_id})
@@ -210,7 +211,7 @@ class CasemapShard(ArkhamShard):
         params["limit"] = limit
         params["offset"] = offset
 
-        rows = await self.frame.db.fetch(f"""
+        rows = await self._db.fetch_all(f"""
             SELECT * FROM arkham_casemap.legal_theories
             WHERE {where}
             ORDER BY created_at DESC
@@ -220,7 +221,7 @@ class CasemapShard(ArkhamShard):
 
     async def count_theories(self) -> int:
         tenant_id = str(self.get_tenant_id())
-        row = await self.frame.db.fetchrow("""
+        row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_casemap.legal_theories
             WHERE tenant_id = %(tid)s
         """, {"tid": tenant_id})
@@ -243,7 +244,7 @@ class CasemapShard(ArkhamShard):
             params["meta"] = json.dumps(data["metadata"])
 
         set_clause = ", ".join(sets)
-        await self.frame.db.execute(f"""
+        await self._db.execute(f"""
             UPDATE arkham_casemap.legal_theories
             SET {set_clause}
             WHERE id = %(id)s AND tenant_id = %(tid)s
@@ -257,7 +258,7 @@ class CasemapShard(ArkhamShard):
 
     async def delete_theory(self, theory_id: str) -> bool:
         tenant_id = str(self.get_tenant_id())
-        await self.frame.db.execute("""
+        await self._db.execute("""
             DELETE FROM arkham_casemap.legal_theories
             WHERE id = %(id)s AND tenant_id = %(tid)s
         """, {"id": theory_id, "tid": tenant_id})
@@ -274,14 +275,14 @@ class CasemapShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id())
 
         # Auto-increment display_order
-        row = await self.frame.db.fetchrow("""
+        row = await self._db.fetch_one("""
             SELECT COALESCE(MAX(display_order), 0) + 1 as next_ord
             FROM arkham_casemap.legal_elements
             WHERE theory_id = %(tid_theory)s AND tenant_id = %(tid)s
         """, {"tid_theory": theory_id, "tid": tenant_id})
         order = row["next_ord"] if row else 1
 
-        await self.frame.db.execute("""
+        await self._db.execute("""
             INSERT INTO arkham_casemap.legal_elements
             (id, tenant_id, theory_id, title, description, burden, status,
              required, statutory_reference, notes, display_order)
@@ -310,7 +311,7 @@ class CasemapShard(ArkhamShard):
 
     async def get_element(self, element_id: str) -> Optional[LegalElement]:
         tenant_id = str(self.get_tenant_id())
-        row = await self.frame.db.fetchrow("""
+        row = await self._db.fetch_one("""
             SELECT * FROM arkham_casemap.legal_elements
             WHERE id = %(id)s AND tenant_id = %(tid)s
         """, {"id": element_id, "tid": tenant_id})
@@ -320,7 +321,7 @@ class CasemapShard(ArkhamShard):
 
     async def list_elements(self, theory_id: str) -> List[LegalElement]:
         tenant_id = str(self.get_tenant_id())
-        rows = await self.frame.db.fetch("""
+        rows = await self._db.fetch_all("""
             SELECT * FROM arkham_casemap.legal_elements
             WHERE theory_id = %(theory_id)s AND tenant_id = %(tid)s
             ORDER BY display_order ASC
@@ -344,7 +345,7 @@ class CasemapShard(ArkhamShard):
             params["order"] = data["display_order"]
 
         set_clause = ", ".join(sets)
-        await self.frame.db.execute(f"""
+        await self._db.execute(f"""
             UPDATE arkham_casemap.legal_elements
             SET {set_clause}
             WHERE id = %(id)s AND tenant_id = %(tid)s
@@ -354,7 +355,7 @@ class CasemapShard(ArkhamShard):
 
     async def delete_element(self, element_id: str) -> bool:
         tenant_id = str(self.get_tenant_id())
-        await self.frame.db.execute("""
+        await self._db.execute("""
             DELETE FROM arkham_casemap.legal_elements
             WHERE id = %(id)s AND tenant_id = %(tid)s
         """, {"id": element_id, "tid": tenant_id})
@@ -366,7 +367,7 @@ class CasemapShard(ArkhamShard):
         link_id = str(uuid.uuid4())
         tenant_id = str(self.get_tenant_id())
 
-        await self.frame.db.execute("""
+        await self._db.execute("""
             INSERT INTO arkham_casemap.evidence_links
             (id, tenant_id, element_id, document_id, witness_id, description,
              strength, source_reference, supports_element, notes)
@@ -402,7 +403,7 @@ class CasemapShard(ArkhamShard):
 
     async def list_evidence(self, element_id: str) -> List[EvidenceLink]:
         tenant_id = str(self.get_tenant_id())
-        rows = await self.frame.db.fetch("""
+        rows = await self._db.fetch_all("""
             SELECT * FROM arkham_casemap.evidence_links
             WHERE element_id = %(eid)s AND tenant_id = %(tid)s
             ORDER BY created_at DESC
@@ -411,7 +412,7 @@ class CasemapShard(ArkhamShard):
 
     async def delete_evidence(self, link_id: str) -> bool:
         tenant_id = str(self.get_tenant_id())
-        await self.frame.db.execute("""
+        await self._db.execute("""
             DELETE FROM arkham_casemap.evidence_links
             WHERE id = %(id)s AND tenant_id = %(tid)s
         """, {"id": link_id, "tid": tenant_id})
@@ -466,7 +467,7 @@ class CasemapShard(ArkhamShard):
 
         # Update theory strength
         tenant_id = str(self.get_tenant_id())
-        await self.frame.db.execute("""
+        await self._db.execute("""
             UPDATE arkham_casemap.legal_theories
             SET overall_strength = %(strength)s, updated_at = NOW()
             WHERE id = %(id)s AND tenant_id = %(tid)s
