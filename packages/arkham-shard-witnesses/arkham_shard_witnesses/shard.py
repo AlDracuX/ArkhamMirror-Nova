@@ -45,16 +45,28 @@ class WitnessesShard(ArkhamShard):
     version = "0.1.0"
     description = "Witness management and credibility tracking for litigation"
 
+    def __init__(self):
+        super().__init__()
+        self._frame = None
+        self._db = None
+        self._event_bus = None
+
     async def initialize(self, frame) -> None:
+        self._frame = frame
         self.frame = frame
         self._db = frame.database
+        self._event_bus = frame.get_service("events")
         await self._create_schema()
         await self._subscribe_events()
-        init_api(shard=self, event_bus=frame.events)
+        init_api(shard=self, event_bus=self._event_bus)
+        if hasattr(frame, "app") and frame.app:
+            frame.app.state.witnesses_shard = self
         logger.info("Witnesses shard initialized")
 
     async def shutdown(self) -> None:
         logger.info("Witnesses shard shutting down")
+        self._db = None
+        self._event_bus = None
 
     def get_routes(self):
         return router
@@ -68,7 +80,7 @@ class WitnessesShard(ArkhamShard):
         await self._db.execute("""
             CREATE TABLE IF NOT EXISTS arkham_witnesses.witnesses (
                 id UUID PRIMARY KEY,
-                tenant_id UUID NOT NULL,
+                tenant_id UUID,
                 name VARCHAR(500) NOT NULL,
                 role VARCHAR(50) NOT NULL DEFAULT 'claimant',
                 status VARCHAR(50) NOT NULL DEFAULT 'identified',
@@ -89,7 +101,7 @@ class WitnessesShard(ArkhamShard):
         await self._db.execute("""
             CREATE TABLE IF NOT EXISTS arkham_witnesses.witness_statements (
                 id UUID PRIMARY KEY,
-                tenant_id UUID NOT NULL,
+                tenant_id UUID,
                 witness_id UUID NOT NULL REFERENCES arkham_witnesses.witnesses(id) ON DELETE CASCADE,
                 version INT NOT NULL DEFAULT 1,
                 title VARCHAR(500) DEFAULT '',
@@ -105,7 +117,7 @@ class WitnessesShard(ArkhamShard):
         await self._db.execute("""
             CREATE TABLE IF NOT EXISTS arkham_witnesses.cross_exam_notes (
                 id UUID PRIMARY KEY,
-                tenant_id UUID NOT NULL,
+                tenant_id UUID,
                 witness_id UUID NOT NULL REFERENCES arkham_witnesses.witnesses(id) ON DELETE CASCADE,
                 statement_id UUID,
                 topic VARCHAR(500) DEFAULT '',
@@ -137,10 +149,13 @@ class WitnessesShard(ArkhamShard):
     # === Events ===
 
     async def _subscribe_events(self) -> None:
+        if not self._event_bus:
+            logger.debug("Event bus not available - skipping subscriptions")
+            return
         try:
-            await self.frame.events.subscribe("entity.created", self._handle_entity_created)
-            await self.frame.events.subscribe("credibility.scored", self._handle_credibility_scored)
-            await self.frame.events.subscribe("contradictions.found", self._handle_contradiction_found)
+            await self._event_bus.subscribe("entity.created", self._handle_entity_created)
+            await self._event_bus.subscribe("credibility.scored", self._handle_credibility_scored)
+            await self._event_bus.subscribe("contradictions.found", self._handle_contradiction_found)
         except Exception as e:
             logger.debug(f"Event subscription skipped: {e}")
 
@@ -157,7 +172,7 @@ class WitnessesShard(ArkhamShard):
 
     async def create_witness(self, data: Dict[str, Any]) -> Witness:
         witness_id = str(uuid.uuid4())
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         now = datetime.utcnow()
 
         await self._db.execute("""
@@ -189,16 +204,17 @@ class WitnessesShard(ArkhamShard):
             "metadata": json.dumps(data.get("metadata", {})),
         })
 
-        await self.frame.events.emit("witnesses.witness.created", {
-            "witness_id": witness_id,
-            "name": data.get("name"),
-            "role": data.get("role", "claimant"),
-        }, source="witnesses-shard")
+        if self._event_bus:
+            await self._event_bus.emit("witnesses.witness.created", {
+                "witness_id": witness_id,
+                "name": data.get("name"),
+                "role": data.get("role", "claimant"),
+            }, source="witnesses-shard")
 
         return await self.get_witness(witness_id)
 
     async def get_witness(self, witness_id: str) -> Optional[Witness]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         row = await self._db.fetch_one("""
             SELECT * FROM arkham_witnesses.witnesses
             WHERE id = :id AND tenant_id = :tenant_id
@@ -210,7 +226,7 @@ class WitnessesShard(ArkhamShard):
 
     async def list_witnesses(self, filters: Optional[WitnessFilter] = None,
                               limit: int = 100, offset: int = 0) -> List[Witness]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         conditions = ["tenant_id = :tenant_id"]
         params: Dict[str, Any] = {"tenant_id": tenant_id}
 
@@ -245,7 +261,7 @@ class WitnessesShard(ArkhamShard):
         return [self._row_to_witness(r) for r in rows]
 
     async def count_witnesses(self) -> int:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_witnesses.witnesses
             WHERE tenant_id = :tenant_id
@@ -253,7 +269,7 @@ class WitnessesShard(ArkhamShard):
         return row["cnt"] if row else 0
 
     async def update_witness(self, witness_id: str, data: Dict[str, Any]) -> Optional[Witness]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         sets = ["updated_at = NOW()"]
         params: Dict[str, Any] = {"id": witness_id, "tenant_id": tenant_id}
 
@@ -285,29 +301,31 @@ class WitnessesShard(ArkhamShard):
             WHERE id = :id AND tenant_id = :tenant_id
         """, params)
 
-        await self.frame.events.emit("witnesses.witness.updated", {
-            "witness_id": witness_id,
-        }, source="witnesses-shard")
+        if self._event_bus:
+            await self._event_bus.emit("witnesses.witness.updated", {
+                "witness_id": witness_id,
+            }, source="witnesses-shard")
 
         return await self.get_witness(witness_id)
 
     async def delete_witness(self, witness_id: str) -> bool:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         await self._db.execute("""
             DELETE FROM arkham_witnesses.witnesses
             WHERE id = :id AND tenant_id = :tenant_id
         """, {"id": witness_id, "tenant_id": tenant_id})
 
-        await self.frame.events.emit("witnesses.witness.deleted", {
-            "witness_id": witness_id,
-        }, source="witnesses-shard")
+        if self._event_bus:
+            await self._event_bus.emit("witnesses.witness.deleted", {
+                "witness_id": witness_id,
+            }, source="witnesses-shard")
         return True
 
     # === Statements ===
 
     async def add_statement(self, witness_id: str, data: Dict[str, Any]) -> WitnessStatement:
         stmt_id = str(uuid.uuid4())
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
 
         # Auto-increment version
         row = await self._db.fetch_one("""
@@ -344,16 +362,17 @@ class WitnessesShard(ArkhamShard):
             WHERE id = :wid AND tenant_id = :tid
         """, {"wid": witness_id, "tid": tenant_id})
 
-        await self.frame.events.emit("witnesses.statement.added", {
-            "witness_id": witness_id,
-            "statement_id": stmt_id,
-            "version": version,
-        }, source="witnesses-shard")
+        if self._event_bus:
+            await self._event_bus.emit("witnesses.statement.added", {
+                "witness_id": witness_id,
+                "statement_id": stmt_id,
+                "version": version,
+            }, source="witnesses-shard")
 
         return await self.get_statement(stmt_id)
 
     async def get_statement(self, statement_id: str) -> Optional[WitnessStatement]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         row = await self._db.fetch_one("""
             SELECT * FROM arkham_witnesses.witness_statements
             WHERE id = :id AND tenant_id = :tid
@@ -363,7 +382,7 @@ class WitnessesShard(ArkhamShard):
         return self._row_to_statement(row)
 
     async def list_statements(self, witness_id: str) -> List[WitnessStatement]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         rows = await self._db.fetch_all("""
             SELECT * FROM arkham_witnesses.witness_statements
             WHERE witness_id = :wid AND tenant_id = :tid
@@ -372,7 +391,7 @@ class WitnessesShard(ArkhamShard):
         return [self._row_to_statement(r) for r in rows]
 
     async def update_statement(self, statement_id: str, data: Dict[str, Any]) -> Optional[WitnessStatement]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         sets = ["updated_at = NOW()"]
         params: Dict[str, Any] = {"id": statement_id, "tid": tenant_id}
 
@@ -397,9 +416,10 @@ class WitnessesShard(ArkhamShard):
             WHERE id = :id AND tenant_id = :tid
         """, params)
 
-        await self.frame.events.emit("witnesses.statement.updated", {
-            "statement_id": statement_id,
-        }, source="witnesses-shard")
+        if self._event_bus:
+            await self._event_bus.emit("witnesses.statement.updated", {
+                "statement_id": statement_id,
+            }, source="witnesses-shard")
 
         return await self.get_statement(statement_id)
 
@@ -407,7 +427,7 @@ class WitnessesShard(ArkhamShard):
 
     async def add_cross_exam_note(self, witness_id: str, data: Dict[str, Any]) -> CrossExamNote:
         note_id = str(uuid.uuid4())
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
 
         await self._db.execute("""
             INSERT INTO arkham_witnesses.cross_exam_notes
@@ -439,7 +459,7 @@ class WitnessesShard(ArkhamShard):
         )
 
     async def list_cross_exam_notes(self, witness_id: str) -> List[CrossExamNote]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         rows = await self._db.fetch_all("""
             SELECT * FROM arkham_witnesses.cross_exam_notes
             WHERE witness_id = :wid AND tenant_id = :tid
@@ -455,7 +475,7 @@ class WitnessesShard(ArkhamShard):
     # === Summary ===
 
     async def get_witness_summary(self, witness_id: str) -> Dict[str, Any]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         witness = await self.get_witness(witness_id)
         if not witness:
             return {}
@@ -483,7 +503,7 @@ class WitnessesShard(ArkhamShard):
     # === Stats ===
 
     async def get_stats(self) -> WitnessStats:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         rows = await self._db.fetch_all("""
             SELECT role, status, party, COUNT(*) as cnt
             FROM arkham_witnesses.witnesses

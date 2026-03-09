@@ -46,16 +46,28 @@ class CasemapShard(ArkhamShard):
     version = "0.1.0"
     description = "Legal case theory mapping with evidence linkage and burden tracking"
 
+    def __init__(self):
+        super().__init__()
+        self._frame = None
+        self._db = None
+        self._event_bus = None
+
     async def initialize(self, frame) -> None:
+        self._frame = frame
         self.frame = frame
         self._db = frame.database
+        self._event_bus = frame.get_service("events")
         await self._create_schema()
         await self._subscribe_events()
-        init_api(shard=self, event_bus=frame.events)
+        init_api(shard=self, event_bus=self._event_bus)
+        if hasattr(frame, "app") and frame.app:
+            frame.app.state.casemap_shard = self
         logger.info("Casemap shard initialized")
 
     async def shutdown(self) -> None:
         logger.info("Casemap shard shutting down")
+        self._db = None
+        self._event_bus = None
 
     def get_routes(self):
         return router
@@ -67,7 +79,7 @@ class CasemapShard(ArkhamShard):
         await self._db.execute("""
             CREATE TABLE IF NOT EXISTS arkham_casemap.legal_theories (
                 id UUID PRIMARY KEY,
-                tenant_id UUID NOT NULL,
+                tenant_id UUID,
                 title VARCHAR(500) NOT NULL,
                 claim_type VARCHAR(100) NOT NULL,
                 description TEXT DEFAULT '',
@@ -84,7 +96,7 @@ class CasemapShard(ArkhamShard):
         await self._db.execute("""
             CREATE TABLE IF NOT EXISTS arkham_casemap.legal_elements (
                 id UUID PRIMARY KEY,
-                tenant_id UUID NOT NULL,
+                tenant_id UUID,
                 theory_id UUID NOT NULL REFERENCES arkham_casemap.legal_theories(id) ON DELETE CASCADE,
                 title VARCHAR(500) NOT NULL,
                 description TEXT DEFAULT '',
@@ -101,7 +113,7 @@ class CasemapShard(ArkhamShard):
         await self._db.execute("""
             CREATE TABLE IF NOT EXISTS arkham_casemap.evidence_links (
                 id UUID PRIMARY KEY,
-                tenant_id UUID NOT NULL,
+                tenant_id UUID,
                 element_id UUID NOT NULL REFERENCES arkham_casemap.legal_elements(id) ON DELETE CASCADE,
                 document_id UUID,
                 witness_id UUID,
@@ -129,10 +141,13 @@ class CasemapShard(ArkhamShard):
     # === Events ===
 
     async def _subscribe_events(self) -> None:
+        if not self._event_bus:
+            logger.debug("Event bus not available - skipping subscriptions")
+            return
         try:
-            await self.frame.events.subscribe("claims.created", self._handle_claim_created)
-            await self.frame.events.subscribe("contradictions.found", self._handle_contradiction)
-            await self.frame.events.subscribe("document.processed", self._handle_document)
+            await self._event_bus.subscribe("claims.created", self._handle_claim_created)
+            await self._event_bus.subscribe("contradictions.found", self._handle_contradiction)
+            await self._event_bus.subscribe("document.processed", self._handle_document)
         except Exception as e:
             logger.debug(f"Event subscription skipped: {e}")
 
@@ -149,7 +164,7 @@ class CasemapShard(ArkhamShard):
 
     async def create_theory(self, data: Dict[str, Any]) -> LegalTheory:
         theory_id = str(uuid.uuid4())
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
 
         await self._db.execute("""
             INSERT INTO arkham_casemap.legal_theories
@@ -169,16 +184,17 @@ class CasemapShard(ArkhamShard):
             "meta": json.dumps(data.get("metadata", {})),
         })
 
-        await self.frame.events.emit("casemap.theory.created", {
-            "theory_id": theory_id,
-            "title": data.get("title"),
-            "claim_type": data.get("claim_type"),
-        }, source="casemap-shard")
+        if self._event_bus:
+            await self._event_bus.emit("casemap.theory.created", {
+                "theory_id": theory_id,
+                "title": data.get("title"),
+                "claim_type": data.get("claim_type"),
+            }, source="casemap-shard")
 
         return await self.get_theory(theory_id)
 
     async def get_theory(self, theory_id: str) -> Optional[LegalTheory]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         row = await self._db.fetch_one("""
             SELECT * FROM arkham_casemap.legal_theories
             WHERE id = :id AND tenant_id = :tid
@@ -189,7 +205,7 @@ class CasemapShard(ArkhamShard):
 
     async def list_theories(self, filters: Optional[TheoryFilter] = None,
                              limit: int = 100, offset: int = 0) -> List[LegalTheory]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         conditions = ["tenant_id = :tid"]
         params: Dict[str, Any] = {"tid": tenant_id}
 
@@ -220,7 +236,7 @@ class CasemapShard(ArkhamShard):
         return [self._row_to_theory(r) for r in rows]
 
     async def count_theories(self) -> int:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         row = await self._db.fetch_one("""
             SELECT COUNT(*) as cnt FROM arkham_casemap.legal_theories
             WHERE tenant_id = :tid
@@ -228,7 +244,7 @@ class CasemapShard(ArkhamShard):
         return row["cnt"] if row else 0
 
     async def update_theory(self, theory_id: str, data: Dict[str, Any]) -> Optional[LegalTheory]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         sets = ["updated_at = NOW()"]
         params: Dict[str, Any] = {"id": theory_id, "tid": tenant_id}
 
@@ -250,29 +266,31 @@ class CasemapShard(ArkhamShard):
             WHERE id = :id AND tenant_id = :tid
         """, params)
 
-        await self.frame.events.emit("casemap.theory.updated", {
-            "theory_id": theory_id,
-        }, source="casemap-shard")
+        if self._event_bus:
+            await self._event_bus.emit("casemap.theory.updated", {
+                "theory_id": theory_id,
+            }, source="casemap-shard")
 
         return await self.get_theory(theory_id)
 
     async def delete_theory(self, theory_id: str) -> bool:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         await self._db.execute("""
             DELETE FROM arkham_casemap.legal_theories
             WHERE id = :id AND tenant_id = :tid
         """, {"id": theory_id, "tid": tenant_id})
 
-        await self.frame.events.emit("casemap.theory.deleted", {
-            "theory_id": theory_id,
-        }, source="casemap-shard")
+        if self._event_bus:
+            await self._event_bus.emit("casemap.theory.deleted", {
+                "theory_id": theory_id,
+            }, source="casemap-shard")
         return True
 
     # === Elements ===
 
     async def create_element(self, theory_id: str, data: Dict[str, Any]) -> LegalElement:
         elem_id = str(uuid.uuid4())
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
 
         # Auto-increment display_order
         row = await self._db.fetch_one("""
@@ -301,16 +319,17 @@ class CasemapShard(ArkhamShard):
             "order": data.get("display_order", order),
         })
 
-        await self.frame.events.emit("casemap.element.created", {
-            "theory_id": theory_id,
-            "element_id": elem_id,
-            "title": data.get("title"),
-        }, source="casemap-shard")
+        if self._event_bus:
+            await self._event_bus.emit("casemap.element.created", {
+                "theory_id": theory_id,
+                "element_id": elem_id,
+                "title": data.get("title"),
+            }, source="casemap-shard")
 
         return await self.get_element(elem_id)
 
     async def get_element(self, element_id: str) -> Optional[LegalElement]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         row = await self._db.fetch_one("""
             SELECT * FROM arkham_casemap.legal_elements
             WHERE id = :id AND tenant_id = :tid
@@ -320,7 +339,7 @@ class CasemapShard(ArkhamShard):
         return self._row_to_element(row)
 
     async def list_elements(self, theory_id: str) -> List[LegalElement]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         rows = await self._db.fetch_all("""
             SELECT * FROM arkham_casemap.legal_elements
             WHERE theory_id = :theory_id AND tenant_id = :tid
@@ -329,7 +348,7 @@ class CasemapShard(ArkhamShard):
         return [self._row_to_element(r) for r in rows]
 
     async def update_element(self, element_id: str, data: Dict[str, Any]) -> Optional[LegalElement]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         sets = ["updated_at = NOW()"]
         params: Dict[str, Any] = {"id": element_id, "tid": tenant_id}
 
@@ -354,7 +373,7 @@ class CasemapShard(ArkhamShard):
         return await self.get_element(element_id)
 
     async def delete_element(self, element_id: str) -> bool:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         await self._db.execute("""
             DELETE FROM arkham_casemap.legal_elements
             WHERE id = :id AND tenant_id = :tid
@@ -365,7 +384,7 @@ class CasemapShard(ArkhamShard):
 
     async def link_evidence(self, element_id: str, data: Dict[str, Any]) -> EvidenceLink:
         link_id = str(uuid.uuid4())
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
 
         await self._db.execute("""
             INSERT INTO arkham_casemap.evidence_links
@@ -385,10 +404,11 @@ class CasemapShard(ArkhamShard):
             "notes": data.get("notes", ""),
         })
 
-        await self.frame.events.emit("casemap.evidence.linked", {
-            "element_id": element_id,
-            "evidence_link_id": link_id,
-        }, source="casemap-shard")
+        if self._event_bus:
+            await self._event_bus.emit("casemap.evidence.linked", {
+                "element_id": element_id,
+                "evidence_link_id": link_id,
+            }, source="casemap-shard")
 
         return EvidenceLink(
             id=link_id, element_id=element_id,
@@ -402,7 +422,7 @@ class CasemapShard(ArkhamShard):
         )
 
     async def list_evidence(self, element_id: str) -> List[EvidenceLink]:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         rows = await self._db.fetch_all("""
             SELECT * FROM arkham_casemap.evidence_links
             WHERE element_id = :eid AND tenant_id = :tid
@@ -411,7 +431,7 @@ class CasemapShard(ArkhamShard):
         return [self._row_to_evidence(r) for r in rows]
 
     async def delete_evidence(self, link_id: str) -> bool:
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         await self._db.execute("""
             DELETE FROM arkham_casemap.evidence_links
             WHERE id = :id AND tenant_id = :tid
@@ -466,17 +486,18 @@ class CasemapShard(ArkhamShard):
             assessment.overall_score = int(sum(element_scores) / len(element_scores))
 
         # Update theory strength
-        tenant_id = str(self.get_tenant_id())
+        tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         await self._db.execute("""
             UPDATE arkham_casemap.legal_theories
             SET overall_strength = :strength, updated_at = NOW()
             WHERE id = :id AND tenant_id = :tid
         """, {"strength": assessment.overall_score, "id": theory_id, "tid": tenant_id})
 
-        await self.frame.events.emit("casemap.strength.updated", {
-            "theory_id": theory_id,
-            "overall_score": assessment.overall_score,
-        }, source="casemap-shard")
+        if self._event_bus:
+            await self._event_bus.emit("casemap.strength.updated", {
+                "theory_id": theory_id,
+                "overall_score": assessment.overall_score,
+            }, source="casemap-shard")
 
         return assessment
 
@@ -497,8 +518,8 @@ class CasemapShard(ArkhamShard):
                     "status": elem.status,
                 })
 
-        if gaps:
-            await self.frame.events.emit("casemap.gap.identified", {
+        if gaps and self._event_bus:
+            await self._event_bus.emit("casemap.gap.identified", {
                 "theory_id": theory_id,
                 "gap_count": len(gaps),
             }, source="casemap-shard")
