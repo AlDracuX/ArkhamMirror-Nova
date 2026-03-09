@@ -56,10 +56,7 @@ import {
   MilestoneDialog,
 } from './components';
 
-import type {
-  PremortemAnalysis,
-  PremortemListItem,
-} from './types';
+import type { PremortemAnalysis, PremortemListItem } from './types';
 
 // ============================================
 // Main Page Component
@@ -172,7 +169,9 @@ function MatrixListView() {
           <Icon name="Scale" size={28} />
           <div>
             <h1>ACH Analysis</h1>
-            <p className="page-description">Analysis of Competing Hypotheses - Heuer's 8-Step Method</p>
+            <p className="page-description">
+              Analysis of Competing Hypotheses - Heuer's 8-Step Method
+            </p>
           </div>
         </div>
         <div className="page-actions">
@@ -195,8 +194,12 @@ function MatrixListView() {
         </div>
       ) : (
         <div className="ach-matrix-list">
-          {matrices.map(matrix => (
-            <div key={matrix.id} className="matrix-card" onClick={() => handleOpenMatrix(matrix.id)}>
+          {matrices.map((matrix) => (
+            <div
+              key={matrix.id}
+              className="matrix-card"
+              onClick={() => handleOpenMatrix(matrix.id)}
+            >
               <div className="matrix-card-header">
                 <h3>{matrix.title}</h3>
                 <span className={`status-badge status-${matrix.status}`}>{matrix.status}</span>
@@ -205,8 +208,12 @@ function MatrixListView() {
                 <p className="matrix-card-description">{matrix.description}</p>
               )}
               <div className="matrix-card-stats">
-                <span><Icon name="GitBranch" size={14} /> {matrix.hypothesis_count} hypotheses</span>
-                <span><Icon name="FileText" size={14} /> {matrix.evidence_count} evidence</span>
+                <span>
+                  <Icon name="GitBranch" size={14} /> {matrix.hypothesis_count} hypotheses
+                </span>
+                <span>
+                  <Icon name="FileText" size={14} /> {matrix.evidence_count} evidence
+                </span>
               </div>
               <div className="matrix-card-footer">
                 <span className="matrix-date">
@@ -214,7 +221,10 @@ function MatrixListView() {
                 </span>
                 <button
                   className="btn btn-icon btn-sm btn-danger"
-                  onClick={(e) => { e.stopPropagation(); handleDelete(matrix); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(matrix);
+                  }}
                   title="Delete matrix"
                 >
                   <Icon name="Trash2" size={14} />
@@ -251,7 +261,10 @@ function CreateMatrixView() {
 
     setSubmitting(true);
     try {
-      const result = await api.createMatrix({ title: title.trim(), description: description.trim() });
+      const result = await api.createMatrix({
+        title: title.trim(),
+        description: description.trim(),
+      });
       toast.success(`Analysis "${title}" created`);
       setSearchParams({ matrixId: result.matrix_id });
     } catch (err) {
@@ -274,14 +287,18 @@ function CreateMatrixView() {
           </button>
           <div>
             <h1>New ACH Analysis</h1>
-            <p className="page-description">Define your focus question - the central question you want to analyze</p>
+            <p className="page-description">
+              Define your focus question - the central question you want to analyze
+            </p>
           </div>
         </div>
       </header>
 
       <form className="ach-create-form" onSubmit={handleSubmit}>
         <div className="form-field">
-          <label htmlFor="title">Title <span className="required">*</span></label>
+          <label htmlFor="title">
+            Title <span className="required">*</span>
+          </label>
           <input
             id="title"
             type="text"
@@ -309,7 +326,12 @@ function CreateMatrixView() {
         </div>
 
         <div className="form-actions">
-          <button type="button" className="btn btn-secondary" onClick={handleCancel} disabled={submitting}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleCancel}
+            disabled={submitting}
+          >
             Cancel
           </button>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
@@ -357,19 +379,25 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
 
   // Sync step with URL
-  const setCurrentStep = useCallback((step: number) => {
-    setCurrentStepState(step);
-    setSearchParams(prev => {
-      const newParams = new URLSearchParams(prev);
-      newParams.set('step', step.toString());
-      return newParams;
-    });
-  }, [setSearchParams]);
+  const setCurrentStep = useCallback(
+    (step: number) => {
+      setCurrentStepState(step);
+      setSearchParams((prev) => {
+        const newParams = new URLSearchParams(prev);
+        newParams.set('step', step.toString());
+        return newParams;
+      });
+    },
+    [setSearchParams]
+  );
 
   // Dialog state
   const [showAddHypothesis, setShowAddHypothesis] = useState(false);
   const [showAddEvidence, setShowAddEvidence] = useState(false);
-  const [editingRating, setEditingRating] = useState<{ evidenceId: string; hypothesisId: string } | null>(null);
+  const [editingRating, setEditingRating] = useState<{
+    evidenceId: string;
+    hypothesisId: string;
+  } | null>(null);
 
   // AI state
   const [aiAvailable, setAiAvailable] = useState(false);
@@ -437,7 +465,8 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
       const completed: number[] = [];
       if (data.hypotheses.length >= 2) completed.push(1);
       if (data.evidence.length >= 1) completed.push(2);
-      if (data.ratings.length >= data.hypotheses.length * data.evidence.length * 0.5) completed.push(3);
+      if (data.ratings.length >= data.hypotheses.length * data.evidence.length * 0.5)
+        completed.push(3);
       setCompletedSteps(completed);
 
       // Run consistency checks
@@ -497,23 +526,23 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
     // Check for minimum hypotheses
     checks.push({
       passed: m.hypotheses.length >= 2,
-      message: m.hypotheses.length >= 2
-        ? `${m.hypotheses.length} hypotheses defined`
-        : 'Need at least 2 hypotheses',
+      message:
+        m.hypotheses.length >= 2
+          ? `${m.hypotheses.length} hypotheses defined`
+          : 'Need at least 2 hypotheses',
     });
 
     // Check for evidence
     checks.push({
       passed: m.evidence.length >= 1,
-      message: m.evidence.length >= 1
-        ? `${m.evidence.length} evidence items`
-        : 'No evidence added yet',
+      message:
+        m.evidence.length >= 1 ? `${m.evidence.length} evidence items` : 'No evidence added yet',
     });
 
     // Check matrix completion
     const totalCells = m.hypotheses.length * m.evidence.length;
     const ratedCells = m.ratings.length;
-    const completionPct = totalCells > 0 ? (ratedCells / totalCells * 100).toFixed(0) : 0;
+    const completionPct = totalCells > 0 ? ((ratedCells / totalCells) * 100).toFixed(0) : 0;
     checks.push({
       passed: Number(completionPct) >= 80,
       message: `Matrix ${completionPct}% complete (${ratedCells}/${totalCells} cells rated)`,
@@ -551,7 +580,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
   const getRating = (evidenceId: string, hypothesisId: string): ConsistencyRating | null => {
     if (!matrix) return null;
     const rating = matrix.ratings.find(
-      r => r.evidence_id === evidenceId && r.hypothesis_id === hypothesisId
+      (r) => r.evidence_id === evidenceId && r.hypothesis_id === hypothesisId
     );
     return rating?.rating || null;
   };
@@ -595,7 +624,9 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
 
   const handleRemoveHypothesis = async (hypothesisId: string, title: string) => {
     // Use window.confirm as fallback if useConfirm doesn't work
-    const confirmed = window.confirm(`Remove "${title}" from the matrix? All ratings for this hypothesis will be deleted.`);
+    const confirmed = window.confirm(
+      `Remove "${title}" from the matrix? All ratings for this hypothesis will be deleted.`
+    );
 
     if (confirmed) {
       try {
@@ -609,7 +640,12 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
   };
 
   // Evidence handlers
-  const handleAddEvidence = async (description: string, source: string, evidenceType: EvidenceType, credibility: number) => {
+  const handleAddEvidence = async (
+    description: string,
+    source: string,
+    evidenceType: EvidenceType,
+    credibility: number
+  ) => {
     try {
       await api.addEvidence({
         matrix_id: matrixId,
@@ -628,7 +664,9 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
   };
 
   const handleRemoveEvidence = async (evidenceId: string, description: string) => {
-    const confirmed = window.confirm(`Remove "${description.substring(0, 50)}..." from the matrix?`);
+    const confirmed = window.confirm(
+      `Remove "${description.substring(0, 50)}..." from the matrix?`
+    );
 
     if (confirmed) {
       try {
@@ -661,10 +699,12 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
         focus_question: matrix.description || matrix.title,
         matrix_id: matrixId,
       });
-      setHypothesisSuggestions(result.suggestions.map(s => ({
-        title: s.title,
-        description: s.description,
-      })));
+      setHypothesisSuggestions(
+        result.suggestions.map((s) => ({
+          title: s.title,
+          description: s.description,
+        }))
+      );
       setShowAIHypotheses(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to get suggestions');
@@ -721,11 +761,13 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
         focus_question: matrix.description || matrix.title,
         use_corpus: useCorpus,
       });
-      setEvidenceSuggestions(result.suggestions.map(s => ({
-        description: s.description,
-        evidence_type: s.evidence_type as EvidenceType,
-        source: s.source,
-      })));
+      setEvidenceSuggestions(
+        result.suggestions.map((s) => ({
+          description: s.description,
+          evidence_type: s.evidence_type as EvidenceType,
+          source: s.source,
+        }))
+      );
       setShowAIEvidence(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to get suggestions');
@@ -758,7 +800,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
 
   const handleRequestRatingSuggestions = async (evidenceId: string) => {
     if (!matrix) return;
-    const evidence = matrix.evidence.find(e => e.id === evidenceId);
+    const evidence = matrix.evidence.find((e) => e.id === evidenceId);
     if (!evidence) return;
 
     setAiLoading(true);
@@ -779,7 +821,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
   };
 
   const handleAcceptRatingSuggestion = async (hypothesisId: string, rating: ConsistencyRating) => {
-    const suggestion = ratingSuggestions.find(s => s.hypothesis_id === hypothesisId);
+    const suggestion = ratingSuggestions.find((s) => s.hypothesis_id === hypothesisId);
     if (!suggestion || !ratingEvidenceId) return;
     try {
       await api.updateRating({
@@ -790,7 +832,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
         reasoning: suggestion.explanation,
       });
       toast.success('Rating updated');
-      setRatingSuggestions(prev => prev.filter(s => s.hypothesis_id !== hypothesisId));
+      setRatingSuggestions((prev) => prev.filter((s) => s.hypothesis_id !== hypothesisId));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update rating');
     }
@@ -803,14 +845,16 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
         matrix_id: matrixId,
         hypothesis_id: hypothesisId || selectedChallengeHypothesis || undefined,
       });
-      setChallenges([{
-        hypothesis_id: result.hypothesis_id,
-        hypothesis_label: result.hypothesis_title,
-        counter_argument: result.challenge_text,
-        disproof_evidence: result.evidence_gaps.join(', '),
-        alternative_angle: result.alternative_interpretation,
-        weaknesses: result.weaknesses,
-      }]);
+      setChallenges([
+        {
+          hypothesis_id: result.hypothesis_id,
+          hypothesis_label: result.hypothesis_title,
+          counter_argument: result.challenge_text,
+          disproof_evidence: result.evidence_gaps.join(', '),
+          alternative_angle: result.alternative_interpretation,
+          weaknesses: result.weaknesses,
+        },
+      ]);
       setShowDevilsAdvocate(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to run analysis');
@@ -820,10 +864,13 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
   };
 
   const handleSaveChallengesToNotes = () => {
-    const notesText = challenges.map(c =>
-      `[${c.hypothesis_label}]\nCounter-argument: ${c.counter_argument}\nDisproof: ${c.disproof_evidence}\nAlternative: ${c.alternative_angle}`
-    ).join('\n\n');
-    setSensitivityNotes(prev => prev + '\n\n--- AI Challenges ---\n' + notesText);
+    const notesText = challenges
+      .map(
+        (c) =>
+          `[${c.hypothesis_label}]\nCounter-argument: ${c.counter_argument}\nDisproof: ${c.disproof_evidence}\nAlternative: ${c.alternative_angle}`
+      )
+      .join('\n\n');
+    setSensitivityNotes((prev) => prev + '\n\n--- AI Challenges ---\n' + notesText);
     toast.success('Challenges saved to notes');
     setShowDevilsAdvocate(false);
   };
@@ -832,7 +879,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
   const handleRunSensitivity = async () => {
     setSensitivityLoading(true);
     try {
-      const result = await api.getSensitivity(matrixId) as {
+      const result = (await api.getSensitivity(matrixId)) as {
         sensitivity: string;
         uncertain_evidence_count: number;
         rank_changes: Array<{
@@ -845,11 +892,15 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
       };
 
       // Transform backend response to frontend format
-      const results: SensitivityResult[] = result.rank_changes.map(change => ({
+      const results: SensitivityResult[] = result.rank_changes.map((change) => ({
         evidence_id: change.hypothesis_id,
         evidence_label: change.hypothesis_title,
-        impact: Math.abs(change.change) >= 2 ? 'critical' as const :
-                Math.abs(change.change) === 1 ? 'moderate' as const : 'minor' as const,
+        impact:
+          Math.abs(change.change) >= 2
+            ? ('critical' as const)
+            : Math.abs(change.change) === 1
+              ? ('moderate' as const)
+              : ('minor' as const),
         description: `Rank changed from ${change.original_rank} to ${change.new_rank} (${change.change > 0 ? '+' : ''}${change.change})`,
         affected_rankings: [change.hypothesis_title],
       }));
@@ -857,7 +908,9 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
       setSensitivityResults(results);
 
       if (results.length === 0) {
-        toast.info(`Sensitivity: ${result.sensitivity} - ${result.uncertain_evidence_count} uncertain evidence items`);
+        toast.info(
+          `Sensitivity: ${result.sensitivity} - ${result.uncertain_evidence_count} uncertain evidence items`
+        );
       } else {
         toast.success('Sensitivity analysis complete');
       }
@@ -871,7 +924,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
   // Premortem handlers
   const handleRunPremortem = async (hypothesisId: string) => {
     if (!matrix) return;
-    const hypothesis = matrix.hypotheses.find(h => h.id === hypothesisId);
+    const hypothesis = matrix.hypotheses.find((h) => h.id === hypothesisId);
     if (!hypothesis) {
       toast.error('Hypothesis not found');
       return;
@@ -909,7 +962,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
     if (!window.confirm('Delete this premortem analysis?')) return;
     try {
       await api.deletePremortem(premortemId);
-      setPremortems(prev => prev.filter(p => p.id !== premortemId));
+      setPremortems((prev) => prev.filter((p) => p.id !== premortemId));
       if (selectedPremortem?.id === premortemId) {
         setSelectedPremortem(null);
       }
@@ -919,7 +972,10 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
     }
   };
 
-  const handleConvertFailureModeToHypothesis = async (premortemId: string, failureModeId: string) => {
+  const handleConvertFailureModeToHypothesis = async (
+    premortemId: string,
+    failureModeId: string
+  ) => {
     if (!matrix) return;
     try {
       await api.convertFailureMode({
@@ -940,9 +996,12 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
     }
   };
 
-  const handleConvertFailureModeToMilestone = async (premortemId: string, failureModeId: string) => {
+  const handleConvertFailureModeToMilestone = async (
+    premortemId: string,
+    failureModeId: string
+  ) => {
     if (!matrix || !selectedPremortem) return;
-    const failureMode = selectedPremortem.failure_modes.find(fm => fm.id === failureModeId);
+    const failureMode = selectedPremortem.failure_modes.find((fm) => fm.id === failureModeId);
     if (!failureMode) return;
 
     try {
@@ -963,7 +1022,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      setMilestones(prev => [...prev, newMilestone]);
+      setMilestones((prev) => [...prev, newMilestone]);
       toast.success('Failure mode converted to milestone');
       // Reload the selected premortem to show updated status
       const updated = await api.getPremortem(selectedPremortem.id);
@@ -994,7 +1053,9 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
   const handleExportJSON = async () => {
     try {
       const result = await api.exportMatrix(matrixId, 'json');
-      const blob = new Blob([JSON.stringify(result.content, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(result.content, null, 2)], {
+        type: 'application/json',
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -1063,10 +1124,10 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
   // Calculate diagnosticity for evidence
   const getEvidenceDiagnosticity = (evidenceId: string): 'high' | 'low' | 'normal' => {
     if (!matrix || matrix.hypotheses.length < 2) return 'normal';
-    const ratings = matrix.ratings.filter(r => r.evidence_id === evidenceId);
+    const ratings = matrix.ratings.filter((r) => r.evidence_id === evidenceId);
     if (ratings.length < 2) return 'normal';
 
-    const uniqueRatings = new Set(ratings.map(r => r.rating));
+    const uniqueRatings = new Set(ratings.map((r) => r.rating));
     if (uniqueRatings.size >= matrix.hypotheses.length * 0.7) return 'high';
     if (uniqueRatings.size === 1) return 'low';
     return 'normal';
@@ -1076,47 +1137,55 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        return <HypothesesSection
-          matrix={matrix}
-          aiAvailable={aiAvailable}
-          aiLoading={aiLoading}
-          selectedChallengeHypothesis={selectedChallengeHypothesis}
-          onChallengeHypothesisSelect={setSelectedChallengeHypothesis}
-          onAddHypothesis={() => setShowAddHypothesis(true)}
-          onRemoveHypothesis={handleRemoveHypothesis}
-          onAISuggest={handleRequestHypothesisSuggestions}
-          onDevilsAdvocate={handleDevilsAdvocate}
-        />;
+        return (
+          <HypothesesSection
+            matrix={matrix}
+            aiAvailable={aiAvailable}
+            aiLoading={aiLoading}
+            selectedChallengeHypothesis={selectedChallengeHypothesis}
+            onChallengeHypothesisSelect={setSelectedChallengeHypothesis}
+            onAddHypothesis={() => setShowAddHypothesis(true)}
+            onRemoveHypothesis={handleRemoveHypothesis}
+            onAISuggest={handleRequestHypothesisSuggestions}
+            onDevilsAdvocate={handleDevilsAdvocate}
+          />
+        );
       case 2:
-        return <EvidenceSection
-          matrix={matrix}
-          aiAvailable={aiAvailable}
-          aiLoading={aiLoading}
-          hasLinkedDocuments={(matrix.linked_document_ids || []).length > 0}
-          useCorpus={useCorpus}
-          onUseCorpusChange={setUseCorpus}
-          onAddEvidence={() => setShowAddEvidence(true)}
-          onRemoveEvidence={handleRemoveEvidence}
-          onAISuggest={handleRequestEvidenceSuggestions}
-        />;
+        return (
+          <EvidenceSection
+            matrix={matrix}
+            aiAvailable={aiAvailable}
+            aiLoading={aiLoading}
+            hasLinkedDocuments={(matrix.linked_document_ids || []).length > 0}
+            useCorpus={useCorpus}
+            onUseCorpusChange={setUseCorpus}
+            onAddEvidence={() => setShowAddEvidence(true)}
+            onRemoveEvidence={handleRemoveEvidence}
+            onAISuggest={handleRequestEvidenceSuggestions}
+          />
+        );
       case 3:
-        return <MatrixSection
-          matrix={matrix}
-          zoom={zoom}
-          onZoomIn={() => setZoom(Math.min(2, zoom + 0.1))}
-          onZoomOut={() => setZoom(Math.max(0.5, zoom - 0.1))}
-          onRatingClick={handleRatingClick}
-          onAISuggestRatings={handleRequestRatingSuggestions}
-          onRecalculate={handleRecalculateScores}
-          getRating={getRating}
-          getEvidenceDiagnosticity={getEvidenceDiagnosticity}
-        />;
+        return (
+          <MatrixSection
+            matrix={matrix}
+            zoom={zoom}
+            onZoomIn={() => setZoom(Math.min(2, zoom + 0.1))}
+            onZoomOut={() => setZoom(Math.max(0.5, zoom - 0.1))}
+            onRatingClick={handleRatingClick}
+            onAISuggestRatings={handleRequestRatingSuggestions}
+            onRecalculate={handleRecalculateScores}
+            getRating={getRating}
+            getEvidenceDiagnosticity={getEvidenceDiagnosticity}
+          />
+        );
       case 4:
-        return <DiagnosticitySection
-          matrix={matrix}
-          getEvidenceDiagnosticity={getEvidenceDiagnosticity}
-          onRemoveEvidence={handleRemoveEvidence}
-        />;
+        return (
+          <DiagnosticitySection
+            matrix={matrix}
+            getEvidenceDiagnosticity={getEvidenceDiagnosticity}
+            onRemoveEvidence={handleRemoveEvidence}
+          />
+        );
       case 5:
         return (
           <div className="step-5-content">
@@ -1167,20 +1236,22 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
           </div>
         );
       case 7:
-        return <SensitivitySection
-          results={sensitivityResults}
-          notes={sensitivityNotes}
-          isLoading={sensitivityLoading}
-          onRunAnalysis={handleRunSensitivity}
-          onNotesChange={setSensitivityNotes}
-          onSaveNotes={() => toast.success('Notes saved')}
-        />;
+        return (
+          <SensitivitySection
+            results={sensitivityResults}
+            notes={sensitivityNotes}
+            isLoading={sensitivityLoading}
+            onRunAnalysis={handleRunSensitivity}
+            onNotesChange={setSensitivityNotes}
+            onSaveNotes={() => toast.success('Notes saved')}
+          />
+        );
       case 8:
         return (
           <div className="step-8-content">
             <MilestonesSection
               milestones={milestones}
-              hypotheses={matrix.hypotheses.map(h => ({ id: h.id, title: h.title }))}
+              hypotheses={matrix.hypotheses.map((h) => ({ id: h.id, title: h.title }))}
               aiAvailable={aiAvailable}
               isAILoading={aiLoading}
               selectedHypothesis={selectedMilestoneHypothesis}
@@ -1202,7 +1273,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
                 setShowMilestoneDialog(true);
               }}
               onEditMilestone={(id) => {
-                const milestone = milestones.find(m => m.id === id);
+                const milestone = milestones.find((m) => m.id === id);
                 if (milestone) {
                   setEditingMilestone(milestone);
                   setShowMilestoneDialog(true);
@@ -1210,15 +1281,20 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
               }}
               onDeleteMilestone={(id) => {
                 if (window.confirm('Delete this milestone?')) {
-                  setMilestones(prev => prev.filter(m => m.id !== id));
+                  setMilestones((prev) => prev.filter((m) => m.id !== id));
                   toast.success('Milestone deleted');
                 }
               }}
               onUpdateMilestoneStatus={(id, status) => {
-                setMilestones(prev => prev.map(m =>
-                  m.id === id ? { ...m, observed: status, updated_at: new Date().toISOString() } : m
-                ));
-                const statusLabel = status === 1 ? 'OBSERVED' : status === -1 ? 'CONTRADICTED' : 'PENDING';
+                setMilestones((prev) =>
+                  prev.map((m) =>
+                    m.id === id
+                      ? { ...m, observed: status, updated_at: new Date().toISOString() }
+                      : m
+                  )
+                );
+                const statusLabel =
+                  status === 1 ? 'OBSERVED' : status === -1 ? 'CONTRADICTED' : 'PENDING';
                 toast.success(`Milestone marked as ${statusLabel}`);
               }}
               onExportMarkdown={handleExportMarkdown}
@@ -1228,7 +1304,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
             <PremortemSection
               premortems={premortems}
               selectedPremortem={selectedPremortem}
-              hypotheses={matrix.hypotheses.map(h => ({ id: h.id, title: h.title }))}
+              hypotheses={matrix.hypotheses.map((h) => ({ id: h.id, title: h.title }))}
               aiAvailable={aiAvailable}
               isLoading={isPremortemLoading}
               onRunPremortem={handleRunPremortem}
@@ -1254,7 +1330,9 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
           </button>
           <div>
             <h1>{matrix.title}</h1>
-            <p className="page-description">{matrix.description || 'Analysis of Competing Hypotheses'}</p>
+            <p className="page-description">
+              {matrix.description || 'Analysis of Competing Hypotheses'}
+            </p>
           </div>
           <span className={`status-badge status-${matrix.status}`}>{matrix.status}</span>
         </div>
@@ -1301,19 +1379,21 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
                 hypothesis_count: matrix.hypotheses?.length || 0,
                 evidence_count: matrix.evidence?.length || 0,
               },
-              hypotheses: matrix.hypotheses?.map(h => ({
-                id: h.id,
-                title: h.title,
-                description: h.description,
-                is_lead: h.is_lead,
-              })) || [],
-              evidence: matrix.evidence?.slice(0, 20).map(e => ({
-                id: e.id,
-                description: e.description,
-                evidence_type: e.evidence_type,
-                credibility: e.credibility,
-                relevance: e.relevance,
-              })) || [],
+              hypotheses:
+                matrix.hypotheses?.map((h) => ({
+                  id: h.id,
+                  title: h.title,
+                  description: h.description,
+                  is_lead: h.is_lead,
+                })) || [],
+              evidence:
+                matrix.evidence?.slice(0, 20).map((e) => ({
+                  id: e.id,
+                  description: e.description,
+                  evidence_type: e.evidence_type,
+                  credibility: e.credibility,
+                  relevance: e.relevance,
+                })) || [],
               current_step: currentStep,
               scores: matrix.scores || null,
             }}
@@ -1337,16 +1417,18 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
       <GuidancePanel currentStep={currentStep} />
 
       {/* Step Content */}
-      <div className="step-content">
-        {renderStepContent()}
-      </div>
+      <div className="step-content">{renderStepContent()}</div>
 
       {/* Quick View Accordions (after step 3) */}
       {currentStep >= 3 && currentStep < 6 && (
         <div className="quick-views">
           <details className="quick-view-accordion">
             <summary>Quick View: Scores</summary>
-            <ScoresSection scores={matrix.scores} hypotheses={matrix.hypotheses} onRecalculate={handleRecalculateScores} />
+            <ScoresSection
+              scores={matrix.scores}
+              hypotheses={matrix.hypotheses}
+              onRecalculate={handleRecalculateScores}
+            />
           </details>
           <details className="quick-view-accordion">
             <summary>Quick View: Consistency Checks</summary>
@@ -1363,10 +1445,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
       />
 
       {/* Corpus Search Section */}
-      <CorpusSearchSection
-        matrix={matrix}
-        onEvidenceAdded={fetchMatrix}
-      />
+      <CorpusSearchSection matrix={matrix} onEvidenceAdded={fetchMatrix} />
 
       {/* Dialogs */}
       {showAddHypothesis && (
@@ -1415,7 +1494,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
           suggestions={ratingSuggestions}
           onAccept={async (hypothesisId, rating) => {
             await handleAcceptRatingSuggestion(hypothesisId, rating);
-            const remaining = ratingSuggestions.filter(s => s.hypothesis_id !== hypothesisId);
+            const remaining = ratingSuggestions.filter((s) => s.hypothesis_id !== hypothesisId);
             if (remaining.length === 0) {
               setShowAIRatings(false);
             }
@@ -1470,9 +1549,11 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             };
-            setMilestones(prev => [...prev, newMilestone]);
+            setMilestones((prev) => [...prev, newMilestone]);
             toast.success(`Milestone for ${s.hypothesis_label} added`);
-            const remaining = milestoneSuggestions.filter(m => m.hypothesis_id !== s.hypothesis_id);
+            const remaining = milestoneSuggestions.filter(
+              (m) => m.hypothesis_id !== s.hypothesis_id
+            );
             setMilestoneSuggestions(remaining);
             if (remaining.length === 0) {
               setShowAIMilestones(false);
@@ -1491,7 +1572,7 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             }));
-            setMilestones(prev => [...prev, ...newMilestones]);
+            setMilestones((prev) => [...prev, ...newMilestones]);
             setMilestoneSuggestions([]);
             toast.success('All milestones added');
             setShowAIMilestones(false);
@@ -1503,22 +1584,27 @@ function MatrixDetailView({ matrixId }: { matrixId: string }) {
       {showMilestoneDialog && (
         <MilestoneDialog
           milestone={editingMilestone}
-          hypotheses={matrix.hypotheses.map(h => ({ id: h.id, title: h.title }))}
+          hypotheses={matrix.hypotheses.map((h) => ({ id: h.id, title: h.title }))}
           onSave={(milestoneData) => {
             if (editingMilestone) {
               // Update existing milestone
-              setMilestones(prev => prev.map(m =>
-                m.id === milestoneData.id
-                  ? { ...milestoneData, updated_at: new Date().toISOString() }
-                  : m
-              ));
+              setMilestones((prev) =>
+                prev.map((m) =>
+                  m.id === milestoneData.id
+                    ? { ...milestoneData, updated_at: new Date().toISOString() }
+                    : m
+                )
+              );
               toast.success('Milestone updated');
             } else {
               // Add new milestone
-              setMilestones(prev => [...prev, {
-                ...milestoneData,
-                updated_at: new Date().toISOString(),
-              }]);
+              setMilestones((prev) => [
+                ...prev,
+                {
+                  ...milestoneData,
+                  updated_at: new Date().toISOString(),
+                },
+              ]);
               toast.success('Milestone added');
             }
             setShowMilestoneDialog(false);
@@ -1577,7 +1663,11 @@ function HypothesesSection({
                 onClick={onAISuggest}
                 disabled={aiLoading}
               >
-                {aiLoading ? <Icon name="Loader2" size={12} className="spin" /> : <Icon name="Sparkles" size={12} />}
+                {aiLoading ? (
+                  <Icon name="Loader2" size={12} className="spin" />
+                ) : (
+                  <Icon name="Sparkles" size={12} />
+                )}
                 AI Suggest
               </button>
               {matrix.hypotheses.length > 0 && (
@@ -1590,7 +1680,10 @@ function HypothesesSection({
                   >
                     <option value="">Lead Hypothesis</option>
                     {matrix.hypotheses.map((h, i) => (
-                      <option key={h.id} value={h.id}>H{i + 1}: {h.title.substring(0, 30)}{h.title.length > 30 ? '...' : ''}</option>
+                      <option key={h.id} value={h.id}>
+                        H{i + 1}: {h.title.substring(0, 30)}
+                        {h.title.length > 30 ? '...' : ''}
+                      </option>
                     ))}
                   </select>
                   <button
@@ -1684,7 +1777,10 @@ function EvidenceSection({
           {aiAvailable && (
             <>
               <div className="corpus-toggle">
-                <label className="corpus-toggle-label" title="When enabled, AI will consider content from linked documents">
+                <label
+                  className="corpus-toggle-label"
+                  title="When enabled, AI will consider content from linked documents"
+                >
                   <input
                     type="checkbox"
                     checked={useCorpus}
@@ -1702,7 +1798,11 @@ function EvidenceSection({
                 onClick={onAISuggest}
                 disabled={aiLoading}
               >
-                {aiLoading ? <Icon name="Loader2" size={12} className="spin" /> : <Icon name="Sparkles" size={12} />}
+                {aiLoading ? (
+                  <Icon name="Loader2" size={12} className="spin" />
+                ) : (
+                  <Icon name="Sparkles" size={12} />
+                )}
                 AI Suggest
               </button>
             </>
@@ -1779,7 +1879,7 @@ function MatrixSection({
 }: MatrixSectionProps) {
   const totalCells = matrix.hypotheses.length * matrix.evidence.length;
   const ratedCells = matrix.ratings.length;
-  const completionPct = totalCells > 0 ? Math.round(ratedCells / totalCells * 100) : 0;
+  const completionPct = totalCells > 0 ? Math.round((ratedCells / totalCells) * 100) : 0;
 
   return (
     <div className="ach-section">
@@ -1820,13 +1920,20 @@ function MatrixSection({
           <p>Add hypotheses and evidence to create the matrix</p>
         </div>
       ) : (
-        <div className="ach-matrix-container" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
+        <div
+          className="ach-matrix-container"
+          style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+        >
           <table className="ach-matrix">
             <thead>
               <tr>
                 <th className="evidence-header-compact"></th>
                 {matrix.hypotheses.map((h, i) => (
-                  <th key={h.id} className="hypothesis-header-compact" title={`${h.title}\n\n${h.description || ''}`}>
+                  <th
+                    key={h.id}
+                    className="hypothesis-header-compact"
+                    title={`${h.title}\n\n${h.description || ''}`}
+                  >
                     H{i + 1}
                   </th>
                 ))}
@@ -1839,14 +1946,19 @@ function MatrixSection({
               {matrix.evidence.map((e, i) => {
                 const diagnosticity = getEvidenceDiagnosticity(e.id);
                 return (
-                  <tr
-                    key={e.id}
-                    className={`evidence-row diagnosticity-${diagnosticity}`}
-                  >
-                    <td className="evidence-cell-compact" title={`${e.description}\n\nSource: ${e.source || 'N/A'} | Type: ${e.evidence_type} | Credibility: ${e.credibility}`}>
+                  <tr key={e.id} className={`evidence-row diagnosticity-${diagnosticity}`}>
+                    <td
+                      className="evidence-cell-compact"
+                      title={`${e.description}\n\nSource: ${e.source || 'N/A'} | Type: ${e.evidence_type} | Credibility: ${e.credibility}`}
+                    >
                       <span className="evidence-label">E{i + 1}</span>
                       {diagnosticity === 'high' && (
-                        <Icon name="Star" size={10} className="icon-amber" title="High diagnostic value" />
+                        <Icon
+                          name="Star"
+                          size={10}
+                          className="icon-amber"
+                          title="High diagnostic value"
+                        />
                       )}
                     </td>
                     {matrix.hypotheses.map((h) => {
@@ -1855,7 +1967,9 @@ function MatrixSection({
                         <td
                           key={`${e.id}-${h.id}`}
                           className="rating-cell"
-                          style={{ backgroundColor: rating ? RATING_COLORS[rating] : 'transparent' }}
+                          style={{
+                            backgroundColor: rating ? RATING_COLORS[rating] : 'transparent',
+                          }}
                           onClick={() => onRatingClick(e.id, h.id)}
                           title={rating ? RATING_LABELS[rating] : 'Click to rate'}
                         >
@@ -1880,7 +1994,7 @@ function MatrixSection({
               <tr>
                 <td className="score-label">Inconsistency Score</td>
                 {matrix.hypotheses.map((h) => {
-                  const score = matrix.scores.find(s => s.hypothesis_id === h.id);
+                  const score = matrix.scores.find((s) => s.hypothesis_id === h.id);
                   return (
                     <td key={h.id} className="score-cell">
                       {score?.inconsistency_count ?? '-'}
@@ -1897,7 +2011,7 @@ function MatrixSection({
       {/* Legend */}
       <div className="rating-legend">
         <span className="legend-label">Legend:</span>
-        {RATING_OPTIONS.map(opt => (
+        {RATING_OPTIONS.map((opt) => (
           <div key={opt.value} className="legend-item">
             <span className="legend-color" style={{ backgroundColor: RATING_COLORS[opt.value] }} />
             <span>{opt.label}</span>
@@ -1940,28 +2054,30 @@ function DiagnosticitySection({
       </div>
 
       <p className="section-description">
-        Evidence sorted by diagnostic value. High-diagnostic evidence helps distinguish between hypotheses.
-        Consider removing low-diagnostic evidence to simplify your analysis.
+        Evidence sorted by diagnostic value. High-diagnostic evidence helps distinguish between
+        hypotheses. Consider removing low-diagnostic evidence to simplify your analysis.
       </p>
 
       <div className="diagnosticity-list">
         {sortedEvidence.map((e, i) => {
           const diagnosticity = getEvidenceDiagnosticity(e.id);
           return (
-            <div
-              key={e.id}
-              className={`diagnosticity-card diagnosticity-${diagnosticity}`}
-            >
+            <div key={e.id} className={`diagnosticity-card diagnosticity-${diagnosticity}`}>
               <div className="diagnosticity-indicator">
                 {diagnosticity === 'high' && <Icon name="Star" size={16} className="icon-amber" />}
-                {diagnosticity === 'low' && <Icon name="MinusCircle" size={16} className="icon-muted" />}
-                {diagnosticity === 'normal' && <Icon name="Circle" size={16} className="icon-blue" />}
+                {diagnosticity === 'low' && (
+                  <Icon name="MinusCircle" size={16} className="icon-muted" />
+                )}
+                {diagnosticity === 'normal' && (
+                  <Icon name="Circle" size={16} className="icon-blue" />
+                )}
               </div>
               <div className="diagnosticity-content">
                 <div className="diagnosticity-header">
                   <span className="evidence-label">E{i + 1}</span>
                   <span className={`badge badge-${diagnosticity}`}>
-                    {diagnosticity === 'high' ? 'High' : diagnosticity === 'low' ? 'Low' : 'Normal'} Diagnostic Value
+                    {diagnosticity === 'high' ? 'High' : diagnosticity === 'low' ? 'Low' : 'Normal'}{' '}
+                    Diagnostic Value
                   </span>
                 </div>
                 <p className="evidence-description">{e.description}</p>
@@ -2007,7 +2123,7 @@ function AddHypothesisDialog({
 
   return (
     <div className="dialog-overlay" onClick={onCancel}>
-      <div className="dialog" onClick={e => e.stopPropagation()}>
+      <div className="dialog" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-header">
           <h2>Add Hypothesis</h2>
           <button className="btn btn-icon" onClick={onCancel}>
@@ -2021,7 +2137,7 @@ function AddHypothesisDialog({
             <input
               type="text"
               value={title}
-              onChange={e => setTitle(e.target.value)}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Insider threat from IT department"
               autoFocus
             />
@@ -2030,18 +2146,25 @@ function AddHypothesisDialog({
             <label>Description</label>
             <textarea
               value={description}
-              onChange={e => setDescription(e.target.value)}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe this hypothesis in detail..."
               rows={3}
             />
           </div>
           <div className="callout callout-info">
             <Icon name="Info" size={14} />
-            <span>Remember: Include unlikely explanations too. Consider a 'null hypothesis' - what if nothing unusual happened?</span>
+            <span>
+              Remember: Include unlikely explanations too. Consider a 'null hypothesis' - what if
+              nothing unusual happened?
+            </span>
           </div>
           <div className="dialog-actions">
-            <button type="button" className="btn btn-secondary" onClick={onCancel}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={!title.trim()}>Add Hypothesis</button>
+            <button type="button" className="btn btn-secondary" onClick={onCancel}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={!title.trim()}>
+              Add Hypothesis
+            </button>
           </div>
         </form>
       </div>
@@ -2053,7 +2176,12 @@ function AddEvidenceDialog({
   onSubmit,
   onCancel,
 }: {
-  onSubmit: (description: string, source: string, evidenceType: EvidenceType, credibility: number) => void;
+  onSubmit: (
+    description: string,
+    source: string,
+    evidenceType: EvidenceType,
+    credibility: number
+  ) => void;
   onCancel: () => void;
 }) {
   const [description, setDescription] = useState('');
@@ -2070,7 +2198,7 @@ function AddEvidenceDialog({
 
   return (
     <div className="dialog-overlay" onClick={onCancel}>
-      <div className="dialog" onClick={e => e.stopPropagation()}>
+      <div className="dialog" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-header">
           <h2>Add Evidence</h2>
           <button className="btn btn-icon" onClick={onCancel}>
@@ -2083,7 +2211,7 @@ function AddEvidenceDialog({
             <label>Description *</label>
             <textarea
               value={description}
-              onChange={e => setDescription(e.target.value)}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the evidence..."
               rows={3}
               autoFocus
@@ -2094,22 +2222,27 @@ function AddEvidenceDialog({
             <input
               type="text"
               value={source}
-              onChange={e => setSource(e.target.value)}
+              onChange={(e) => setSource(e.target.value)}
               placeholder="e.g., Security log from Dec 15, Witness interview"
             />
           </div>
           <div className="form-row">
             <div className="form-field">
               <label>Type</label>
-              <select value={evidenceType} onChange={e => setEvidenceType(e.target.value as EvidenceType)}>
-                {EVIDENCE_TYPE_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+              <select
+                value={evidenceType}
+                onChange={(e) => setEvidenceType(e.target.value as EvidenceType)}
+              >
+                {EVIDENCE_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
             <div className="form-field">
               <label>Credibility</label>
-              <select value={credibility} onChange={e => setCredibility(Number(e.target.value))}>
+              <select value={credibility} onChange={(e) => setCredibility(Number(e.target.value))}>
                 <option value={1.0}>High (1.0)</option>
                 <option value={0.7}>Medium (0.7)</option>
                 <option value={0.4}>Low (0.4)</option>
@@ -2117,8 +2250,12 @@ function AddEvidenceDialog({
             </div>
           </div>
           <div className="dialog-actions">
-            <button type="button" className="btn btn-secondary" onClick={onCancel}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={!description.trim()}>Add Evidence</button>
+            <button type="button" className="btn btn-secondary" onClick={onCancel}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={!description.trim()}>
+              Add Evidence
+            </button>
           </div>
         </form>
       </div>
@@ -2145,7 +2282,7 @@ function RatingDialog({
 
   return (
     <div className="dialog-overlay" onClick={onCancel}>
-      <div className="dialog" onClick={e => e.stopPropagation()}>
+      <div className="dialog" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-header">
           <h2>Rate Consistency</h2>
           <button className="btn btn-icon" onClick={onCancel}>
@@ -2159,7 +2296,7 @@ function RatingDialog({
           <div className="form-field">
             <label>Rating</label>
             <div className="rating-options">
-              {RATING_OPTIONS.map(opt => (
+              {RATING_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
@@ -2167,7 +2304,9 @@ function RatingDialog({
                   style={{ borderColor: RATING_COLORS[opt.value] }}
                   onClick={() => setRating(opt.value)}
                 >
-                  <span className="rating-value" style={{ color: RATING_COLORS[opt.value] }}>{opt.value}</span>
+                  <span className="rating-value" style={{ color: RATING_COLORS[opt.value] }}>
+                    {opt.value}
+                  </span>
                   <span className="rating-label">{RATING_LABELS[opt.value]}</span>
                 </button>
               ))}
@@ -2177,14 +2316,18 @@ function RatingDialog({
             <label>Reasoning (optional)</label>
             <textarea
               value={reasoning}
-              onChange={e => setReasoning(e.target.value)}
+              onChange={(e) => setReasoning(e.target.value)}
               placeholder="Explain your rating..."
               rows={2}
             />
           </div>
           <div className="dialog-actions">
-            <button type="button" className="btn btn-secondary" onClick={onCancel}>Cancel</button>
-            <button type="submit" className="btn btn-primary">Save Rating</button>
+            <button type="button" className="btn btn-secondary" onClick={onCancel}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Save Rating
+            </button>
           </div>
         </form>
       </div>

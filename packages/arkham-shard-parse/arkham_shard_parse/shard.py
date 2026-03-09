@@ -7,9 +7,9 @@ from pathlib import Path
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
-from .extractors import NERExtractor, DateExtractor, LocationExtractor, RelationExtractor
-from .linkers import EntityLinker, CoreferenceResolver
 from .chunker import TextChunker
+from .extractors import DateExtractor, LocationExtractor, NERExtractor, RelationExtractor
+from .linkers import CoreferenceResolver, EntityLinker
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +63,7 @@ class ParseShard(ArkhamShard):
         event_bus = frame.get_service("events")
 
         # Initialize extractors
-        self.ner_extractor = NERExtractor(
-            model_name=self._config.get("parse.spacy_model", "en_core_web_sm")
-        )
+        self.ner_extractor = NERExtractor(model_name=self._config.get("parse.spacy_model", "en_core_web_sm"))
 
         # Initialize NER in background (loading spaCy model is slow)
         # In production, this should be done in worker process
@@ -110,6 +108,7 @@ class ParseShard(ArkhamShard):
         # Register workers with Frame
         if worker_service:
             from .workers import NERWorker
+
             worker_service.register_worker(NERWorker)
             logger.info("Registered NERWorker to cpu-ner pool")
 
@@ -129,6 +128,7 @@ class ParseShard(ArkhamShard):
             worker_service = self._frame.get_service("workers")
             if worker_service:
                 from .workers import NERWorker
+
                 worker_service.unregister_worker(NERWorker)
                 logger.info("Unregistered NERWorker from cpu-ner pool")
 
@@ -166,7 +166,7 @@ class ParseShard(ArkhamShard):
         doc_id = result.get("document_id")
 
         if not doc_id:
-            logger.debug(f"No document_id in ingest.job.completed event, skipping parse")
+            logger.debug("No document_id in ingest.job.completed event, skipping parse")
             return
 
         logger.info(f"Auto-parsing document {doc_id} after ingestion")
@@ -361,15 +361,19 @@ class ParseShard(ArkhamShard):
         if event_bus and all_entities:
             entity_data = []
             for entity in all_entities:
-                entity_type_val = entity.entity_type.value if hasattr(entity.entity_type, 'value') else str(entity.entity_type)
-                entity_data.append({
-                    "text": entity.text,
-                    "entity_type": entity_type_val,
-                    "start_offset": getattr(entity, 'start_char', 0),
-                    "end_offset": getattr(entity, 'end_char', 0),
-                    "confidence": getattr(entity, 'confidence', 0.85),
-                    "sentence": getattr(entity, 'sentence', None),
-                })
+                entity_type_val = (
+                    entity.entity_type.value if hasattr(entity.entity_type, "value") else str(entity.entity_type)
+                )
+                entity_data.append(
+                    {
+                        "text": entity.text,
+                        "entity_type": entity_type_val,
+                        "start_offset": getattr(entity, "start_char", 0),
+                        "end_offset": getattr(entity, "end_char", 0),
+                        "confidence": getattr(entity, "confidence", 0.85),
+                        "sentence": getattr(entity, "sentence", None),
+                    }
+                )
             await event_bus.emit(
                 "parse.entity.extracted",
                 {
@@ -384,13 +388,15 @@ class ParseShard(ArkhamShard):
         if event_bus and all_relationships:
             relationship_data = []
             for rel in all_relationships:
-                relationship_data.append({
-                    "source_entity": rel.source_entity_id,
-                    "target_entity": rel.target_entity_id,
-                    "relation_type": rel.relation_type,
-                    "confidence": rel.confidence,
-                    "evidence_text": rel.evidence_text,
-                })
+                relationship_data.append(
+                    {
+                        "source_entity": rel.source_entity_id,
+                        "target_entity": rel.target_entity_id,
+                        "relation_type": rel.relation_type,
+                        "confidence": rel.confidence,
+                        "evidence_text": rel.evidence_text,
+                    }
+                )
             await event_bus.emit(
                 "parse.relationships.extracted",
                 {
@@ -455,7 +461,7 @@ class ParseShard(ArkhamShard):
                     },
                 )
                 saved_count += 1
-                if saved_chunk and hasattr(saved_chunk, 'id'):
+                if saved_chunk and hasattr(saved_chunk, "id"):
                     chunk_ids.append(saved_chunk.id)
             except Exception as e:
                 logger.error(f"Failed to save chunk {chunk.chunk_index}: {e}")
@@ -536,7 +542,9 @@ class ParseShard(ArkhamShard):
         for entity in entities:
             try:
                 # Get entity type value (may be enum or string)
-                entity_type_val = entity.entity_type.value if hasattr(entity.entity_type, 'value') else str(entity.entity_type)
+                entity_type_val = (
+                    entity.entity_type.value if hasattr(entity.entity_type, "value") else str(entity.entity_type)
+                )
 
                 # Map to Frame's EntityType
                 frame_entity_type = type_mapping.get(entity_type_val, FrameEntityType.OTHER)
@@ -545,17 +553,17 @@ class ParseShard(ArkhamShard):
                     text=entity.text,
                     entity_type=frame_entity_type,
                     document_id=document_id,
-                    chunk_id=getattr(entity, 'source_chunk_id', None),
-                    start_offset=getattr(entity, 'start_char', 0),
-                    end_offset=getattr(entity, 'end_char', 0),
-                    confidence=getattr(entity, 'confidence', 0.85),
+                    chunk_id=getattr(entity, "source_chunk_id", None),
+                    start_offset=getattr(entity, "start_char", 0),
+                    end_offset=getattr(entity, "end_char", 0),
+                    confidence=getattr(entity, "confidence", 0.85),
                     metadata={
-                        "sentence": getattr(entity, 'sentence', None),
+                        "sentence": getattr(entity, "sentence", None),
                         "source": "parse-shard",
                     },
                 )
                 saved_count += 1
-                if saved_entity and hasattr(saved_entity, 'id'):
+                if saved_entity and hasattr(saved_entity, "id"):
                     entity_ids.append(saved_entity.id)
             except Exception as e:
                 logger.error(f"Failed to save entity '{entity.text}': {e}")

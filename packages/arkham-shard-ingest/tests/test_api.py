@@ -4,15 +4,13 @@ Ingest Shard - API Tests
 Tests for FastAPI endpoints using TestClient.
 """
 
-import pytest
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi.testclient import TestClient
-from fastapi import FastAPI
 
-from arkham_shard_ingest.api import router, init_api
+import pytest
+from arkham_shard_ingest.api import init_api, router
 from arkham_shard_ingest.models import (
     FileCategory,
     FileInfo,
@@ -23,7 +21,8 @@ from arkham_shard_ingest.models import (
     JobPriority,
     JobStatus,
 )
-
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 # === Test Setup ===
 
@@ -474,10 +473,18 @@ class TestQueueStatsEndpoint:
     def test_get_queue_stats_with_jobs(self, client, mock_intake_manager, sample_file_info):
         """Test getting queue stats with various jobs."""
         jobs = {
-            "job-1": IngestJob(id="job-1", file_info=sample_file_info, priority=JobPriority.USER, status=JobStatus.PENDING),
-            "job-2": IngestJob(id="job-2", file_info=sample_file_info, priority=JobPriority.BATCH, status=JobStatus.PROCESSING),
-            "job-3": IngestJob(id="job-3", file_info=sample_file_info, priority=JobPriority.USER, status=JobStatus.COMPLETED),
-            "job-4": IngestJob(id="job-4", file_info=sample_file_info, priority=JobPriority.REPROCESS, status=JobStatus.FAILED),
+            "job-1": IngestJob(
+                id="job-1", file_info=sample_file_info, priority=JobPriority.USER, status=JobStatus.PENDING
+            ),
+            "job-2": IngestJob(
+                id="job-2", file_info=sample_file_info, priority=JobPriority.BATCH, status=JobStatus.PROCESSING
+            ),
+            "job-3": IngestJob(
+                id="job-3", file_info=sample_file_info, priority=JobPriority.USER, status=JobStatus.COMPLETED
+            ),
+            "job-4": IngestJob(
+                id="job-4", file_info=sample_file_info, priority=JobPriority.REPROCESS, status=JobStatus.FAILED
+            ),
         }
         mock_intake_manager._jobs = jobs
 

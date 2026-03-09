@@ -3,8 +3,8 @@
 import logging
 import math
 import re
-from typing import Any
 from collections import Counter
+from typing import Any
 
 from ..models import SearchQuery, SearchResultItem
 
@@ -41,10 +41,42 @@ class BM25Scorer:
         self.k1 = k1
         self.b = b
         self._stop_words = {
-            'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from',
-            'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'or', 'that',
-            'the', 'to', 'was', 'were', 'will', 'with', 'this', 'they',
-            'but', 'have', 'had', 'what', 'when', 'where', 'who', 'which',
+            "a",
+            "an",
+            "and",
+            "are",
+            "as",
+            "at",
+            "be",
+            "by",
+            "for",
+            "from",
+            "has",
+            "he",
+            "in",
+            "is",
+            "it",
+            "its",
+            "of",
+            "on",
+            "or",
+            "that",
+            "the",
+            "to",
+            "was",
+            "were",
+            "will",
+            "with",
+            "this",
+            "they",
+            "but",
+            "have",
+            "had",
+            "what",
+            "when",
+            "where",
+            "who",
+            "which",
         }
 
     def tokenize(self, text: str) -> list[str]:
@@ -58,7 +90,7 @@ class BM25Scorer:
             List of lowercase terms (words)
         """
         # Convert to lowercase and split on non-alphanumeric
-        tokens = re.findall(r'\b\w+\b', text.lower())
+        tokens = re.findall(r"\b\w+\b", text.lower())
         # Filter out very short tokens and stop words
         return [t for t in tokens if len(t) > 1 and t not in self._stop_words]
 
@@ -158,21 +190,18 @@ class KeywordSearchEngine:
             (total_docs, avg_doc_length) tuple
         """
         import time
+
         current_time = time.time()
 
         # Refresh cache every 5 minutes
         if current_time - self._cache_timestamp > 300:
             try:
                 # Get total chunk count
-                count_result = await self.db.fetch_one(
-                    "SELECT COUNT(*) as count FROM arkham_frame.chunks"
-                )
+                count_result = await self.db.fetch_one("SELECT COUNT(*) as count FROM arkham_frame.chunks")
                 self._total_docs = count_result["count"] if count_result else 0
 
                 # Get average document length
-                avg_result = await self.db.fetch_one(
-                    "SELECT AVG(LENGTH(text)) as avg_length FROM arkham_frame.chunks"
-                )
+                avg_result = await self.db.fetch_one("SELECT AVG(LENGTH(text)) as avg_length FROM arkham_frame.chunks")
                 if avg_result and avg_result["avg_length"]:
                     self._avg_doc_length = float(avg_result["avg_length"])
 
@@ -208,7 +237,7 @@ class KeywordSearchEngine:
                     FROM arkham_frame.chunks
                     WHERE LOWER(text) LIKE :pattern
                     """,
-                    {"pattern": f"%{term}%"}
+                    {"pattern": f"%{term}%"},
                 )
                 doc_freqs[term] = result["count"] if result else 0
         except Exception as e:
@@ -251,8 +280,7 @@ class KeywordSearchEngine:
 
         # Compute IDF scores
         idf_scores = {
-            term: self.bm25.compute_idf(term, doc_freqs.get(term, 1), max(total_docs, 1))
-            for term in query_terms
+            term: self.bm25.compute_idf(term, doc_freqs.get(term, 1), max(total_docs, 1)) for term in query_terms
         }
         logger.debug(f"IDF scores: {idf_scores}")
 
@@ -267,7 +295,7 @@ class KeywordSearchEngine:
 
             params = {f"term{i}": f"%{term}%" for i, term in enumerate(query_terms[:5])}
             params["limit"] = query.limit * 3  # Fetch more for re-ranking
-            params["offset"] = query.offset if hasattr(query, 'offset') else 0
+            params["offset"] = query.offset if hasattr(query, "offset") else 0
 
             sql = f"""
                 SELECT
@@ -338,8 +366,10 @@ class KeywordSearchEngine:
                     item.score = item.score / max_score
 
         # Return top results
-        final_results = scored_results[:query.limit]
-        logger.info(f"BM25 search returned {len(final_results)} results (max score: {final_results[0].score if final_results else 0:.3f})")
+        final_results = scored_results[: query.limit]
+        logger.info(
+            f"BM25 search returned {len(final_results)} results (max score: {final_results[0].score if final_results else 0:.3f})"
+        )
 
         return final_results
 
@@ -369,7 +399,7 @@ class KeywordSearchEngine:
                 ORDER BY filename
                 LIMIT :limit
                 """,
-                {"prefix": f"{prefix.lower()}%", "limit": limit}
+                {"prefix": f"{prefix.lower()}%", "limit": limit},
             )
 
             return [(row["filename"], row["score"]) for row in rows]
@@ -461,7 +491,9 @@ class KeywordSearchEngine:
 
         # Entity filter (assuming many-to-many relationship)
         if filters.entity_ids:
-            conditions.append("EXISTS (SELECT 1 FROM document_entities WHERE document_id = doc_id AND entity_id = ANY(%s))")
+            conditions.append(
+                "EXISTS (SELECT 1 FROM document_entities WHERE document_id = doc_id AND entity_id = ANY(%s))"
+            )
             params.append(filters.entity_ids)
 
         # Project filter

@@ -154,7 +154,7 @@ export function IngestQueuePage() {
 
         <div className="filter-group">
           <label>Show:</label>
-          <select value={limit} onChange={e => setLimit(Number(e.target.value))}>
+          <select value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
             <option value={25}>25 jobs</option>
             <option value={50}>50 jobs</option>
             <option value={100}>100 jobs</option>
@@ -216,7 +216,9 @@ export function IngestQueuePage() {
                     <span className="category-badge">{job.category}</span>
                   </div>
                   <div className="col-priority">
-                    <span className={`priority-badge priority-${job.priority}`}>{job.priority}</span>
+                    <span className={`priority-badge priority-${job.priority}`}>
+                      {job.priority}
+                    </span>
                   </div>
                   <div className="col-route">
                     <div className="route-cell">

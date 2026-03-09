@@ -4,18 +4,19 @@ ProjectService - Full project management service.
 Provides CRUD operations, settings management, and statistics for projects.
 """
 
-from typing import Optional, List, Dict, Any, Tuple
-from dataclasses import dataclass, field
-from datetime import datetime
+import json
 import logging
 import uuid
-import json
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class ProjectNotFoundError(Exception):
     """Project not found."""
+
     def __init__(self, project_id: str):
         self.project_id = project_id
         super().__init__(f"Project not found: {project_id}")
@@ -23,6 +24,7 @@ class ProjectNotFoundError(Exception):
 
 class ProjectExistsError(Exception):
     """Project already exists."""
+
     def __init__(self, name: str):
         self.name = name
         super().__init__(f"Project already exists: {name}")
@@ -30,12 +32,14 @@ class ProjectExistsError(Exception):
 
 class ProjectError(Exception):
     """General project operation error."""
+
     pass
 
 
 @dataclass
 class Project:
     """Project data model."""
+
     id: str
     name: str
     description: str
@@ -48,6 +52,7 @@ class Project:
 @dataclass
 class ProjectStats:
     """Project statistics."""
+
     document_count: int = 0
     entity_count: int = 0
     total_pages: int = 0
@@ -110,7 +115,8 @@ class ProjectService:
                 conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {self.SCHEMA}"))
 
                 # Projects table
-                conn.execute(text(f"""
+                conn.execute(
+                    text(f"""
                     CREATE TABLE IF NOT EXISTS {self.SCHEMA}.projects (
                         id VARCHAR(36) PRIMARY KEY,
                         name VARCHAR(255) NOT NULL UNIQUE,
@@ -120,15 +126,20 @@ class ProjectService:
                         settings JSONB DEFAULT '{{}}',
                         metadata JSONB DEFAULT '{{}}'
                     )
-                """))
+                """)
+                )
 
                 # Indexes
-                conn.execute(text(f"""
+                conn.execute(
+                    text(f"""
                     CREATE INDEX IF NOT EXISTS idx_projects_name ON {self.SCHEMA}.projects(name)
-                """))
-                conn.execute(text(f"""
+                """)
+                )
+                conn.execute(
+                    text(f"""
                     CREATE INDEX IF NOT EXISTS idx_projects_updated ON {self.SCHEMA}.projects(updated_at)
-                """))
+                """)
+                )
 
                 conn.commit()
                 logger.debug("Project tables created/verified")
@@ -327,9 +338,7 @@ class ProjectService:
                     {"offset": offset, "limit": limit},
                 )
 
-                projects = [
-                    self._row_to_project(row._mapping) for row in result.fetchall()
-                ]
+                projects = [self._row_to_project(row._mapping) for row in result.fetchall()]
 
                 return projects, total
 

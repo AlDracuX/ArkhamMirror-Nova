@@ -1,9 +1,8 @@
 """Tests for graph algorithms."""
 
 import pytest
-
 from arkham_shard_graph.algorithms import GraphAlgorithms
-from arkham_shard_graph.models import Graph, GraphNode, GraphEdge
+from arkham_shard_graph.models import Graph, GraphEdge, GraphNode
 
 
 class TestGraphAlgorithmsCreation:
@@ -91,14 +90,10 @@ class TestShortestPath:
         """Test path finding respects max depth."""
         algorithms = GraphAlgorithms()
 
-        nodes = [
-            GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person")
-            for i in range(6)
-        ]
+        nodes = [GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person") for i in range(6)]
 
         edges = [
-            GraphEdge(source=f"n{i}", target=f"n{i+1}", relationship_type="works_for", weight=0.8)
-            for i in range(5)
+            GraphEdge(source=f"n{i}", target=f"n{i + 1}", relationship_type="works_for", weight=0.8) for i in range(5)
         ]
 
         graph = Graph(project_id="proj1", nodes=nodes, edges=edges)
@@ -166,7 +161,7 @@ class TestDegreeCentrality:
         algorithms = GraphAlgorithms()
 
         nodes = [
-            GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person", degree=10-i)
+            GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person", degree=10 - i)
             for i in range(10)
         ]
 
@@ -220,14 +215,10 @@ class TestBetweennessCentrality:
         """Test betweenness centrality with result limit."""
         algorithms = GraphAlgorithms()
 
-        nodes = [
-            GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person")
-            for i in range(5)
-        ]
+        nodes = [GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person") for i in range(5)]
 
         edges = [
-            GraphEdge(source=f"n{i}", target=f"n{i+1}", relationship_type="works_for", weight=0.8)
-            for i in range(4)
+            GraphEdge(source=f"n{i}", target=f"n{i + 1}", relationship_type="works_for", weight=0.8) for i in range(4)
         ]
 
         graph = Graph(project_id="proj1", nodes=nodes, edges=edges)
@@ -348,10 +339,7 @@ class TestCommunityDetection:
         """Test community detection with custom resolution."""
         algorithms = GraphAlgorithms()
 
-        nodes = [
-            GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person")
-            for i in range(6)
-        ]
+        nodes = [GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person") for i in range(6)]
 
         edges = [
             GraphEdge(source="n0", target="n1", relationship_type="works_for", weight=0.9),
@@ -362,9 +350,7 @@ class TestCommunityDetection:
 
         graph = Graph(project_id="proj1", nodes=nodes, edges=edges)
 
-        communities, modularity = algorithms.detect_communities_louvain(
-            graph, min_community_size=2, resolution=1.5
-        )
+        communities, modularity = algorithms.detect_communities_louvain(graph, min_community_size=2, resolution=1.5)
 
         assert isinstance(communities, list)
 
@@ -523,14 +509,10 @@ class TestGetNeighbors:
         """Test getting neighbors with result limit."""
         algorithms = GraphAlgorithms()
 
-        nodes = [
-            GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person")
-            for i in range(10)
-        ]
+        nodes = [GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person") for i in range(10)]
 
         edges = [
-            GraphEdge(source="n0", target=f"n{i}", relationship_type="works_for", weight=0.8)
-            for i in range(1, 10)
+            GraphEdge(source="n0", target=f"n{i}", relationship_type="works_for", weight=0.8) for i in range(1, 10)
         ]
 
         graph = Graph(project_id="proj1", nodes=nodes, edges=edges)

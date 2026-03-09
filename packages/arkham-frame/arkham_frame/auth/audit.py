@@ -7,8 +7,9 @@ Provides functions to log and query security-relevant events.
 import json
 import logging
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
 from uuid import UUID
+
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,8 +19,10 @@ logger = logging.getLogger(__name__)
 
 # --- Pydantic Schemas ---
 
+
 class AuditEventCreate(BaseModel):
     """Data for creating an audit event."""
+
     event_type: str
     action: str
     target_type: Optional[str] = None
@@ -29,6 +32,7 @@ class AuditEventCreate(BaseModel):
 
 class AuditEventRead(BaseModel):
     """Audit event response model."""
+
     id: UUID
     tenant_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
@@ -48,6 +52,7 @@ class AuditEventRead(BaseModel):
 
 class AuditListResponse(BaseModel):
     """Paginated audit event list."""
+
     events: List[AuditEventRead]
     total: int
     limit: int
@@ -56,6 +61,7 @@ class AuditListResponse(BaseModel):
 
 class AuditStats(BaseModel):
     """Audit statistics."""
+
     total_events: int
     events_today: int
     events_this_week: int
@@ -65,6 +71,7 @@ class AuditStats(BaseModel):
 
 
 # --- Service Functions ---
+
 
 async def log_audit_event(
     session: AsyncSession,
@@ -110,7 +117,7 @@ async def log_audit_event(
                 "details": json.dumps(details or {}),
                 "ip_address": ip_address,
                 "user_agent": user_agent,
-            }
+            },
         )
         await session.commit()
         logger.debug(f"Audit event logged: {event_type} by user {user_id}")
@@ -169,8 +176,7 @@ async def get_audit_events(
 
     # Get total count
     count_result = await session.execute(
-        text(f"SELECT COUNT(*) FROM arkham_auth.audit_events a WHERE {where_clause}"),
-        params
+        text(f"SELECT COUNT(*) FROM arkham_auth.audit_events a WHERE {where_clause}"), params
     )
     total = count_result.scalar() or 0
 
@@ -192,20 +198,22 @@ async def get_audit_events(
 
     events = []
     for row in rows:
-        events.append(AuditEventRead(
-            id=row.id,
-            tenant_id=row.tenant_id,
-            user_id=row.user_id,
-            user_email=row.user_email,
-            event_type=row.event_type,
-            target_type=row.target_type,
-            target_id=row.target_id,
-            action=row.action,
-            details=row.details if isinstance(row.details, dict) else json.loads(row.details or "{}"),
-            ip_address=row.ip_address,
-            user_agent=row.user_agent,
-            created_at=row.created_at,
-        ))
+        events.append(
+            AuditEventRead(
+                id=row.id,
+                tenant_id=row.tenant_id,
+                user_id=row.user_id,
+                user_email=row.user_email,
+                event_type=row.event_type,
+                target_type=row.target_type,
+                target_id=row.target_id,
+                action=row.action,
+                details=row.details if isinstance(row.details, dict) else json.loads(row.details or "{}"),
+                ip_address=row.ip_address,
+                user_agent=row.user_agent,
+                created_at=row.created_at,
+            )
+        )
 
     return events, total
 
@@ -218,8 +226,7 @@ async def get_audit_stats(
 
     # Total events
     total_result = await session.execute(
-        text("SELECT COUNT(*) FROM arkham_auth.audit_events WHERE tenant_id = :tid"),
-        {"tid": str(tenant_id)}
+        text("SELECT COUNT(*) FROM arkham_auth.audit_events WHERE tenant_id = :tid"), {"tid": str(tenant_id)}
     )
     total_events = total_result.scalar() or 0
 
@@ -229,7 +236,7 @@ async def get_audit_stats(
             SELECT COUNT(*) FROM arkham_auth.audit_events
             WHERE tenant_id = :tid AND created_at >= CURRENT_DATE
         """),
-        {"tid": str(tenant_id)}
+        {"tid": str(tenant_id)},
     )
     events_today = today_result.scalar() or 0
 
@@ -239,7 +246,7 @@ async def get_audit_stats(
             SELECT COUNT(*) FROM arkham_auth.audit_events
             WHERE tenant_id = :tid AND created_at >= CURRENT_DATE - INTERVAL '7 days'
         """),
-        {"tid": str(tenant_id)}
+        {"tid": str(tenant_id)},
     )
     events_this_week = week_result.scalar() or 0
 
@@ -251,7 +258,7 @@ async def get_audit_stats(
             AND event_type = 'auth.login.failure'
             AND created_at >= CURRENT_DATE
         """),
-        {"tid": str(tenant_id)}
+        {"tid": str(tenant_id)},
     )
     failed_logins_today = failed_result.scalar() or 0
 
@@ -265,12 +272,9 @@ async def get_audit_stats(
             ORDER BY count DESC
             LIMIT 10
         """),
-        {"tid": str(tenant_id)}
+        {"tid": str(tenant_id)},
     )
-    top_event_types = [
-        {"event_type": row.event_type, "count": row.count}
-        for row in top_types_result.fetchall()
-    ]
+    top_event_types = [{"event_type": row.event_type, "count": row.count} for row in top_types_result.fetchall()]
 
     # Recent active users
     recent_users_result = await session.execute(
@@ -283,7 +287,7 @@ async def get_audit_stats(
             ORDER BY last_activity DESC
             LIMIT 10
         """),
-        {"tid": str(tenant_id)}
+        {"tid": str(tenant_id)},
     )
     recent_users = [
         {"email": row.email, "event_count": row.event_count, "last_activity": row.last_activity.isoformat()}
@@ -323,11 +327,7 @@ async def export_audit_events(
     )
 
     if format == "json":
-        return json.dumps(
-            [e.model_dump(mode="json") for e in events],
-            indent=2,
-            default=str
-        )
+        return json.dumps([e.model_dump(mode="json") for e in events], indent=2, default=str)
 
     # CSV format
     import csv
@@ -337,31 +337,43 @@ async def export_audit_events(
     writer = csv.writer(output)
 
     # Header
-    writer.writerow([
-        "Timestamp", "Event Type", "Action", "User Email", "User ID",
-        "Target Type", "Target ID", "IP Address", "Details"
-    ])
+    writer.writerow(
+        [
+            "Timestamp",
+            "Event Type",
+            "Action",
+            "User Email",
+            "User ID",
+            "Target Type",
+            "Target ID",
+            "IP Address",
+            "Details",
+        ]
+    )
 
     # Rows
     for event in events:
-        writer.writerow([
-            event.created_at.isoformat(),
-            event.event_type,
-            event.action,
-            event.user_email or "",
-            str(event.user_id) if event.user_id else "",
-            event.target_type or "",
-            event.target_id or "",
-            event.ip_address or "",
-            json.dumps(event.details),
-        ])
+        writer.writerow(
+            [
+                event.created_at.isoformat(),
+                event.event_type,
+                event.action,
+                event.user_email or "",
+                str(event.user_id) if event.user_id else "",
+                event.target_type or "",
+                event.target_id or "",
+                event.ip_address or "",
+                json.dumps(event.details),
+            ]
+        )
 
     return output.getvalue()
 
 
 async def ensure_audit_schema(session: AsyncSession) -> None:
     """Ensure audit table exists (idempotent)."""
-    await session.execute(text("""
+    await session.execute(
+        text("""
         CREATE TABLE IF NOT EXISTS arkham_auth.audit_events (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             tenant_id UUID REFERENCES arkham_auth.tenants(id) ON DELETE CASCADE,
@@ -375,14 +387,17 @@ async def ensure_audit_schema(session: AsyncSession) -> None:
             user_agent TEXT,
             created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )
-    """))
+    """)
+    )
 
     # Create indexes if not exist
     await session.execute(text("CREATE INDEX IF NOT EXISTS idx_audit_tenant ON arkham_auth.audit_events(tenant_id)"))
     await session.execute(text("CREATE INDEX IF NOT EXISTS idx_audit_user ON arkham_auth.audit_events(user_id)"))
     await session.execute(text("CREATE INDEX IF NOT EXISTS idx_audit_type ON arkham_auth.audit_events(event_type)"))
     await session.execute(text("CREATE INDEX IF NOT EXISTS idx_audit_created ON arkham_auth.audit_events(created_at)"))
-    await session.execute(text("CREATE INDEX IF NOT EXISTS idx_audit_target ON arkham_auth.audit_events(target_type, target_id)"))
+    await session.execute(
+        text("CREATE INDEX IF NOT EXISTS idx_audit_target ON arkham_auth.audit_events(target_type, target_id)")
+    )
 
     await session.commit()
     logger.info("Audit schema verified")

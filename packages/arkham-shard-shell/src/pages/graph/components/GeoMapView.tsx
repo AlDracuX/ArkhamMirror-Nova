@@ -166,9 +166,7 @@ function SvgFallbackMap({
   }, [data?.nodes]);
 
   const validEdges = useMemo(() => {
-    return (data?.edges || []).filter(
-      (edge) => nodeCoords[edge.source] && nodeCoords[edge.target]
-    );
+    return (data?.edges || []).filter((edge) => nodeCoords[edge.source] && nodeCoords[edge.target]);
   }, [data?.edges, nodeCoords]);
 
   const handleNodeHover = (node: GeoNode, event: React.MouseEvent) => {
@@ -267,8 +265,7 @@ function SvgFallbackMap({
           validEdges.map((edge, idx) => {
             const source = nodeCoords[edge.source];
             const target = nodeCoords[edge.target];
-            const isSelected =
-              selectedNodeId === edge.source || selectedNodeId === edge.target;
+            const isSelected = selectedNodeId === edge.source || selectedNodeId === edge.target;
 
             return (
               <line
@@ -290,9 +287,7 @@ function SvgFallbackMap({
           if (!coords) return null;
 
           const color =
-            entityColors[node.entity_type?.toLowerCase()] ||
-            entityColors.default ||
-            '#64748b';
+            entityColors[node.entity_type?.toLowerCase()] || entityColors.default || '#64748b';
           const isSelected = selectedNodeId === node.id;
           const isHovered = hoveredNode === node.id;
           const radius = isSelected ? 8 : isHovered ? 7 : 5;
@@ -454,8 +449,7 @@ export default function GeoMapView({
       const target = nodeMap.get(edge.target);
       if (!source || !target) continue;
 
-      const isSelected =
-        selectedNodeId === edge.source || selectedNodeId === edge.target;
+      const isSelected = selectedNodeId === edge.source || selectedNodeId === edge.target;
 
       features.push({
         type: 'Feature',
@@ -539,12 +533,7 @@ export default function GeoMapView({
             id="edge-lines"
             type="line"
             paint={{
-              'line-color': [
-                'case',
-                ['get', 'selected'],
-                '#3b82f6',
-                'rgba(148, 163, 184, 0.5)',
-              ],
+              'line-color': ['case', ['get', 'selected'], '#3b82f6', 'rgba(148, 163, 184, 0.5)'],
               'line-width': ['case', ['get', 'selected'], 2, 1],
             }}
           />
@@ -553,9 +542,7 @@ export default function GeoMapView({
         {/* Node markers */}
         {validNodes.map((node) => {
           const color =
-            entityColors[node.entity_type?.toLowerCase()] ||
-            entityColors.default ||
-            '#ef4444';
+            entityColors[node.entity_type?.toLowerCase()] || entityColors.default || '#ef4444';
           const isSelected = selectedNodeId === node.id;
 
           return (
@@ -564,9 +551,7 @@ export default function GeoMapView({
               longitude={node.longitude!}
               latitude={node.latitude!}
               anchor="center"
-              onClick={(e) =>
-                handleMarkerClick(node, e.originalEvent)
-              }
+              onClick={(e) => handleMarkerClick(node, e.originalEvent)}
             >
               <div
                 style={{
@@ -612,7 +597,8 @@ export default function GeoMapView({
               </div>
               {popupInfo.city && (
                 <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                  {popupInfo.city}{popupInfo.country ? `, ${popupInfo.country}` : ''}
+                  {popupInfo.city}
+                  {popupInfo.country ? `, ${popupInfo.country}` : ''}
                 </div>
               )}
             </div>

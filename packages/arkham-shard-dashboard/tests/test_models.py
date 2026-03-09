@@ -4,35 +4,35 @@ Dashboard Shard - Model Tests
 Tests for all Pydantic models and enums.
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_dashboard.models import (
-    ServiceStatus,
-    ServiceHealth,
-    SystemHealth,
-    LLMConfig,
-    UpdateLLMRequest,
-    LLMTestResult,
+    DashboardStats,
     DatabaseInfo,
+    ErrorInfo,
+    ErrorListResponse,
+    EventInfo,
+    EventListResponse,
+    LLMConfig,
+    LLMTestResult,
     MigrationResult,
-    ResetDatabaseRequest,
-    VacuumResult,
-    WorkerInfo,
     QueueStats,
+    ResetDatabaseRequest,
     ScaleWorkersRequest,
     ScaleWorkersResult,
+    ServiceHealth,
+    ServiceStatus,
+    ShardInfo,
     StartWorkerRequest,
     StartWorkerResult,
     StopWorkerRequest,
     StopWorkerResult,
-    EventInfo,
-    EventListResponse,
-    ErrorInfo,
-    ErrorListResponse,
-    ShardInfo,
+    SystemHealth,
     SystemInfo,
-    DashboardStats,
+    UpdateLLMRequest,
+    VacuumResult,
+    WorkerInfo,
 )
 
 

@@ -96,7 +96,6 @@ export function MergeDuplicates({ onMergeComplete }: MergeDuplicatesProps) {
 
       refetch();
       onMergeComplete?.();
-
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Merge failed');
     } finally {
@@ -111,7 +110,7 @@ export function MergeDuplicates({ onMergeComplete }: MergeDuplicatesProps) {
 
     try {
       // For each selected pair, merge keeping entity_a as canonical
-      const pairsToMerge = duplicates?.filter(d => selectedPairs.has(getPairKey(d))) || [];
+      const pairsToMerge = duplicates?.filter((d) => selectedPairs.has(getPairKey(d))) || [];
 
       for (const pair of pairsToMerge) {
         await fetch('/api/entities/merge', {
@@ -129,7 +128,6 @@ export function MergeDuplicates({ onMergeComplete }: MergeDuplicatesProps) {
       setSelectedPairs(new Set());
       refetch();
       onMergeComplete?.();
-
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Batch merge failed');
     } finally {
@@ -169,7 +167,7 @@ export function MergeDuplicates({ onMergeComplete }: MergeDuplicatesProps) {
             onChange={(e) => setTypeFilter(e.target.value)}
             className="type-select"
           >
-            {ENTITY_TYPES.map(type => (
+            {ENTITY_TYPES.map((type) => (
               <option key={type.value} value={type.value}>
                 {type.label}
               </option>
@@ -192,21 +190,13 @@ export function MergeDuplicates({ onMergeComplete }: MergeDuplicatesProps) {
           </div>
         </div>
 
-        <button
-          className="btn btn-secondary"
-          onClick={() => refetch()}
-          disabled={loading}
-        >
+        <button className="btn btn-secondary" onClick={() => refetch()} disabled={loading}>
           <Icon name="RefreshCw" size={16} className={loading ? 'spin' : ''} />
           Refresh
         </button>
 
         {selectedPairs.size > 0 && (
-          <button
-            className="btn btn-primary"
-            onClick={handleBatchMerge}
-            disabled={merging}
-          >
+          <button className="btn btn-primary" onClick={handleBatchMerge} disabled={merging}>
             <Icon name="Merge" size={16} />
             Merge {selectedPairs.size} Selected
           </button>
@@ -242,10 +232,7 @@ export function MergeDuplicates({ onMergeComplete }: MergeDuplicatesProps) {
                 const isSelected = selectedPairs.has(key);
 
                 return (
-                  <div
-                    key={key}
-                    className={`duplicate-card ${isSelected ? 'selected' : ''}`}
-                  >
+                  <div key={key} className={`duplicate-card ${isSelected ? 'selected' : ''}`}>
                     <div className="duplicate-header">
                       <input
                         type="checkbox"
@@ -253,7 +240,9 @@ export function MergeDuplicates({ onMergeComplete }: MergeDuplicatesProps) {
                         onChange={() => togglePairSelection(candidate)}
                         className="select-checkbox"
                       />
-                      <span className={`similarity-badge ${getSimilarityColor(candidate.similarity_score)}`}>
+                      <span
+                        className={`similarity-badge ${getSimilarityColor(candidate.similarity_score)}`}
+                      >
                         {Math.round(candidate.similarity_score * 100)}% match
                       </span>
                       <span className="entity-type-badge">
@@ -335,10 +324,7 @@ export function MergeDuplicates({ onMergeComplete }: MergeDuplicatesProps) {
             </div>
 
             <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setConfirmMerge(null)}
-              >
+              <button className="btn btn-secondary" onClick={() => setConfirmMerge(null)}>
                 Cancel
               </button>
               <button

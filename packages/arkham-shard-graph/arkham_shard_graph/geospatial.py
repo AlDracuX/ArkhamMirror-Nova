@@ -5,13 +5,13 @@ Provides tools for extracting geographic coordinates from entities,
 calculating distances, and preparing data for map-based visualization.
 """
 
-from dataclasses import dataclass, field
-from typing import Any
-from math import radians, sin, cos, sqrt, atan2
-import re
 import logging
+import re
+from dataclasses import dataclass, field
+from math import atan2, cos, radians, sin, sqrt
+from typing import Any
 
-from .models import Graph, GraphNode, GraphEdge
+from .models import Graph, GraphEdge, GraphNode
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class GeoCoordinate:
     """Geographic coordinate."""
+
     latitude: float
     longitude: float
 
@@ -30,6 +31,7 @@ class GeoCoordinate:
 @dataclass
 class GeoNode:
     """Node with geographic coordinates."""
+
     entity_id: str
     label: str
     latitude: float
@@ -45,6 +47,7 @@ class GeoNode:
 @dataclass
 class GeoEdge:
     """Edge with geographic distance."""
+
     source_id: str
     target_id: str
     distance_km: float
@@ -55,6 +58,7 @@ class GeoEdge:
 @dataclass
 class GeoBounds:
     """Geographic bounding box."""
+
     min_lat: float
     max_lat: float
     min_lng: float
@@ -70,15 +74,13 @@ class GeoBounds:
 
     def contains(self, lat: float, lng: float) -> bool:
         """Check if point is within bounds."""
-        return (
-            self.min_lat <= lat <= self.max_lat and
-            self.min_lng <= lng <= self.max_lng
-        )
+        return self.min_lat <= lat <= self.max_lat and self.min_lng <= lng <= self.max_lng
 
 
 @dataclass
 class GeoCluster:
     """Cluster of nearby geographic nodes."""
+
     id: str
     center_lat: float
     center_lng: float
@@ -89,6 +91,7 @@ class GeoCluster:
 @dataclass
 class GeoGraphData:
     """Geographic graph data for visualization."""
+
     nodes: list[GeoNode] = field(default_factory=list)
     edges: list[GeoEdge] = field(default_factory=list)
     bounds: GeoBounds | None = None
@@ -105,9 +108,9 @@ class GeoGraphEngine:
     # Common coordinate patterns
     COORD_PATTERNS = [
         # Decimal degrees in parentheses: (40.7128, -74.0060) - most common format in our data
-        r'\(\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*\)',
+        r"\(\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*\)",
         # Decimal degrees without parentheses but with decimal points required
-        r'(-?\d+\.\d{2,})\s*,\s*(-?\d+\.\d{2,})',
+        r"(-?\d+\.\d{2,})\s*,\s*(-?\d+\.\d{2,})",
         # DMS: 40°42'46"N 74°0'22"W
         r"(\d+)°(\d+)'(\d+(?:\.\d+)?)[\"″]?\s*([NS])\s+(\d+)°(\d+)'(\d+(?:\.\d+)?)[\"″]?\s*([EW])",
     ]
@@ -163,9 +166,7 @@ class GeoGraphEngine:
                         # Pattern: "Label, any words (lat, lng)" - e.g., "London, United Kingdom (51.5074, -0.1278)"
                         # Also handles: "Label (lat, lng)" directly
                         label_with_coords = re.search(
-                            rf'{re.escape(label)}[^(]*\((-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\)',
-                            sentence,
-                            re.IGNORECASE
+                            rf"{re.escape(label)}[^(]*\((-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\)", sentence, re.IGNORECASE
                         )
                         if label_with_coords:
                             try:
@@ -201,18 +202,20 @@ class GeoGraphEngine:
             if not (-90 <= lat <= 90 and -180 <= lng <= 180):
                 continue
 
-            geo_nodes.append(GeoNode(
-                entity_id=node.id,
-                label=node.label or node.id,
-                latitude=lat,
-                longitude=lng,
-                location_type=location_type,
-                entity_type=entity_type,
-                address=node.properties.get("address", "") if node.properties else "",
-                city=node.properties.get("city", "") if node.properties else "",
-                country=node.properties.get("country", "") if node.properties else "",
-                properties=node.properties or {},
-            ))
+            geo_nodes.append(
+                GeoNode(
+                    entity_id=node.id,
+                    label=node.label or node.id,
+                    latitude=lat,
+                    longitude=lng,
+                    location_type=location_type,
+                    entity_type=entity_type,
+                    address=node.properties.get("address", "") if node.properties else "",
+                    city=node.properties.get("city", "") if node.properties else "",
+                    country=node.properties.get("country", "") if node.properties else "",
+                    properties=node.properties or {},
+                )
+            )
 
         return geo_nodes
 
@@ -248,11 +251,11 @@ class GeoGraphEngine:
                 lng_dir = dms_match.group(8).upper()
 
                 lat = lat_deg + lat_min / 60 + lat_sec / 3600
-                if lat_dir == 'S':
+                if lat_dir == "S":
                     lat = -lat
 
                 lng = lng_deg + lng_min / 60 + lng_sec / 3600
-                if lng_dir == 'W':
+                if lng_dir == "W":
                     lng = -lng
 
                 if -90 <= lat <= 90 and -180 <= lng <= 180:
@@ -305,10 +308,7 @@ class GeoGraphEngine:
             List of GeoEdge with distances
         """
         # Build coordinate lookup
-        coord_map = {
-            node.entity_id: (node.latitude, node.longitude)
-            for node in geo_nodes
-        }
+        coord_map = {node.entity_id: (node.latitude, node.longitude) for node in geo_nodes}
 
         geo_edges: list[GeoEdge] = []
 
@@ -318,17 +318,21 @@ class GeoGraphEngine:
 
             if source_coords and target_coords:
                 distance = self.calculate_distance(
-                    source_coords[0], source_coords[1],
-                    target_coords[0], target_coords[1],
+                    source_coords[0],
+                    source_coords[1],
+                    target_coords[0],
+                    target_coords[1],
                 )
 
-                geo_edges.append(GeoEdge(
-                    source_id=edge.source,
-                    target_id=edge.target,
-                    distance_km=distance,
-                    relationship_type=edge.relationship_type or edge.type or "related",
-                    weight=edge.weight,
-                ))
+                geo_edges.append(
+                    GeoEdge(
+                        source_id=edge.source,
+                        target_id=edge.target,
+                        distance_km=distance,
+                        relationship_type=edge.relationship_type or edge.type or "related",
+                        weight=edge.weight,
+                    )
+                )
 
         return geo_edges
 
@@ -384,8 +388,10 @@ class GeoGraphEngine:
                     continue
 
                 distance = self.calculate_distance(
-                    node.latitude, node.longitude,
-                    other.latitude, other.longitude,
+                    node.latitude,
+                    node.longitude,
+                    other.latitude,
+                    other.longitude,
                 )
 
                 if distance <= radius_km:
@@ -402,13 +408,15 @@ class GeoGraphEngine:
                 dist = self.calculate_distance(center_lat, center_lng, n.latitude, n.longitude)
                 max_dist = max(max_dist, dist)
 
-            clusters.append(GeoCluster(
-                id=f"cluster_{len(clusters)}",
-                center_lat=center_lat,
-                center_lng=center_lng,
-                node_ids=[n.entity_id for n in cluster_nodes],
-                radius_km=max_dist,
-            ))
+            clusters.append(
+                GeoCluster(
+                    id=f"cluster_{len(clusters)}",
+                    center_lat=center_lat,
+                    center_lng=center_lng,
+                    node_ids=[n.entity_id for n in cluster_nodes],
+                    radius_km=max_dist,
+                )
+            )
 
         return clusters
 
@@ -461,17 +469,11 @@ class GeoGraphEngine:
         bounds: GeoBounds,
     ) -> GeoGraphData:
         """Filter geo data to only include nodes within bounds."""
-        filtered_nodes = [
-            n for n in geo_data.nodes
-            if bounds.contains(n.latitude, n.longitude)
-        ]
+        filtered_nodes = [n for n in geo_data.nodes if bounds.contains(n.latitude, n.longitude)]
 
         node_ids = {n.entity_id for n in filtered_nodes}
 
-        filtered_edges = [
-            e for e in geo_data.edges
-            if e.source_id in node_ids and e.target_id in node_ids
-        ]
+        filtered_edges = [e for e in geo_data.edges if e.source_id in node_ids and e.target_id in node_ids]
 
         return GeoGraphData(
             nodes=filtered_nodes,
@@ -513,7 +515,9 @@ class GeoGraphEngine:
                 "min_lng": geo_data.bounds.min_lng,
                 "max_lng": geo_data.bounds.max_lng,
                 "center": geo_data.bounds.center,
-            } if geo_data.bounds else None,
+            }
+            if geo_data.bounds
+            else None,
             "clusters": [
                 {
                     "id": c.id,
@@ -543,50 +547,51 @@ class GeoGraphEngine:
 
         # Add node points
         for node in geo_data.nodes:
-            features.append({
-                "type": "Feature",
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": [node.longitude, node.latitude],
-                },
-                "properties": {
-                    "id": node.entity_id,
-                    "label": node.label,
-                    "entity_type": node.entity_type,
-                    "location_type": node.location_type,
-                    "address": node.address,
-                    "city": node.city,
-                    "country": node.country,
-                    "feature_type": "node",
-                },
-            })
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [node.longitude, node.latitude],
+                    },
+                    "properties": {
+                        "id": node.entity_id,
+                        "label": node.label,
+                        "entity_type": node.entity_type,
+                        "location_type": node.location_type,
+                        "address": node.address,
+                        "city": node.city,
+                        "country": node.country,
+                        "feature_type": "node",
+                    },
+                }
+            )
 
         # Add edge lines
-        node_coords = {
-            n.entity_id: [n.longitude, n.latitude]
-            for n in geo_data.nodes
-        }
+        node_coords = {n.entity_id: [n.longitude, n.latitude] for n in geo_data.nodes}
 
         for edge in geo_data.edges:
             source_coords = node_coords.get(edge.source_id)
             target_coords = node_coords.get(edge.target_id)
 
             if source_coords and target_coords:
-                features.append({
-                    "type": "Feature",
-                    "geometry": {
-                        "type": "LineString",
-                        "coordinates": [source_coords, target_coords],
-                    },
-                    "properties": {
-                        "source": edge.source_id,
-                        "target": edge.target_id,
-                        "distance_km": edge.distance_km,
-                        "relationship_type": edge.relationship_type,
-                        "weight": edge.weight,
-                        "feature_type": "edge",
-                    },
-                })
+                features.append(
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [source_coords, target_coords],
+                        },
+                        "properties": {
+                            "source": edge.source_id,
+                            "target": edge.target_id,
+                            "distance_km": edge.distance_km,
+                            "relationship_type": edge.relationship_type,
+                            "weight": edge.weight,
+                            "feature_type": "edge",
+                        },
+                    }
+                )
 
         return {
             "type": "FeatureCollection",

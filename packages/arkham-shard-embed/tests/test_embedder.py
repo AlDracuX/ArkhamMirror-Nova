@@ -4,9 +4,8 @@ Tests for the EmbeddingManager.
 These tests verify the core embedding functionality.
 """
 
-import pytest
 import numpy as np
-
+import pytest
 from arkham_shard_embed.embedder import EmbeddingManager
 from arkham_shard_embed.models import EmbedConfig
 
@@ -49,11 +48,7 @@ def test_embed_single_text(manager):
 
 def test_embed_batch(manager):
     """Test batch embedding."""
-    texts = [
-        "First sentence.",
-        "Second sentence.",
-        "Third sentence."
-    ]
+    texts = ["First sentence.", "Second sentence.", "Third sentence."]
     embeddings = manager.embed_batch(texts)
 
     assert isinstance(embeddings, list)
@@ -77,8 +72,8 @@ def test_cache(manager):
 
     # Check cache stats
     cache_info = manager.get_cache_info()
-    assert cache_info['enabled']
-    assert cache_info['hits'] > 0
+    assert cache_info["enabled"]
+    assert cache_info["hits"] > 0
 
 
 def test_cache_clear(manager):
@@ -88,14 +83,14 @@ def test_cache_clear(manager):
 
     # Get initial cache state
     before = manager.get_cache_info()
-    assert before['size'] > 0
+    assert before["size"] > 0
 
     # Clear cache
     manager.clear_cache()
 
     # Check cache is empty
     after = manager.get_cache_info()
-    assert after['size'] == 0
+    assert after["size"] == 0
 
 
 def test_similarity_cosine(manager):
@@ -163,7 +158,7 @@ def test_chunk_text_with_sentences(manager):
     # Should try to break at sentence boundaries
     assert len(chunks) > 1
     # Most chunks should end with a period
-    assert sum(1 for chunk in chunks if chunk.strip().endswith('.')) >= len(chunks) // 2
+    assert sum(1 for chunk in chunks if chunk.strip().endswith(".")) >= len(chunks) // 2
 
 
 def test_get_model_info(manager):

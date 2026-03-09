@@ -11,8 +11,8 @@ import numpy as np
 from .models import (
     Claim,
     Contradiction,
-    ContradictionType,
     ContradictionStatus,
+    ContradictionType,
     Severity,
 )
 
@@ -67,7 +67,7 @@ class ContradictionDetector:
                 id=str(uuid.uuid4()),
                 document_id=document_id or "unknown",
                 text=sentence.strip(),
-                location=f"sentence_{i+1}",
+                location=f"sentence_{i + 1}",
                 extraction_method="simple",
             )
             claims.append(claim)
@@ -75,9 +75,7 @@ class ContradictionDetector:
         logger.info(f"Extracted {len(claims)} claims from text (simple method)")
         return claims
 
-    async def extract_claims_llm(
-        self, text: str, document_id: str | None = None
-    ) -> list[Claim]:
+    async def extract_claims_llm(self, text: str, document_id: str | None = None) -> list[Claim]:
         """
         Extract claims using LLM.
 
@@ -111,7 +109,8 @@ Return a JSON array of claims with format:
 
             # Parse JSON response - LLMResponse is a dataclass with .text attribute
             import json
-            response_text = response.text if hasattr(response, 'text') else str(response)
+
+            response_text = response.text if hasattr(response, "text") else str(response)
             claims_data = json.loads(response_text) if response_text else []
 
             claims = []
@@ -121,7 +120,7 @@ Return a JSON array of claims with format:
                     document_id=document_id or "unknown",
                     text=claim_data.get("claim", ""),
                     claim_type=claim_data.get("type", "fact"),
-                    location=f"claim_{i+1}",
+                    location=f"claim_{i + 1}",
                     extraction_method="llm",
                 )
                 claims.append(claim)
@@ -194,9 +193,7 @@ Return a JSON array of claims with format:
 
     # --- Contradiction Verification ---
 
-    async def verify_contradiction(
-        self, claim_a: Claim, claim_b: Claim, similarity: float
-    ) -> Contradiction | None:
+    async def verify_contradiction(self, claim_a: Claim, claim_b: Claim, similarity: float) -> Contradiction | None:
         """
         Verify if two similar claims are actually contradictory.
 
@@ -238,7 +235,8 @@ Return JSON format:
 
             # Parse response - LLMResponse is a dataclass with .text attribute
             import json
-            response_text = response.text if hasattr(response, 'text') else str(response)
+
+            response_text = response.text if hasattr(response, "text") else str(response)
             result = json.loads(response_text) if response_text else {}
 
             if not result.get("contradicts", False):
@@ -308,13 +306,13 @@ Return JSON format:
                 return contradiction
 
         # Numeric contradictions
-        numbers_a = re.findall(r'\b\d+(?:,\d{3})*(?:\.\d+)?\b', text_a)
-        numbers_b = re.findall(r'\b\d+(?:,\d{3})*(?:\.\d+)?\b', text_b)
+        numbers_a = re.findall(r"\b\d+(?:,\d{3})*(?:\.\d+)?\b", text_a)
+        numbers_b = re.findall(r"\b\d+(?:,\d{3})*(?:\.\d+)?\b", text_b)
 
         if numbers_a and numbers_b and numbers_a != numbers_b:
             # Check if claims are otherwise similar (without numbers)
-            text_a_no_nums = re.sub(r'\b\d+(?:,\d{3})*(?:\.\d+)?\b', 'NUM', text_a)
-            text_b_no_nums = re.sub(r'\b\d+(?:,\d{3})*(?:\.\d+)?\b', 'NUM', text_b)
+            text_a_no_nums = re.sub(r"\b\d+(?:,\d{3})*(?:\.\d+)?\b", "NUM", text_a)
+            text_b_no_nums = re.sub(r"\b\d+(?:,\d{3})*(?:\.\d+)?\b", "NUM", text_b)
 
             if self._text_similarity(text_a_no_nums, text_b_no_nums) > 0.7:
                 contradiction = Contradiction(
@@ -378,10 +376,7 @@ Return JSON format:
         claim_a_lower = contradiction.claim_a.lower()
         claim_b_lower = contradiction.claim_b.lower()
 
-        high_count = sum(
-            1 for keyword in high_keywords
-            if keyword in claim_a_lower or keyword in claim_b_lower
-        )
+        high_count = sum(1 for keyword in high_keywords if keyword in claim_a_lower or keyword in claim_b_lower)
 
         if high_count >= 2 or contradiction.contradiction_type == ContradictionType.DIRECT:
             return Severity.HIGH
@@ -399,7 +394,7 @@ Return JSON format:
     def _split_sentences(self, text: str) -> list[str]:
         """Split text into sentences."""
         # Simple sentence splitting
-        sentences = re.split(r'[.!?]+', text)
+        sentences = re.split(r"[.!?]+", text)
         return [s.strip() for s in sentences if s.strip()]
 
     def _cosine_similarity(self, vec_a: list[float], vec_b: list[float]) -> float:
@@ -486,9 +481,7 @@ class ChainDetector:
                 continue
 
             # DFS to find paths
-            path_contradictions = self._dfs_find_paths(
-                start_doc, graph, contradiction_map, visited, max_depth=5
-            )
+            path_contradictions = self._dfs_find_paths(start_doc, graph, contradiction_map, visited, max_depth=5)
 
             if len(path_contradictions) >= 2:  # Chain of at least 2 contradictions
                 chains.append(path_contradictions)
@@ -525,9 +518,7 @@ class ChainDetector:
                     chain = [contradiction_id]
 
                     # Recurse
-                    sub_chain = self._dfs_find_paths(
-                        neighbor, graph, contradiction_map, visited, new_path, max_depth
-                    )
+                    sub_chain = self._dfs_find_paths(neighbor, graph, contradiction_map, visited, new_path, max_depth)
 
                     if sub_chain:
                         chain.extend(sub_chain)

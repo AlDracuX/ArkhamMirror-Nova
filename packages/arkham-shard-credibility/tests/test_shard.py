@@ -2,11 +2,10 @@
 Tests for credibility shard implementation.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from arkham_shard_credibility.shard import CredibilityShard
+import pytest
 from arkham_shard_credibility.models import (
     AssessmentMethod,
     CredibilityFactor,
@@ -14,6 +13,7 @@ from arkham_shard_credibility.models import (
     FactorType,
     SourceType,
 )
+from arkham_shard_credibility.shard import CredibilityShard
 
 
 @pytest.fixture
@@ -293,10 +293,7 @@ async def test_get_source_credibility(shard, mock_frame):
         },
     ]
 
-    source_cred = await shard.get_source_credibility(
-        SourceType.DOCUMENT,
-        "doc-123"
-    )
+    source_cred = await shard.get_source_credibility(SourceType.DOCUMENT, "doc-123")
 
     assert source_cred is not None
     assert source_cred.source_type == SourceType.DOCUMENT
@@ -312,14 +309,14 @@ async def test_get_statistics(shard, mock_frame):
     # Mock database responses
     mock_frame.database.fetch_one.side_effect = [
         {"count": 100},  # total
-        {"count": 10},   # unreliable
-        {"count": 20},   # low
-        {"count": 30},   # medium
-        {"count": 25},   # high
-        {"count": 15},   # verified
-        {"avg": 55.5},   # avg score
-        {"avg": 0.85},   # avg confidence
-        {"count": 50},   # unique sources
+        {"count": 10},  # unreliable
+        {"count": 20},  # low
+        {"count": 30},  # medium
+        {"count": 25},  # high
+        {"count": 15},  # verified
+        {"avg": 55.5},  # avg score
+        {"avg": 0.85},  # avg confidence
+        {"count": 50},  # unique sources
     ]
 
     mock_frame.database.fetch_all.side_effect = [

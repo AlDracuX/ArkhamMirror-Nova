@@ -36,6 +36,7 @@ class NERExtractor:
         """
         try:
             import spacy
+
             self.nlp = spacy.load(self.model_name)
             logger.info(f"Loaded spaCy model: {self.model_name}")
         except Exception as e:
@@ -74,7 +75,7 @@ class NERExtractor:
                 entity_type = EntityType.OTHER
 
             # Get sentence context
-            sentence = ent.sent.text if hasattr(ent, 'sent') else None
+            sentence = ent.sent.text if hasattr(ent, "sent") else None
 
             mention = EntityMention(
                 text=ent.text,

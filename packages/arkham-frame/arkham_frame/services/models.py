@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 class ModelType(str, Enum):
     """Types of ML models managed by this service."""
+
     EMBEDDING = "embedding"
     OCR = "ocr"
     VISION = "vision"
@@ -27,6 +28,7 @@ class ModelType(str, Enum):
 
 class ModelStatus(str, Enum):
     """Installation status of a model."""
+
     INSTALLED = "installed"
     NOT_INSTALLED = "not_installed"
     DOWNLOADING = "downloading"
@@ -37,6 +39,7 @@ class ModelStatus(str, Enum):
 @dataclass
 class ModelInfo:
     """Information about an ML model."""
+
     id: str
     name: str
     model_type: ModelType
@@ -101,7 +104,6 @@ KNOWN_MODELS: dict[str, ModelInfo] = {
         size_mb=90,
         required_by=["embed"],
     ),
-
     # PaddleOCR models
     "paddleocr-en": ModelInfo(
         id="paddleocr-en",
@@ -389,6 +391,7 @@ class ModelService:
 
             try:
                 from sentence_transformers import SentenceTransformer
+
                 logger.info(f"Downloading embedding model: {hf_path}")
                 # This triggers the download
                 SentenceTransformer(hf_path)
@@ -444,9 +447,7 @@ except Exception as e:
                 logger.info(f"Successfully downloaded PaddleOCR: {lang}")
                 return True
             elif "IMPORT_ERROR" in output:
-                raise RuntimeError(
-                    "paddleocr not installed. Install with: pip install paddleocr paddlepaddle"
-                )
+                raise RuntimeError("paddleocr not installed. Install with: pip install paddleocr paddlepaddle")
             else:
                 error_msg = output or stderr or "Unknown error"
                 raise RuntimeError(f"Failed to download PaddleOCR model: {error_msg}")

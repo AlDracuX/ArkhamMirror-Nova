@@ -3,13 +3,13 @@
 import sys
 from datetime import datetime
 
+from arkham_shard_timeline.conflicts import ConflictDetector
 from arkham_shard_timeline.extraction import DateExtractor
 from arkham_shard_timeline.merging import TimelineMerger
-from arkham_shard_timeline.conflicts import ConflictDetector
 from arkham_shard_timeline.models import (
+    ConflictType,
     ExtractionContext,
     MergeStrategy,
-    ConflictType,
 )
 
 
@@ -73,8 +73,9 @@ def test_timeline_merging():
     """Test timeline merging."""
     print("\n=== Timeline Merging Test ===")
 
-    from arkham_shard_timeline.models import TimelineEvent, EventType, DatePrecision
     import uuid
+
+    from arkham_shard_timeline.models import DatePrecision, EventType, TimelineEvent
 
     # Create some test events
     events = [
@@ -124,8 +125,9 @@ def test_conflict_detection():
     """Test conflict detection."""
     print("\n=== Conflict Detection Test ===")
 
-    from arkham_shard_timeline.models import TimelineEvent, EventType, DatePrecision
     import uuid
+
+    from arkham_shard_timeline.models import DatePrecision, EventType, TimelineEvent
 
     # Create events with conflicts
     events = [
@@ -186,6 +188,7 @@ def main():
             results.append((name, False))
             print(f"\n[FAIL] {name}: {e}")
             import traceback
+
             traceback.print_exc()
 
     print("\n" + "=" * 60)

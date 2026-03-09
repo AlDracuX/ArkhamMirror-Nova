@@ -255,7 +255,7 @@ export interface SimilarImagesResult {
   near_duplicates: number;
   visually_similar: number;
   generated_at: string;
-  search_urls?: ReverseImageSearchUrl[];  // URLs for manual reverse image search
+  search_urls?: ReverseImageSearchUrl[]; // URLs for manual reverse image search
 }
 
 // ============================================

@@ -13,33 +13,37 @@ from pydantic import BaseModel, Field
 
 class PatternType(str, Enum):
     """Types of patterns that can be detected."""
-    RECURRING_THEME = "recurring_theme"      # Theme appearing in multiple documents
-    BEHAVIORAL = "behavioral"                 # Consistent behavior of an entity
-    TEMPORAL = "temporal"                     # Time-based pattern (cycles, sequences)
-    CORRELATION = "correlation"               # Statistical correlation between entities
-    LINGUISTIC = "linguistic"                 # Language/style pattern
-    STRUCTURAL = "structural"                 # Document structure pattern
-    CUSTOM = "custom"                         # User-defined pattern
+
+    RECURRING_THEME = "recurring_theme"  # Theme appearing in multiple documents
+    BEHAVIORAL = "behavioral"  # Consistent behavior of an entity
+    TEMPORAL = "temporal"  # Time-based pattern (cycles, sequences)
+    CORRELATION = "correlation"  # Statistical correlation between entities
+    LINGUISTIC = "linguistic"  # Language/style pattern
+    STRUCTURAL = "structural"  # Document structure pattern
+    CUSTOM = "custom"  # User-defined pattern
 
 
 class PatternStatus(str, Enum):
     """Status of a detected pattern."""
-    DETECTED = "detected"       # Automatically detected, pending review
-    CONFIRMED = "confirmed"     # Manually confirmed as valid
-    DISMISSED = "dismissed"     # Dismissed as noise/false positive
-    ARCHIVED = "archived"       # No longer active but preserved
+
+    DETECTED = "detected"  # Automatically detected, pending review
+    CONFIRMED = "confirmed"  # Manually confirmed as valid
+    DISMISSED = "dismissed"  # Dismissed as noise/false positive
+    ARCHIVED = "archived"  # No longer active but preserved
 
 
 class DetectionMethod(str, Enum):
     """How the pattern was detected."""
-    MANUAL = "manual"           # User-reported pattern
-    AUTOMATED = "automated"     # System-detected pattern
-    LLM = "llm"                 # LLM-assisted detection
-    HYBRID = "hybrid"           # Combination of methods
+
+    MANUAL = "manual"  # User-reported pattern
+    AUTOMATED = "automated"  # System-detected pattern
+    LLM = "llm"  # LLM-assisted detection
+    HYBRID = "hybrid"  # Combination of methods
 
 
 class SourceType(str, Enum):
     """Type of source that matched a pattern."""
+
     DOCUMENT = "document"
     ENTITY = "entity"
     CLAIM = "claim"
@@ -49,6 +53,7 @@ class SourceType(str, Enum):
 
 class PatternCriteria(BaseModel):
     """Criteria for matching a pattern."""
+
     keywords: Optional[List[str]] = Field(default_factory=list)
     regex_patterns: Optional[List[str]] = Field(default_factory=list)
     entity_types: Optional[List[str]] = Field(default_factory=list)
@@ -61,6 +66,7 @@ class PatternCriteria(BaseModel):
 
 class Pattern(BaseModel):
     """A detected pattern across documents."""
+
     id: str
     name: str
     description: str
@@ -92,6 +98,7 @@ class Pattern(BaseModel):
 
 class PatternCreate(BaseModel):
     """Request to create a new pattern."""
+
     name: str
     description: str
     pattern_type: PatternType
@@ -102,6 +109,7 @@ class PatternCreate(BaseModel):
 
 class PatternUpdate(BaseModel):
     """Request to update a pattern."""
+
     name: Optional[str] = None
     description: Optional[str] = None
     criteria: Optional[PatternCriteria] = None
@@ -112,6 +120,7 @@ class PatternUpdate(BaseModel):
 
 class PatternMatch(BaseModel):
     """A match of a pattern in a source."""
+
     id: str
     pattern_id: str
 
@@ -137,6 +146,7 @@ class PatternMatch(BaseModel):
 
 class PatternMatchCreate(BaseModel):
     """Request to add a match to a pattern."""
+
     source_type: SourceType
     source_id: str
     source_title: Optional[str] = None
@@ -150,6 +160,7 @@ class PatternMatchCreate(BaseModel):
 
 class PatternFilter(BaseModel):
     """Filter criteria for listing patterns."""
+
     pattern_type: Optional[PatternType] = None
     status: Optional[PatternStatus] = None
     min_confidence: Optional[float] = None
@@ -163,6 +174,7 @@ class PatternFilter(BaseModel):
 
 class PatternAnalysisRequest(BaseModel):
     """Request to analyze documents for patterns."""
+
     document_ids: Optional[List[str]] = None
     text: Optional[str] = None
     pattern_types: Optional[List[PatternType]] = None
@@ -172,6 +184,7 @@ class PatternAnalysisRequest(BaseModel):
 
 class PatternAnalysisResult(BaseModel):
     """Result of pattern analysis."""
+
     patterns_detected: List[Pattern] = Field(default_factory=list)
     matches_found: List[PatternMatch] = Field(default_factory=list)
     documents_analyzed: int = 0
@@ -181,6 +194,7 @@ class PatternAnalysisResult(BaseModel):
 
 class CorrelationRequest(BaseModel):
     """Request to find correlations between entities."""
+
     entity_ids: List[str]
     time_window_days: Optional[int] = Field(default=90)
     min_occurrences: int = Field(default=3)
@@ -189,6 +203,7 @@ class CorrelationRequest(BaseModel):
 
 class Correlation(BaseModel):
     """A detected correlation between entities."""
+
     entity_id_1: str
     entity_id_2: str
     correlation_score: float = Field(ge=-1.0, le=1.0)
@@ -200,6 +215,7 @@ class Correlation(BaseModel):
 
 class CorrelationResult(BaseModel):
     """Result of correlation analysis."""
+
     correlations: List[Correlation] = Field(default_factory=list)
     entities_analyzed: int = 0
     processing_time_ms: float = 0.0
@@ -207,6 +223,7 @@ class CorrelationResult(BaseModel):
 
 class PatternStatistics(BaseModel):
     """Statistics about patterns in the system."""
+
     total_patterns: int = 0
     by_type: Dict[str, int] = Field(default_factory=dict)
     by_status: Dict[str, int] = Field(default_factory=dict)
@@ -221,6 +238,7 @@ class PatternStatistics(BaseModel):
 
 class PatternListResponse(BaseModel):
     """Response for pattern listing."""
+
     items: List[Pattern]
     total: int
     page: int
@@ -229,6 +247,7 @@ class PatternListResponse(BaseModel):
 
 class PatternMatchListResponse(BaseModel):
     """Response for match listing."""
+
     items: List[PatternMatch]
     total: int
     page: int

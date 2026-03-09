@@ -36,7 +36,7 @@ export function SetupPage() {
   });
 
   const updateData = (field: keyof SetupData, value: string) => {
-    setData(prev => ({ ...prev, [field]: value }));
+    setData((prev) => ({ ...prev, [field]: value }));
     setError('');
 
     // Auto-generate slug from organization name
@@ -45,7 +45,7 @@ export function SetupPage() {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
-      setData(prev => ({ ...prev, tenant_slug: slug }));
+      setData((prev) => ({ ...prev, tenant_slug: slug }));
     }
   };
 
@@ -329,11 +329,7 @@ export function SetupPage() {
             </div>
 
             <div className="setup-actions">
-              <button
-                type="button"
-                className="auth-secondary"
-                onClick={handleBack}
-              >
+              <button type="button" className="auth-secondary" onClick={handleBack}>
                 <Icon name="ArrowLeft" size={18} />
                 Back
               </button>

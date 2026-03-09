@@ -2,9 +2,10 @@
 Dashboard API routes.
 """
 
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
@@ -52,6 +53,7 @@ class ResetDatabaseRequest(BaseModel):
 
 class SetFallbackModelsRequest(BaseModel):
     """Request to configure OpenRouter fallback models."""
+
     models: List[str] = []
     enabled: bool = True
 
@@ -69,6 +71,7 @@ def get_dashboard_shard():
 
 # === Health ===
 
+
 @router.get("/health")
 async def get_health() -> Dict[str, Any]:
     """Get service health status."""
@@ -77,6 +80,7 @@ async def get_health() -> Dict[str, Any]:
 
 
 # === LLM Configuration ===
+
 
 @router.get("/llm")
 async def get_llm_config() -> Dict[str, Any]:
@@ -113,7 +117,7 @@ async def reset_llm_config() -> Dict[str, Any]:
 async def set_fallback_models(request: SetFallbackModelsRequest) -> Dict[str, Any]:
     """
     Configure OpenRouter fallback models for intelligent routing.
-    
+
     When enabled, requests will automatically fall back to the next model
     if the primary model fails (quota exceeded, rate limited, etc).
     """
@@ -132,6 +136,7 @@ async def get_fallback_models() -> Dict[str, Any]:
 
 
 # === Database ===
+
 
 @router.get("/database")
 async def get_database_info() -> Dict[str, Any]:
@@ -177,6 +182,7 @@ async def vacuum_database() -> Dict[str, Any]:
 
 
 # === Workers ===
+
 
 @router.get("/workers")
 async def get_workers() -> Dict[str, Any]:
@@ -264,6 +270,7 @@ async def cancel_job(request: CancelJobRequest) -> Dict[str, Any]:
 
 
 # === Events ===
+
 
 @router.get("/events")
 async def get_events(

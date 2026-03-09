@@ -4,20 +4,20 @@ Reports Shard - Shard Tests
 Tests for ReportsShard class and methods.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
-from arkham_shard_reports.shard import ReportsShard
+import pytest
 from arkham_shard_reports.models import (
     Report,
+    ReportFilter,
     ReportFormat,
+    ReportSchedule,
     ReportStatus,
     ReportTemplate,
     ReportType,
-    ReportSchedule,
-    ReportFilter,
 )
+from arkham_shard_reports.shard import ReportsShard
 
 
 @pytest.fixture
@@ -114,20 +114,22 @@ class TestReportGeneration:
     async def test_get_report(self, shard):
         """Test getting a report by ID."""
         # Mock database response
-        shard._db.fetch_one = AsyncMock(return_value={
-            "id": "rep-1",
-            "report_type": "summary",
-            "title": "Test Report",
-            "status": "completed",
-            "created_at": datetime.utcnow().isoformat(),
-            "completed_at": None,
-            "parameters": "{}",
-            "output_format": "html",
-            "file_path": "/reports/rep-1.html",
-            "file_size": 1024,
-            "error": None,
-            "metadata": "{}",
-        })
+        shard._db.fetch_one = AsyncMock(
+            return_value={
+                "id": "rep-1",
+                "report_type": "summary",
+                "title": "Test Report",
+                "status": "completed",
+                "created_at": datetime.utcnow().isoformat(),
+                "completed_at": None,
+                "parameters": "{}",
+                "output_format": "html",
+                "file_path": "/reports/rep-1.html",
+                "file_size": 1024,
+                "error": None,
+                "metadata": "{}",
+            }
+        )
 
         report = await shard.get_report("rep-1")
         assert report is not None
@@ -145,36 +147,38 @@ class TestReportGeneration:
     async def test_list_reports(self, shard):
         """Test listing reports."""
         # Mock database response
-        shard._db.fetch_all = AsyncMock(return_value=[
-            {
-                "id": "rep-1",
-                "report_type": "summary",
-                "title": "Report 1",
-                "status": "completed",
-                "created_at": datetime.utcnow().isoformat(),
-                "completed_at": None,
-                "parameters": "{}",
-                "output_format": "html",
-                "file_path": None,
-                "file_size": None,
-                "error": None,
-                "metadata": "{}",
-            },
-            {
-                "id": "rep-2",
-                "report_type": "timeline",
-                "title": "Report 2",
-                "status": "pending",
-                "created_at": datetime.utcnow().isoformat(),
-                "completed_at": None,
-                "parameters": "{}",
-                "output_format": "pdf",
-                "file_path": None,
-                "file_size": None,
-                "error": None,
-                "metadata": "{}",
-            },
-        ])
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "id": "rep-1",
+                    "report_type": "summary",
+                    "title": "Report 1",
+                    "status": "completed",
+                    "created_at": datetime.utcnow().isoformat(),
+                    "completed_at": None,
+                    "parameters": "{}",
+                    "output_format": "html",
+                    "file_path": None,
+                    "file_size": None,
+                    "error": None,
+                    "metadata": "{}",
+                },
+                {
+                    "id": "rep-2",
+                    "report_type": "timeline",
+                    "title": "Report 2",
+                    "status": "pending",
+                    "created_at": datetime.utcnow().isoformat(),
+                    "completed_at": None,
+                    "parameters": "{}",
+                    "output_format": "pdf",
+                    "file_path": None,
+                    "file_size": None,
+                    "error": None,
+                    "metadata": "{}",
+                },
+            ]
+        )
 
         reports = await shard.list_reports(limit=10, offset=0)
         assert len(reports) == 2
@@ -197,20 +201,22 @@ class TestReportGeneration:
     async def test_delete_report(self, shard):
         """Test deleting a report."""
         # Mock get_report to return a report
-        shard._db.fetch_one = AsyncMock(return_value={
-            "id": "rep-1",
-            "report_type": "summary",
-            "title": "Test Report",
-            "status": "completed",
-            "created_at": datetime.utcnow().isoformat(),
-            "completed_at": None,
-            "parameters": "{}",
-            "output_format": "html",
-            "file_path": "/reports/rep-1.html",
-            "file_size": 1024,
-            "error": None,
-            "metadata": "{}",
-        })
+        shard._db.fetch_one = AsyncMock(
+            return_value={
+                "id": "rep-1",
+                "report_type": "summary",
+                "title": "Test Report",
+                "status": "completed",
+                "created_at": datetime.utcnow().isoformat(),
+                "completed_at": None,
+                "parameters": "{}",
+                "output_format": "html",
+                "file_path": "/reports/rep-1.html",
+                "file_size": 1024,
+                "error": None,
+                "metadata": "{}",
+            }
+        )
 
         success = await shard.delete_report("rep-1")
         assert success is True
@@ -251,18 +257,20 @@ class TestTemplates:
     @pytest.mark.asyncio
     async def test_get_template(self, shard):
         """Test getting a template by ID."""
-        shard._db.fetch_one = AsyncMock(return_value={
-            "id": "tmpl-1",
-            "name": "Test Template",
-            "report_type": "summary",
-            "description": "Test description",
-            "parameters_schema": "{}",
-            "default_format": "html",
-            "template_content": "# {{title}}",
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
-            "metadata": "{}",
-        })
+        shard._db.fetch_one = AsyncMock(
+            return_value={
+                "id": "tmpl-1",
+                "name": "Test Template",
+                "report_type": "summary",
+                "description": "Test description",
+                "parameters_schema": "{}",
+                "default_format": "html",
+                "template_content": "# {{title}}",
+                "created_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat(),
+                "metadata": "{}",
+            }
+        )
 
         template = await shard.get_template("tmpl-1")
         assert template is not None
@@ -272,20 +280,22 @@ class TestTemplates:
     @pytest.mark.asyncio
     async def test_list_templates(self, shard):
         """Test listing templates."""
-        shard._db.fetch_all = AsyncMock(return_value=[
-            {
-                "id": "tmpl-1",
-                "name": "Template 1",
-                "report_type": "summary",
-                "description": "Desc 1",
-                "parameters_schema": "{}",
-                "default_format": "html",
-                "template_content": "",
-                "created_at": datetime.utcnow().isoformat(),
-                "updated_at": datetime.utcnow().isoformat(),
-                "metadata": "{}",
-            },
-        ])
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "id": "tmpl-1",
+                    "name": "Template 1",
+                    "report_type": "summary",
+                    "description": "Desc 1",
+                    "parameters_schema": "{}",
+                    "default_format": "html",
+                    "template_content": "",
+                    "created_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.utcnow().isoformat(),
+                    "metadata": "{}",
+                },
+            ]
+        )
 
         templates = await shard.list_templates(limit=10, offset=0)
         assert len(templates) == 1
@@ -314,21 +324,23 @@ class TestSchedules:
     @pytest.mark.asyncio
     async def test_list_schedules(self, shard):
         """Test listing schedules."""
-        shard._db.fetch_all = AsyncMock(return_value=[
-            {
-                "id": "sched-1",
-                "template_id": "tmpl-1",
-                "cron_expression": "0 9 * * 1",
-                "enabled": 1,
-                "last_run": None,
-                "next_run": None,
-                "parameters": "{}",
-                "output_format": "html",
-                "retention_days": 30,
-                "email_recipients": "[]",
-                "metadata": "{}",
-            },
-        ])
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "id": "sched-1",
+                    "template_id": "tmpl-1",
+                    "cron_expression": "0 9 * * 1",
+                    "enabled": 1,
+                    "last_run": None,
+                    "next_run": None,
+                    "parameters": "{}",
+                    "output_format": "html",
+                    "retention_days": 30,
+                    "email_recipients": "[]",
+                    "metadata": "{}",
+                },
+            ]
+        )
 
         schedules = await shard.list_schedules(limit=10, offset=0)
         assert len(schedules) == 1
@@ -347,18 +359,22 @@ class TestStatistics:
     @pytest.mark.asyncio
     async def test_get_statistics(self, shard):
         """Test getting statistics."""
-        shard._db.fetch_one = AsyncMock(side_effect=[
-            {"count": 100},  # total reports
-            {"count": 10},   # templates
-            {"count": 5},    # schedules
-            {"count": 3},    # active schedules
-            {"total": 524288},  # file size
-        ])
-        shard._db.fetch_all = AsyncMock(side_effect=[
-            [{"status": "completed", "count": 80}, {"status": "pending", "count": 20}],
-            [{"report_type": "summary", "count": 60}, {"report_type": "timeline", "count": 40}],
-            [{"output_format": "html", "count": 70}, {"output_format": "pdf", "count": 30}],
-        ])
+        shard._db.fetch_one = AsyncMock(
+            side_effect=[
+                {"count": 100},  # total reports
+                {"count": 10},  # templates
+                {"count": 5},  # schedules
+                {"count": 3},  # active schedules
+                {"total": 524288},  # file size
+            ]
+        )
+        shard._db.fetch_all = AsyncMock(
+            side_effect=[
+                [{"status": "completed", "count": 80}, {"status": "pending", "count": 20}],
+                [{"report_type": "summary", "count": 60}, {"report_type": "timeline", "count": 40}],
+                [{"output_format": "html", "count": 70}, {"output_format": "pdf", "count": 30}],
+            ]
+        )
 
         stats = await shard.get_statistics()
         assert stats.total_reports == 100

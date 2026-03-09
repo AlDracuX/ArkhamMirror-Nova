@@ -8,6 +8,7 @@ from typing import Any, Optional
 
 class EvidenceRelevance(str, Enum):
     """How extracted evidence relates to a hypothesis."""
+
     SUPPORTS = "supports"
     CONTRADICTS = "contradicts"
     NEUTRAL = "neutral"
@@ -16,6 +17,7 @@ class EvidenceRelevance(str, Enum):
 
 class ExtractionMethod(str, Enum):
     """How evidence was added to the matrix."""
+
     MANUAL = "manual"
     CORPUS = "corpus"
     AI_SUGGESTED = "ai_suggested"
@@ -23,6 +25,7 @@ class ExtractionMethod(str, Enum):
 
 class ConsistencyRating(Enum):
     """Evidence consistency with hypothesis ratings."""
+
     HIGHLY_CONSISTENT = "++"
     CONSISTENT = "+"
     NEUTRAL = "N"
@@ -50,6 +53,7 @@ class ConsistencyRating(Enum):
 
 class EvidenceType(Enum):
     """Type of evidence."""
+
     FACT = "fact"
     TESTIMONY = "testimony"
     DOCUMENT = "document"
@@ -60,6 +64,7 @@ class EvidenceType(Enum):
 
 class MatrixStatus(Enum):
     """Status of an ACH matrix."""
+
     DRAFT = "draft"
     ACTIVE = "active"
     COMPLETED = "completed"
@@ -69,6 +74,7 @@ class MatrixStatus(Enum):
 @dataclass
 class Hypothesis:
     """A hypothesis in an ACH matrix."""
+
     id: str
     matrix_id: str
     title: str
@@ -84,6 +90,7 @@ class Hypothesis:
 @dataclass
 class Evidence:
     """Evidence item in an ACH matrix."""
+
     id: str
     matrix_id: str
     description: str
@@ -109,6 +116,7 @@ class Evidence:
 @dataclass
 class ExtractedEvidence:
     """Evidence extracted from corpus search (before user acceptance)."""
+
     quote: str
     source_document_id: str
     source_document_name: str
@@ -125,6 +133,7 @@ class ExtractedEvidence:
 @dataclass
 class SearchScope:
     """Scope for corpus search."""
+
     project_id: str | None = None
     document_ids: list[str] | None = None
     date_from: datetime | None = None
@@ -136,6 +145,7 @@ class SearchScope:
 @dataclass
 class CorpusSearchConfig:
     """Configuration for corpus search."""
+
     chunk_limit: int = 30
     min_similarity: float = 0.5
     max_chunks_per_document: int = 5
@@ -146,6 +156,7 @@ class CorpusSearchConfig:
 @dataclass
 class Rating:
     """A single cell in the ACH matrix."""
+
     matrix_id: str
     evidence_id: str
     hypothesis_id: str
@@ -164,6 +175,7 @@ class Rating:
 @dataclass
 class HypothesisScore:
     """Calculated score for a hypothesis."""
+
     hypothesis_id: str
     consistency_score: float = 0.0
     inconsistency_count: int = 0
@@ -177,6 +189,7 @@ class HypothesisScore:
 @dataclass
 class ACHMatrix:
     """An ACH matrix for analyzing competing hypotheses."""
+
     id: str
     title: str
     description: str = ""
@@ -229,6 +242,7 @@ class ACHMatrix:
 @dataclass
 class DevilsAdvocateChallenge:
     """A devil's advocate challenge to the leading hypothesis."""
+
     matrix_id: str
     hypothesis_id: str
     challenge_text: str
@@ -243,6 +257,7 @@ class DevilsAdvocateChallenge:
 @dataclass
 class MatrixExport:
     """Export format for an ACH matrix."""
+
     matrix: ACHMatrix
     format: str
     content: str | bytes | dict[str, Any]  # bytes for PDF binary content
@@ -253,8 +268,10 @@ class MatrixExport:
 # Premortem Analysis Models
 # ============================================
 
+
 class FailureModeType(str, Enum):
     """Type of failure mode identified in premortem analysis."""
+
     MISINTERPRETATION = "misinterpretation"
     MISSED_EVIDENCE = "missed_evidence"
     FAILED_ASSUMPTION = "failed_assumption"
@@ -264,6 +281,7 @@ class FailureModeType(str, Enum):
 
 class PremortemConversionType(str, Enum):
     """What a failure mode can be converted to."""
+
     HYPOTHESIS = "hypothesis"
     MILESTONE = "milestone"
     ASSUMPTION = "assumption"
@@ -272,6 +290,7 @@ class PremortemConversionType(str, Enum):
 @dataclass
 class FailureMode:
     """A single failure mode identified during premortem analysis."""
+
     id: str
     premortem_id: str
     failure_type: FailureModeType
@@ -287,6 +306,7 @@ class FailureMode:
 @dataclass
 class PremortemAnalysis:
     """A premortem analysis result for a hypothesis."""
+
     id: str
     matrix_id: str
     hypothesis_id: str
@@ -306,8 +326,10 @@ class PremortemAnalysis:
 # Cone of Plausibility Models
 # ============================================
 
+
 class ScenarioStatus(str, Enum):
     """Status of a scenario in the cone."""
+
     ACTIVE = "active"
     OCCURRED = "occurred"
     RULED_OUT = "ruled_out"
@@ -317,6 +339,7 @@ class ScenarioStatus(str, Enum):
 @dataclass
 class ScenarioIndicator:
     """An indicator to watch for a scenario."""
+
     id: str
     scenario_id: str
     description: str
@@ -328,6 +351,7 @@ class ScenarioIndicator:
 @dataclass
 class ScenarioDriver:
     """A key driver/variable that causes scenario branching."""
+
     id: str
     tree_id: str
     name: str
@@ -339,6 +363,7 @@ class ScenarioDriver:
 @dataclass
 class ScenarioNode:
     """A single scenario node in the cone of plausibility tree."""
+
     id: str
     tree_id: str
     parent_id: str | None  # None for root "NOW" node
@@ -361,6 +386,7 @@ class ScenarioNode:
 @dataclass
 class ScenarioTree:
     """A cone of plausibility tree for scenario planning."""
+
     id: str
     matrix_id: str
     title: str
@@ -383,10 +409,7 @@ class ScenarioTree:
 
     def get_children(self, parent_id: str | None) -> list[ScenarioNode]:
         """Get child nodes of a parent."""
-        return sorted(
-            [n for n in self.nodes if n.parent_id == parent_id],
-            key=lambda n: n.branch_order
-        )
+        return sorted([n for n in self.nodes if n.parent_id == parent_id], key=lambda n: n.branch_order)
 
     def get_root(self) -> ScenarioNode | None:
         """Get the root 'NOW' node."""

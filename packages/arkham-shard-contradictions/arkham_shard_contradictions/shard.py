@@ -5,7 +5,7 @@ import logging
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router, set_db_service
-from .detector import ContradictionDetector, ChainDetector
+from .detector import ChainDetector, ContradictionDetector
 from .storage import ContradictionStore
 
 logger = logging.getLogger(__name__)
@@ -169,7 +169,7 @@ class ContradictionsShard(ArkhamShard):
 
         try:
             # Execute schema creation SQL
-            for statement in SCHEMA_SQL.split(';'):
+            for statement in SCHEMA_SQL.split(";"):
                 statement = statement.strip()
                 if statement:
                     await self._db_service.execute(statement)
@@ -255,7 +255,9 @@ class ContradictionsShard(ArkhamShard):
             self._on_document_embedded,
         )
 
-        logger.info("Subscribed to events: documents.document.created, documents.document.updated, embed.document.completed")
+        logger.info(
+            "Subscribed to events: documents.document.created, documents.document.updated, embed.document.completed"
+        )
 
     async def _unsubscribe_from_events(self) -> None:
         """Unsubscribe from events."""
@@ -307,9 +309,7 @@ class ContradictionsShard(ArkhamShard):
                     if c.status.value == "confirmed":
                         # Add note about document update
                         await self.storage.add_note(
-                            c.id,
-                            f"Source document {doc_id} was updated - may require review",
-                            analyst_id="system"
+                            c.id, f"Source document {doc_id} was updated - may require review", analyst_id="system"
                         )
 
     async def _on_document_embedded(self, event_data: dict) -> None:
@@ -359,10 +359,7 @@ class ContradictionsShard(ArkhamShard):
                 try:
                     # Use the public analyze_pair method
                     results = await self.analyze_pair(
-                        doc_a_id=doc_id,
-                        doc_b_id=other_id,
-                        threshold=0.7,
-                        use_llm=self._llm_service is not None
+                        doc_a_id=doc_id, doc_b_id=other_id, threshold=0.7, use_llm=self._llm_service is not None
                     )
                     total_contradictions += len(results)
                 except Exception as e:
@@ -410,7 +407,7 @@ class ContradictionsShard(ArkhamShard):
         doc_b_content = await self._get_document_content(doc_b_id)
 
         if not doc_a_content or not doc_b_content:
-            raise RuntimeError(f"Could not fetch document content for analysis")
+            raise RuntimeError("Could not fetch document content for analysis")
 
         doc_a_text = doc_a_content["content"]
         doc_b_text = doc_b_content["content"]
@@ -424,9 +421,7 @@ class ContradictionsShard(ArkhamShard):
             claims_b = self.detector.extract_claims_simple(doc_b_text, doc_b_id)
 
         # Find similar claim pairs
-        similar_pairs = await self.detector.find_similar_claims(
-            claims_a, claims_b, threshold=threshold
-        )
+        similar_pairs = await self.detector.find_similar_claims(claims_a, claims_b, threshold=threshold)
 
         # Verify contradictions
         contradictions = []
@@ -494,11 +489,7 @@ class ContradictionsShard(ArkhamShard):
                 logger.warning(f"Document {doc_id} has no chunk content")
                 return None
 
-            return {
-                "id": doc_id,
-                "content": content,
-                "title": doc_result.get("filename", f"Document {doc_id}")
-            }
+            return {"id": doc_id, "content": content, "title": doc_result.get("filename", f"Document {doc_id}")}
 
         except Exception as e:
             logger.error(f"Failed to fetch document {doc_id}: {e}")
@@ -560,16 +551,15 @@ class ContradictionsShard(ArkhamShard):
         from .models import ContradictionStatus
 
         contradictions = await self.storage.search(status=None)
-        contradictions = [
-            c for c in contradictions if c.status != ContradictionStatus.DISMISSED
-        ]
+        contradictions = [c for c in contradictions if c.status != ContradictionStatus.DISMISSED]
 
         # Detect chains
         chains = self.chain_detector.detect_chains(contradictions)
 
         # Create chain objects
-        from .models import ContradictionChain
         import uuid
+
+        from .models import ContradictionChain
 
         created_chains = []
         for chain_ids in chains:

@@ -10,11 +10,11 @@ from dateutil import parser as dateutil_parser
 from dateutil.relativedelta import relativedelta
 
 from .models import (
-    TimelineEvent,
-    EventType,
     DatePrecision,
+    EventType,
     ExtractionContext,
     NormalizedDate,
+    TimelineEvent,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,100 +33,98 @@ class DateExtractor:
     """
 
     # Date pattern regexes
-    ISO_DATE_PATTERN = re.compile(
-        r'\b(\d{4})-(\d{1,2})-(\d{1,2})(?:T(\d{1,2}):(\d{1,2}):(\d{1,2}))?\b'
-    )
+    ISO_DATE_PATTERN = re.compile(r"\b(\d{4})-(\d{1,2})-(\d{1,2})(?:T(\d{1,2}):(\d{1,2}):(\d{1,2}))?\b")
 
     MONTH_DAY_YEAR_PATTERN = re.compile(
-        r'\b(January|February|March|April|May|June|July|August|September|October|November|December|'
-        r'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b',
-        re.IGNORECASE
+        r"\b(January|February|March|April|May|June|July|August|September|October|November|December|"
+        r"Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b",
+        re.IGNORECASE,
     )
 
     DAY_MONTH_YEAR_PATTERN = re.compile(
-        r'\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(January|February|March|April|May|June|July|August|September|October|November|December|'
-        r'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec),?\s+(\d{4})\b',
-        re.IGNORECASE
+        r"\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(January|February|March|April|May|June|July|August|September|October|November|December|"
+        r"Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec),?\s+(\d{4})\b",
+        re.IGNORECASE,
     )
 
-    NUMERIC_DATE_PATTERN = re.compile(
-        r'\b(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{2,4})\b'
-    )
+    NUMERIC_DATE_PATTERN = re.compile(r"\b(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{2,4})\b")
 
-    YEAR_ONLY_PATTERN = re.compile(r'\b(19\d{2}|20\d{2})\b')
+    YEAR_ONLY_PATTERN = re.compile(r"\b(19\d{2}|20\d{2})\b")
 
-    QUARTER_PATTERN = re.compile(
-        r'\b(Q[1-4]|first|second|third|fourth)\s+quarter\s+(?:of\s+)?(\d{4})\b',
-        re.IGNORECASE
-    )
+    QUARTER_PATTERN = re.compile(r"\b(Q[1-4]|first|second|third|fourth)\s+quarter\s+(?:of\s+)?(\d{4})\b", re.IGNORECASE)
 
-    SEASON_PATTERN = re.compile(
-        r'\b(spring|summer|fall|autumn|winter)\s+(?:of\s+)?(\d{4})\b',
-        re.IGNORECASE
-    )
+    SEASON_PATTERN = re.compile(r"\b(spring|summer|fall|autumn|winter)\s+(?:of\s+)?(\d{4})\b", re.IGNORECASE)
 
     DECADE_PATTERN = re.compile(
-        r'\b(?:the\s+)?(\d{4})s\b|'
-        r'\b(early|mid|late)[\s\-]?(\d{2})s\b',
-        re.IGNORECASE
+        r"\b(?:the\s+)?(\d{4})s\b|"
+        r"\b(early|mid|late)[\s\-]?(\d{2})s\b",
+        re.IGNORECASE,
     )
 
-    RELATIVE_DAY_PATTERN = re.compile(
-        r'\b(yesterday|today|tomorrow)\b',
-        re.IGNORECASE
-    )
+    RELATIVE_DAY_PATTERN = re.compile(r"\b(yesterday|today|tomorrow)\b", re.IGNORECASE)
 
     RELATIVE_WEEK_PATTERN = re.compile(
-        r'\b(last|next|this)\s+(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b',
-        re.IGNORECASE
+        r"\b(last|next|this)\s+(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b", re.IGNORECASE
     )
 
     RELATIVE_NUMERIC_PATTERN = re.compile(
-        r'\b(\d+)\s+(days?|weeks?|months?|years?)\s+(ago|from\s+now)\b',
-        re.IGNORECASE
+        r"\b(\d+)\s+(days?|weeks?|months?|years?)\s+(ago|from\s+now)\b", re.IGNORECASE
     )
 
-    APPROXIMATE_PATTERN = re.compile(
-        r'\b(around|circa|about|approximately|roughly)\s+(\d{4})\b',
-        re.IGNORECASE
-    )
+    APPROXIMATE_PATTERN = re.compile(r"\b(around|circa|about|approximately|roughly)\s+(\d{4})\b", re.IGNORECASE)
 
     TIME_PERIOD_PATTERN = re.compile(
-        r'\b(early|mid|late)\s+(January|February|March|April|May|June|July|August|September|October|November|December|'
-        r'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)(?:\s+(\d{4}))?\b',
-        re.IGNORECASE
+        r"\b(early|mid|late)\s+(January|February|March|April|May|June|July|August|September|October|November|December|"
+        r"Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)(?:\s+(\d{4}))?\b",
+        re.IGNORECASE,
     )
 
     def __init__(self):
         """Initialize the date extractor."""
         self.month_map = {
-            'january': 1, 'jan': 1,
-            'february': 2, 'feb': 2,
-            'march': 3, 'mar': 3,
-            'april': 4, 'apr': 4,
-            'may': 5,
-            'june': 6, 'jun': 6,
-            'july': 7, 'jul': 7,
-            'august': 8, 'aug': 8,
-            'september': 9, 'sep': 9, 'sept': 9,
-            'october': 10, 'oct': 10,
-            'november': 11, 'nov': 11,
-            'december': 12, 'dec': 12,
+            "january": 1,
+            "jan": 1,
+            "february": 2,
+            "feb": 2,
+            "march": 3,
+            "mar": 3,
+            "april": 4,
+            "apr": 4,
+            "may": 5,
+            "june": 6,
+            "jun": 6,
+            "july": 7,
+            "jul": 7,
+            "august": 8,
+            "aug": 8,
+            "september": 9,
+            "sep": 9,
+            "sept": 9,
+            "october": 10,
+            "oct": 10,
+            "november": 11,
+            "nov": 11,
+            "december": 12,
+            "dec": 12,
         }
 
         self.quarter_map = {
-            'q1': 1, 'first': 1,
-            'q2': 2, 'second': 2,
-            'q3': 3, 'third': 3,
-            'q4': 4, 'fourth': 4,
+            "q1": 1,
+            "first": 1,
+            "q2": 2,
+            "second": 2,
+            "q3": 3,
+            "third": 3,
+            "q4": 4,
+            "fourth": 4,
         }
 
         self.season_map = {
-            'spring': 3,   # March
-            'summer': 6,   # June
-            'fall': 9,     # September
-            'autumn': 9,   # September
-            'winter': 12,  # December
+            "spring": 3,  # March
+            "summer": 6,  # June
+            "fall": 9,  # September
+            "autumn": 9,  # September
+            "winter": 12,  # December
         }
 
     def _extract_context(self, text: str, start: int, end: int, max_chars: int = 200) -> str:
@@ -143,7 +141,7 @@ class DateExtractor:
             The sentence or line containing the date
         """
         # Find sentence boundaries (. ! ? or newlines)
-        sentence_end_pattern = re.compile(r'[.!?\n]')
+        sentence_end_pattern = re.compile(r"[.!?\n]")
 
         # Find the start of the sentence (look backwards for sentence end or start of text)
         context_start = max(0, start - max_chars)
@@ -156,7 +154,7 @@ class DateExtractor:
             context_start = context_start + matches[-1].end()
         elif context_start > 0:
             # No sentence boundary found, find first space after context_start
-            space_pos = prefix.find(' ')
+            space_pos = prefix.find(" ")
             if space_pos != -1:
                 context_start = context_start + space_pos + 1
 
@@ -170,7 +168,7 @@ class DateExtractor:
             context_end = end + match.end()
         elif context_end < len(text):
             # No sentence boundary found, find last space before context_end
-            space_pos = suffix.rfind(' ')
+            space_pos = suffix.rfind(" ")
             if space_pos != -1:
                 context_end = end + space_pos
 
@@ -178,15 +176,12 @@ class DateExtractor:
         context = text[context_start:context_end].strip()
 
         # Remove excessive whitespace
-        context = re.sub(r'\s+', ' ', context)
+        context = re.sub(r"\s+", " ", context)
 
         return context
 
     def extract_events(
-        self,
-        text: str,
-        document_id: str,
-        context: Optional[ExtractionContext] = None
+        self, text: str, document_id: str, context: Optional[ExtractionContext] = None
     ) -> list[TimelineEvent]:
         """
         Extract all temporal events from text.
@@ -220,12 +215,7 @@ class DateExtractor:
 
         return events
 
-    def _extract_iso_dates(
-        self,
-        text: str,
-        document_id: str,
-        context: ExtractionContext
-    ) -> list[TimelineEvent]:
+    def _extract_iso_dates(self, text: str, document_id: str, context: ExtractionContext) -> list[TimelineEvent]:
         """Extract ISO format dates (2024-01-15)."""
         events = []
 
@@ -265,12 +255,7 @@ class DateExtractor:
 
         return events
 
-    def _extract_natural_dates(
-        self,
-        text: str,
-        document_id: str,
-        context: ExtractionContext
-    ) -> list[TimelineEvent]:
+    def _extract_natural_dates(self, text: str, document_id: str, context: ExtractionContext) -> list[TimelineEvent]:
         """Extract natural language dates (January 15, 2024)."""
         events = []
 
@@ -329,12 +314,7 @@ class DateExtractor:
 
         return events
 
-    def _extract_numeric_dates(
-        self,
-        text: str,
-        document_id: str,
-        context: ExtractionContext
-    ) -> list[TimelineEvent]:
+    def _extract_numeric_dates(self, text: str, document_id: str, context: ExtractionContext) -> list[TimelineEvent]:
         """Extract numeric dates (01/15/2024 or 15/01/2024)."""
         events = []
 
@@ -366,7 +346,7 @@ class DateExtractor:
                         confidence=confidence,
                         event_type=EventType.REFERENCE,
                         span=(match.start(), match.end()),
-                        metadata={"ambiguous_format": True}
+                        metadata={"ambiguous_format": True},
                     )
                     events.append(event)
                     break  # Only add first valid interpretation
@@ -375,12 +355,7 @@ class DateExtractor:
 
         return events
 
-    def _extract_quarters(
-        self,
-        text: str,
-        document_id: str,
-        context: ExtractionContext
-    ) -> list[TimelineEvent]:
+    def _extract_quarters(self, text: str, document_id: str, context: ExtractionContext) -> list[TimelineEvent]:
         """Extract quarter references (Q3 2024)."""
         events = []
 
@@ -416,12 +391,7 @@ class DateExtractor:
 
         return events
 
-    def _extract_seasons(
-        self,
-        text: str,
-        document_id: str,
-        context: ExtractionContext
-    ) -> list[TimelineEvent]:
+    def _extract_seasons(self, text: str, document_id: str, context: ExtractionContext) -> list[TimelineEvent]:
         """Extract season references (summer 2024)."""
         events = []
 
@@ -449,12 +419,7 @@ class DateExtractor:
 
         return events
 
-    def _extract_decades(
-        self,
-        text: str,
-        document_id: str,
-        context: ExtractionContext
-    ) -> list[TimelineEvent]:
+    def _extract_decades(self, text: str, document_id: str, context: ExtractionContext) -> list[TimelineEvent]:
         """Extract decade references (the 1990s, mid-90s)."""
         events = []
 
@@ -473,14 +438,14 @@ class DateExtractor:
             precision = DatePrecision.DECADE
             if match.group(2):
                 qualifier = match.group(2).lower()
-                if qualifier == 'early':
+                if qualifier == "early":
                     date_end = datetime(decade_start + 3, 12, 31)
                     precision = DatePrecision.YEAR
-                elif qualifier == 'mid':
+                elif qualifier == "mid":
                     date_start = datetime(decade_start + 3, 1, 1)
                     date_end = datetime(decade_start + 6, 12, 31)
                     precision = DatePrecision.YEAR
-                elif qualifier == 'late':
+                elif qualifier == "late":
                     date_start = datetime(decade_start + 7, 1, 1)
                     precision = DatePrecision.YEAR
 
@@ -499,12 +464,7 @@ class DateExtractor:
 
         return events
 
-    def _extract_relative_dates(
-        self,
-        text: str,
-        document_id: str,
-        context: ExtractionContext
-    ) -> list[TimelineEvent]:
+    def _extract_relative_dates(self, text: str, document_id: str, context: ExtractionContext) -> list[TimelineEvent]:
         """Extract relative dates (yesterday, 3 days ago, next week)."""
         events = []
         ref_date = context.reference_date or datetime.now()
@@ -513,11 +473,11 @@ class DateExtractor:
         for match in self.RELATIVE_DAY_PATTERN.finditer(text):
             day_str = match.group(1).lower()
 
-            if day_str == 'yesterday':
+            if day_str == "yesterday":
                 date = ref_date - timedelta(days=1)
-            elif day_str == 'today':
+            elif day_str == "today":
                 date = ref_date
-            elif day_str == 'tomorrow':
+            elif day_str == "tomorrow":
                 date = ref_date + timedelta(days=1)
             else:
                 continue
@@ -531,7 +491,7 @@ class DateExtractor:
                 confidence=0.85,
                 event_type=EventType.REFERENCE,
                 span=(match.start(), match.end()),
-                metadata={"relative_to": ref_date.isoformat()}
+                metadata={"relative_to": ref_date.isoformat()},
             )
             events.append(event)
 
@@ -541,20 +501,25 @@ class DateExtractor:
             weekday_str = match.group(2)
 
             weekday_map = {
-                'monday': 0, 'tuesday': 1, 'wednesday': 2,
-                'thursday': 3, 'friday': 4, 'saturday': 5, 'sunday': 6
+                "monday": 0,
+                "tuesday": 1,
+                "wednesday": 2,
+                "thursday": 3,
+                "friday": 4,
+                "saturday": 5,
+                "sunday": 6,
             }
             target_weekday = weekday_map.get(weekday_str.lower())
 
             if target_weekday is not None:
                 current_weekday = ref_date.weekday()
 
-                if direction == 'last':
+                if direction == "last":
                     days_back = (current_weekday - target_weekday) % 7
                     if days_back == 0:
                         days_back = 7
                     date = ref_date - timedelta(days=days_back)
-                elif direction == 'next':
+                elif direction == "next":
                     days_forward = (target_weekday - current_weekday) % 7
                     if days_forward == 0:
                         days_forward = 7
@@ -572,28 +537,28 @@ class DateExtractor:
                     confidence=0.8,
                     event_type=EventType.REFERENCE,
                     span=(match.start(), match.end()),
-                    metadata={"relative_to": ref_date.isoformat()}
+                    metadata={"relative_to": ref_date.isoformat()},
                 )
                 events.append(event)
 
         # Numeric relative (3 days ago, 2 weeks from now)
         for match in self.RELATIVE_NUMERIC_PATTERN.finditer(text):
             amount = int(match.group(1))
-            unit = match.group(2).lower().rstrip('s')  # Remove plural 's'
+            unit = match.group(2).lower().rstrip("s")  # Remove plural 's'
             direction = match.group(3).lower()
 
-            multiplier = -1 if direction == 'ago' else 1
+            multiplier = -1 if direction == "ago" else 1
 
-            if unit == 'day':
+            if unit == "day":
                 date = ref_date + timedelta(days=amount * multiplier)
                 precision = DatePrecision.DAY
-            elif unit == 'week':
+            elif unit == "week":
                 date = ref_date + timedelta(weeks=amount * multiplier)
                 precision = DatePrecision.WEEK
-            elif unit == 'month':
+            elif unit == "month":
                 date = ref_date + relativedelta(months=amount * multiplier)
                 precision = DatePrecision.MONTH
-            elif unit == 'year':
+            elif unit == "year":
                 date = ref_date + relativedelta(years=amount * multiplier)
                 precision = DatePrecision.YEAR
             else:
@@ -608,17 +573,14 @@ class DateExtractor:
                 confidence=0.75,
                 event_type=EventType.REFERENCE,
                 span=(match.start(), match.end()),
-                metadata={"relative_to": ref_date.isoformat()}
+                metadata={"relative_to": ref_date.isoformat()},
             )
             events.append(event)
 
         return events
 
     def _extract_approximate_dates(
-        self,
-        text: str,
-        document_id: str,
-        context: ExtractionContext
+        self, text: str, document_id: str, context: ExtractionContext
     ) -> list[TimelineEvent]:
         """Extract approximate dates (around 2020, circa 1995)."""
         events = []
@@ -638,18 +600,13 @@ class DateExtractor:
                 confidence=0.6,
                 event_type=EventType.REFERENCE,
                 span=(match.start(), match.end()),
-                metadata={"qualifier": match.group(1)}
+                metadata={"qualifier": match.group(1)},
             )
             events.append(event)
 
         return events
 
-    def _extract_time_periods(
-        self,
-        text: str,
-        document_id: str,
-        context: ExtractionContext
-    ) -> list[TimelineEvent]:
+    def _extract_time_periods(self, text: str, document_id: str, context: ExtractionContext) -> list[TimelineEvent]:
         """Extract time periods (early January, late 2024)."""
         events = []
 
@@ -661,10 +618,10 @@ class DateExtractor:
             month = self.month_map.get(month_str)
             if month:
                 # Determine date range based on qualifier
-                if qualifier == 'early':
+                if qualifier == "early":
                     date_start = datetime(year, month, 1)
                     date_end = datetime(year, month, 10)
-                elif qualifier == 'mid':
+                elif qualifier == "mid":
                     date_start = datetime(year, month, 11)
                     date_end = datetime(year, month, 20)
                 else:  # late
@@ -688,11 +645,7 @@ class DateExtractor:
 
         return events
 
-    def normalize_date(
-        self,
-        date_str: str,
-        context: Optional[ExtractionContext] = None
-    ) -> Optional[NormalizedDate]:
+    def normalize_date(self, date_str: str, context: Optional[ExtractionContext] = None) -> Optional[NormalizedDate]:
         """
         Normalize a date string to standard format.
 

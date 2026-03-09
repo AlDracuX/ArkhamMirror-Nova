@@ -272,7 +272,7 @@ export function AnomalyDetail({ anomalyId }: { anomalyId: string }) {
           </div>
 
           <div className="status-actions">
-            {STATUS_OPTIONS.map(opt => (
+            {STATUS_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 className={`btn btn-status ${anomaly.status === opt.value ? 'btn-status-active' : 'btn-secondary'}`}
@@ -289,9 +289,7 @@ export function AnomalyDetail({ anomalyId }: { anomalyId: string }) {
             <div className="status-review">
               <p>
                 Reviewed by <strong>{anomaly.reviewed_by}</strong>
-                {anomaly.reviewed_at && (
-                  <> on {new Date(anomaly.reviewed_at).toLocaleString()}</>
-                )}
+                {anomaly.reviewed_at && <> on {new Date(anomaly.reviewed_at).toLocaleString()}</>}
               </p>
             </div>
           )}
@@ -398,10 +396,7 @@ export function AnomalyDetail({ anomalyId }: { anomalyId: string }) {
 
       {/* Add Note Dialog */}
       {showNoteDialog && (
-        <AddNoteDialog
-          onSubmit={handleAddNote}
-          onCancel={() => setShowNoteDialog(false)}
-        />
+        <AddNoteDialog onSubmit={handleAddNote} onCancel={() => setShowNoteDialog(false)} />
       )}
 
       {/* Related Anomalies Dialog */}
@@ -441,20 +436,22 @@ function AddNoteDialog({ onSubmit, onCancel }: AddNoteDialogProps) {
 
   return (
     <div className="dialog-overlay" onClick={onCancel}>
-      <div className="dialog" onClick={e => e.stopPropagation()}>
+      <div className="dialog" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-header">
           <h2>Add Note</h2>
           <button className="btn btn-icon" onClick={onCancel}>
             <Icon name="X" size={20} />
           </button>
         </div>
-        <p className="dialog-description">Add investigation notes or observations about this anomaly.</p>
+        <p className="dialog-description">
+          Add investigation notes or observations about this anomaly.
+        </p>
         <form onSubmit={handleSubmit}>
           <div className="form-field">
             <label>Note Content</label>
             <textarea
               value={content}
-              onChange={e => setContent(e.target.value)}
+              onChange={(e) => setContent(e.target.value)}
               placeholder="Enter your notes here..."
               rows={6}
               autoFocus
@@ -486,10 +483,15 @@ interface RelatedAnomaliesDialogProps {
   onSelect: (id: string) => void;
 }
 
-function RelatedAnomaliesDialog({ related, loading, onClose, onSelect }: RelatedAnomaliesDialogProps) {
+function RelatedAnomaliesDialog({
+  related,
+  loading,
+  onClose,
+  onSelect,
+}: RelatedAnomaliesDialogProps) {
   return (
     <div className="dialog-overlay" onClick={onClose}>
-      <div className="dialog dialog-lg" onClick={e => e.stopPropagation()}>
+      <div className="dialog dialog-lg" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-header">
           <h2>Related Anomalies</h2>
           <button className="btn btn-icon" onClick={onClose}>
@@ -506,7 +508,9 @@ function RelatedAnomaliesDialog({ related, loading, onClose, onSelect }: Related
               <p>Finding related anomalies...</p>
             </div>
           ) : related.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--arkham-text-muted)' }}>
+            <div
+              style={{ padding: '2rem', textAlign: 'center', color: 'var(--arkham-text-muted)' }}
+            >
               <Icon name="Search" size={32} />
               <p>No related anomalies found</p>
             </div>
@@ -527,11 +531,18 @@ function RelatedAnomaliesDialog({ related, loading, onClose, onSelect }: Related
                     {anomaly.relation === 'same_document' ? 'Same Document' : 'Same Type'}
                   </span>
                 </div>
-                <p className="anomaly-explanation" style={{ fontSize: '0.875rem', margin: '0.5rem 0' }}>
+                <p
+                  className="anomaly-explanation"
+                  style={{ fontSize: '0.875rem', margin: '0.5rem 0' }}
+                >
                   {anomaly.explanation}
                 </p>
-                <div className="anomaly-meta" style={{ fontSize: '0.75rem', color: 'var(--arkham-text-muted)' }}>
-                  Score: {anomaly.score.toFixed(1)} • Confidence: {(anomaly.confidence * 100).toFixed(0)}%
+                <div
+                  className="anomaly-meta"
+                  style={{ fontSize: '0.75rem', color: 'var(--arkham-text-muted)' }}
+                >
+                  Score: {anomaly.score.toFixed(1)} • Confidence:{' '}
+                  {(anomaly.confidence * 100).toFixed(0)}%
                 </div>
               </div>
             ))

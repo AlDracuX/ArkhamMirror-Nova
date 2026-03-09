@@ -2,22 +2,22 @@
 Tests for Patterns Shard Implementation
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from arkham_shard_patterns import PatternsShard
 from arkham_shard_patterns.models import (
+    CorrelationRequest,
+    DetectionMethod,
     Pattern,
+    PatternAnalysisRequest,
+    PatternCriteria,
+    PatternFilter,
     PatternMatch,
     PatternMatchCreate,
-    PatternFilter,
-    PatternCriteria,
-    PatternAnalysisRequest,
-    CorrelationRequest,
-    PatternType,
     PatternStatus,
-    DetectionMethod,
+    PatternType,
     SourceType,
 )
 
@@ -448,10 +448,12 @@ class TestStatistics:
     async def test_get_statistics(self, shard_with_db):
         """Test getting statistics."""
         shard_with_db._db.fetch_one = AsyncMock(return_value={"count": 10, "avg": 0.75})
-        shard_with_db._db.fetch_all = AsyncMock(return_value=[
-            {"pattern_type": "recurring_theme", "count": 5},
-            {"pattern_type": "behavioral", "count": 5},
-        ])
+        shard_with_db._db.fetch_all = AsyncMock(
+            return_value=[
+                {"pattern_type": "recurring_theme", "count": 5},
+                {"pattern_type": "behavioral", "count": 5},
+            ]
+        )
 
         stats = await shard_with_db.get_statistics()
 

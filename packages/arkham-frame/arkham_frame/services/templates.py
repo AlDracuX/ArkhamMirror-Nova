@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 # Try to import Jinja2, provide fallback if not available
 try:
-    from jinja2 import Environment, FileSystemLoader, BaseLoader, TemplateNotFound
-    from jinja2 import select_autoescape
+    from jinja2 import BaseLoader, Environment, FileSystemLoader, TemplateNotFound, select_autoescape
+
     JINJA2_AVAILABLE = True
 except ImportError:
     JINJA2_AVAILABLE = False
@@ -27,23 +27,28 @@ except ImportError:
 # Exceptions
 # ============================================
 
+
 class TemplateError(Exception):
     """Base exception for template errors."""
+
     pass
 
 
 class TemplateNotFoundError(TemplateError):
     """Template not found."""
+
     pass
 
 
 class TemplateRenderError(TemplateError):
     """Error during template rendering."""
+
     pass
 
 
 class TemplateSyntaxError(TemplateError):
     """Template syntax error."""
+
     pass
 
 
@@ -51,9 +56,11 @@ class TemplateSyntaxError(TemplateError):
 # Types
 # ============================================
 
+
 @dataclass
 class Template:
     """Template definition."""
+
     name: str
     content: str
     description: str = ""
@@ -67,6 +74,7 @@ class Template:
 @dataclass
 class RenderResult:
     """Result of template rendering."""
+
     content: str
     template_name: str
     rendered_at: datetime = field(default_factory=datetime.utcnow)
@@ -78,6 +86,7 @@ class RenderResult:
 # ============================================
 
 if JINJA2_AVAILABLE:
+
     class DictLoader(BaseLoader):
         """Jinja2 loader that loads templates from a dictionary."""
 
@@ -94,6 +103,7 @@ if JINJA2_AVAILABLE:
 # ============================================
 # Template Service
 # ============================================
+
 
 class TemplateService:
     """
@@ -214,13 +224,13 @@ Best regards,
             # Create environment
             self._jinja_env = Environment(
                 loader=DictLoader({}),  # Will be updated
-                autoescape=select_autoescape(['html', 'xml']),
+                autoescape=select_autoescape(["html", "xml"]),
                 auto_reload=auto_reload,
             )
 
             # Add custom filters
-            self._jinja_env.filters['datetime'] = self._format_datetime
-            self._jinja_env.filters['truncate_words'] = self._truncate_words
+            self._jinja_env.filters["datetime"] = self._format_datetime
+            self._jinja_env.filters["truncate_words"] = self._truncate_words
 
         # Register default templates
         for name, content in self.DEFAULT_TEMPLATES.items():
@@ -450,13 +460,14 @@ Best regards,
             List of variable names
         """
         import re
+
         # Match {{ variable }} and {{ variable.attr }}
-        pattern = r'\{\{\s*([a-zA-Z_][a-zA-Z0-9_\.]*)'
+        pattern = r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_\.]*)"
         matches = re.findall(pattern, content)
         # Get unique root variable names
         variables = set()
         for match in matches:
-            root = match.split('.')[0]
+            root = match.split(".")[0]
             variables.add(root)
         return sorted(variables)
 
@@ -485,9 +496,10 @@ Best regards,
         else:
             # Basic validation
             import re
+
             # Check for unmatched braces
-            opens = len(re.findall(r'\{\{', content))
-            closes = len(re.findall(r'\}\}', content))
+            opens = len(re.findall(r"\{\{", content))
+            closes = len(re.findall(r"\}\}", content))
             if opens != closes:
                 errors.append(f"Unmatched braces: {opens} opens, {closes} closes")
 
@@ -509,12 +521,12 @@ Best regards,
             return 0
 
         count = 0
-        extensions = ['.j2', '.jinja2', '.html', '.md', '.txt']
+        extensions = [".j2", ".jinja2", ".html", ".md", ".txt"]
 
         for file_path in directory.iterdir():
             if file_path.suffix.lower() in extensions:
                 try:
-                    content = file_path.read_text(encoding='utf-8')
+                    content = file_path.read_text(encoding="utf-8")
                     name = file_path.stem
                     self.register(
                         name=name,

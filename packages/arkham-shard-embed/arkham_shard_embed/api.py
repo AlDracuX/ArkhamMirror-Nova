@@ -1,24 +1,24 @@
 """Embed Shard API endpoints."""
 
 import logging
-import uuid
 import time
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from .models import (
-    EmbedRequest,
     BatchEmbedRequest,
-    EmbedResult,
     BatchEmbedResult,
-    SimilarityRequest,
-    SimilarityResult,
+    DocumentEmbedRequest,
+    EmbedRequest,
+    EmbedResult,
+    ModelInfo,
     NearestRequest,
     NearestResult,
-    DocumentEmbedRequest,
-    ModelInfo,
+    SimilarityRequest,
+    SimilarityResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -91,6 +91,7 @@ class DocumentEmbedRequestBody(BaseModel):
 
 class BatchDocumentEmbedRequestBody(BaseModel):
     """Request to embed multiple documents at once."""
+
     doc_ids: list[str]
     force: bool = False
 
@@ -118,10 +119,7 @@ async def embed_text(request: TextEmbedRequest):
     try:
         start_time = time.time()
 
-        embedding = _embedding_manager.embed_text(
-            text=request.text,
-            use_cache=request.use_cache
-        )
+        embedding = _embedding_manager.embed_text(text=request.text, use_cache=request.use_cache)
 
         model_info = _embedding_manager.get_model_info()
 
@@ -175,10 +173,7 @@ async def embed_batch(request: BatchTextsRequest):
     try:
         start_time = time.time()
 
-        embeddings = _embedding_manager.embed_batch(
-            texts=request.texts,
-            batch_size=request.batch_size
-        )
+        embeddings = _embedding_manager.embed_batch(texts=request.texts, batch_size=request.batch_size)
 
         model_info = _embedding_manager.get_model_info()
 
@@ -236,7 +231,7 @@ async def embed_document(doc_id: str, request: DocumentEmbedRequestBody | None =
             """SELECT id, text, chunk_index FROM arkham_frame.chunks
                WHERE document_id = :doc_id
                ORDER BY chunk_index""",
-            {"doc_id": doc_id}
+            {"doc_id": doc_id},
         )
 
         if not chunks:
@@ -276,17 +271,14 @@ async def embed_document(doc_id: str, request: DocumentEmbedRequestBody | None =
             "doc_id": doc_id,
             "status": "queued",
             "chunk_count": len(texts),
-            "message": "Document embedding job queued"
+            "message": "Document embedding job queued",
         }
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to queue document embedding: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to queue document embedding: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to queue document embedding: {str(e)}")
 
 
 @router.get("/document/{doc_id}")
@@ -310,7 +302,7 @@ async def get_document_embeddings(doc_id: str):
             collection_name=collection_name,
             query_vector=None,  # No query vector, just filter
             limit=1000,  # Large limit to get all chunks
-            filters={"doc_id": doc_id}
+            filters={"doc_id": doc_id},
         )
 
         return {
@@ -322,10 +314,7 @@ async def get_document_embeddings(doc_id: str):
 
     except Exception as e:
         logger.error(f"Failed to get document embeddings: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get embeddings: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to get embeddings: {str(e)}")
 
 
 @router.get("/documents/available")
@@ -369,7 +358,7 @@ async def get_documents_for_embedding(
                        WHERE collection = :collection
                          AND payload->>'document_id' IS NOT NULL
                        GROUP BY payload->>'document_id'""",
-                    {"collection": collection_name}
+                    {"collection": collection_name},
                 )
                 for row in embed_results:
                     if row.get("doc_id"):
@@ -392,10 +381,10 @@ async def get_documents_for_embedding(
 
         result_docs = []
         for doc in docs:
-            doc_dict = doc if isinstance(doc, dict) else doc.__dict__ if hasattr(doc, '__dict__') else {}
+            doc_dict = doc if isinstance(doc, dict) else doc.__dict__ if hasattr(doc, "__dict__") else {}
 
             # Try to get the document ID
-            doc_id = doc_dict.get('id') or doc_dict.get('document_id') or (doc.id if hasattr(doc, 'id') else None)
+            doc_id = doc_dict.get("id") or doc_dict.get("document_id") or (doc.id if hasattr(doc, "id") else None)
 
             if not doc_id:
                 continue
@@ -408,18 +397,23 @@ async def get_documents_for_embedding(
             if only_unembedded and embedding_count > 0:
                 continue
 
-            result_docs.append({
-                "id": doc_id,
-                "title": doc_dict.get('title') or doc_dict.get('original_name') or doc_dict.get('filename') or 'Untitled',
-                "filename": doc_dict.get('filename') or doc_dict.get('original_name'),
-                "mime_type": doc_dict.get('mime_type'),
-                "file_size": doc_dict.get('file_size'),
-                "created_at": str(doc_dict.get('created_at', '')),
-                "status": doc_dict.get('status', 'unknown'),
-                "chunk_count": chunk_count,
-                "embedding_count": embedding_count,
-                "has_embeddings": embedding_count > 0,
-            })
+            result_docs.append(
+                {
+                    "id": doc_id,
+                    "title": doc_dict.get("title")
+                    or doc_dict.get("original_name")
+                    or doc_dict.get("filename")
+                    or "Untitled",
+                    "filename": doc_dict.get("filename") or doc_dict.get("original_name"),
+                    "mime_type": doc_dict.get("mime_type"),
+                    "file_size": doc_dict.get("file_size"),
+                    "created_at": str(doc_dict.get("created_at", "")),
+                    "status": doc_dict.get("status", "unknown"),
+                    "chunk_count": chunk_count,
+                    "embedding_count": embedding_count,
+                    "has_embeddings": embedding_count > 0,
+                }
+            )
 
         return {
             "documents": result_docs,
@@ -463,14 +457,11 @@ async def embed_documents_batch(request: BatchDocumentEmbedRequestBody):
                 """SELECT id, text, chunk_index FROM arkham_frame.chunks
                    WHERE document_id = :doc_id
                    ORDER BY chunk_index""",
-                {"doc_id": doc_id}
+                {"doc_id": doc_id},
             )
 
             if not chunks:
-                results["skipped"].append({
-                    "doc_id": doc_id,
-                    "reason": "No chunks found"
-                })
+                results["skipped"].append({"doc_id": doc_id, "reason": "No chunks found"})
                 continue
 
             # Extract texts and metadata
@@ -483,10 +474,7 @@ async def embed_documents_batch(request: BatchDocumentEmbedRequestBody):
                     chunk_ids.append(chunk.get("id", ""))
 
             if not texts:
-                results["skipped"].append({
-                    "doc_id": doc_id,
-                    "reason": "No valid text in chunks"
-                })
+                results["skipped"].append({"doc_id": doc_id, "reason": "No valid text in chunks"})
                 continue
 
             # Build payload for worker
@@ -504,20 +492,19 @@ async def embed_documents_batch(request: BatchDocumentEmbedRequestBody):
                 payload=payload,
             )
 
-            results["queued"].append({
-                "job_id": job_id,
-                "doc_id": doc_id,
-                "chunk_count": len(texts),
-            })
+            results["queued"].append(
+                {
+                    "job_id": job_id,
+                    "doc_id": doc_id,
+                    "chunk_count": len(texts),
+                }
+            )
 
             logger.info(f"Queued embedding job {job_id} for doc {doc_id} ({len(texts)} chunks)")
 
         except Exception as e:
             logger.error(f"Failed to queue embedding for {doc_id}: {e}")
-            results["failed"].append({
-                "doc_id": doc_id,
-                "error": str(e)
-            })
+            results["failed"].append({"doc_id": doc_id, "error": str(e)})
 
     return {
         "success": True,
@@ -530,7 +517,7 @@ async def embed_documents_batch(request: BatchDocumentEmbedRequestBody):
             "skipped_count": len(results["skipped"]),
             "failed_count": len(results["failed"]),
             "total_chunks": sum(r["chunk_count"] for r in results["queued"]),
-        }
+        },
     }
 
 
@@ -550,9 +537,7 @@ async def calculate_similarity(request: SimilarityRequestBody):
         emb2 = _embedding_manager.embed_text(request.text2)
 
         # Calculate similarity
-        similarity = _embedding_manager.calculate_similarity(
-            emb1, emb2, method=request.method
-        )
+        similarity = _embedding_manager.calculate_similarity(emb1, emb2, method=request.method)
 
         return SimilarityResult(
             similarity=similarity,
@@ -634,35 +619,45 @@ async def list_models():
 
     # Get current model info
     current_model = _embedding_manager.get_model_info()
-    current_model_name = _embedding_manager._model_name if _embedding_manager._model_name else _embedding_manager.config.model
+    current_model_name = (
+        _embedding_manager._model_name if _embedding_manager._model_name else _embedding_manager.config.model
+    )
     is_loaded = current_model.loaded
 
     # Build list of known models with correct loaded state
     models = []
 
     # Add current model first (from actual model info)
-    models.append(ModelInfo(
-        name=current_model_name,
-        dimensions=current_model.dimensions if is_loaded else KNOWN_MODELS.get(current_model_name, {}).get("dimensions", 0),
-        max_length=current_model.max_length if is_loaded else KNOWN_MODELS.get(current_model_name, {}).get("max_length", 512),
-        size_mb=KNOWN_MODELS.get(current_model_name, {}).get("size_mb", 0.0),
-        loaded=is_loaded,
-        device=current_model.device,
-        description=KNOWN_MODELS.get(current_model_name, {}).get("description", current_model.description),
-    ))
+    models.append(
+        ModelInfo(
+            name=current_model_name,
+            dimensions=current_model.dimensions
+            if is_loaded
+            else KNOWN_MODELS.get(current_model_name, {}).get("dimensions", 0),
+            max_length=current_model.max_length
+            if is_loaded
+            else KNOWN_MODELS.get(current_model_name, {}).get("max_length", 512),
+            size_mb=KNOWN_MODELS.get(current_model_name, {}).get("size_mb", 0.0),
+            loaded=is_loaded,
+            device=current_model.device,
+            description=KNOWN_MODELS.get(current_model_name, {}).get("description", current_model.description),
+        )
+    )
 
     # Add other known models
     for name, info in KNOWN_MODELS.items():
         if name == current_model_name:
             continue  # Already added above
-        models.append(ModelInfo(
-            name=name,
-            dimensions=info["dimensions"],
-            max_length=info["max_length"],
-            size_mb=info["size_mb"],
-            loaded=False,
-            description=info["description"]
-        ))
+        models.append(
+            ModelInfo(
+                name=name,
+                dimensions=info["dimensions"],
+                max_length=info["max_length"],
+                size_mb=info["size_mb"],
+                loaded=False,
+                description=info["description"],
+            )
+        )
 
     return models
 
@@ -696,11 +691,7 @@ async def update_config(request: ConfigUpdateRequest):
 
         logger.info(f"Updated embedding config: {updated}")
 
-        return {
-            "success": True,
-            "updated": updated,
-            "message": "Configuration updated"
-        }
+        return {"success": True, "updated": updated, "message": "Configuration updated"}
 
     except Exception as e:
         logger.error(f"Config update failed: {e}", exc_info=True)
@@ -730,9 +721,7 @@ async def get_cache_stats():
         if _db_service:
             try:
                 # Count total embeddings in vector store
-                embed_count = await _db_service.fetch_one(
-                    "SELECT COUNT(*) as count FROM arkham_vectors.embeddings"
-                )
+                embed_count = await _db_service.fetch_one("SELECT COUNT(*) as count FROM arkham_vectors.embeddings")
                 total_embeddings = embed_count.get("count", 0) if embed_count else 0
 
                 # Count unique documents with embeddings
@@ -744,9 +733,7 @@ async def get_cache_stats():
                 total_documents = doc_count.get("count", 0) if doc_count else 0
 
                 # Count total chunks in system
-                chunk_count = await _db_service.fetch_one(
-                    "SELECT COUNT(*) as count FROM arkham_frame.chunks"
-                )
+                chunk_count = await _db_service.fetch_one("SELECT COUNT(*) as count FROM arkham_frame.chunks")
                 total_chunks = chunk_count.get("count", 0) if chunk_count else 0
             except Exception as db_err:
                 logger.debug(f"Could not get embedding counts from DB: {db_err}")
@@ -779,10 +766,7 @@ async def clear_cache():
 
     try:
         _embedding_manager.clear_cache()
-        return {
-            "success": True,
-            "message": "Cache cleared"
-        }
+        return {"success": True, "message": "Cache cleared"}
     except Exception as e:
         logger.error(f"Failed to clear cache: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
@@ -790,14 +774,17 @@ async def clear_cache():
 
 # --- Model Management ---
 
+
 class ModelSwitchRequest(BaseModel):
     """Request to switch embedding model."""
+
     model: str
     confirm_wipe: bool = False  # Must be True if dimensions differ
 
 
 class VectorCollectionInfo(BaseModel):
     """Information about a vector collection."""
+
     name: str
     vector_size: int
     points_count: int
@@ -806,6 +793,7 @@ class VectorCollectionInfo(BaseModel):
 
 class ModelSwitchResponse(BaseModel):
     """Response from model switch operation."""
+
     success: bool
     message: str
     previous_model: str | None = None
@@ -823,25 +811,25 @@ KNOWN_MODELS = {
         "dimensions": 1024,
         "max_length": 8192,
         "size_mb": 2200.0,
-        "description": "Multilingual, high-quality embeddings (large)"
+        "description": "Multilingual, high-quality embeddings (large)",
     },
     "all-MiniLM-L6-v2": {
         "dimensions": 384,
         "max_length": 512,
         "size_mb": 80.0,
-        "description": "Lightweight, fast embeddings (small)"
+        "description": "Lightweight, fast embeddings (small)",
     },
     "all-mpnet-base-v2": {
         "dimensions": 768,
         "max_length": 512,
         "size_mb": 420.0,
-        "description": "High quality, balanced size (medium)"
+        "description": "High quality, balanced size (medium)",
     },
     "paraphrase-MiniLM-L6-v2": {
         "dimensions": 384,
         "max_length": 512,
         "size_mb": 80.0,
-        "description": "Optimized for paraphrase detection (small)"
+        "description": "Optimized for paraphrase detection (small)",
     },
 }
 
@@ -887,15 +875,17 @@ async def get_available_models():
     models = []
     for name, info in KNOWN_MODELS.items():
         is_current = name == current_model
-        models.append({
-            "name": name,
-            "dimensions": info["dimensions"],
-            "max_length": info["max_length"],
-            "size_mb": info["size_mb"],
-            "description": info["description"],
-            "loaded": is_current and current_loaded,
-            "is_current": is_current,
-        })
+        models.append(
+            {
+                "name": name,
+                "dimensions": info["dimensions"],
+                "max_length": info["max_length"],
+                "size_mb": info["size_mb"],
+                "description": info["description"],
+                "loaded": is_current and current_loaded,
+                "is_current": is_current,
+            }
+        )
 
     return models
 
@@ -914,12 +904,14 @@ async def get_vector_collections():
 
         result = []
         for coll in collections:
-            result.append({
-                "name": coll.name,
-                "vector_size": coll.vector_size,
-                "points_count": coll.points_count,
-                "status": coll.status,
-            })
+            result.append(
+                {
+                    "name": coll.name,
+                    "vector_size": coll.vector_size,
+                    "points_count": coll.points_count,
+                    "status": coll.status,
+                }
+            )
 
         return result
     except Exception as e:
@@ -980,16 +972,21 @@ async def check_model_switch(request: ModelSwitchRequest):
     return {
         "success": True,
         "requires_wipe": requires_wipe,
-        "message": "Dimensions differ - vector database wipe required" if requires_wipe else "Model can be switched without data loss",
+        "message": "Dimensions differ - vector database wipe required"
+        if requires_wipe
+        else "Model can be switched without data loss",
         "current_model": current_model,
         "current_dimensions": current_dimensions,
         "new_model": new_model,
         "new_dimensions": new_dimensions,
         "affected_collections": affected_collections,
         "total_vectors_affected": sum(
-            c.points_count for c in (await _vector_store.vectors_service.list_collections())
+            c.points_count
+            for c in (await _vector_store.vectors_service.list_collections())
             if c.name in affected_collections
-        ) if affected_collections else 0,
+        )
+        if affected_collections
+        else 0,
     }
 
 
@@ -1040,14 +1037,12 @@ async def switch_model(request: ModelSwitchRequest):
         # This is a temporary load just to check dimensions
         try:
             from sentence_transformers import SentenceTransformer
+
             temp_model = SentenceTransformer(new_model)
             new_dimensions = temp_model.get_sentence_embedding_dimension()
             del temp_model
         except Exception as e:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Failed to load model '{new_model}': {str(e)}"
-            )
+            raise HTTPException(status_code=400, detail=f"Failed to load model '{new_model}': {str(e)}")
 
     # Check if wipe is required (handle None case)
     requires_wipe = current_dimensions != new_dimensions and (current_dimensions or 0) > 0
@@ -1129,7 +1124,8 @@ async def switch_model(request: ModelSwitchRequest):
 
         return ModelSwitchResponse(
             success=True,
-            message=f"Successfully switched to {new_model}" + (f" (wiped {len(wiped_collections)} collections)" if wiped_collections else ""),
+            message=f"Successfully switched to {new_model}"
+            + (f" (wiped {len(wiped_collections)} collections)" if wiped_collections else ""),
             previous_model=current_model,
             new_model=new_model,
             previous_dimensions=current_dimensions,

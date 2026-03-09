@@ -155,14 +155,44 @@ const DEFAULT_WEBHOOK_FORM: WebhookChannelForm = {
 };
 
 const CATEGORIES: CategoryInfo[] = [
-  { id: 'general', label: 'General', icon: 'Settings', description: 'Language, timezone, and date formats' },
-  { id: 'appearance', label: 'Appearance', icon: 'Palette', description: 'Theme, colors, and layout' },
-  { id: 'notifications', label: 'Notifications', icon: 'Bell', description: 'Alerts, email, and webhooks' },
+  {
+    id: 'general',
+    label: 'General',
+    icon: 'Settings',
+    description: 'Language, timezone, and date formats',
+  },
+  {
+    id: 'appearance',
+    label: 'Appearance',
+    icon: 'Palette',
+    description: 'Theme, colors, and layout',
+  },
+  {
+    id: 'notifications',
+    label: 'Notifications',
+    icon: 'Bell',
+    description: 'Alerts, email, and webhooks',
+  },
   { id: 'performance', label: 'Performance', icon: 'Zap', description: 'Caching and pagination' },
-  { id: 'data', label: 'Data', icon: 'Database', description: 'Storage, cleanup, and data management' },
-  { id: 'models', label: 'ML Models', icon: 'Brain', description: 'Embedding and OCR model management' },
+  {
+    id: 'data',
+    label: 'Data',
+    icon: 'Database',
+    description: 'Storage, cleanup, and data management',
+  },
+  {
+    id: 'models',
+    label: 'ML Models',
+    icon: 'Brain',
+    description: 'Embedding and OCR model management',
+  },
   { id: 'advanced', label: 'Advanced', icon: 'Wrench', description: 'Developer and debug options' },
-  { id: 'shards', label: 'Shards', icon: 'Puzzle', description: 'Enable or disable feature modules' },
+  {
+    id: 'shards',
+    label: 'Shards',
+    icon: 'Puzzle',
+    description: 'Enable or disable feature modules',
+  },
 ];
 
 // Protected shards that cannot be disabled
@@ -180,7 +210,9 @@ export function SettingsPage() {
     return match ? match[1] : 'general';
   };
 
-  const [activeCategory, setActiveCategory] = useState(() => getCategoryFromPath(location.pathname));
+  const [activeCategory, setActiveCategory] = useState(() =>
+    getCategoryFromPath(location.pathname)
+  );
   const [pendingChanges, setPendingChanges] = useState<Record<string, unknown>>({});
   const [saving, setSaving] = useState(false);
   const [togglingShards, setTogglingShards] = useState<Set<string>>(new Set());
@@ -205,13 +237,21 @@ export function SettingsPage() {
   }, [location.pathname]);
 
   // Navigate when category changes
-  const handleCategoryChange = useCallback((categoryId: string) => {
-    const newPath = categoryId === 'general' ? '/settings' : `/settings/${categoryId}`;
-    navigate(newPath);
-  }, [navigate]);
+  const handleCategoryChange = useCallback(
+    (categoryId: string) => {
+      const newPath = categoryId === 'general' ? '/settings' : `/settings/${categoryId}`;
+      navigate(newPath);
+    },
+    [navigate]
+  );
 
   // Fetch settings for current category (skip for shards category)
-  const { data: settings, loading, error, refetch } = useFetch<Setting[]>(
+  const {
+    data: settings,
+    loading,
+    error,
+    refetch,
+  } = useFetch<Setting[]>(
     activeCategory !== 'shards' ? `/api/settings/?category=${activeCategory}` : null
   );
 
@@ -220,7 +260,7 @@ export function SettingsPage() {
     data: shardsData,
     loading: shardsLoading,
     error: shardsError,
-    refetch: refetchShards
+    refetch: refetchShards,
   } = useFetch<{ shards: ShardInfo[]; count: number }>(
     activeCategory === 'shards' ? '/api/shards/' : null
   );
@@ -230,7 +270,7 @@ export function SettingsPage() {
     data: channelsData,
     loading: channelsLoading,
     error: channelsError,
-    refetch: refetchChannels
+    refetch: refetchChannels,
   } = useFetch<{ channels: string[]; count: number }>(
     activeCategory === 'notifications' ? '/api/notifications/channels' : null
   );
@@ -240,20 +280,16 @@ export function SettingsPage() {
     data: storageStats,
     loading: storageLoading,
     error: storageError,
-    refetch: refetchStorageStats
-  } = useFetch<StorageStats>(
-    activeCategory === 'data' ? '/api/settings/data/stats' : null
-  );
+    refetch: refetchStorageStats,
+  } = useFetch<StorageStats>(activeCategory === 'data' ? '/api/settings/data/stats' : null);
 
   // Fetch ML models for model management
   const {
     data: modelsData,
     loading: modelsLoading,
     error: modelsError,
-    refetch: refetchModels
-  } = useFetch<ModelsData>(
-    activeCategory === 'models' ? '/api/settings/models' : null
-  );
+    refetch: refetchModels,
+  } = useFetch<ModelsData>(activeCategory === 'models' ? '/api/settings/models' : null);
 
   // Model download state
   const [downloadingModel, setDownloadingModel] = useState<string | null>(null);
@@ -265,7 +301,7 @@ export function SettingsPage() {
   const {
     data: vectorHealth,
     loading: vectorHealthLoading,
-    refetch: refetchVectorHealth
+    refetch: refetchVectorHealth,
   } = useFetch<VectorHealthStatus>(
     activeCategory === 'data' ? '/api/settings/vectors/health' : null
   );
@@ -276,7 +312,7 @@ export function SettingsPage() {
   }, [activeCategory]);
 
   const handleSettingChange = useCallback((key: string, value: unknown) => {
-    setPendingChanges(prev => ({
+    setPendingChanges((prev) => ({
       ...prev,
       [key]: value,
     }));
@@ -334,7 +370,7 @@ export function SettingsPage() {
 
       toast.success('Setting reset to default');
       // Remove from pending changes if present
-      setPendingChanges(prev => {
+      setPendingChanges((prev) => {
         const updated = { ...prev };
         delete updated[key];
         return updated;
@@ -358,7 +394,7 @@ export function SettingsPage() {
       return;
     }
 
-    setTogglingShards(prev => new Set(prev).add(shardName));
+    setTogglingShards((prev) => new Set(prev).add(shardName));
 
     try {
       const response = await fetch(`/api/shards/${shardName}`, {
@@ -378,7 +414,7 @@ export function SettingsPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update shard');
     } finally {
-      setTogglingShards(prev => {
+      setTogglingShards((prev) => {
         const next = new Set(prev);
         next.delete(shardName);
         return next;
@@ -624,7 +660,7 @@ export function SettingsPage() {
             <input
               type="checkbox"
               checked={Boolean(value)}
-              onChange={e => handleSettingChange(setting.key, e.target.checked)}
+              onChange={(e) => handleSettingChange(setting.key, e.target.checked)}
               disabled={setting.is_readonly}
             />
             <span className="toggle-slider" />
@@ -634,7 +670,7 @@ export function SettingsPage() {
       case 'select': {
         // Find the original typed value from options when selection changes
         const handleSelectChange = (selectedValue: string) => {
-          const option = setting.options.find(opt => String(opt.value) === selectedValue);
+          const option = setting.options.find((opt) => String(opt.value) === selectedValue);
           // Prevent selection of disabled options
           if (option?.disabled) {
             return;
@@ -644,26 +680,27 @@ export function SettingsPage() {
         };
 
         // Check if any option is disabled (for showing tooltip info)
-        const hasDisabledOptions = setting.options.some(opt => opt.disabled);
-        const selectedOption = setting.options.find(opt => String(opt.value) === String(value));
+        const hasDisabledOptions = setting.options.some((opt) => opt.disabled);
+        const selectedOption = setting.options.find((opt) => String(opt.value) === String(value));
         const isCloudOption = selectedOption?.label?.includes('[CLOUD API]');
 
         return (
           <div className="select-wrapper">
             <select
               value={String(value)}
-              onChange={e => handleSelectChange(e.target.value)}
+              onChange={(e) => handleSelectChange(e.target.value)}
               disabled={setting.is_readonly}
               className={`setting-select ${isCloudOption ? 'cloud-option' : ''}`}
             >
-              {setting.options.map(opt => (
+              {setting.options.map((opt) => (
                 <option
                   key={String(opt.value)}
                   value={String(opt.value)}
                   disabled={opt.disabled}
                   title={opt.disabledReason}
                 >
-                  {opt.label}{opt.disabled ? ' (unavailable)' : ''}
+                  {opt.label}
+                  {opt.disabled ? ' (unavailable)' : ''}
                 </option>
               ))}
             </select>
@@ -689,7 +726,7 @@ export function SettingsPage() {
           <input
             type="number"
             value={value as number}
-            onChange={e => handleSettingChange(setting.key, Number(e.target.value))}
+            onChange={(e) => handleSettingChange(setting.key, Number(e.target.value))}
             disabled={setting.is_readonly}
             className="setting-input"
             min={setting.validation?.min as number}
@@ -703,7 +740,7 @@ export function SettingsPage() {
             <input
               type="color"
               value={value as string}
-              onChange={e => handleSettingChange(setting.key, e.target.value)}
+              onChange={(e) => handleSettingChange(setting.key, e.target.value)}
               disabled={setting.is_readonly}
               className="setting-color"
             />
@@ -717,7 +754,7 @@ export function SettingsPage() {
           <input
             type="text"
             value={value as string}
-            onChange={e => handleSettingChange(setting.key, e.target.value)}
+            onChange={(e) => handleSettingChange(setting.key, e.target.value)}
             disabled={setting.is_readonly}
             className="setting-input"
           />
@@ -738,18 +775,10 @@ export function SettingsPage() {
 
         {hasChanges && (
           <div className="settings-actions">
-            <button
-              className="btn btn-secondary"
-              onClick={discardChanges}
-              disabled={saving}
-            >
+            <button className="btn btn-secondary" onClick={discardChanges} disabled={saving}>
               Discard
             </button>
-            <button
-              className="btn btn-primary"
-              onClick={saveChanges}
-              disabled={saving}
-            >
+            <button className="btn btn-primary" onClick={saveChanges} disabled={saving}>
               {saving ? (
                 <>
                   <Icon name="Loader2" size={16} className="spin" />
@@ -769,7 +798,7 @@ export function SettingsPage() {
       <div className="settings-layout">
         {/* Category Sidebar */}
         <nav className="settings-nav">
-          {CATEGORIES.map(cat => (
+          {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
               className={`nav-item ${activeCategory === cat.id ? 'active' : ''}`}
@@ -983,7 +1012,7 @@ export function SettingsPage() {
                       { color: '#ec4899', name: 'Pink' },
                       { color: '#06b6d4', name: 'Cyan' },
                       { color: '#84cc16', name: 'Lime' },
-                    ].map(preset => (
+                    ].map((preset) => (
                       <button
                         key={preset.color}
                         className={`accent-preset ${accentColor === preset.color ? 'selected' : ''}`}
@@ -991,9 +1020,7 @@ export function SettingsPage() {
                         onClick={() => setAccentColor(preset.color)}
                         title={preset.name}
                       >
-                        {accentColor === preset.color && (
-                          <Icon name="Check" size={14} />
-                        )}
+                        {accentColor === preset.color && <Icon name="Check" size={14} />}
                       </button>
                     ))}
                   </div>
@@ -1003,7 +1030,7 @@ export function SettingsPage() {
                       <input
                         type="color"
                         value={accentColor}
-                        onChange={e => setAccentColor(e.target.value)}
+                        onChange={(e) => setAccentColor(e.target.value)}
                         className="setting-color"
                       />
                       <span className="color-value">{accentColor.toUpperCase()}</span>
@@ -1019,7 +1046,8 @@ export function SettingsPage() {
                   Reset Appearance
                 </h3>
                 <p className="section-description">
-                  Restore all appearance settings to their default values (Arkham theme with Ruby accent).
+                  Restore all appearance settings to their default values (Arkham theme with Ruby
+                  accent).
                 </p>
                 <button
                   className="btn btn-secondary"
@@ -1038,8 +1066,8 @@ export function SettingsPage() {
             <div className="data-settings">
               <div className="data-header">
                 <p className="data-description">
-                  Manage application data, clear caches, and perform maintenance tasks.
-                  Destructive actions require confirmation.
+                  Manage application data, clear caches, and perform maintenance tasks. Destructive
+                  actions require confirmation.
                 </p>
               </div>
 
@@ -1057,12 +1085,16 @@ export function SettingsPage() {
                 ) : storageError ? (
                   <div className="section-error">
                     <span>Failed to load storage info</span>
-                    <button className="btn btn-sm" onClick={() => refetchStorageStats()}>Retry</button>
+                    <button className="btn btn-sm" onClick={() => refetchStorageStats()}>
+                      Retry
+                    </button>
                   </div>
                 ) : storageStats ? (
                   <div className="storage-overview">
                     <div className="storage-stat-grid">
-                      <div className={`storage-stat ${storageStats.database_connected ? 'connected' : 'disconnected'}`}>
+                      <div
+                        className={`storage-stat ${storageStats.database_connected ? 'connected' : 'disconnected'}`}
+                      >
                         <Icon name="Database" size={20} />
                         <div className="stat-info">
                           <span className="stat-label">Database</span>
@@ -1070,11 +1102,15 @@ export function SettingsPage() {
                             {storageStats.database_connected ? 'Connected' : 'Disconnected'}
                           </span>
                           {storageStats.database_schemas.length > 0 && (
-                            <span className="stat-detail">{storageStats.database_schemas.length} schema(s)</span>
+                            <span className="stat-detail">
+                              {storageStats.database_schemas.length} schema(s)
+                            </span>
                           )}
                         </div>
                       </div>
-                      <div className={`storage-stat ${storageStats.vector_store_connected ? 'connected' : 'disconnected'}`}>
+                      <div
+                        className={`storage-stat ${storageStats.vector_store_connected ? 'connected' : 'disconnected'}`}
+                      >
                         <Icon name="Cpu" size={20} />
                         <div className="stat-info">
                           <span className="stat-label">Vector Store</span>
@@ -1083,7 +1119,10 @@ export function SettingsPage() {
                           </span>
                           {storageStats.vector_collections.length > 0 && (
                             <span className="stat-detail">
-                              {storageStats.vector_collections.reduce((sum, c) => sum + c.points_count, 0).toLocaleString()} vectors
+                              {storageStats.vector_collections
+                                .reduce((sum, c) => sum + c.points_count, 0)
+                                .toLocaleString()}{' '}
+                              vectors
                             </span>
                           )}
                         </div>
@@ -1092,7 +1131,9 @@ export function SettingsPage() {
                         <Icon name="Folder" size={20} />
                         <div className="stat-info">
                           <span className="stat-label">File Storage</span>
-                          <span className="stat-value">{formatBytes(storageStats.total_storage_bytes)}</span>
+                          <span className="stat-value">
+                            {formatBytes(storageStats.total_storage_bytes)}
+                          </span>
                           {Object.keys(storageStats.storage_categories).length > 0 && (
                             <span className="stat-detail">
                               {Object.keys(storageStats.storage_categories).length} categories
@@ -1128,7 +1169,7 @@ export function SettingsPage() {
                   <div className="settings-list compact">
                     {settings
                       .sort((a, b) => a.order - b.order)
-                      .map(setting => (
+                      .map((setting) => (
                         <div
                           key={setting.key}
                           className={`setting-item ${setting.is_modified || setting.key in pendingChanges ? 'modified' : ''}`}
@@ -1137,9 +1178,7 @@ export function SettingsPage() {
                             <label className="setting-label">{setting.label}</label>
                             <p className="setting-description">{setting.description}</p>
                           </div>
-                          <div className="setting-control">
-                            {renderSettingControl(setting)}
-                          </div>
+                          <div className="setting-control">{renderSettingControl(setting)}</div>
                         </div>
                       ))}
                   </div>
@@ -1165,12 +1204,11 @@ export function SettingsPage() {
                     </div>
                     <div className="action-info">
                       <span className="action-title">Clear Local Storage</span>
-                      <span className="action-desc">Remove cached preferences and UI state from browser</span>
+                      <span className="action-desc">
+                        Remove cached preferences and UI state from browser
+                      </span>
                     </div>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={clearLocalStorage}
-                    >
+                    <button className="btn btn-secondary" onClick={clearLocalStorage}>
                       <Icon name="Trash2" size={16} />
                       Clear
                     </button>
@@ -1204,7 +1242,9 @@ export function SettingsPage() {
                     </div>
                     <div className="action-info">
                       <span className="action-title">Clear Vector Embeddings</span>
-                      <span className="action-desc">Remove all semantic search indexes. Will require re-embedding.</span>
+                      <span className="action-desc">
+                        Remove all semantic search indexes. Will require re-embedding.
+                      </span>
                     </div>
                     <button
                       className="btn btn-warning"
@@ -1226,7 +1266,9 @@ export function SettingsPage() {
                     </div>
                     <div className="action-info">
                       <span className="action-title">Clear Database</span>
-                      <span className="action-desc">Remove all documents, entities, and analysis data. Settings are preserved.</span>
+                      <span className="action-desc">
+                        Remove all documents, entities, and analysis data. Settings are preserved.
+                      </span>
                     </div>
                     <button
                       className="btn btn-warning"
@@ -1248,7 +1290,9 @@ export function SettingsPage() {
                     </div>
                     <div className="action-info">
                       <span className="action-title">Reset All Data</span>
-                      <span className="action-desc">Clear database, vectors, and temp files. Complete fresh start.</span>
+                      <span className="action-desc">
+                        Clear database, vectors, and temp files. Complete fresh start.
+                      </span>
                     </div>
                     <button
                       className="btn btn-danger"
@@ -1294,8 +1338,8 @@ export function SettingsPage() {
                   Vector Index Maintenance
                 </h3>
                 <p className="section-description">
-                  Rebuild IVFFlat indexes after significant data changes. This optimizes search performance
-                  by recalculating index parameters based on current data distribution.
+                  Rebuild IVFFlat indexes after significant data changes. This optimizes search
+                  performance by recalculating index parameters based on current data distribution.
                 </p>
 
                 {vectorHealthLoading ? (
@@ -1308,11 +1352,17 @@ export function SettingsPage() {
                     {/* Status Overview */}
                     <div className="vector-status-bar">
                       <div className={`status-indicator ${vectorHealth.status}`}>
-                        <Icon name={vectorHealth.status === 'healthy' ? 'CheckCircle' : 'AlertCircle'} size={16} />
-                        <span>{vectorHealth.status === 'healthy' ? 'Healthy' : vectorHealth.status}</span>
+                        <Icon
+                          name={vectorHealth.status === 'healthy' ? 'CheckCircle' : 'AlertCircle'}
+                          size={16}
+                        />
+                        <span>
+                          {vectorHealth.status === 'healthy' ? 'Healthy' : vectorHealth.status}
+                        </span>
                       </div>
                       <span className="status-detail">
-                        {vectorHealth.total_vectors.toLocaleString()} vectors in {vectorHealth.total_collections} collection(s)
+                        {vectorHealth.total_vectors.toLocaleString()} vectors in{' '}
+                        {vectorHealth.total_collections} collection(s)
                       </span>
                       {vectorHealth.last_reindex && (
                         <span className="last-reindex">
@@ -1343,10 +1393,14 @@ export function SettingsPage() {
                           <span className="col-params">Params</span>
                           <span className="col-action">Action</span>
                         </div>
-                        {vectorHealth.collections.map(coll => (
+                        {vectorHealth.collections.map((coll) => (
                           <div key={coll.name} className="table-row">
-                            <span className="col-name" title={coll.name}>{coll.name}</span>
-                            <span className="col-vectors">{coll.vector_count.toLocaleString()}</span>
+                            <span className="col-name" title={coll.name}>
+                              {coll.name}
+                            </span>
+                            <span className="col-vectors">
+                              {coll.vector_count.toLocaleString()}
+                            </span>
                             <span className="col-index">{coll.index_type}</span>
                             <span className="col-params">
                               lists={coll.lists}, probes={coll.probes}
@@ -1404,7 +1458,7 @@ export function SettingsPage() {
               {/* Confirmation Dialog */}
               {showConfirmDialog && (
                 <div className="confirm-dialog-overlay" onClick={() => setShowConfirmDialog(null)}>
-                  <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+                  <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
                     <div className="confirm-icon">
                       <Icon name="AlertTriangle" size={32} />
                     </div>
@@ -1412,15 +1466,15 @@ export function SettingsPage() {
                       {showConfirmDialog === 'reset-all'
                         ? 'Reset All Data?'
                         : showConfirmDialog === 'clear-database'
-                        ? 'Clear Database?'
-                        : 'Clear Vector Embeddings?'}
+                          ? 'Clear Database?'
+                          : 'Clear Vector Embeddings?'}
                     </h4>
                     <p className="confirm-message">
                       {showConfirmDialog === 'reset-all'
                         ? 'This will permanently delete all documents, entities, analysis data, and vector embeddings. Your settings will be preserved. This action cannot be undone.'
                         : showConfirmDialog === 'clear-database'
-                        ? 'This will permanently delete all documents, entities, and analysis data. Your settings will be preserved. This action cannot be undone.'
-                        : 'This will delete all vector embeddings. You will need to re-embed your documents to use semantic search. This action cannot be undone.'}
+                          ? 'This will permanently delete all documents, entities, and analysis data. Your settings will be preserved. This action cannot be undone.'
+                          : 'This will delete all vector embeddings. You will need to re-embed your documents to use semantic search. This action cannot be undone.'}
                     </p>
                     <div className="confirm-actions">
                       <button
@@ -1433,7 +1487,9 @@ export function SettingsPage() {
                         className={`btn ${showConfirmDialog === 'reset-all' ? 'btn-danger' : 'btn-warning'}`}
                         onClick={() => executeDataAction(showConfirmDialog)}
                       >
-                        {showConfirmDialog === 'reset-all' ? 'Yes, Reset Everything' : 'Yes, Clear Data'}
+                        {showConfirmDialog === 'reset-all'
+                          ? 'Yes, Reset Everything'
+                          : 'Yes, Clear Data'}
                       </button>
                     </div>
                   </div>
@@ -1445,12 +1501,16 @@ export function SettingsPage() {
             <div className="models-settings">
               <div className="models-header">
                 <p className="models-description">
-                  Manage ML models for embeddings and OCR. Download models on-demand or pre-cache them for air-gapped deployments.
+                  Manage ML models for embeddings and OCR. Download models on-demand or pre-cache
+                  them for air-gapped deployments.
                 </p>
                 {modelsData?.offline_mode && (
                   <div className="offline-mode-banner">
                     <Icon name="WifiOff" size={16} />
-                    <span>Offline Mode Enabled - Downloads are disabled. Pre-cache models before deployment.</span>
+                    <span>
+                      Offline Mode Enabled - Downloads are disabled. Pre-cache models before
+                      deployment.
+                    </span>
                   </div>
                 )}
               </div>
@@ -1463,7 +1523,9 @@ export function SettingsPage() {
               ) : modelsError ? (
                 <div className="section-error">
                   <span>Failed to load models</span>
-                  <button className="btn btn-sm" onClick={() => refetchModels()}>Retry</button>
+                  <button className="btn btn-sm" onClick={() => refetchModels()}>
+                    Retry
+                  </button>
                 </div>
               ) : modelsData ? (
                 <>
@@ -1478,17 +1540,33 @@ export function SettingsPage() {
                     </p>
                     <div className="models-list">
                       {modelsData.models
-                        .filter(m => m.model_type === 'embedding')
-                        .map(model => (
-                          <div key={model.id} className={`model-item ${model.status} ${model.is_selected ? 'selected' : ''}`}>
+                        .filter((m) => m.model_type === 'embedding')
+                        .map((model) => (
+                          <div
+                            key={model.id}
+                            className={`model-item ${model.status} ${model.is_selected ? 'selected' : ''}`}
+                          >
                             <div className="model-icon">
-                              <Icon name={model.is_selected ? 'CheckCircle2' : model.status === 'installed' ? 'CheckCircle' : 'Circle'} size={20} />
+                              <Icon
+                                name={
+                                  model.is_selected
+                                    ? 'CheckCircle2'
+                                    : model.status === 'installed'
+                                      ? 'CheckCircle'
+                                      : 'Circle'
+                                }
+                                size={20}
+                              />
                             </div>
                             <div className="model-info">
                               <div className="model-header">
                                 <span className="model-name">{model.name}</span>
-                                {model.is_selected && <span className="selected-badge">Selected</span>}
-                                {model.is_default && !model.is_selected && <span className="default-badge">Default</span>}
+                                {model.is_selected && (
+                                  <span className="selected-badge">Selected</span>
+                                )}
+                                {model.is_default && !model.is_selected && (
+                                  <span className="default-badge">Default</span>
+                                )}
                                 <span className="model-size">{model.size_mb} MB</span>
                               </div>
                               <p className="model-description">{model.description}</p>
@@ -1505,7 +1583,8 @@ export function SettingsPage() {
                                   <Icon name="Check" size={14} />
                                   Installed
                                 </span>
-                              ) : model.status === 'downloading' || downloadingModel === model.id ? (
+                              ) : model.status === 'downloading' ||
+                                downloadingModel === model.id ? (
                                 <span className="status-badge downloading">
                                   <Icon name="Loader2" size={14} className="spin" />
                                   Downloading...
@@ -1515,7 +1594,11 @@ export function SettingsPage() {
                                   className="btn btn-secondary btn-sm"
                                   onClick={() => downloadModel(model.id)}
                                   disabled={modelsData.offline_mode || downloadingModel !== null}
-                                  title={modelsData.offline_mode ? 'Downloads disabled in offline mode' : 'Download model'}
+                                  title={
+                                    modelsData.offline_mode
+                                      ? 'Downloads disabled in offline mode'
+                                      : 'Download model'
+                                  }
                                 >
                                   <Icon name="Download" size={14} />
                                   Download
@@ -1538,17 +1621,33 @@ export function SettingsPage() {
                     </p>
                     <div className="models-list">
                       {modelsData.models
-                        .filter(m => m.model_type === 'ocr')
-                        .map(model => (
-                          <div key={model.id} className={`model-item ${model.status} ${model.is_selected ? 'selected' : ''}`}>
+                        .filter((m) => m.model_type === 'ocr')
+                        .map((model) => (
+                          <div
+                            key={model.id}
+                            className={`model-item ${model.status} ${model.is_selected ? 'selected' : ''}`}
+                          >
                             <div className="model-icon">
-                              <Icon name={model.is_selected ? 'CheckCircle2' : model.status === 'installed' ? 'CheckCircle' : 'Circle'} size={20} />
+                              <Icon
+                                name={
+                                  model.is_selected
+                                    ? 'CheckCircle2'
+                                    : model.status === 'installed'
+                                      ? 'CheckCircle'
+                                      : 'Circle'
+                                }
+                                size={20}
+                              />
                             </div>
                             <div className="model-info">
                               <div className="model-header">
                                 <span className="model-name">{model.name}</span>
-                                {model.is_selected && <span className="selected-badge">Selected</span>}
-                                {model.is_default && !model.is_selected && <span className="default-badge">Default</span>}
+                                {model.is_selected && (
+                                  <span className="selected-badge">Selected</span>
+                                )}
+                                {model.is_default && !model.is_selected && (
+                                  <span className="default-badge">Default</span>
+                                )}
                                 <span className="model-size">{model.size_mb} MB</span>
                               </div>
                               <p className="model-description">{model.description}</p>
@@ -1565,7 +1664,8 @@ export function SettingsPage() {
                                   <Icon name="Check" size={14} />
                                   Installed
                                 </span>
-                              ) : model.status === 'downloading' || downloadingModel === model.id ? (
+                              ) : model.status === 'downloading' ||
+                                downloadingModel === model.id ? (
                                 <span className="status-badge downloading">
                                   <Icon name="Loader2" size={14} className="spin" />
                                   Downloading...
@@ -1575,7 +1675,11 @@ export function SettingsPage() {
                                   className="btn btn-secondary btn-sm"
                                   onClick={() => downloadModel(model.id)}
                                   disabled={modelsData.offline_mode || downloadingModel !== null}
-                                  title={modelsData.offline_mode ? 'Downloads disabled in offline mode' : 'Download model'}
+                                  title={
+                                    modelsData.offline_mode
+                                      ? 'Downloads disabled in offline mode'
+                                      : 'Download model'
+                                  }
                                 >
                                   <Icon name="Download" size={14} />
                                   Download
@@ -1595,40 +1699,76 @@ export function SettingsPage() {
                     </h3>
                     <div className="info-box">
                       <p>
-                        <strong>SHATTERED is 100% air-gap capable</strong> when configured correctly. Follow these steps:
+                        <strong>SHATTERED is 100% air-gap capable</strong> when configured
+                        correctly. Follow these steps:
                       </p>
 
                       <h4>1. Pre-cache ML Models</h4>
                       <ol>
-                        <li>Download required embedding models on a connected machine using the buttons above</li>
-                        <li>Models are cached in: <code>{modelsData.cache_path || '~/.cache/huggingface/hub'}</code></li>
+                        <li>
+                          Download required embedding models on a connected machine using the
+                          buttons above
+                        </li>
+                        <li>
+                          Models are cached in:{' '}
+                          <code>{modelsData.cache_path || '~/.cache/huggingface/hub'}</code>
+                        </li>
                         <li>Copy the entire cache directory to your air-gapped system</li>
-                        <li>Set environment variable: <code>ARKHAM_OFFLINE_MODE=true</code></li>
-                        <li>Optionally set <code>ARKHAM_MODEL_CACHE=/path/to/cache</code> for custom location</li>
+                        <li>
+                          Set environment variable: <code>ARKHAM_OFFLINE_MODE=true</code>
+                        </li>
+                        <li>
+                          Optionally set <code>ARKHAM_MODEL_CACHE=/path/to/cache</code> for custom
+                          location
+                        </li>
                       </ol>
 
                       <h4>2. Local LLM Setup</h4>
                       <p>Configure a local LLM endpoint (LM Studio, Ollama, or vLLM):</p>
                       <ul>
-                        <li>LM Studio: <code>http://localhost:1234/v1</code></li>
-                        <li>Ollama: <code>http://localhost:11434/v1</code></li>
-                        <li>vLLM: <code>http://localhost:8000/v1</code></li>
+                        <li>
+                          LM Studio: <code>http://localhost:1234/v1</code>
+                        </li>
+                        <li>
+                          Ollama: <code>http://localhost:11434/v1</code>
+                        </li>
+                        <li>
+                          vLLM: <code>http://localhost:8000/v1</code>
+                        </li>
                       </ul>
 
                       <h4>3. Geographic Visualization (Optional)</h4>
                       <p style={{ color: 'var(--warning-color)' }}>
-                        <Icon name="AlertTriangle" size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
-                        The <strong>Geo View</strong> tab in the Graph page requires internet access for map tiles from OpenStreetMap.
+                        <Icon
+                          name="AlertTriangle"
+                          size={14}
+                          style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }}
+                        />
+                        The <strong>Geo View</strong> tab in the Graph page requires internet access
+                        for map tiles from OpenStreetMap.
                       </p>
                       <p>To disable geographic features for full air-gap operation:</p>
                       <ul>
-                        <li>Simply avoid using the "Geo View" tab - all other graph views work offline</li>
-                        <li>For advanced users: set up a local tile server with offline OpenStreetMap data</li>
+                        <li>
+                          Simply avoid using the "Geo View" tab - all other graph views work offline
+                        </li>
+                        <li>
+                          For advanced users: set up a local tile server with offline OpenStreetMap
+                          data
+                        </li>
                       </ul>
 
                       <h4>4. Environment Variables Summary</h4>
-                      <pre style={{ background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: '4px', fontSize: '0.75rem', overflow: 'auto' }}>
-{`# Required for air-gap
+                      <pre
+                        style={{
+                          background: 'var(--bg-tertiary)',
+                          padding: '0.75rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          overflow: 'auto',
+                        }}
+                      >
+                        {`# Required for air-gap
 ARKHAM_OFFLINE_MODE=true
 DATABASE_URL=postgresql://user:pass@localhost:5432/shattered
 
@@ -1648,7 +1788,8 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
             <div className="notifications-settings">
               <div className="notifications-header">
                 <p className="notifications-description">
-                  Configure how you receive alerts and notifications. Add email or webhook channels for external delivery.
+                  Configure how you receive alerts and notifications. Add email or webhook channels
+                  for external delivery.
                 </p>
               </div>
 
@@ -1666,13 +1807,15 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                 ) : error ? (
                   <div className="section-error">
                     <span>Failed to load settings</span>
-                    <button className="btn btn-sm" onClick={() => refetch()}>Retry</button>
+                    <button className="btn btn-sm" onClick={() => refetch()}>
+                      Retry
+                    </button>
                   </div>
                 ) : settings && settings.length > 0 ? (
                   <div className="settings-list compact">
                     {settings
                       .sort((a, b) => a.order - b.order)
-                      .map(setting => (
+                      .map((setting) => (
                         <div
                           key={setting.key}
                           className={`setting-item ${setting.is_modified || setting.key in pendingChanges ? 'modified' : ''}`}
@@ -1681,9 +1824,7 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                             <label className="setting-label">{setting.label}</label>
                             <p className="setting-description">{setting.description}</p>
                           </div>
-                          <div className="setting-control">
-                            {renderSettingControl(setting)}
-                          </div>
+                          <div className="setting-control">{renderSettingControl(setting)}</div>
                         </div>
                       ))}
                   </div>
@@ -1699,7 +1840,8 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                   Delivery Channels
                 </h3>
                 <p className="section-description">
-                  Configure where notifications are sent. The log channel is always active for in-app notifications.
+                  Configure where notifications are sent. The log channel is always active for
+                  in-app notifications.
                 </p>
 
                 {channelsLoading ? (
@@ -1710,23 +1852,34 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                 ) : channelsError ? (
                   <div className="section-error">
                     <span>Failed to load channels</span>
-                    <button className="btn btn-sm" onClick={() => refetchChannels()}>Retry</button>
+                    <button className="btn btn-sm" onClick={() => refetchChannels()}>
+                      Retry
+                    </button>
                   </div>
                 ) : (
                   <div className="channels-list">
-                    {channelsData?.channels.map(channel => (
+                    {channelsData?.channels.map((channel) => (
                       <div key={channel} className="channel-item">
                         <div className="channel-icon">
                           <Icon
-                            name={channel === 'log' ? 'FileText' : channel.includes('email') ? 'Mail' : 'Webhook'}
+                            name={
+                              channel === 'log'
+                                ? 'FileText'
+                                : channel.includes('email')
+                                  ? 'Mail'
+                                  : 'Webhook'
+                            }
                             size={20}
                           />
                         </div>
                         <div className="channel-info">
                           <span className="channel-name">{channel}</span>
                           <span className="channel-type">
-                            {channel === 'log' ? 'In-app logging' :
-                             channel.includes('email') ? 'Email (SMTP)' : 'Webhook'}
+                            {channel === 'log'
+                              ? 'In-app logging'
+                              : channel.includes('email')
+                                ? 'Email (SMTP)'
+                                : 'Webhook'}
                           </span>
                         </div>
                         {channel !== 'log' && (
@@ -1743,9 +1896,7 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                             )}
                           </button>
                         )}
-                        {channel === 'log' && (
-                          <span className="channel-badge">Default</span>
-                        )}
+                        {channel === 'log' && <span className="channel-badge">Default</span>}
                       </div>
                     ))}
 
@@ -1793,7 +1944,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                       <input
                         type="text"
                         value={emailForm.name}
-                        onChange={e => setEmailForm(prev => ({ ...prev, name: e.target.value }))}
+                        onChange={(e) =>
+                          setEmailForm((prev) => ({ ...prev, name: e.target.value }))
+                        }
                         placeholder="e.g., primary-email"
                         className="setting-input"
                       />
@@ -1803,7 +1956,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                       <input
                         type="text"
                         value={emailForm.smtp_host}
-                        onChange={e => setEmailForm(prev => ({ ...prev, smtp_host: e.target.value }))}
+                        onChange={(e) =>
+                          setEmailForm((prev) => ({ ...prev, smtp_host: e.target.value }))
+                        }
                         placeholder="e.g., smtp.gmail.com"
                         className="setting-input"
                       />
@@ -1813,7 +1968,12 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                       <input
                         type="number"
                         value={emailForm.smtp_port}
-                        onChange={e => setEmailForm(prev => ({ ...prev, smtp_port: parseInt(e.target.value) || 587 }))}
+                        onChange={(e) =>
+                          setEmailForm((prev) => ({
+                            ...prev,
+                            smtp_port: parseInt(e.target.value) || 587,
+                          }))
+                        }
                         className="setting-input"
                       />
                     </div>
@@ -1822,7 +1982,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                       <input
                         type="text"
                         value={emailForm.username}
-                        onChange={e => setEmailForm(prev => ({ ...prev, username: e.target.value }))}
+                        onChange={(e) =>
+                          setEmailForm((prev) => ({ ...prev, username: e.target.value }))
+                        }
                         placeholder="SMTP username"
                         className="setting-input"
                       />
@@ -1832,7 +1994,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                       <input
                         type="password"
                         value={emailForm.password}
-                        onChange={e => setEmailForm(prev => ({ ...prev, password: e.target.value }))}
+                        onChange={(e) =>
+                          setEmailForm((prev) => ({ ...prev, password: e.target.value }))
+                        }
                         placeholder="SMTP password"
                         className="setting-input"
                       />
@@ -1842,7 +2006,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                       <input
                         type="email"
                         value={emailForm.from_address}
-                        onChange={e => setEmailForm(prev => ({ ...prev, from_address: e.target.value }))}
+                        onChange={(e) =>
+                          setEmailForm((prev) => ({ ...prev, from_address: e.target.value }))
+                        }
                         placeholder="noreply@example.com"
                         className="setting-input"
                       />
@@ -1852,7 +2018,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                       <input
                         type="text"
                         value={emailForm.from_name}
-                        onChange={e => setEmailForm(prev => ({ ...prev, from_name: e.target.value }))}
+                        onChange={(e) =>
+                          setEmailForm((prev) => ({ ...prev, from_name: e.target.value }))
+                        }
                         placeholder="SHATTERED"
                         className="setting-input"
                       />
@@ -1862,7 +2030,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                         <input
                           type="checkbox"
                           checked={emailForm.use_tls}
-                          onChange={e => setEmailForm(prev => ({ ...prev, use_tls: e.target.checked }))}
+                          onChange={(e) =>
+                            setEmailForm((prev) => ({ ...prev, use_tls: e.target.checked }))
+                          }
                         />
                         <span className="toggle-slider" />
                       </label>
@@ -1913,7 +2083,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                       <input
                         type="text"
                         value={webhookForm.name}
-                        onChange={e => setWebhookForm(prev => ({ ...prev, name: e.target.value }))}
+                        onChange={(e) =>
+                          setWebhookForm((prev) => ({ ...prev, name: e.target.value }))
+                        }
                         placeholder="e.g., slack-alerts"
                         className="setting-input"
                       />
@@ -1923,7 +2095,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                       <input
                         type="url"
                         value={webhookForm.url}
-                        onChange={e => setWebhookForm(prev => ({ ...prev, url: e.target.value }))}
+                        onChange={(e) =>
+                          setWebhookForm((prev) => ({ ...prev, url: e.target.value }))
+                        }
                         placeholder="https://hooks.slack.com/..."
                         className="setting-input"
                       />
@@ -1932,7 +2106,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                       <label>HTTP Method</label>
                       <select
                         value={webhookForm.method}
-                        onChange={e => setWebhookForm(prev => ({ ...prev, method: e.target.value }))}
+                        onChange={(e) =>
+                          setWebhookForm((prev) => ({ ...prev, method: e.target.value }))
+                        }
                         className="setting-select"
                       >
                         <option value="POST">POST</option>
@@ -1945,7 +2121,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                       <input
                         type="password"
                         value={webhookForm.auth_token}
-                        onChange={e => setWebhookForm(prev => ({ ...prev, auth_token: e.target.value }))}
+                        onChange={(e) =>
+                          setWebhookForm((prev) => ({ ...prev, auth_token: e.target.value }))
+                        }
                         placeholder="Bearer token or API key"
                         className="setting-input"
                       />
@@ -1955,7 +2133,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                       <input
                         type="text"
                         value={webhookForm.headers}
-                        onChange={e => setWebhookForm(prev => ({ ...prev, headers: e.target.value }))}
+                        onChange={(e) =>
+                          setWebhookForm((prev) => ({ ...prev, headers: e.target.value }))
+                        }
                         placeholder='{"X-Custom-Header": "value"}'
                         className="setting-input"
                       />
@@ -1965,7 +2145,9 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                         <input
                           type="checkbox"
                           checked={webhookForm.verify_ssl}
-                          onChange={e => setWebhookForm(prev => ({ ...prev, verify_ssl: e.target.checked }))}
+                          onChange={(e) =>
+                            setWebhookForm((prev) => ({ ...prev, verify_ssl: e.target.checked }))
+                          }
                         />
                         <span className="toggle-slider" />
                       </label>
@@ -2022,100 +2204,110 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
               <div className="shards-management">
                 <div className="shards-header">
                   <p className="shards-description">
-                    Manage which feature modules are active. Disabling a shard will unload it from memory
-                    and hide it from navigation. Protected shards (Dashboard, Settings) cannot be disabled.
+                    Manage which feature modules are active. Disabling a shard will unload it from
+                    memory and hide it from navigation. Protected shards (Dashboard, Settings)
+                    cannot be disabled.
                   </p>
                   <div className="shards-stats">
                     <span className="stat">
                       <Icon name="Package" size={16} />
-                      {shardsData.shards.filter(s => s.loaded).length} of {shardsData.shards.length} active
+                      {shardsData.shards.filter((s) => s.loaded).length} of{' '}
+                      {shardsData.shards.length} active
                     </span>
                   </div>
                 </div>
 
-                {Object.entries(groupShardsByCategory(shardsData.shards)).map(([category, shards]) => (
-                  <div key={category} className="shard-category">
-                    <h3 className="category-title">{category}</h3>
-                    <div className="shards-list">
-                      {shards.map(shard => {
-                        const isProtected = PROTECTED_SHARDS.has(shard.name);
-                        const isToggling = togglingShards.has(shard.name);
+                {Object.entries(groupShardsByCategory(shardsData.shards)).map(
+                  ([category, shards]) => (
+                    <div key={category} className="shard-category">
+                      <h3 className="category-title">{category}</h3>
+                      <div className="shards-list">
+                        {shards.map((shard) => {
+                          const isProtected = PROTECTED_SHARDS.has(shard.name);
+                          const isToggling = togglingShards.has(shard.name);
 
-                        return (
-                          <div
-                            key={shard.name}
-                            className={`shard-item ${shard.loaded ? 'loaded' : 'unloaded'} ${isProtected ? 'protected' : ''}`}
-                          >
-                            {/* Toggle on the left for clear association */}
-                            <div className="shard-control">
-                              {isToggling ? (
-                                <div className="toggle-loading">
-                                  <Icon name="Loader2" size={20} className="spin" />
-                                </div>
-                              ) : (
-                                <label className={`toggle-switch shard-toggle ${isProtected ? 'disabled' : ''}`}>
-                                  <input
-                                    type="checkbox"
-                                    checked={shard.enabled}
-                                    onChange={e => toggleShard(shard.name, e.target.checked)}
-                                    disabled={isProtected}
-                                  />
-                                  <span className="toggle-slider" />
-                                </label>
-                              )}
-                            </div>
-                            <div className="shard-icon">
-                              <Icon name={shard.navigation?.icon || 'Package'} size={24} />
-                            </div>
-                            <div className="shard-info">
-                              <div className="shard-header">
-                                <span className="shard-name">
-                                  {shard.navigation?.label || shard.name}
-                                </span>
-                                <span className="shard-version">v{shard.version}</span>
-                                {isProtected && (
-                                  <span className="protected-badge">
-                                    <Icon name="Shield" size={12} />
-                                    Protected
-                                  </span>
+                          return (
+                            <div
+                              key={shard.name}
+                              className={`shard-item ${shard.loaded ? 'loaded' : 'unloaded'} ${isProtected ? 'protected' : ''}`}
+                            >
+                              {/* Toggle on the left for clear association */}
+                              <div className="shard-control">
+                                {isToggling ? (
+                                  <div className="toggle-loading">
+                                    <Icon name="Loader2" size={20} className="spin" />
+                                  </div>
+                                ) : (
+                                  <label
+                                    className={`toggle-switch shard-toggle ${isProtected ? 'disabled' : ''}`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={shard.enabled}
+                                      onChange={(e) => toggleShard(shard.name, e.target.checked)}
+                                      disabled={isProtected}
+                                    />
+                                    <span className="toggle-slider" />
+                                  </label>
                                 )}
                               </div>
-                              <p className="shard-description">{shard.description}</p>
-                              {shard.capabilities && shard.capabilities.length > 0 && (
-                                <div className="shard-capabilities">
-                                  {(expandedCapabilities.has(shard.name)
-                                    ? shard.capabilities
-                                    : shard.capabilities.slice(0, 3)
-                                  ).map(cap => (
-                                    <span key={cap} className="capability-tag">{cap}</span>
-                                  ))}
-                                  {shard.capabilities.length > 3 && (
-                                    <button
-                                      className="capability-tag more"
-                                      onClick={() => setExpandedCapabilities(prev => {
-                                        const next = new Set(prev);
-                                        if (next.has(shard.name)) {
-                                          next.delete(shard.name);
-                                        } else {
-                                          next.add(shard.name);
-                                        }
-                                        return next;
-                                      })}
-                                    >
-                                      {expandedCapabilities.has(shard.name)
-                                        ? 'show less'
-                                        : `+${shard.capabilities.length - 3} more`}
-                                    </button>
+                              <div className="shard-icon">
+                                <Icon name={shard.navigation?.icon || 'Package'} size={24} />
+                              </div>
+                              <div className="shard-info">
+                                <div className="shard-header">
+                                  <span className="shard-name">
+                                    {shard.navigation?.label || shard.name}
+                                  </span>
+                                  <span className="shard-version">v{shard.version}</span>
+                                  {isProtected && (
+                                    <span className="protected-badge">
+                                      <Icon name="Shield" size={12} />
+                                      Protected
+                                    </span>
                                   )}
                                 </div>
-                              )}
+                                <p className="shard-description">{shard.description}</p>
+                                {shard.capabilities && shard.capabilities.length > 0 && (
+                                  <div className="shard-capabilities">
+                                    {(expandedCapabilities.has(shard.name)
+                                      ? shard.capabilities
+                                      : shard.capabilities.slice(0, 3)
+                                    ).map((cap) => (
+                                      <span key={cap} className="capability-tag">
+                                        {cap}
+                                      </span>
+                                    ))}
+                                    {shard.capabilities.length > 3 && (
+                                      <button
+                                        className="capability-tag more"
+                                        onClick={() =>
+                                          setExpandedCapabilities((prev) => {
+                                            const next = new Set(prev);
+                                            if (next.has(shard.name)) {
+                                              next.delete(shard.name);
+                                            } else {
+                                              next.add(shard.name);
+                                            }
+                                            return next;
+                                          })
+                                        }
+                                      >
+                                        {expandedCapabilities.has(shard.name)
+                                          ? 'show less'
+                                          : `+${shard.capabilities.length - 3} more`}
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             ) : (
               <div className="settings-empty">
@@ -2140,7 +2332,7 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
             <div className="settings-list">
               {settings
                 .sort((a, b) => a.order - b.order)
-                .map(setting => (
+                .map((setting) => (
                   <div
                     key={setting.key}
                     className={`setting-item ${setting.is_modified || setting.key in pendingChanges ? 'modified' : ''} ${setting.is_readonly ? 'readonly' : ''}`}
@@ -2165,15 +2357,16 @@ ARKHAM_MODEL_CACHE=/path/to/cache`}
                     </div>
                     <div className="setting-control">
                       {renderSettingControl(setting)}
-                      {(setting.is_modified || setting.key in pendingChanges) && !setting.is_readonly && (
-                        <button
-                          className="reset-btn"
-                          onClick={() => resetSetting(setting.key)}
-                          title="Reset to default"
-                        >
-                          <Icon name="RotateCcw" size={14} />
-                        </button>
-                      )}
+                      {(setting.is_modified || setting.key in pendingChanges) &&
+                        !setting.is_readonly && (
+                          <button
+                            className="reset-btn"
+                            onClick={() => resetSetting(setting.key)}
+                            title="Reset to default"
+                          >
+                            <Icon name="RotateCcw" size={14} />
+                          </button>
+                        )}
                     </div>
                   </div>
                 ))}

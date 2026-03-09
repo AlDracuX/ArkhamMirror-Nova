@@ -24,9 +24,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
         # Restrict browser features
-        response.headers["Permissions-Policy"] = (
-            "geolocation=(), microphone=(), camera=(), payment=()"
-        )
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=()"
 
         # Disable caching for API responses
         if request.url.path.startswith("/api/"):
@@ -35,7 +33,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-from .rate_limit import limiter, rate_limit_handler, upload_rate_limit, auth_rate_limit
+from .rate_limit import auth_rate_limit, limiter, rate_limit_handler, upload_rate_limit
 from .tenant import TenantContextMiddleware, get_current_tenant_id, set_current_tenant_id
 
 __all__ = [

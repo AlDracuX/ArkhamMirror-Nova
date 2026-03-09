@@ -111,9 +111,8 @@ export function LettersPage() {
     },
   });
 
-  const { data: templates, loading: loadingTemplates } = useFetch<Template[]>(
-    '/api/letters/templates'
-  );
+  const { data: templates, loading: loadingTemplates } =
+    useFetch<Template[]>('/api/letters/templates');
 
   // Fetch shared templates from Templates shard
   const { data: sharedTemplatesData, loading: loadingShared } = useFetch<SharedTemplatesResponse>(
@@ -224,7 +223,7 @@ export function LettersPage() {
   };
 
   const getTypeIcon = (type: string) => {
-    const typeInfo = LETTER_TYPES.find(t => t.value === type);
+    const typeInfo = LETTER_TYPES.find((t) => t.value === type);
     return typeInfo?.icon || 'FileText';
   };
 
@@ -250,17 +249,11 @@ export function LettersPage() {
 
         {viewMode === 'list' && (
           <div className="header-actions">
-            <button
-              className="btn btn-secondary"
-              onClick={() => setViewMode('template')}
-            >
+            <button className="btn btn-secondary" onClick={() => setViewMode('template')}>
               <Icon name="FileText" size={16} />
               Use Template
             </button>
-            <button
-              className="btn btn-primary"
-              onClick={() => setViewMode('create')}
-            >
+            <button className="btn btn-primary" onClick={() => setViewMode('create')}>
               <Icon name="Plus" size={16} />
               New Letter
             </button>
@@ -358,7 +351,7 @@ export function LettersPage() {
               </div>
             ) : letters && letters.length > 0 ? (
               <div className="letters-list">
-                {letters.map(letter => (
+                {letters.map((letter) => (
                   <div key={letter.id} className="letter-card">
                     <div className="letter-header">
                       <div className="letter-title">
@@ -455,10 +448,7 @@ export function LettersPage() {
         )}
 
         {viewMode === 'create' && (
-          <LetterEditor
-            onCreate={handleCreateLetter}
-            onCancel={() => setViewMode('list')}
-          />
+          <LetterEditor onCreate={handleCreateLetter} onCancel={() => setViewMode('list')} />
         )}
 
         {viewMode === 'edit' && selectedLetter && (
@@ -485,14 +475,18 @@ interface TemplateSelectorProps {
   onSelectShared: (template: SharedTemplate) => void;
 }
 
-function TemplateSelector({ templates, sharedTemplates, loading, onSelect, onSelectShared }: TemplateSelectorProps) {
+function TemplateSelector({
+  templates,
+  sharedTemplates,
+  loading,
+  onSelect,
+  onSelectShared,
+}: TemplateSelectorProps) {
   const { toast } = useToast();
   const [filterType, setFilterType] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'local' | 'shared'>('shared');
 
-  const filteredTemplates = templates.filter(t =>
-    !filterType || t.letter_type === filterType
-  );
+  const filteredTemplates = templates.filter((t) => !filterType || t.letter_type === filterType);
 
   const handleUseSharedTemplate = async (template: SharedTemplate) => {
     try {
@@ -554,8 +548,12 @@ function TemplateSelector({ templates, sharedTemplates, loading, onSelect, onSel
         <>
           {sharedTemplates.length > 0 ? (
             <div className="templates-grid">
-              {sharedTemplates.map(template => (
-                <div key={template.id} className="template-card shared" onClick={() => handleUseSharedTemplate(template)}>
+              {sharedTemplates.map((template) => (
+                <div
+                  key={template.id}
+                  className="template-card shared"
+                  onClick={() => handleUseSharedTemplate(template)}
+                >
                   <div className="template-icon">
                     <Icon name="Library" size={24} />
                   </div>
@@ -574,7 +572,9 @@ function TemplateSelector({ templates, sharedTemplates, loading, onSelect, onSel
             <div className="templates-empty">
               <Icon name="Library" size={48} />
               <p>No shared letter templates available</p>
-              <span className="empty-hint">Create LETTER type templates in the Templates shard</span>
+              <span className="empty-hint">
+                Create LETTER type templates in the Templates shard
+              </span>
             </div>
           )}
         </>
@@ -585,7 +585,7 @@ function TemplateSelector({ templates, sharedTemplates, loading, onSelect, onSel
           <div className="filter-row">
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
               <option value="">All Types</option>
-              {LETTER_TYPES.map(type => (
+              {LETTER_TYPES.map((type) => (
                 <option key={type.value} value={type.value}>
                   {type.label}
                 </option>
@@ -595,10 +595,16 @@ function TemplateSelector({ templates, sharedTemplates, loading, onSelect, onSel
 
           {filteredTemplates.length > 0 ? (
             <div className="templates-grid">
-              {filteredTemplates.map(template => (
+              {filteredTemplates.map((template) => (
                 <div key={template.id} className="template-card" onClick={() => onSelect(template)}>
                   <div className="template-icon">
-                    <Icon name={LETTER_TYPES.find(t => t.value === template.letter_type)?.icon || 'FileText'} size={24} />
+                    <Icon
+                      name={
+                        LETTER_TYPES.find((t) => t.value === template.letter_type)?.icon ||
+                        'FileText'
+                      }
+                      size={24}
+                    />
                   </div>
                   <h3>{template.name}</h3>
                   <p>{template.description}</p>
@@ -690,7 +696,7 @@ function LetterEditor({ letter, onCreate, onUpdate, onCancel }: LetterEditorProp
             <div className="form-group">
               <label>Type</label>
               <select value={letterType} onChange={(e) => setLetterType(e.target.value)}>
-                {LETTER_TYPES.map(type => (
+                {LETTER_TYPES.map((type) => (
                   <option key={type.value} value={type.value}>
                     {type.label}
                   </option>

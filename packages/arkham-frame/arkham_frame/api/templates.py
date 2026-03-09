@@ -4,15 +4,17 @@ Template API endpoints.
 Provides REST API for template management and rendering.
 """
 
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Optional
 
 router = APIRouter()
 
 
 class TemplateCreateRequest(BaseModel):
     """Request body for creating a template."""
+
     name: str = Field(..., description="Template name (unique identifier)")
     content: str = Field(..., description="Template content (Jinja2 syntax)")
     description: str = Field("", description="Template description")
@@ -23,6 +25,7 @@ class TemplateCreateRequest(BaseModel):
 
 class TemplateUpdateRequest(BaseModel):
     """Request body for updating a template."""
+
     content: Optional[str] = Field(None, description="New template content")
     description: Optional[str] = Field(None, description="New description")
     category: Optional[str] = Field(None, description="New category")
@@ -30,17 +33,20 @@ class TemplateUpdateRequest(BaseModel):
 
 class RenderRequest(BaseModel):
     """Request body for rendering a template."""
+
     variables: Dict[str, Any] = Field(default_factory=dict, description="Template variables")
 
 
 class RenderStringRequest(BaseModel):
     """Request body for rendering a template string."""
+
     content: str = Field(..., description="Template content")
     variables: Dict[str, Any] = Field(default_factory=dict, description="Template variables")
 
 
 class ValidateRequest(BaseModel):
     """Request body for validating a template."""
+
     content: str = Field(..., description="Template content to validate")
 
 

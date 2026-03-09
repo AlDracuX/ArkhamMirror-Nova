@@ -17,7 +17,7 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 from arkham_frame.workers.base import BaseWorker
 
@@ -51,6 +51,7 @@ class FileWorker(BaseWorker):
         # Try to import aiofiles
         try:
             import aiofiles
+
             self._aiofiles_available = True
             logger.info("aiofiles available for async file I/O")
         except ImportError:
@@ -144,6 +145,7 @@ class FileWorker(BaseWorker):
         try:
             if self._aiofiles_available:
                 import aiofiles
+
                 mode = "rb" if binary else "r"
                 async with aiofiles.open(path, mode=mode, encoding=None if binary else encoding) as f:
                     content = await f.read()
@@ -153,6 +155,7 @@ class FileWorker(BaseWorker):
                     mode = "rb" if binary else "r"
                     with open(path, mode=mode, encoding=None if binary else encoding) as f:
                         return f.read()
+
                 content = await asyncio.to_thread(sync_read)
 
             # If binary, base64 encode for JSON transport
@@ -215,6 +218,7 @@ class FileWorker(BaseWorker):
 
             if self._aiofiles_available:
                 import aiofiles
+
                 mode = "wb" if binary else "w"
                 async with aiofiles.open(path, mode=mode, encoding=None if binary else encoding) as f:
                     await f.write(content)
@@ -224,6 +228,7 @@ class FileWorker(BaseWorker):
                     mode = "wb" if binary else "w"
                     with open(path, mode=mode, encoding=None if binary else encoding) as f:
                         f.write(content)
+
                 await asyncio.to_thread(sync_write)
 
             size = path_obj.stat().st_size
@@ -274,6 +279,7 @@ class FileWorker(BaseWorker):
             return {"error": f"Destination exists: {dst}", "success": False}
 
         try:
+
             def sync_copy():
                 if src_obj.is_file():
                     shutil.copy2(str(src_obj), str(dst_obj))
@@ -328,6 +334,7 @@ class FileWorker(BaseWorker):
             return {"error": f"Destination exists: {dst}", "success": False}
 
         try:
+
             def sync_move():
                 if dst_obj.exists() and overwrite:
                     if dst_obj.is_file():
@@ -377,6 +384,7 @@ class FileWorker(BaseWorker):
             return {"error": f"Path not found: {path}", "success": False}
 
         try:
+
             def sync_delete():
                 if path_obj.is_file():
                     path_obj.unlink()
@@ -423,6 +431,7 @@ class FileWorker(BaseWorker):
         path_obj = self._resolve_path(path)
 
         try:
+
             def sync_exists():
                 return {
                     "path": str(path_obj),
@@ -474,6 +483,7 @@ class FileWorker(BaseWorker):
             return {"error": f"Path is not a directory: {path}", "success": False}
 
         try:
+
             def sync_list():
                 if recursive:
                     matches = list(path_obj.rglob(pattern))
@@ -531,6 +541,7 @@ class FileWorker(BaseWorker):
             return {"error": f"Path not found: {path}", "success": False}
 
         try:
+
             def sync_stat():
                 stat = path_obj.stat()
                 return {

@@ -3,15 +3,16 @@ EXIF/XMP metadata extraction service.
 Uses multiple extraction methods for comprehensive coverage.
 """
 
-from typing import Dict, Any, Optional, List
-from pathlib import Path
 import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from PIL import Image
 from PIL.ExifTags import TAGS
 
 try:
     import exifread
+
     EXIFREAD_AVAILABLE = True
 except ImportError:
     EXIFREAD_AVAILABLE = False
@@ -174,6 +175,7 @@ class ExifExtractor:
         numbers = re.findall(r"[\d.]+(?:/[\d.]+)?", str(coord_str))
 
         if len(numbers) >= 3:
+
             def parse_rational(s):
                 if "/" in s:
                     num, den = s.split("/")
@@ -224,15 +226,11 @@ class ExifExtractor:
 
         # Warning: No EXIF at all
         if not metadata.get("exif"):
-            warnings.append(
-                "NO_EXIF: Image has no EXIF metadata - may indicate AI generation or metadata stripping"
-            )
+            warnings.append("NO_EXIF: Image has no EXIF metadata - may indicate AI generation or metadata stripping")
 
         # Warning: Missing camera info but has other EXIF
         if metadata.get("exif") and not metadata.get("camera", {}).get("make"):
-            warnings.append(
-                "NO_CAMERA: Has EXIF but missing camera make/model - may indicate editing software origin"
-            )
+            warnings.append("NO_CAMERA: Has EXIF but missing camera make/model - may indicate editing software origin")
 
         # Warning: Software field indicates editing
         software = metadata.get("camera", {}).get("software", "") or ""
@@ -254,8 +252,6 @@ class ExifExtractor:
 
         # Warning: GPS present but no camera info
         if metadata.get("gps") and not metadata.get("camera", {}).get("make"):
-            warnings.append(
-                "GPS_NO_CAMERA: Has GPS data but no camera info - may indicate metadata injection"
-            )
+            warnings.append("GPS_NO_CAMERA: Has GPS data but no camera info - may indicate metadata injection")
 
         return warnings

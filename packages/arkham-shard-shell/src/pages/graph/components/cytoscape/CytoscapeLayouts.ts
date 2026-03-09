@@ -96,11 +96,11 @@ export const LAYOUT_CONFIGS: Record<string, LayoutOptions> = {
    */
   hierarchical: {
     name: 'dagre',
-    rankDir: 'TB',  // TB (top-bottom), BT, LR, RL
-    nodeSep: 50,    // Horizontal separation between nodes
-    edgeSep: 10,    // Separation between edges
-    rankSep: 80,    // Vertical separation between ranks
-    ranker: 'network-simplex',  // 'tight-tree', 'longest-path'
+    rankDir: 'TB', // TB (top-bottom), BT, LR, RL
+    nodeSep: 50, // Horizontal separation between nodes
+    edgeSep: 10, // Separation between edges
+    rankSep: 80, // Vertical separation between ranks
+    ranker: 'network-simplex', // 'tight-tree', 'longest-path'
     animate: true,
     animationDuration: 500,
     animationEasing: 'ease-out',
@@ -132,13 +132,13 @@ export const LAYOUT_CONFIGS: Record<string, LayoutOptions> = {
    */
   breadthfirst: {
     name: 'breadthfirst',
-    directed: false,  // Set to false to avoid root determination issues
+    directed: false, // Set to false to avoid root determination issues
     animate: true,
     animationDuration: 500,
     animationEasing: 'ease-out',
     spacingFactor: 1.5,
     avoidOverlap: true,
-    maximal: false,  // Disable maximal to avoid null node errors
+    maximal: false, // Disable maximal to avoid null node errors
     fit: true,
     padding: 50,
     circle: false,
@@ -163,13 +163,13 @@ export const LAYOUT_CONFIGS: Record<string, LayoutOptions> = {
     animationEasing: 'ease-out',
     // Nodes with higher degree go toward center
     concentric: (node: any) => node.degree(),
-    levelWidth: () => 2,  // Nodes per concentric ring
+    levelWidth: () => 2, // Nodes per concentric ring
     minNodeSpacing: 50,
     equidistant: true,
     fit: true,
     padding: 50,
-    startAngle: 3 / 2 * Math.PI,  // Start at top
-    sweep: 2 * Math.PI,  // Full circle
+    startAngle: (3 / 2) * Math.PI, // Start at top
+    sweep: 2 * Math.PI, // Full circle
     clockwise: true,
   } as any,
 
@@ -187,10 +187,10 @@ export const LAYOUT_CONFIGS: Record<string, LayoutOptions> = {
     spacingFactor: 1.5,
     fit: true,
     padding: 50,
-    startAngle: 3 / 2 * Math.PI,
+    startAngle: (3 / 2) * Math.PI,
     sweep: 2 * Math.PI,
     clockwise: true,
-    sort: (a: any, b: any) => b.degree() - a.degree(),  // Sort by degree
+    sort: (a: any, b: any) => b.degree() - a.degree(), // Sort by degree
   } as any,
 
   /**
@@ -206,8 +206,8 @@ export const LAYOUT_CONFIGS: Record<string, LayoutOptions> = {
     avoidOverlap: true,
     avoidOverlapPadding: 20,
     condense: true,
-    rows: undefined,  // Auto-calculate
-    cols: undefined,  // Auto-calculate
+    rows: undefined, // Auto-calculate
+    cols: undefined, // Auto-calculate
     fit: true,
     padding: 50,
     sort: (a: any, b: any) => {
@@ -235,7 +235,7 @@ export const LAYOUT_CONFIGS: Record<string, LayoutOptions> = {
     animate: true,
     animationDuration: 500,
     animationEasing: 'ease-out',
-    positions: undefined,  // Set dynamically: { nodeId: { x, y } }
+    positions: undefined, // Set dynamically: { nodeId: { x, y } }
     fit: true,
     padding: 50,
   } as any,
@@ -259,14 +259,14 @@ export const LAYOUT_CONFIGS: Record<string, LayoutOptions> = {
  * Provides recommended layouts for specific analysis scenarios
  */
 export const ANALYSIS_LAYOUTS: Record<string, keyof typeof LAYOUT_CONFIGS> = {
-  exploration: 'fcose',           // General discovery
-  hierarchy: 'hierarchical',      // Org structure, chains
-  ego: 'concentric',              // Person-centric analysis
-  clusters: 'cose',               // Community detection
-  timeline: 'hierarchical-lr',    // Temporal flow (LR direction)
-  comparison: 'grid',             // Side-by-side entities
-  tree: 'breadthfirst',           // Family trees, org trees
-  network: 'circle',              // Small network overview
+  exploration: 'fcose', // General discovery
+  hierarchy: 'hierarchical', // Org structure, chains
+  ego: 'concentric', // Person-centric analysis
+  clusters: 'cose', // Community detection
+  timeline: 'hierarchical-lr', // Temporal flow (LR direction)
+  comparison: 'grid', // Side-by-side entities
+  tree: 'breadthfirst', // Family trees, org trees
+  network: 'circle', // Small network overview
 };
 
 /**

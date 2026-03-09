@@ -41,11 +41,11 @@ class ScoreConfig:
     def normalized_weights(self) -> dict[str, float]:
         """Get normalized weights that sum to 1.0."""
         total = (
-            self.centrality_weight +
-            self.frequency_weight +
-            self.recency_weight +
-            self.credibility_weight +
-            self.corroboration_weight
+            self.centrality_weight
+            + self.frequency_weight
+            + self.recency_weight
+            + self.credibility_weight
+            + self.corroboration_weight
         )
         if total == 0:
             return {
@@ -67,6 +67,7 @@ class ScoreConfig:
 @dataclass
 class EntityScore:
     """Composite score for an entity."""
+
     entity_id: str
     label: str
     entity_type: str
@@ -111,6 +112,7 @@ class EntityScore:
 @dataclass
 class ScoreResponse:
     """Response from scoring calculation."""
+
     project_id: str
     scores: list[EntityScore]
     config: ScoreConfig
@@ -199,11 +201,11 @@ class CompositeScorer:
 
             # Calculate composite score
             composite = (
-                weights["centrality"] * centrality +
-                weights["frequency"] * frequency +
-                weights["recency"] * recency +
-                weights["credibility"] * credibility +
-                weights["corroboration"] * corroboration
+                weights["centrality"] * centrality
+                + weights["frequency"] * frequency
+                + weights["recency"] * recency
+                + weights["credibility"] * credibility
+                + weights["corroboration"] * corroboration
             ) * type_weight
 
             # Count sources
@@ -233,11 +235,7 @@ class CompositeScorer:
 
         return scores
 
-    def _calculate_centrality_scores(
-        self,
-        graph: Graph,
-        centrality_type: str
-    ) -> dict[str, float]:
+    def _calculate_centrality_scores(self, graph: Graph, centrality_type: str) -> dict[str, float]:
         """
         Calculate centrality-based scores (0-1 normalized).
 
@@ -282,11 +280,7 @@ class CompositeScorer:
             if node_id in node_to_entity
         }
 
-    def _calculate_frequency_scores(
-        self,
-        graph: Graph,
-        entity_mentions: dict[str, list[dict]]
-    ) -> dict[str, float]:
+    def _calculate_frequency_scores(self, graph: Graph, entity_mentions: dict[str, list[dict]]) -> dict[str, float]:
         """
         Calculate TF-IDF style frequency scores.
 
@@ -330,10 +324,7 @@ class CompositeScorer:
         return {k: v / max_score for k, v in scores.items()}
 
     def _calculate_recency_scores(
-        self,
-        graph: Graph,
-        entity_mentions: dict[str, list[dict]],
-        config: ScoreConfig
+        self, graph: Graph, entity_mentions: dict[str, list[dict]], config: ScoreConfig
     ) -> dict[str, float]:
         """
         Calculate recency scores using exponential decay.
@@ -381,10 +372,7 @@ class CompositeScorer:
         return scores
 
     def _calculate_credibility_scores(
-        self,
-        graph: Graph,
-        entity_mentions: dict[str, list[dict]],
-        credibility_ratings: dict[str, float]
+        self, graph: Graph, entity_mentions: dict[str, list[dict]], credibility_ratings: dict[str, float]
     ) -> dict[str, float]:
         """
         Calculate credibility scores based on source reliability.
@@ -423,11 +411,7 @@ class CompositeScorer:
 
         return scores
 
-    def _calculate_corroboration_scores(
-        self,
-        graph: Graph,
-        entity_mentions: dict[str, list[dict]]
-    ) -> dict[str, float]:
+    def _calculate_corroboration_scores(self, graph: Graph, entity_mentions: dict[str, list[dict]]) -> dict[str, float]:
         """
         Calculate corroboration scores based on independent source confirmation.
 
@@ -481,7 +465,7 @@ class CompositeScorer:
         adjacency: dict[str, list[tuple[str, float]]],
         damping: float = 0.85,
         max_iterations: int = 100,
-        tolerance: float = 1e-6
+        tolerance: float = 1e-6,
     ) -> dict[str, float]:
         """PageRank using power iteration."""
         node_ids = [n.id for n in graph.nodes]
@@ -517,11 +501,7 @@ class CompositeScorer:
 
         return pagerank
 
-    def _betweenness_centrality(
-        self,
-        graph: Graph,
-        adjacency: dict[str, list[tuple[str, float]]]
-    ) -> dict[str, float]:
+    def _betweenness_centrality(self, graph: Graph, adjacency: dict[str, list[tuple[str, float]]]) -> dict[str, float]:
         """Betweenness centrality (simplified)."""
         from collections import deque
 
@@ -565,7 +545,7 @@ class CompositeScorer:
         graph: Graph,
         adjacency: dict[str, list[tuple[str, float]]],
         max_iterations: int = 100,
-        tolerance: float = 1e-6
+        tolerance: float = 1e-6,
     ) -> dict[str, float]:
         """Eigenvector centrality using power iteration."""
         node_ids = [n.id for n in graph.nodes]
@@ -609,7 +589,7 @@ class CompositeScorer:
         graph: Graph,
         adjacency: dict[str, list[tuple[str, float]]],
         max_iterations: int = 100,
-        tolerance: float = 1e-6
+        tolerance: float = 1e-6,
     ) -> dict[str, float]:
         """HITS algorithm (Hubs and Authorities) - returns authority scores."""
         node_ids = [n.id for n in graph.nodes]
@@ -663,11 +643,7 @@ class CompositeScorer:
         # Return authority scores (more useful for entity importance)
         return auth_scores
 
-    def _closeness_centrality(
-        self,
-        graph: Graph,
-        adjacency: dict[str, list[tuple[str, float]]]
-    ) -> dict[str, float]:
+    def _closeness_centrality(self, graph: Graph, adjacency: dict[str, list[tuple[str, float]]]) -> dict[str, float]:
         """Closeness centrality (inverse of average distance)."""
         from collections import deque
 

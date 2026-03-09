@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
-from .models import Graph, GraphNode, GraphEdge, RelationshipType
+from .models import Graph, GraphEdge, GraphNode, RelationshipType
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,9 @@ class GraphBuilder:
         Returns:
             Constructed Graph object
         """
-        logger.info(f"Building graph for project {project_id} (entities={include_document_entities}, cooccurrences={include_cooccurrences})")
+        logger.info(
+            f"Building graph for project {project_id} (entities={include_document_entities}, cooccurrences={include_cooccurrences})"
+        )
 
         entities = []
         co_occurrences: dict[tuple[str, str], dict[str, Any]] = {}
@@ -68,9 +70,7 @@ class GraphBuilder:
 
             # Get co-occurrence data from document mentions (if enabled)
             if include_cooccurrences and entities:
-                co_occurrences = await self._get_co_occurrences(
-                    project_id, entities, document_ids, min_co_occurrence
-                )
+                co_occurrences = await self._get_co_occurrences(project_id, entities, document_ids, min_co_occurrence)
                 logger.info(f"Found {len(co_occurrences)} entity pairs from co-occurrence")
 
                 # Also get explicit relationships
@@ -114,9 +114,7 @@ class GraphBuilder:
             },
         )
 
-        logger.info(
-            f"Graph built: {len(nodes)} nodes, {len(edges)} edges"
-        )
+        logger.info(f"Graph built: {len(nodes)} nodes, {len(edges)} edges")
 
         return graph
 
@@ -169,13 +167,15 @@ class GraphBuilder:
 
                 entities = []
                 for row in rows:
-                    entities.append({
-                        "id": str(row["id"]),
-                        "label": row["label"],
-                        "entity_type": row["entity_type"],
-                        "document_count": row["document_count"] or 0,
-                        "properties": row.get("metadata") or {},
-                    })
+                    entities.append(
+                        {
+                            "id": str(row["id"]),
+                            "label": row["label"],
+                            "entity_type": row["entity_type"],
+                            "document_count": row["document_count"] or 0,
+                            "properties": row.get("metadata") or {},
+                        }
+                    )
 
                 if entities:
                     return entities
@@ -299,10 +299,7 @@ class GraphBuilder:
                 ent_b = entities[j]["id"]
 
                 # Simple heuristic based on document overlap
-                shared_docs = min(
-                    entities[i].get("document_count", 0),
-                    entities[j].get("document_count", 0)
-                )
+                shared_docs = min(entities[i].get("document_count", 0), entities[j].get("document_count", 0))
 
                 if shared_docs >= min_count:
                     co_occurrences[(ent_a, ent_b)] = {
@@ -424,9 +421,7 @@ class GraphBuilder:
             edge = GraphEdge(
                 source=source,
                 target=target,
-                relationship_type=data.get(
-                    "relationship_type", RelationshipType.MENTIONED_WITH.value
-                ),
+                relationship_type=data.get("relationship_type", RelationshipType.MENTIONED_WITH.value),
                 weight=weight,
                 document_ids=data.get("document_ids", []),
                 co_occurrence_count=count,
@@ -436,9 +431,7 @@ class GraphBuilder:
 
         return edges
 
-    def _update_node_degrees(
-        self, nodes: list[GraphNode], edges: list[GraphEdge]
-    ) -> None:
+    def _update_node_degrees(self, nodes: list[GraphNode], edges: list[GraphEdge]) -> None:
         """
         Update node degree counts.
 
@@ -482,9 +475,7 @@ class GraphBuilder:
         filtered_nodes = graph.nodes
 
         if entity_types:
-            filtered_nodes = [
-                n for n in filtered_nodes if n.entity_type in entity_types
-            ]
+            filtered_nodes = [n for n in filtered_nodes if n.entity_type in entity_types]
 
         if min_degree is not None:
             filtered_nodes = [n for n in filtered_nodes if n.degree >= min_degree]
@@ -496,24 +487,16 @@ class GraphBuilder:
         filtered_edges = graph.edges
 
         # Only include edges between filtered nodes
-        filtered_edges = [
-            e for e in filtered_edges
-            if e.source in node_ids and e.target in node_ids
-        ]
+        filtered_edges = [e for e in filtered_edges if e.source in node_ids and e.target in node_ids]
 
         if min_edge_weight is not None:
             filtered_edges = [e for e in filtered_edges if e.weight >= min_edge_weight]
 
         if relationship_types:
-            filtered_edges = [
-                e for e in filtered_edges if e.relationship_type in relationship_types
-            ]
+            filtered_edges = [e for e in filtered_edges if e.relationship_type in relationship_types]
 
         if document_ids:
-            filtered_edges = [
-                e for e in filtered_edges
-                if any(doc_id in e.document_ids for doc_id in document_ids)
-            ]
+            filtered_edges = [e for e in filtered_edges if any(doc_id in e.document_ids for doc_id in document_ids)]
 
         # Update node degrees after edge filtering
         self._update_node_degrees(filtered_nodes, filtered_edges)
@@ -596,10 +579,9 @@ class GraphBuilder:
 
         # Collect edges
         subgraph_edges = [
-            e for e in graph.edges
-            if e.source in subgraph_node_ids
-            and e.target in subgraph_node_ids
-            and e.weight >= min_weight
+            e
+            for e in graph.edges
+            if e.source in subgraph_node_ids and e.target in subgraph_node_ids and e.weight >= min_weight
         ]
 
         # Create subgraph
@@ -618,9 +600,7 @@ class GraphBuilder:
 
         return subgraph
 
-    def _build_adjacency_list(
-        self, edges: list[GraphEdge]
-    ) -> dict[str, list[tuple[str, float]]]:
+    def _build_adjacency_list(self, edges: list[GraphEdge]) -> dict[str, list[tuple[str, float]]]:
         """
         Build adjacency list from edges.
 

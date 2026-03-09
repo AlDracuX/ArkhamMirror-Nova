@@ -2,18 +2,18 @@
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from .models import (
+    AnalystNote,
     Anomaly,
-    AnomalyType,
-    AnomalyStatus,
-    SeverityLevel,
     AnomalyPattern,
     AnomalyStats,
-    AnalystNote,
+    AnomalyStatus,
+    AnomalyType,
+    SeverityLevel,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,9 +58,7 @@ class AnomalyStore:
         logger.debug(f"Stored anomaly {anomaly.id} for doc {anomaly.doc_id}")
         return anomaly
 
-    async def get_anomaly(
-        self, anomaly_id: str, tenant_id: Optional[UUID] = None
-    ) -> Optional[Anomaly]:
+    async def get_anomaly(self, anomaly_id: str, tenant_id: Optional[UUID] = None) -> Optional[Anomaly]:
         """
         Get an anomaly by ID.
 
@@ -105,9 +103,7 @@ class AnomalyStore:
         logger.debug(f"Updated anomaly {anomaly.id}")
         return anomaly
 
-    async def delete_anomaly(
-        self, anomaly_id: str, tenant_id: Optional[UUID] = None
-    ) -> bool:
+    async def delete_anomaly(self, anomaly_id: str, tenant_id: Optional[UUID] = None) -> bool:
         """
         Delete an anomaly.
 
@@ -207,8 +203,7 @@ class AnomalyStore:
 
             # Get total count
             count_row = await self._db.fetch_one(
-                f"SELECT COUNT(*) as count FROM arkham_anomalies WHERE {where_sql}",
-                params
+                f"SELECT COUNT(*) as count FROM arkham_anomalies WHERE {where_sql}", params
             )
             total = count_row["count"] if count_row else 0
 
@@ -220,7 +215,7 @@ class AnomalyStore:
                     WHERE {where_sql}
                     ORDER BY detected_at DESC
                     LIMIT :limit OFFSET :offset""",
-                params
+                params,
             )
 
             anomalies = [self._row_to_anomaly(row) for row in rows]
@@ -242,13 +237,11 @@ class AnomalyStore:
             filtered.sort(key=lambda a: a.detected_at, reverse=True)
 
             total = len(filtered)
-            result = filtered[offset:offset + limit]
+            result = filtered[offset : offset + limit]
 
             return result, total
 
-    async def get_anomalies_by_doc(
-        self, doc_id: str, tenant_id: Optional[UUID] = None
-    ) -> List[Anomaly]:
+    async def get_anomalies_by_doc(self, doc_id: str, tenant_id: Optional[UUID] = None) -> List[Anomaly]:
         """
         Get all anomalies for a document.
 
@@ -359,7 +352,7 @@ class AnomalyStore:
                     "author": note.author,
                     "content": note.content,
                     "created_at": note.created_at.isoformat(),
-                }
+                },
             )
         else:
             if note.anomaly_id not in self._notes:
@@ -369,9 +362,7 @@ class AnomalyStore:
         logger.debug(f"Added note to anomaly {note.anomaly_id}")
         return note
 
-    async def get_notes(
-        self, anomaly_id: str, tenant_id: Optional[UUID] = None
-    ) -> List[AnalystNote]:
+    async def get_notes(self, anomaly_id: str, tenant_id: Optional[UUID] = None) -> List[AnalystNote]:
         """
         Get all notes for an anomaly.
 
@@ -424,7 +415,7 @@ class AnomalyStore:
                     "confidence": pattern.confidence,
                     "detected_at": pattern.detected_at.isoformat(),
                     "notes": pattern.notes,
-                }
+                },
             )
         else:
             self._patterns[pattern.id] = pattern
@@ -432,9 +423,7 @@ class AnomalyStore:
         logger.debug(f"Stored pattern {pattern.id}")
         return pattern
 
-    async def get_pattern(
-        self, pattern_id: str, tenant_id: Optional[UUID] = None
-    ) -> Optional[AnomalyPattern]:
+    async def get_pattern(self, pattern_id: str, tenant_id: Optional[UUID] = None) -> Optional[AnomalyPattern]:
         """
         Get a pattern by ID.
 
@@ -459,9 +448,7 @@ class AnomalyStore:
         else:
             return self._patterns.get(pattern_id)
 
-    async def list_patterns(
-        self, tenant_id: Optional[UUID] = None
-    ) -> List[AnomalyPattern]:
+    async def list_patterns(self, tenant_id: Optional[UUID] = None) -> List[AnomalyPattern]:
         """
         List all patterns.
 
@@ -489,9 +476,7 @@ class AnomalyStore:
             patterns.sort(key=lambda p: p.detected_at, reverse=True)
             return patterns
 
-    async def get_stats(
-        self, tenant_id: Optional[UUID] = None
-    ) -> AnomalyStats:
+    async def get_stats(self, tenant_id: Optional[UUID] = None) -> AnomalyStats:
         """
         Calculate anomaly statistics.
 
@@ -511,29 +496,28 @@ class AnomalyStore:
 
             # Total anomalies
             total_row = await self._db.fetch_one(
-                f"SELECT COUNT(*) as count FROM arkham_anomalies WHERE 1=1{tenant_clause}",
-                tenant_params
+                f"SELECT COUNT(*) as count FROM arkham_anomalies WHERE 1=1{tenant_clause}", tenant_params
             )
             total = total_row["count"] if total_row else 0
 
             # Count by type
             type_rows = await self._db.fetch_all(
                 f"SELECT anomaly_type, COUNT(*) as count FROM arkham_anomalies WHERE 1=1{tenant_clause} GROUP BY anomaly_type",
-                tenant_params
+                tenant_params,
             )
             by_type = {row["anomaly_type"]: row["count"] for row in type_rows}
 
             # Count by status
             status_rows = await self._db.fetch_all(
                 f"SELECT status, COUNT(*) as count FROM arkham_anomalies WHERE 1=1{tenant_clause} GROUP BY status",
-                tenant_params
+                tenant_params,
             )
             by_status = {row["status"]: row["count"] for row in status_rows}
 
             # Count by severity
             severity_rows = await self._db.fetch_all(
                 f"SELECT severity, COUNT(*) as count FROM arkham_anomalies WHERE 1=1{tenant_clause} GROUP BY severity",
-                tenant_params
+                tenant_params,
             )
             by_severity = {row["severity"]: row["count"] for row in severity_rows}
 
@@ -544,40 +528,39 @@ class AnomalyStore:
             detected_params = {"since": last_24h, **tenant_params}
             detected_row = await self._db.fetch_one(
                 f"SELECT COUNT(*) as count FROM arkham_anomalies WHERE detected_at >= :since{tenant_clause}",
-                detected_params
+                detected_params,
             )
             detected_last_24h = detected_row["count"] if detected_row else 0
 
             confirmed_row = await self._db.fetch_one(
                 f"SELECT COUNT(*) as count FROM arkham_anomalies WHERE status = 'confirmed' AND reviewed_at >= :since{tenant_clause}",
-                detected_params
+                detected_params,
             )
             confirmed_last_24h = confirmed_row["count"] if confirmed_row else 0
 
             dismissed_row = await self._db.fetch_one(
                 f"SELECT COUNT(*) as count FROM arkham_anomalies WHERE status = 'dismissed' AND reviewed_at >= :since{tenant_clause}",
-                detected_params
+                detected_params,
             )
             dismissed_last_24h = dismissed_row["count"] if dismissed_row else 0
 
             # Quality metrics
             reviewed_row = await self._db.fetch_one(
                 f"SELECT COUNT(*) as count FROM arkham_anomalies WHERE status IN ('confirmed', 'dismissed', 'false_positive'){tenant_clause}",
-                tenant_params
+                tenant_params,
             )
             reviewed_count = reviewed_row["count"] if reviewed_row else 0
 
             fp_row = await self._db.fetch_one(
                 f"SELECT COUNT(*) as count FROM arkham_anomalies WHERE status = 'false_positive'{tenant_clause}",
-                tenant_params
+                tenant_params,
             )
             fp_count = fp_row["count"] if fp_row else 0
 
             false_positive_rate = fp_count / reviewed_count if reviewed_count > 0 else 0.0
 
             avg_row = await self._db.fetch_one(
-                f"SELECT AVG(confidence) as avg FROM arkham_anomalies WHERE 1=1{tenant_clause}",
-                tenant_params
+                f"SELECT AVG(confidence) as avg FROM arkham_anomalies WHERE 1=1{tenant_clause}", tenant_params
             )
             avg_confidence = avg_row["avg"] if avg_row and avg_row["avg"] else 0.0
 
@@ -616,16 +599,26 @@ class AnomalyStore:
             last_24h = now - timedelta(hours=24)
 
             detected_last_24h = len([a for a in all_anomalies if a.detected_at >= last_24h])
-            confirmed_last_24h = len([
-                a for a in all_anomalies
-                if a.status == AnomalyStatus.CONFIRMED and a.reviewed_at and a.reviewed_at >= last_24h
-            ])
-            dismissed_last_24h = len([
-                a for a in all_anomalies
-                if a.status == AnomalyStatus.DISMISSED and a.reviewed_at and a.reviewed_at >= last_24h
-            ])
+            confirmed_last_24h = len(
+                [
+                    a
+                    for a in all_anomalies
+                    if a.status == AnomalyStatus.CONFIRMED and a.reviewed_at and a.reviewed_at >= last_24h
+                ]
+            )
+            dismissed_last_24h = len(
+                [
+                    a
+                    for a in all_anomalies
+                    if a.status == AnomalyStatus.DISMISSED and a.reviewed_at and a.reviewed_at >= last_24h
+                ]
+            )
 
-            reviewed = [a for a in all_anomalies if a.status in {AnomalyStatus.CONFIRMED, AnomalyStatus.FALSE_POSITIVE, AnomalyStatus.DISMISSED}]
+            reviewed = [
+                a
+                for a in all_anomalies
+                if a.status in {AnomalyStatus.CONFIRMED, AnomalyStatus.FALSE_POSITIVE, AnomalyStatus.DISMISSED}
+            ]
             false_positives = [a for a in all_anomalies if a.status == AnomalyStatus.FALSE_POSITIVE]
 
             false_positive_rate = len(false_positives) / len(reviewed) if reviewed else 0.0
@@ -643,9 +636,7 @@ class AnomalyStore:
                 avg_confidence=avg_confidence,
             )
 
-    async def get_facets(
-        self, tenant_id: Optional[UUID] = None
-    ) -> Dict[str, Any]:
+    async def get_facets(self, tenant_id: Optional[UUID] = None) -> Dict[str, Any]:
         """
         Get facet counts for filtering.
 
@@ -664,53 +655,53 @@ class AnomalyStore:
                 tenant_params["tenant_id"] = str(tenant_id)
 
             facets = {
-                'types': {},
-                'statuses': {},
-                'severities': {},
+                "types": {},
+                "statuses": {},
+                "severities": {},
             }
 
             type_rows = await self._db.fetch_all(
                 f"SELECT anomaly_type, COUNT(*) as count FROM arkham_anomalies WHERE 1=1{tenant_clause} GROUP BY anomaly_type",
-                tenant_params
+                tenant_params,
             )
             for row in type_rows:
-                facets['types'][row["anomaly_type"]] = row["count"]
+                facets["types"][row["anomaly_type"]] = row["count"]
 
             status_rows = await self._db.fetch_all(
                 f"SELECT status, COUNT(*) as count FROM arkham_anomalies WHERE 1=1{tenant_clause} GROUP BY status",
-                tenant_params
+                tenant_params,
             )
             for row in status_rows:
-                facets['statuses'][row["status"]] = row["count"]
+                facets["statuses"][row["status"]] = row["count"]
 
             severity_rows = await self._db.fetch_all(
                 f"SELECT severity, COUNT(*) as count FROM arkham_anomalies WHERE 1=1{tenant_clause} GROUP BY severity",
-                tenant_params
+                tenant_params,
             )
             for row in severity_rows:
-                facets['severities'][row["severity"]] = row["count"]
+                facets["severities"][row["severity"]] = row["count"]
 
             return facets
         else:
             all_anomalies = list(self._anomalies.values())
 
             facets = {
-                'types': {},
-                'statuses': {},
-                'severities': {},
+                "types": {},
+                "statuses": {},
+                "severities": {},
             }
 
             for anomaly_type in AnomalyType:
                 count = len([a for a in all_anomalies if a.anomaly_type == anomaly_type])
-                facets['types'][anomaly_type.value] = count
+                facets["types"][anomaly_type.value] = count
 
             for status in AnomalyStatus:
                 count = len([a for a in all_anomalies if a.status == status])
-                facets['statuses'][status.value] = count
+                facets["statuses"][status.value] = count
 
             for severity in SeverityLevel:
                 count = len([a for a in all_anomalies if a.severity == severity])
-                facets['severities'][severity.value] = count
+                facets["severities"][severity.value] = count
 
             return facets
 
@@ -721,32 +712,33 @@ class AnomalyStore:
         params = {
             "id": anomaly.id,
             "doc_id": anomaly.doc_id,
-            "project_id": getattr(anomaly, 'project_id', None),
+            "project_id": getattr(anomaly, "project_id", None),
             "anomaly_type": anomaly.anomaly_type.value,
             "severity": anomaly.severity.value,
             "status": anomaly.status.value,
             "score": anomaly.score,
             "confidence": anomaly.confidence,
-            "title": getattr(anomaly, 'title', None),
-            "description": getattr(anomaly, 'description', None),
+            "title": getattr(anomaly, "title", None),
+            "description": getattr(anomaly, "description", None),
             "explanation": anomaly.explanation,
             "field_name": anomaly.field_name,
             "expected_range": anomaly.expected_range,
             "actual_value": anomaly.actual_value,
-            "evidence": json.dumps(getattr(anomaly, 'evidence', {})),
+            "evidence": json.dumps(getattr(anomaly, "evidence", {})),
             "details": json.dumps(anomaly.details),
             "tags": json.dumps(anomaly.tags),
-            "metadata": json.dumps(getattr(anomaly, 'metadata', {})),
+            "metadata": json.dumps(getattr(anomaly, "metadata", {})),
             "detected_at": anomaly.detected_at.isoformat(),
             "reviewed_at": anomaly.reviewed_at.isoformat() if anomaly.reviewed_at else None,
             "reviewed_by": anomaly.reviewed_by,
             "notes": anomaly.notes,
-            "created_at": getattr(anomaly, 'created_at', anomaly.detected_at).isoformat(),
+            "created_at": getattr(anomaly, "created_at", anomaly.detected_at).isoformat(),
             "updated_at": anomaly.updated_at.isoformat(),
         }
 
         if update:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 UPDATE arkham_anomalies SET
                     doc_id = :doc_id,
                     project_id = :project_id,
@@ -771,9 +763,12 @@ class AnomalyStore:
                     notes = :notes,
                     updated_at = :updated_at
                 WHERE id = :id
-            """, params)
+            """,
+                params,
+            )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_anomalies (
                     id, doc_id, project_id, anomaly_type, severity, status,
                     score, confidence, title, description, explanation,
@@ -789,7 +784,9 @@ class AnomalyStore:
                     :detected_at, :reviewed_at, :reviewed_by, :notes,
                     :created_at, :updated_at
                 )
-            """, params)
+            """,
+                params,
+            )
 
     def _row_to_anomaly(self, row: Dict[str, Any]) -> Anomaly:
         """Convert database row to Anomaly object."""

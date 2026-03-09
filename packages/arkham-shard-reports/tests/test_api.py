@@ -4,21 +4,21 @@ Reports Shard - API Tests
 Tests for FastAPI routes and endpoints.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from fastapi.testclient import TestClient
+import pytest
 from arkham_shard_reports.api import router
 from arkham_shard_reports.models import (
     Report,
     ReportFormat,
+    ReportSchedule,
+    ReportStatistics,
     ReportStatus,
     ReportTemplate,
     ReportType,
-    ReportSchedule,
-    ReportStatistics,
 )
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture

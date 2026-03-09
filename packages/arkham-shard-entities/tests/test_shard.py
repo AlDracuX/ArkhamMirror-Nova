@@ -1,7 +1,8 @@
 """Tests for EntitiesShard implementation."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from arkham_shard_entities.shard import EntitiesShard
 
 

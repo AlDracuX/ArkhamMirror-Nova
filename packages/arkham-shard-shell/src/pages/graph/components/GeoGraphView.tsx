@@ -129,10 +129,13 @@ export function GeoGraphView({
   }, [fetchGeoData]);
 
   // Handle node click
-  const handleNodeClick = useCallback((nodeId: string) => {
-    setSelectedNodeId(prev => prev === nodeId ? null : nodeId);
-    onNodeClick?.(nodeId);
-  }, [onNodeClick]);
+  const handleNodeClick = useCallback(
+    (nodeId: string) => {
+      setSelectedNodeId((prev) => (prev === nodeId ? null : nodeId));
+      onNodeClick?.(nodeId);
+    },
+    [onNodeClick]
+  );
 
   // Empty/loading states
   if (loading) {
@@ -209,12 +212,14 @@ export function GeoGraphView({
 
       {/* Map - Lazy loaded */}
       <div className="geo-map-container" style={{ height: height - 60 }}>
-        <Suspense fallback={
-          <div className="geo-loading">
-            <Icon name="Loader2" size={32} className="spin" />
-            <span>Loading map...</span>
-          </div>
-        }>
+        <Suspense
+          fallback={
+            <div className="geo-loading">
+              <Icon name="Loader2" size={32} className="spin" />
+              <span>Loading map...</span>
+            </div>
+          }
+        >
           <LazyMapView
             data={data}
             showEdges={showEdges}
@@ -229,12 +234,14 @@ export function GeoGraphView({
 
       {/* Legend */}
       <div className="geo-legend">
-        {Object.entries(ENTITY_COLORS).filter(([k]) => k !== 'default').map(([type, color]) => (
-          <div key={type} className="legend-item">
-            <span className="legend-dot" style={{ background: color }} />
-            <span>{type}</span>
-          </div>
-        ))}
+        {Object.entries(ENTITY_COLORS)
+          .filter(([k]) => k !== 'default')
+          .map(([type, color]) => (
+            <div key={type} className="legend-item">
+              <span className="legend-dot" style={{ background: color }} />
+              <span>{type}</span>
+            </div>
+          ))}
       </div>
     </div>
   );
@@ -298,7 +305,10 @@ export function GeoGraphControls({
 
       <div className="control-info">
         <Icon name="Info" size={14} />
-        <p>Geographic view shows entities with location coordinates on a map. Edges represent relationships with distances.</p>
+        <p>
+          Geographic view shows entities with location coordinates on a map. Edges represent
+          relationships with distances.
+        </p>
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ import logging
 import re
 import unicodedata
 from collections import Counter
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from .base import BaseWorker
 
@@ -43,6 +43,7 @@ class LightWorker(BaseWorker):
         # Try to import langdetect
         try:
             import langdetect
+
             self._langdetect_available = True
             logger.info("langdetect available for language detection")
         except ImportError:
@@ -68,6 +69,7 @@ class LightWorker(BaseWorker):
             # Resolve relative path using DATA_SILO_PATH (for Docker/portable deployments)
             import os
             from pathlib import Path
+
             if not os.path.isabs(file_path):
                 data_silo = os.environ.get("DATA_SILO_PATH", ".")
                 file_path = str(Path(data_silo) / file_path)
@@ -121,10 +123,7 @@ class LightWorker(BaseWorker):
         original_len = len(text)
 
         # Remove control characters (except newline, tab, carriage return)
-        cleaned = "".join(
-            char for char in text
-            if unicodedata.category(char)[0] != "C" or char in "\n\t\r"
-        )
+        cleaned = "".join(char for char in text if unicodedata.category(char)[0] != "C" or char in "\n\t\r")
         if len(cleaned) != original_len:
             changes.append("removed_control_chars")
 
@@ -141,8 +140,8 @@ class LightWorker(BaseWorker):
             "\u201c": '"',  # Left double quote
             "\u201d": '"',  # Right double quote
             "\u2013": "-",  # En dash
-            "\u2014": "--", # Em dash
-            "\u2026": "...", # Ellipsis
+            "\u2014": "--",  # Em dash
+            "\u2026": "...",  # Ellipsis
         }
 
         fixed = normalized
@@ -251,8 +250,7 @@ class LightWorker(BaseWorker):
                 code = ord(char)
 
                 # Latin (including extensions)
-                if (code >= 0x0041 and code <= 0x007A) or \
-                   (code >= 0x00C0 and code <= 0x024F):
+                if (code >= 0x0041 and code <= 0x007A) or (code >= 0x00C0 and code <= 0x024F):
                     latin += 1
                 # Cyrillic
                 elif code >= 0x0400 and code <= 0x04FF:
@@ -261,8 +259,7 @@ class LightWorker(BaseWorker):
                 elif code >= 0x0600 and code <= 0x06FF:
                     arabic += 1
                 # CJK
-                elif (code >= 0x4E00 and code <= 0x9FFF) or \
-                     (code >= 0x3040 and code <= 0x30FF):
+                elif (code >= 0x4E00 and code <= 0x9FFF) or (code >= 0x3040 and code <= 0x30FF):
                     cjk += 1
 
         if total == 0:
@@ -273,10 +270,10 @@ class LightWorker(BaseWorker):
 
         # Calculate percentages
         scripts = [
-            ("en", latin / total),      # English/Latin
-            ("ru", cyrillic / total),   # Russian/Cyrillic
-            ("ar", arabic / total),     # Arabic
-            ("zh", cjk / total),        # Chinese/CJK
+            ("en", latin / total),  # English/Latin
+            ("ru", cyrillic / total),  # Russian/Cyrillic
+            ("ar", arabic / total),  # Arabic
+            ("zh", cjk / total),  # Chinese/CJK
         ]
 
         # Get dominant script
@@ -418,6 +415,7 @@ class LightWorker(BaseWorker):
 
         # Calculate Shannon entropy
         import math
+
         entropy = 0.0
         for count in char_counts.values():
             prob = count / total

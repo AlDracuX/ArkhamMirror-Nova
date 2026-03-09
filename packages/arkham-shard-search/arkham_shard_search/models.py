@@ -8,6 +8,7 @@ from typing import Any
 
 class SearchMode(Enum):
     """Search mode options."""
+
     HYBRID = "hybrid"
     SEMANTIC = "semantic"
     KEYWORD = "keyword"
@@ -16,6 +17,7 @@ class SearchMode(Enum):
 
 class RegexFlag(Enum):
     """Regex flags for pattern matching."""
+
     CASE_INSENSITIVE = "case_insensitive"
     MULTILINE = "multiline"
     DOTALL = "dotall"
@@ -23,6 +25,7 @@ class RegexFlag(Enum):
 
 class SortBy(Enum):
     """Sort options for search results."""
+
     RELEVANCE = "relevance"
     DATE = "date"
     TITLE = "title"
@@ -30,6 +33,7 @@ class SortBy(Enum):
 
 class SortOrder(Enum):
     """Sort order options."""
+
     DESC = "desc"
     ASC = "asc"
 
@@ -37,6 +41,7 @@ class SortOrder(Enum):
 @dataclass
 class DateRangeFilter:
     """Date range filter."""
+
     start: datetime | None = None
     end: datetime | None = None
 
@@ -44,6 +49,7 @@ class DateRangeFilter:
 @dataclass
 class SearchFilters:
     """Search filters."""
+
     date_range: DateRangeFilter | None = None
     entity_ids: list[str] = field(default_factory=list)
     project_ids: list[str] = field(default_factory=list)
@@ -55,6 +61,7 @@ class SearchFilters:
 @dataclass
 class SearchQuery:
     """Search query parameters."""
+
     query: str
     mode: SearchMode = SearchMode.HYBRID
     filters: SearchFilters | None = None
@@ -71,6 +78,7 @@ class SearchQuery:
 @dataclass
 class SearchResultItem:
     """Individual search result."""
+
     doc_id: str
     chunk_id: str | None
     title: str
@@ -94,6 +102,7 @@ class SearchResultItem:
 @dataclass
 class SearchResult:
     """Search result container."""
+
     query: str
     mode: SearchMode
     total: int
@@ -114,6 +123,7 @@ class SearchResult:
 @dataclass
 class SuggestionItem:
     """Autocomplete suggestion item."""
+
     text: str
     score: float
     type: str  # "entity" | "document" | "term"
@@ -123,6 +133,7 @@ class SuggestionItem:
 @dataclass
 class SimilarityRequest:
     """Request for finding similar documents."""
+
     doc_id: str
     limit: int = 10
     min_similarity: float = 0.5
@@ -135,6 +146,7 @@ class SimilarityRequest:
 @dataclass
 class RegexMatch:
     """Individual regex match result."""
+
     document_id: str
     document_title: str
     page_number: int | None
@@ -149,6 +161,7 @@ class RegexMatch:
 @dataclass
 class RegexSearchQuery:
     """Regex search query parameters."""
+
     pattern: str
     flags: list[str] = field(default_factory=list)
     project_id: str | None = None
@@ -162,6 +175,7 @@ class RegexSearchQuery:
 @dataclass
 class RegexSearchResult:
     """Regex search result container."""
+
     pattern: str
     matches: list[RegexMatch] = field(default_factory=list)
     total_matches: int = 0
@@ -174,6 +188,7 @@ class RegexSearchResult:
 @dataclass
 class RegexPreset:
     """Predefined regex pattern."""
+
     id: str
     name: str
     pattern: str

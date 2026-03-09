@@ -2,10 +2,9 @@
 Tests for Letters Shard - Shard Implementation
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from arkham_shard_letters.shard import LettersShard
+import pytest
 from arkham_shard_letters.models import (
     ExportFormat,
     Letter,
@@ -14,6 +13,7 @@ from arkham_shard_letters.models import (
     LetterType,
     PlaceholderValue,
 )
+from arkham_shard_letters.shard import LettersShard
 
 
 @pytest.fixture

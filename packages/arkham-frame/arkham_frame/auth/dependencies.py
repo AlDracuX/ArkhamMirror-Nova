@@ -13,17 +13,16 @@ from fastapi_users.authentication import (
 )
 from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from .models import User, UserRole, Base
 from .manager import UserManager
+from .models import Base, User, UserRole
 
 # Configuration from environment
 SECRET_KEY = os.environ.get("AUTH_SECRET_KEY", "CHANGE-ME-IN-PRODUCTION")
 JWT_LIFETIME = int(os.environ.get("JWT_LIFETIME_SECONDS", "3600"))
 DATABASE_URL = os.environ.get(
-    "AUTH_DATABASE_URL",
-    os.environ.get("DATABASE_URL", "postgresql+asyncpg://arkham:arkhampass@localhost/arkhamdb")
+    "AUTH_DATABASE_URL", os.environ.get("DATABASE_URL", "postgresql+asyncpg://arkham:arkhampass@localhost/arkhamdb")
 )
 
 # Ensure async driver
@@ -91,16 +90,14 @@ def require_role(required_role: str):
         async def admin_endpoint(user: User = Depends(require_role("admin"))):
             ...
     """
+
     async def check_role(user: User = Depends(current_active_user)) -> User:
         hierarchy = UserRole.get_hierarchy()
         user_level = hierarchy.get(user.role, 0)
         required_level = hierarchy.get(required_role, 0)
 
         if user_level < required_level:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Role '{required_role}' required"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Role '{required_role}' required")
         return user
 
     return check_role
@@ -115,12 +112,10 @@ def require_permission(permission: str):
         async def create_doc(user: User = Depends(require_permission("write"))):
             ...
     """
+
     async def check_permission(user: User = Depends(current_active_user)) -> User:
         if not UserRole.has_permission(user.role, permission):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Permission '{permission}' required"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Permission '{permission}' required")
         return user
 
     return check_permission

@@ -35,7 +35,11 @@ export interface AnnotationPanelProps {
   annotations: Annotation[];
   onRefresh: () => Promise<void>;
   onAnnotationClick?: (annotation: Annotation) => void;
-  onAddAnnotation?: (type: AnnotationType, nodeId?: string, edgeKey?: { source: string; target: string }) => void;
+  onAddAnnotation?: (
+    type: AnnotationType,
+    nodeId?: string,
+    edgeKey?: { source: string; target: string }
+  ) => void;
   loading?: boolean;
 }
 
@@ -70,35 +74,39 @@ export function AnnotationPanel({
   const [saving, setSaving] = useState(false);
 
   // Filter annotations
-  const filteredAnnotations = filterType === 'all'
-    ? annotations
-    : annotations.filter(a => a.annotation_type === filterType);
+  const filteredAnnotations =
+    filterType === 'all'
+      ? annotations
+      : annotations.filter((a) => a.annotation_type === filterType);
 
   // Group annotations by type for stats
   const stats = {
-    notes: annotations.filter(a => a.annotation_type === 'note').length,
-    labels: annotations.filter(a => a.annotation_type === 'label').length,
-    highlights: annotations.filter(a => a.annotation_type === 'highlight').length,
-    groups: annotations.filter(a => a.annotation_type === 'group').length,
+    notes: annotations.filter((a) => a.annotation_type === 'note').length,
+    labels: annotations.filter((a) => a.annotation_type === 'label').length,
+    highlights: annotations.filter((a) => a.annotation_type === 'highlight').length,
+    groups: annotations.filter((a) => a.annotation_type === 'group').length,
   };
 
   // Open modal for adding new annotation
-  const openAddModal = useCallback((
-    type: AnnotationType,
-    nodeId?: string | null,
-    edgeKey?: { source: string; target: string } | null
-  ) => {
-    setContent('');
-    setColor('#3b82f6');
-    setModal({
-      visible: true,
-      mode: 'add',
-      type,
-      annotation: null,
-      nodeId: nodeId || null,
-      edgeKey: edgeKey || null,
-    });
-  }, []);
+  const openAddModal = useCallback(
+    (
+      type: AnnotationType,
+      nodeId?: string | null,
+      edgeKey?: { source: string; target: string } | null
+    ) => {
+      setContent('');
+      setColor('#3b82f6');
+      setModal({
+        visible: true,
+        mode: 'add',
+        type,
+        annotation: null,
+        nodeId: nodeId || null,
+        edgeKey: edgeKey || null,
+      });
+    },
+    []
+  );
 
   // Open modal for editing existing annotation
   const openEditModal = useCallback((annotation: Annotation) => {
@@ -110,15 +118,16 @@ export function AnnotationPanel({
       type: annotation.annotation_type,
       annotation,
       nodeId: annotation.node_id,
-      edgeKey: annotation.edge_source && annotation.edge_target
-        ? { source: annotation.edge_source, target: annotation.edge_target }
-        : null,
+      edgeKey:
+        annotation.edge_source && annotation.edge_target
+          ? { source: annotation.edge_source, target: annotation.edge_target }
+          : null,
     });
   }, []);
 
   // Close modal
   const closeModal = useCallback(() => {
-    setModal(prev => ({ ...prev, visible: false }));
+    setModal((prev) => ({ ...prev, visible: false }));
     setContent('');
     setColor('#3b82f6');
   }, []);
@@ -175,32 +184,40 @@ export function AnnotationPanel({
   }, [projectId, graphId, modal, content, color, onRefresh, closeModal]);
 
   // Delete annotation
-  const deleteAnnotation = useCallback(async (annotationId: string) => {
-    if (!window.confirm('Delete this annotation?')) return;
+  const deleteAnnotation = useCallback(
+    async (annotationId: string) => {
+      if (!window.confirm('Delete this annotation?')) return;
 
-    try {
-      const response = await fetch(`/api/graph/annotations/${annotationId}`, {
-        method: 'DELETE',
-      });
+      try {
+        const response = await fetch(`/api/graph/annotations/${annotationId}`, {
+          method: 'DELETE',
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete annotation');
+        if (!response.ok) {
+          throw new Error('Failed to delete annotation');
+        }
+
+        await onRefresh();
+      } catch (error) {
+        console.error('Error deleting annotation:', error);
       }
-
-      await onRefresh();
-    } catch (error) {
-      console.error('Error deleting annotation:', error);
-    }
-  }, [onRefresh]);
+    },
+    [onRefresh]
+  );
 
   // Get icon for annotation type
   const getTypeIcon = (type: AnnotationType) => {
     switch (type) {
-      case 'note': return 'StickyNote';
-      case 'label': return 'Tag';
-      case 'highlight': return 'Highlighter';
-      case 'group': return 'Group';
-      default: return 'FileText';
+      case 'note':
+        return 'StickyNote';
+      case 'label':
+        return 'Tag';
+      case 'highlight':
+        return 'Highlighter';
+      case 'group':
+        return 'Group';
+      default:
+        return 'FileText';
     }
   };
 
@@ -226,7 +243,11 @@ export function AnnotationPanel({
           disabled={loading}
           title="Refresh annotations"
         >
-          <Icon name={loading ? 'Loader2' : 'RefreshCw'} size={14} className={loading ? 'spin' : ''} />
+          <Icon
+            name={loading ? 'Loader2' : 'RefreshCw'}
+            size={14}
+            className={loading ? 'spin' : ''}
+          />
         </button>
       </div>
 
@@ -305,7 +326,7 @@ export function AnnotationPanel({
             <p className="hint">Add notes, labels, or highlights to your graph</p>
           </div>
         ) : (
-          filteredAnnotations.map(annotation => (
+          filteredAnnotations.map((annotation) => (
             <div
               key={annotation.id}
               className={`annotation-item annotation-type-${annotation.annotation_type}`}
@@ -338,9 +359,7 @@ export function AnnotationPanel({
                   </button>
                 </div>
               </div>
-              <div className="annotation-content">
-                {annotation.content}
-              </div>
+              <div className="annotation-content">{annotation.content}</div>
               <div className="annotation-meta">
                 {new Date(annotation.created_at).toLocaleDateString()}
               </div>
@@ -372,7 +391,8 @@ export function AnnotationPanel({
               {modal.edgeKey && (
                 <div className="modal-info">
                   <Icon name="ArrowRight" size={14} />
-                  Target: Edge {modal.edgeKey.source.slice(0, 6)} → {modal.edgeKey.target.slice(0, 6)}
+                  Target: Edge {modal.edgeKey.source.slice(0, 6)} →{' '}
+                  {modal.edgeKey.target.slice(0, 6)}
                 </div>
               )}
               {!modal.nodeId && !modal.edgeKey && (
@@ -397,7 +417,7 @@ export function AnnotationPanel({
                 <div className="form-group">
                   <label>Color</label>
                   <div className="color-picker">
-                    {['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'].map(c => (
+                    {['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'].map((c) => (
                       <button
                         key={c}
                         className={`color-option ${color === c ? 'selected' : ''}`}

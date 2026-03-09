@@ -4,44 +4,49 @@ StorageService - File and blob storage management.
 Provides unified file storage for documents, exports, temp files, and models.
 """
 
-from typing import Optional, List, Dict, Any, Tuple
-from dataclasses import dataclass, field
-from pathlib import Path
-from datetime import datetime, timedelta
-import logging
-import uuid
+import asyncio
 import hashlib
 import json
-import shutil
-import asyncio
+import logging
 import os
+import shutil
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class StorageError(Exception):
     """Base exception for storage operations."""
+
     pass
 
 
 class FileNotFoundError(StorageError):
     """File not found in storage."""
+
     pass
 
 
 class StorageFullError(StorageError):
     """Storage capacity exceeded."""
+
     pass
 
 
 class InvalidPathError(StorageError):
     """Invalid or unsafe path."""
+
     pass
 
 
 @dataclass
 class FileInfo:
     """Information about a stored file."""
+
     storage_id: str
     filename: str
     path: str
@@ -56,6 +61,7 @@ class FileInfo:
 @dataclass
 class StorageStats:
     """Storage statistics."""
+
     total_bytes: int
     used_bytes: int
     available_bytes: int
@@ -170,9 +176,7 @@ class StorageService:
         # Validate size
         size_mb = len(content) / (1024 * 1024)
         if size_mb > self.max_file_size_mb:
-            raise StorageFullError(
-                f"File size {size_mb:.1f}MB exceeds maximum {self.max_file_size_mb}MB"
-            )
+            raise StorageFullError(f"File size {size_mb:.1f}MB exceeds maximum {self.max_file_size_mb}MB")
 
         # Validate and sanitize path
         safe_path = self._sanitize_path(path)
@@ -412,7 +416,7 @@ class StorageService:
         # Sort by modified date descending
         results.sort(key=lambda f: f.modified_at, reverse=True)
 
-        return results[offset:offset + limit]
+        return results[offset : offset + limit]
 
     async def get_storage_stats(self) -> StorageStats:
         """Get storage statistics."""
@@ -562,6 +566,7 @@ class StorageService:
     def _guess_mime_type(self, path: str) -> Optional[str]:
         """Guess MIME type from file extension."""
         import mimetypes
+
         mime_type, _ = mimetypes.guess_type(path)
         return mime_type
 

@@ -1,17 +1,17 @@
 """Tests for Qwen VLM OCR worker."""
 
-import pytest
-import pytest_asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
 import base64
 import json
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+import pytest_asyncio
 from arkham_shard_ocr.workers.qwen_worker import (
-    QwenWorker,
     DEFAULT_ENDPOINT,
     DEFAULT_MODEL,
-    OCR_SYSTEM_PROMPT,
     DEFAULT_OCR_PROMPT,
+    OCR_SYSTEM_PROMPT,
+    QwenWorker,
 )
 
 
@@ -101,23 +101,16 @@ class TestQwenWorkerProcessJob:
 
         # Mock HTTP response
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [
-                {
-                    "message": {
-                        "content": "Extracted text from image"
-                    }
-                }
-            ]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Extracted text from image"}}]}
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=mock_response)
 
-        with patch.object(worker, "_get_client", return_value=mock_client), \
-             patch("os.path.exists", return_value=True), \
-             patch("builtins.open", create=True) as mock_open:
-
+        with (
+            patch.object(worker, "_get_client", return_value=mock_client),
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", create=True) as mock_open,
+        ):
             mock_file = MagicMock()
             mock_file.read.return_value = b"fake image bytes"
             mock_open.return_value.__enter__.return_value = mock_file
@@ -154,9 +147,7 @@ class TestQwenWorkerProcessJob:
         fake_b64 = base64.b64encode(fake_img_data).decode("utf-8")
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Test text"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Test text"}}]}
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=mock_response)
@@ -189,17 +180,16 @@ class TestQwenWorkerProcessJob:
         worker = QwenWorker(database_url="postgresql://localhost/test")
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Text"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Text"}}]}
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=mock_response)
 
-        with patch.object(worker, "_get_client", return_value=mock_client), \
-             patch("os.path.exists", return_value=True), \
-             patch("builtins.open", create=True) as mock_open:
-
+        with (
+            patch.object(worker, "_get_client", return_value=mock_client),
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", create=True) as mock_open,
+        ):
             mock_file = MagicMock()
             mock_file.read.return_value = b"fake"
             mock_open.return_value.__enter__.return_value = mock_file
@@ -224,17 +214,16 @@ class TestQwenWorkerProcessJob:
         worker = QwenWorker(database_url="postgresql://localhost/test")
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Text"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Text"}}]}
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=mock_response)
 
-        with patch.object(worker, "_get_client", return_value=mock_client), \
-             patch("os.path.exists", return_value=True), \
-             patch("builtins.open", create=True) as mock_open:
-
+        with (
+            patch.object(worker, "_get_client", return_value=mock_client),
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", create=True) as mock_open,
+        ):
             mock_file = MagicMock()
             mock_file.read.return_value = b"fake"
             mock_open.return_value.__enter__.return_value = mock_file
@@ -259,17 +248,16 @@ class TestQwenWorkerProcessJob:
         worker = QwenWorker(database_url="postgresql://localhost/test")
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Text"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Text"}}]}
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=mock_response)
 
-        with patch.object(worker, "_get_client", return_value=mock_client), \
-             patch("os.path.exists", return_value=True), \
-             patch("builtins.open", create=True) as mock_open:
-
+        with (
+            patch.object(worker, "_get_client", return_value=mock_client),
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", create=True) as mock_open,
+        ):
             mock_file = MagicMock()
             mock_file.read.return_value = b"fake"
             mock_open.return_value.__enter__.return_value = mock_file
@@ -294,17 +282,16 @@ class TestQwenWorkerProcessJob:
         worker = QwenWorker(database_url="postgresql://localhost/test")
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Text"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Text"}}]}
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=mock_response)
 
-        with patch.object(worker, "_get_client", return_value=mock_client), \
-             patch("os.path.exists", return_value=True), \
-             patch("builtins.open", create=True) as mock_open:
-
+        with (
+            patch.object(worker, "_get_client", return_value=mock_client),
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", create=True) as mock_open,
+        ):
             mock_file = MagicMock()
             mock_file.read.return_value = b"fake"
             mock_open.return_value.__enter__.return_value = mock_file
@@ -330,10 +317,11 @@ class TestQwenWorkerProcessJob:
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection failed"))
 
-        with patch.object(worker, "_get_client", return_value=mock_client), \
-             patch("os.path.exists", return_value=True), \
-             patch("builtins.open", create=True) as mock_open:
-
+        with (
+            patch.object(worker, "_get_client", return_value=mock_client),
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", create=True) as mock_open,
+        ):
             mock_file = MagicMock()
             mock_file.read.return_value = b"fake"
             mock_open.return_value.__enter__.return_value = mock_file
@@ -356,15 +344,14 @@ class TestQwenWorkerProcessJob:
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(
-            side_effect=httpx.HTTPStatusError(
-                "Error", request=MagicMock(), response=mock_response
-            )
+            side_effect=httpx.HTTPStatusError("Error", request=MagicMock(), response=mock_response)
         )
 
-        with patch.object(worker, "_get_client", return_value=mock_client), \
-             patch("os.path.exists", return_value=True), \
-             patch("builtins.open", create=True) as mock_open:
-
+        with (
+            patch.object(worker, "_get_client", return_value=mock_client),
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", create=True) as mock_open,
+        ):
             mock_file = MagicMock()
             mock_file.read.return_value = b"fake"
             mock_open.return_value.__enter__.return_value = mock_file
@@ -380,17 +367,16 @@ class TestQwenWorkerProcessJob:
         worker = QwenWorker(database_url="postgresql://localhost/test")
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Text"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Text"}}]}
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=mock_response)
 
-        with patch.object(worker, "_get_client", return_value=mock_client), \
-             patch("os.path.exists", return_value=True), \
-             patch("builtins.open", create=True) as mock_open:
-
+        with (
+            patch.object(worker, "_get_client", return_value=mock_client),
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", create=True) as mock_open,
+        ):
             mock_file = MagicMock()
             mock_file.read.return_value = b"fake"
             mock_open.return_value.__enter__.return_value = mock_file
@@ -434,9 +420,7 @@ class TestQwenWorkerTableExtraction:
         ]
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": json.dumps(table_data)}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": json.dumps(table_data)}}]}
         mock_response.raise_for_status = MagicMock()
 
         mock_client = AsyncMock()
@@ -462,9 +446,7 @@ class TestQwenWorkerTableExtraction:
         worker = QwenWorker(database_url="postgresql://localhost/test")
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "[]"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "[]"}}]}
         mock_response.raise_for_status = MagicMock()
 
         mock_client = AsyncMock()
@@ -491,9 +473,7 @@ class TestQwenWorkerTableExtraction:
         content_with_markdown = f"```json\n{json.dumps(table_data)}\n```"
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": content_with_markdown}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": content_with_markdown}}]}
         mock_response.raise_for_status = MagicMock()
 
         mock_client = AsyncMock()
@@ -538,20 +518,19 @@ class TestQwenWorkerTableExtraction:
         worker = QwenWorker(database_url="postgresql://localhost/test")
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Text with table"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Text with table"}}]}
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=mock_response)
 
         table_data = [{"headers": ["A"], "rows": [["1"]]}]
 
-        with patch.object(worker, "_get_client", return_value=mock_client), \
-             patch.object(worker, "_extract_tables", return_value=table_data), \
-             patch("os.path.exists", return_value=True), \
-             patch("builtins.open", create=True) as mock_open:
-
+        with (
+            patch.object(worker, "_get_client", return_value=mock_client),
+            patch.object(worker, "_extract_tables", return_value=table_data),
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", create=True) as mock_open,
+        ):
             mock_file = MagicMock()
             mock_file.read.return_value = b"fake"
             mock_open.return_value.__enter__.return_value = mock_file
@@ -577,17 +556,16 @@ class TestQwenWorkerBatchMode:
         worker = QwenWorker(database_url="postgresql://localhost/test")
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Text"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Text"}}]}
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=mock_response)
 
-        with patch.object(worker, "_get_client", return_value=mock_client), \
-             patch("os.path.exists", return_value=True), \
-             patch("builtins.open", create=True) as mock_open:
-
+        with (
+            patch.object(worker, "_get_client", return_value=mock_client),
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", create=True) as mock_open,
+        ):
             mock_file = MagicMock()
             mock_file.read.return_value = b"fake"
             mock_open.return_value.__enter__.return_value = mock_file
@@ -625,17 +603,16 @@ class TestQwenWorkerBatchMode:
         worker = QwenWorker(database_url="postgresql://localhost/test")
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Text"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Text"}}]}
 
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(return_value=mock_response)
 
-        with patch.object(worker, "_get_client", return_value=mock_client), \
-             patch("os.path.exists", side_effect=[True, False]), \
-             patch("builtins.open", create=True) as mock_open:
-
+        with (
+            patch.object(worker, "_get_client", return_value=mock_client),
+            patch("os.path.exists", side_effect=[True, False]),
+            patch("builtins.open", create=True) as mock_open,
+        ):
             mock_file = MagicMock()
             mock_file.read.return_value = b"fake"
             mock_open.return_value.__enter__.return_value = mock_file
@@ -662,6 +639,7 @@ class TestQwenWorkerHelpers:
     def test_run_qwen_worker_function_exists(self):
         """Test run_qwen_worker function exists."""
         from arkham_shard_ocr.workers.qwen_worker import run_qwen_worker
+
         assert callable(run_qwen_worker)
 
     def test_ocr_system_prompt_exists(self):

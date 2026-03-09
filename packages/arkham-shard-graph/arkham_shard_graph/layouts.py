@@ -12,13 +12,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from .models import Graph, GraphNode, GraphEdge
+from .models import Graph, GraphEdge, GraphNode
 
 logger = logging.getLogger(__name__)
 
 
 class LayoutType(Enum):
     """Available layout algorithms."""
+
     FORCE_DIRECTED = "force"
     HIERARCHICAL = "hierarchical"
     RADIAL = "radial"
@@ -30,6 +31,7 @@ class LayoutType(Enum):
 
 class HierarchicalDirection(Enum):
     """Direction for hierarchical layouts."""
+
     TOP_TO_BOTTOM = "TB"
     BOTTOM_TO_TOP = "BT"
     LEFT_TO_RIGHT = "LR"
@@ -39,6 +41,7 @@ class HierarchicalDirection(Enum):
 @dataclass
 class LayoutPosition:
     """Node position from layout calculation."""
+
     node_id: str
     x: float
     y: float
@@ -50,6 +53,7 @@ class LayoutPosition:
 @dataclass
 class LayoutResult:
     """Result of layout calculation."""
+
     layout_type: str
     positions: dict[str, LayoutPosition]
     width: float
@@ -567,8 +571,7 @@ class LayoutEngine:
         # Partition nodes
         left_nodes = [n for n in graph.nodes if n.entity_type in left_types]
         right_nodes = [n for n in graph.nodes if n.entity_type in right_types]
-        other_nodes = [n for n in graph.nodes
-                       if n.entity_type not in left_types and n.entity_type not in right_types]
+        other_nodes = [n for n in graph.nodes if n.entity_type not in left_types and n.entity_type not in right_types]
 
         # Sort by degree within each column
         left_nodes.sort(key=lambda n: n.degree, reverse=True)
@@ -762,7 +765,7 @@ class LayoutEngine:
             neighbors = adjacency.get(node_id, [])
             prev_neighbors = [n for n in neighbors if n in prev_positions]
             if not prev_neighbors:
-                return float('inf')
+                return float("inf")
             return sum(prev_positions[n] for n in prev_neighbors) / len(prev_neighbors)
 
         return sorted(layer_nodes, key=barycenter)

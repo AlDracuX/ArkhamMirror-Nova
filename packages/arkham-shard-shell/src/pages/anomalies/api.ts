@@ -274,9 +274,7 @@ export async function quickScanHiddenContent(
   });
 }
 
-export async function getHiddenContentScan(
-  scanId: string
-): Promise<{ scan: HiddenContentScan }> {
+export async function getHiddenContentScan(scanId: string): Promise<{ scan: HiddenContentScan }> {
   return fetchAPI<{ scan: HiddenContentScan }>(`/hidden-content/${scanId}`);
 }
 

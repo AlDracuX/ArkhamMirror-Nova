@@ -12,12 +12,13 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from jinja2 import Environment, TemplateSyntaxError, meta
+
 from arkham_frame import ArkhamShard
 
 from .models import (
     OutputFormat,
-    PlaceholderWarning,
     PlaceholderDataType,
+    PlaceholderWarning,
     Template,
     TemplateCreate,
     TemplateFilter,
@@ -72,7 +73,9 @@ class TemplatesShard(ArkhamShard):
 
     name = "templates"
     version = "0.1.0"
-    description = "Template management shard - create, edit, version, and render templates for reports, letters, and exports"
+    description = (
+        "Template management shard - create, edit, version, and render templates for reports, letters, and exports"
+    )
 
     def __init__(self):
         super().__init__()
@@ -130,15 +133,12 @@ class TemplatesShard(ArkhamShard):
     def get_routes(self):
         """Return the API router."""
         from .api import router
+
         return router
 
     # === Template CRUD ===
 
-    async def create_template(
-        self,
-        template_data: TemplateCreate,
-        created_by: Optional[str] = None
-    ) -> Template:
+    async def create_template(self, template_data: TemplateCreate, created_by: Optional[str] = None) -> Template:
         """
         Create a new template.
 
@@ -186,20 +186,20 @@ class TemplatesShard(ArkhamShard):
         await self._save_template(template)
 
         # Create initial version
-        await self._create_version_record(
-            template,
-            created_by=created_by,
-            changes="Initial version"
-        )
+        await self._create_version_record(template, created_by=created_by, changes="Initial version")
 
         # Publish event
         if self._event_bus:
-            await self._event_bus.emit("templates.template.created", {
-                "template_id": template.id,
-                "name": template.name,
-                "template_type": template.template_type.value,
-                "created_by": created_by,
-            }, source="templates-shard")
+            await self._event_bus.emit(
+                "templates.template.created",
+                {
+                    "template_id": template.id,
+                    "name": template.name,
+                    "template_type": template.template_type.value,
+                    "created_by": created_by,
+                },
+                source="templates-shard",
+            )
 
         logger.info(f"Created template: {template.name} ({template.id})")
         return template
@@ -225,7 +225,7 @@ class TemplatesShard(ArkhamShard):
         page_size: int = 20,
         filters: Optional[TemplateFilter] = None,
         sort: str = "created_at",
-        order: str = "desc"
+        order: str = "desc",
     ) -> tuple[List[Template], int]:
         """
         List templates with pagination and filtering.
@@ -308,7 +308,7 @@ class TemplatesShard(ArkhamShard):
         template_id: str,
         update_data: TemplateUpdate,
         updated_by: Optional[str] = None,
-        create_version: bool = True
+        create_version: bool = True,
     ) -> Optional[Template]:
         """
         Update an existing template.
@@ -352,32 +352,28 @@ class TemplatesShard(ArkhamShard):
         # Create new version if content changed
         if content_changed and create_version:
             template.version += 1
-            await self._create_version_record(
-                template,
-                created_by=updated_by,
-                changes="Template updated"
-            )
+            await self._create_version_record(template, created_by=updated_by, changes="Template updated")
 
         # Save to database
         await self._save_template(template)
 
         # Publish event
         if self._event_bus:
-            await self._event_bus.emit("templates.template.updated", {
-                "template_id": template.id,
-                "name": template.name,
-                "version": template.version,
-                "updated_by": updated_by,
-            }, source="templates-shard")
+            await self._event_bus.emit(
+                "templates.template.updated",
+                {
+                    "template_id": template.id,
+                    "name": template.name,
+                    "version": template.version,
+                    "updated_by": updated_by,
+                },
+                source="templates-shard",
+            )
 
         logger.info(f"Updated template: {template.name} ({template.id})")
         return template
 
-    async def delete_template(
-        self,
-        template_id: str,
-        deleted_by: Optional[str] = None
-    ) -> bool:
+    async def delete_template(self, template_id: str, deleted_by: Optional[str] = None) -> bool:
         """
         Delete a template.
 
@@ -401,31 +397,28 @@ class TemplatesShard(ArkhamShard):
             # Delete from database (CASCADE will handle versions)
             await self._db.execute(
                 "DELETE FROM arkham_templates WHERE id = :id AND tenant_id = :tenant_id",
-                {"id": template_id, "tenant_id": str(tenant_id)}
+                {"id": template_id, "tenant_id": str(tenant_id)},
             )
         else:
             # Delete from database (CASCADE will handle versions)
-            await self._db.execute(
-                "DELETE FROM arkham_templates WHERE id = :id",
-                {"id": template_id}
-            )
+            await self._db.execute("DELETE FROM arkham_templates WHERE id = :id", {"id": template_id})
 
         # Publish event
         if self._event_bus:
-            await self._event_bus.emit("templates.template.deleted", {
-                "template_id": template_id,
-                "name": template.name,
-                "deleted_by": deleted_by,
-            }, source="templates-shard")
+            await self._event_bus.emit(
+                "templates.template.deleted",
+                {
+                    "template_id": template_id,
+                    "name": template.name,
+                    "deleted_by": deleted_by,
+                },
+                source="templates-shard",
+            )
 
         logger.info(f"Deleted template: {template.name} ({template_id})")
         return True
 
-    async def activate_template(
-        self,
-        template_id: str,
-        activated_by: Optional[str] = None
-    ) -> Optional[Template]:
+    async def activate_template(self, template_id: str, activated_by: Optional[str] = None) -> Optional[Template]:
         """
         Activate a template.
 
@@ -450,20 +443,20 @@ class TemplatesShard(ArkhamShard):
         await self._save_template(template)
 
         if self._event_bus:
-            await self._event_bus.emit("templates.template.activated", {
-                "template_id": template_id,
-                "name": template.name,
-                "activated_by": activated_by,
-            }, source="templates-shard")
+            await self._event_bus.emit(
+                "templates.template.activated",
+                {
+                    "template_id": template_id,
+                    "name": template.name,
+                    "activated_by": activated_by,
+                },
+                source="templates-shard",
+            )
 
         logger.info(f"Activated template: {template.name} ({template_id})")
         return template
 
-    async def deactivate_template(
-        self,
-        template_id: str,
-        deactivated_by: Optional[str] = None
-    ) -> Optional[Template]:
+    async def deactivate_template(self, template_id: str, deactivated_by: Optional[str] = None) -> Optional[Template]:
         """
         Deactivate a template.
 
@@ -488,11 +481,15 @@ class TemplatesShard(ArkhamShard):
         await self._save_template(template)
 
         if self._event_bus:
-            await self._event_bus.emit("templates.template.deactivated", {
-                "template_id": template_id,
-                "name": template.name,
-                "deactivated_by": deactivated_by,
-            }, source="templates-shard")
+            await self._event_bus.emit(
+                "templates.template.deactivated",
+                {
+                    "template_id": template_id,
+                    "name": template.name,
+                    "deactivated_by": deactivated_by,
+                },
+                source="templates-shard",
+            )
 
         logger.info(f"Deactivated template: {template.name} ({template_id})")
         return template
@@ -500,10 +497,7 @@ class TemplatesShard(ArkhamShard):
     # === Versioning ===
 
     async def create_version(
-        self,
-        template_id: str,
-        version_data: TemplateVersionCreate,
-        created_by: Optional[str] = None
+        self, template_id: str, version_data: TemplateVersionCreate, created_by: Optional[str] = None
     ) -> Optional[TemplateVersion]:
         """
         Create a new version of a template.
@@ -526,19 +520,19 @@ class TemplatesShard(ArkhamShard):
         template.version += 1
         await self._save_template(template)
 
-        version = await self._create_version_record(
-            template,
-            created_by=created_by,
-            changes=version_data.changes
-        )
+        version = await self._create_version_record(template, created_by=created_by, changes=version_data.changes)
 
         if self._event_bus:
-            await self._event_bus.emit("templates.version.created", {
-                "template_id": template_id,
-                "version_id": version.id,
-                "version_number": version.version_number,
-                "created_by": created_by,
-            }, source="templates-shard")
+            await self._event_bus.emit(
+                "templates.version.created",
+                {
+                    "template_id": template_id,
+                    "version_id": version.id,
+                    "version_number": version.version_number,
+                    "created_by": created_by,
+                },
+                source="templates-shard",
+            )
 
         return version
 
@@ -564,7 +558,7 @@ class TemplatesShard(ArkhamShard):
                 WHERE template_id = :template_id AND tenant_id = :tenant_id
                 ORDER BY version_number DESC
                 """,
-                {"template_id": template_id, "tenant_id": str(tenant_id)}
+                {"template_id": template_id, "tenant_id": str(tenant_id)},
             )
         else:
             rows = await self._db.fetch_all(
@@ -573,16 +567,12 @@ class TemplatesShard(ArkhamShard):
                 WHERE template_id = :template_id
                 ORDER BY version_number DESC
                 """,
-                {"template_id": template_id}
+                {"template_id": template_id},
             )
 
         return [self._row_to_version(row) for row in rows]
 
-    async def get_version(
-        self,
-        template_id: str,
-        version_id: str
-    ) -> Optional[TemplateVersion]:
+    async def get_version(self, template_id: str, version_id: str) -> Optional[TemplateVersion]:
         """
         Get a specific version.
 
@@ -604,7 +594,7 @@ class TemplatesShard(ArkhamShard):
                 SELECT * FROM arkham_template_versions
                 WHERE id = :id AND template_id = :template_id AND tenant_id = :tenant_id
                 """,
-                {"id": version_id, "template_id": template_id, "tenant_id": str(tenant_id)}
+                {"id": version_id, "template_id": template_id, "tenant_id": str(tenant_id)},
             )
         else:
             row = await self._db.fetch_one(
@@ -612,7 +602,7 @@ class TemplatesShard(ArkhamShard):
                 SELECT * FROM arkham_template_versions
                 WHERE id = :id AND template_id = :template_id
                 """,
-                {"id": version_id, "template_id": template_id}
+                {"id": version_id, "template_id": template_id},
             )
 
         if not row:
@@ -621,10 +611,7 @@ class TemplatesShard(ArkhamShard):
         return self._row_to_version(row)
 
     async def restore_version(
-        self,
-        template_id: str,
-        version_id: str,
-        restored_by: Optional[str] = None
+        self, template_id: str, version_id: str, restored_by: Optional[str] = None
     ) -> Optional[Template]:
         """
         Restore a template to a previous version.
@@ -660,18 +647,20 @@ class TemplatesShard(ArkhamShard):
 
         # Create new version record
         await self._create_version_record(
-            template,
-            created_by=restored_by,
-            changes=f"Restored from version {version.version_number}"
+            template, created_by=restored_by, changes=f"Restored from version {version.version_number}"
         )
 
         if self._event_bus:
-            await self._event_bus.emit("templates.version.restored", {
-                "template_id": template_id,
-                "version_id": version_id,
-                "new_version": template.version,
-                "restored_by": restored_by,
-            }, source="templates-shard")
+            await self._event_bus.emit(
+                "templates.version.restored",
+                {
+                    "template_id": template_id,
+                    "version_id": version_id,
+                    "new_version": template.version,
+                    "restored_by": restored_by,
+                },
+                source="templates-shard",
+            )
 
         logger.info(f"Restored template {template_id} to version {version.version_number}")
         return template
@@ -679,9 +668,7 @@ class TemplatesShard(ArkhamShard):
     # === Rendering ===
 
     async def render_template(
-        self,
-        template_id: str,
-        render_request: TemplateRenderRequest
+        self, template_id: str, render_request: TemplateRenderRequest
     ) -> Optional[TemplateRenderResult]:
         """
         Render a template with data.
@@ -701,11 +688,7 @@ class TemplatesShard(ArkhamShard):
             return None
 
         # Validate placeholders
-        warnings = self._validate_placeholders(
-            template,
-            render_request.data,
-            strict=render_request.strict
-        )
+        warnings = self._validate_placeholders(template, render_request.data, strict=render_request.strict)
 
         # Apply defaults for missing optional placeholders
         data = self._apply_defaults(template, render_request.data)
@@ -732,18 +715,20 @@ class TemplatesShard(ArkhamShard):
         )
 
         if self._event_bus:
-            await self._event_bus.emit("templates.rendered", {
-                "template_id": template_id,
-                "template_name": template.name,
-                "output_format": render_request.output_format.value,
-            }, source="templates-shard")
+            await self._event_bus.emit(
+                "templates.rendered",
+                {
+                    "template_id": template_id,
+                    "template_name": template.name,
+                    "output_format": render_request.output_format.value,
+                },
+                source="templates-shard",
+            )
 
         return result
 
     async def preview_template(
-        self,
-        template_id: str,
-        data: Optional[Dict[str, Any]] = None
+        self, template_id: str, data: Optional[Dict[str, Any]] = None
     ) -> Optional[TemplateRenderResult]:
         """
         Preview a template with sample data.
@@ -768,16 +753,12 @@ class TemplatesShard(ArkhamShard):
         request = TemplateRenderRequest(
             data=preview_data,
             output_format=OutputFormat.TEXT,
-            strict=False  # Don't error on missing in preview
+            strict=False,  # Don't error on missing in preview
         )
 
         return await self.render_template(template_id, request)
 
-    async def validate_placeholders(
-        self,
-        template_id: str,
-        data: Dict[str, Any]
-    ) -> List[PlaceholderWarning]:
+    async def validate_placeholders(self, template_id: str, data: Dict[str, Any]) -> List[PlaceholderWarning]:
         """
         Validate placeholder data without rendering.
 
@@ -793,11 +774,7 @@ class TemplatesShard(ArkhamShard):
 
         template = await self._load_template(template_id)
         if not template:
-            return [PlaceholderWarning(
-                placeholder="template",
-                message="Template not found",
-                severity="error"
-            )]
+            return [PlaceholderWarning(placeholder="template", message="Template not found", severity="error")]
 
         return self._validate_placeholders(template, data, strict=False)
 
@@ -820,15 +797,11 @@ class TemplatesShard(ArkhamShard):
         params = {"tenant_id": str(tenant_id)} if tenant_id else {}
 
         # Count total and active/inactive
-        total_row = await self._db.fetch_one(
-            f"SELECT COUNT(*) as count FROM arkham_templates{tenant_filter}",
-            params
-        )
+        total_row = await self._db.fetch_one(f"SELECT COUNT(*) as count FROM arkham_templates{tenant_filter}", params)
         total_templates = total_row["count"] if total_row else 0
 
         active_row = await self._db.fetch_one(
-            f"SELECT COUNT(*) as count FROM arkham_templates WHERE is_active = TRUE{tenant_filter_and}",
-            params
+            f"SELECT COUNT(*) as count FROM arkham_templates WHERE is_active = TRUE{tenant_filter_and}", params
         )
         active_templates = active_row["count"] if active_row else 0
         inactive_templates = total_templates - active_templates
@@ -840,7 +813,7 @@ class TemplatesShard(ArkhamShard):
             FROM arkham_templates{tenant_filter}
             GROUP BY template_type
             """,
-            params
+            params,
         )
         by_type = {row["template_type"]: row["count"] for row in type_rows}
 
@@ -851,14 +824,13 @@ class TemplatesShard(ArkhamShard):
             ORDER BY created_at DESC
             LIMIT 5
             """,
-            params
+            params,
         )
         recent = [self._row_to_template(row) for row in recent_rows]
 
         # Total versions
         versions_row = await self._db.fetch_one(
-            f"SELECT COUNT(*) as count FROM arkham_template_versions{tenant_filter}",
-            params
+            f"SELECT COUNT(*) as count FROM arkham_template_versions{tenant_filter}", params
         )
         total_versions = versions_row["count"] if versions_row else 0
 
@@ -892,24 +864,20 @@ class TemplatesShard(ArkhamShard):
             if tenant_id:
                 row = await self._db.fetch_one(
                     "SELECT COUNT(*) as count FROM arkham_templates WHERE is_active = TRUE AND tenant_id = :tenant_id",
-                    {"tenant_id": str(tenant_id)}
+                    {"tenant_id": str(tenant_id)},
                 )
             else:
                 row = await self._db.fetch_one(
-                    "SELECT COUNT(*) as count FROM arkham_templates WHERE is_active = TRUE",
-                    {}
+                    "SELECT COUNT(*) as count FROM arkham_templates WHERE is_active = TRUE", {}
                 )
         else:
             if tenant_id:
                 row = await self._db.fetch_one(
                     "SELECT COUNT(*) as count FROM arkham_templates WHERE tenant_id = :tenant_id",
-                    {"tenant_id": str(tenant_id)}
+                    {"tenant_id": str(tenant_id)},
                 )
             else:
-                row = await self._db.fetch_one(
-                    "SELECT COUNT(*) as count FROM arkham_templates",
-                    {}
-                )
+                row = await self._db.fetch_one("SELECT COUNT(*) as count FROM arkham_templates", {})
 
         return row["count"] if row else 0
 
@@ -935,19 +903,21 @@ class TemplatesShard(ArkhamShard):
             FROM arkham_templates{tenant_filter}
             GROUP BY template_type
             """,
-            params
+            params,
         )
         type_counts = {row["template_type"]: row["count"] for row in type_rows}
 
         type_info = []
         for template_type in TemplateType:
             count = type_counts.get(template_type.value, 0)
-            type_info.append(TemplateTypeInfo(
-                type=template_type,
-                name=template_type.value.title(),
-                description=self._get_type_description(template_type),
-                count=count,
-            ))
+            type_info.append(
+                TemplateTypeInfo(
+                    type=template_type,
+                    name=template_type.value.title(),
+                    description=self._get_type_description(template_type),
+                    count=count,
+                )
+            )
 
         return type_info
 
@@ -1045,26 +1015,25 @@ class TemplatesShard(ArkhamShard):
             raise RuntimeError("Database not available")
 
         # Serialize placeholders to JSON
-        placeholders_json = json.dumps([
-            {
-                "name": p.name,
-                "description": p.description,
-                "data_type": p.data_type.value if hasattr(p.data_type, 'value') else p.data_type,
-                "default_value": p.default_value,
-                "required": p.required,
-                "example": p.example,
-            }
-            for p in template.placeholders
-        ])
+        placeholders_json = json.dumps(
+            [
+                {
+                    "name": p.name,
+                    "description": p.description,
+                    "data_type": p.data_type.value if hasattr(p.data_type, "value") else p.data_type,
+                    "default_value": p.default_value,
+                    "required": p.required,
+                    "example": p.example,
+                }
+                for p in template.placeholders
+            ]
+        )
 
         # Include tenant_id for multi-tenancy
         tenant_id = self.get_tenant_id_or_none()
 
         # Check if template exists
-        existing = await self._db.fetch_one(
-            "SELECT id FROM arkham_templates WHERE id = :id",
-            {"id": template.id}
-        )
+        existing = await self._db.fetch_one("SELECT id FROM arkham_templates WHERE id = :id", {"id": template.id})
 
         if existing:
             # Update with tenant_id filter
@@ -1098,7 +1067,7 @@ class TemplatesShard(ArkhamShard):
                         "updated_at": template.updated_at,
                         "updated_by": template.updated_by,
                         "tenant_id": str(tenant_id),
-                    }
+                    },
                 )
             else:
                 await self._db.execute(
@@ -1128,7 +1097,7 @@ class TemplatesShard(ArkhamShard):
                         "metadata": json.dumps(template.metadata),
                         "updated_at": template.updated_at,
                         "updated_by": template.updated_by,
-                    }
+                    },
                 )
         else:
             # Insert with tenant_id
@@ -1159,7 +1128,7 @@ class TemplatesShard(ArkhamShard):
                     "created_by": template.created_by,
                     "updated_by": template.updated_by,
                     "tenant_id": str(tenant_id) if tenant_id else None,
-                }
+                },
             )
 
     async def _load_template(self, template_id: str) -> Optional[Template]:
@@ -1172,13 +1141,10 @@ class TemplatesShard(ArkhamShard):
         if tenant_id:
             row = await self._db.fetch_one(
                 "SELECT * FROM arkham_templates WHERE id = :id AND tenant_id = :tenant_id",
-                {"id": template_id, "tenant_id": str(tenant_id)}
+                {"id": template_id, "tenant_id": str(tenant_id)},
             )
         else:
-            row = await self._db.fetch_one(
-                "SELECT * FROM arkham_templates WHERE id = :id",
-                {"id": template_id}
-            )
+            row = await self._db.fetch_one("SELECT * FROM arkham_templates WHERE id = :id", {"id": template_id})
 
         if not row:
             return None
@@ -1273,17 +1239,19 @@ class TemplatesShard(ArkhamShard):
             raise RuntimeError("Database not available")
 
         # Serialize placeholders to JSON
-        placeholders_json = json.dumps([
-            {
-                "name": p.name,
-                "description": p.description,
-                "data_type": p.data_type.value if hasattr(p.data_type, 'value') else p.data_type,
-                "default_value": p.default_value,
-                "required": p.required,
-                "example": p.example,
-            }
-            for p in version.placeholders
-        ])
+        placeholders_json = json.dumps(
+            [
+                {
+                    "name": p.name,
+                    "description": p.description,
+                    "data_type": p.data_type.value if hasattr(p.data_type, "value") else p.data_type,
+                    "default_value": p.default_value,
+                    "required": p.required,
+                    "example": p.example,
+                }
+                for p in version.placeholders
+            ]
+        )
 
         # Include tenant_id for multi-tenancy
         tenant_id = self.get_tenant_id_or_none()
@@ -1307,14 +1275,11 @@ class TemplatesShard(ArkhamShard):
                 "created_by": version.created_by,
                 "changes": version.changes,
                 "tenant_id": str(tenant_id) if tenant_id else None,
-            }
+            },
         )
 
     async def _create_version_record(
-        self,
-        template: Template,
-        created_by: Optional[str] = None,
-        changes: str = ""
+        self, template: Template, created_by: Optional[str] = None, changes: str = ""
     ) -> TemplateVersion:
         """Create a version record for a template."""
         version = TemplateVersion(
@@ -1352,10 +1317,7 @@ class TemplatesShard(ArkhamShard):
             return []
 
     def _validate_placeholders(
-        self,
-        template: Template,
-        data: Dict[str, Any],
-        strict: bool = True
+        self, template: Template, data: Dict[str, Any], strict: bool = True
     ) -> List[PlaceholderWarning]:
         """Validate placeholder data against template requirements."""
         warnings = []
@@ -1364,29 +1326,29 @@ class TemplatesShard(ArkhamShard):
         for placeholder in template.placeholders:
             if placeholder.required and placeholder.name not in data:
                 message = f"Required placeholder '{placeholder.name}' is missing"
-                warnings.append(PlaceholderWarning(
-                    placeholder=placeholder.name,
-                    message=message,
-                    severity="error" if strict else "warning",
-                ))
+                warnings.append(
+                    PlaceholderWarning(
+                        placeholder=placeholder.name,
+                        message=message,
+                        severity="error" if strict else "warning",
+                    )
+                )
 
         # Check for unused provided data
         placeholder_names = {p.name for p in template.placeholders}
         for key in data.keys():
             if key not in placeholder_names:
-                warnings.append(PlaceholderWarning(
-                    placeholder=key,
-                    message=f"Provided data '{key}' is not a defined placeholder",
-                    severity="info",
-                ))
+                warnings.append(
+                    PlaceholderWarning(
+                        placeholder=key,
+                        message=f"Provided data '{key}' is not a defined placeholder",
+                        severity="info",
+                    )
+                )
 
         return warnings
 
-    def _apply_defaults(
-        self,
-        template: Template,
-        data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _apply_defaults(self, template: Template, data: Dict[str, Any]) -> Dict[str, Any]:
         """Apply default values for missing placeholders."""
         result = data.copy()
 

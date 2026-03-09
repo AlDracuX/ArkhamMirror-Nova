@@ -3,14 +3,13 @@ Perceptual hash computation for image similarity detection.
 Computes pHash, dHash, and aHash.
 """
 
-from typing import Dict, List
-from pathlib import Path
 import hashlib
+from pathlib import Path
+from typing import Dict, List
 
-from PIL import Image
 import numpy as np
-
 import structlog
+from PIL import Image
 
 logger = structlog.get_logger()
 
@@ -131,9 +130,7 @@ class PerceptualHashService:
         max_distance = len(hash1) * 4  # Each hex char = 4 bits
         return 1.0 - (distance / max_distance)
 
-    async def find_similar(
-        self, target_hash: str, hash_type: str = "phash", threshold: int = 10
-    ) -> List[Dict]:
+    async def find_similar(self, target_hash: str, hash_type: str = "phash", threshold: int = 10) -> List[Dict]:
         """
         Find images with similar hashes in the database.
 
@@ -166,12 +163,14 @@ class PerceptualHashService:
                 try:
                     distance = self.compute_hamming_distance(target_hash, hash_value)
                     if distance <= threshold:
-                        similar.append({
-                            "analysis_id": row.get("id"),
-                            "hash": hash_value,
-                            "hamming_distance": distance,
-                            "similarity_score": self.similarity_score(target_hash, hash_value),
-                        })
+                        similar.append(
+                            {
+                                "analysis_id": row.get("id"),
+                                "hash": hash_value,
+                                "hamming_distance": distance,
+                                "similarity_score": self.similarity_score(target_hash, hash_value),
+                            }
+                        )
                 except Exception:
                     continue
 

@@ -40,9 +40,7 @@ interface UseSettingsResult {
 }
 
 export function useSettings(): UseSettingsResult {
-  const [settings, setSettings] = useState<Map<string, unknown>>(
-    settingsCache?.data ?? new Map()
-  );
+  const [settings, setSettings] = useState<Map<string, unknown>>(settingsCache?.data ?? new Map());
   const [loading, setLoading] = useState(!settingsCache);
   const [error, setError] = useState<Error | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -102,13 +100,16 @@ export function useSettings(): UseSettingsResult {
     return () => abortRef.current?.abort();
   }, [fetchSettings]);
 
-  const getSetting = useCallback(<T,>(key: string, defaultValue: T): T => {
-    const value = settings.get(key);
-    if (value === undefined) {
-      return defaultValue;
-    }
-    return value as T;
-  }, [settings]);
+  const getSetting = useCallback(
+    <T>(key: string, defaultValue: T): T => {
+      const value = settings.get(key);
+      if (value === undefined) {
+        return defaultValue;
+      }
+      return value as T;
+    },
+    [settings]
+  );
 
   const refresh = useCallback(() => {
     fetchSettings(true);
@@ -240,7 +241,7 @@ export function useDateFormat() {
       const parts = formatter.formatToParts(d);
 
       // Reconstruct based on our format pattern
-      const getPart = (type: string) => parts.find(p => p.type === type)?.value || '';
+      const getPart = (type: string) => parts.find((p) => p.type === type)?.value || '';
       const year = getPart('year');
       const month = getPart('month');
       const day = getPart('day');

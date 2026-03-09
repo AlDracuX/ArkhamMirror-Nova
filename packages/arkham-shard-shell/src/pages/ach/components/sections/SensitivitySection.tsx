@@ -68,8 +68,8 @@ export function SensitivitySection({
         <div className="callout callout-info">
           <Icon name="Info" size={14} />
           <div>
-            Click <strong>Run Analysis</strong> to identify which evidence items are
-            most critical to your conclusions.
+            Click <strong>Run Analysis</strong> to identify which evidence items are most critical
+            to your conclusions.
           </div>
         </div>
       ) : results.length > 0 ? (
@@ -78,14 +78,14 @@ export function SensitivitySection({
             <div
               key={result.evidence_id}
               className={`callout callout-${
-                result.impact === 'critical' ? 'danger' :
-                result.impact === 'moderate' ? 'warning' : 'info'
+                result.impact === 'critical'
+                  ? 'danger'
+                  : result.impact === 'moderate'
+                    ? 'warning'
+                    : 'info'
               }`}
             >
-              <Icon
-                name={result.impact === 'critical' ? 'AlertTriangle' : 'Info'}
-                size={14}
-              />
+              <Icon name={result.impact === 'critical' ? 'AlertTriangle' : 'Info'} size={14} />
               <div>
                 <strong>{result.evidence_label}</strong>: {result.description}
               </div>
@@ -96,9 +96,9 @@ export function SensitivitySection({
         <div className="callout callout-success">
           <Icon name="CheckCircle" size={14} />
           <div>
-            <strong>Analysis complete</strong>: Your conclusions appear robust.
-            Removing uncertain evidence would not change the hypothesis rankings.
-            Click "Run Analysis" to check again after making changes.
+            <strong>Analysis complete</strong>: Your conclusions appear robust. Removing uncertain
+            evidence would not change the hypothesis rankings. Click "Run Analysis" to check again
+            after making changes.
           </div>
         </div>
       )}

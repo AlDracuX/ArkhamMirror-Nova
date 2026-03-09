@@ -4,7 +4,8 @@ Settings Shard - API Endpoints
 FastAPI router for settings management.
 """
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
@@ -15,6 +16,7 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
 # === Helper to get shard instance ===
+
 
 def get_shard(request: Request) -> "SettingsShard":
     """Get the settings shard instance from app state."""
@@ -29,6 +31,7 @@ def get_shard(request: Request) -> "SettingsShard":
 
 class SettingResponse(BaseModel):
     """Response model for a setting."""
+
     key: str
     value: Any
     default_value: Any
@@ -46,16 +49,19 @@ class SettingResponse(BaseModel):
 
 class SettingUpdateRequest(BaseModel):
     """Request to update a setting."""
+
     value: Any
 
 
 class BulkSettingsUpdateRequest(BaseModel):
     """Request to update multiple settings."""
+
     settings: Dict[str, Any]
 
 
 class ProfileCreateRequest(BaseModel):
     """Request to create a settings profile."""
+
     name: str = Field(..., min_length=1, max_length=100)
     description: str = ""
     settings: Optional[Dict[str, Any]] = None
@@ -64,6 +70,7 @@ class ProfileCreateRequest(BaseModel):
 
 class ProfileResponse(BaseModel):
     """Response model for a profile."""
+
     id: str
     name: str
     description: str
@@ -76,12 +83,14 @@ class ProfileResponse(BaseModel):
 
 class BackupCreateRequest(BaseModel):
     """Request to create a backup."""
+
     name: str = ""
     description: str = ""
 
 
 class BackupResponse(BaseModel):
     """Response model for a backup."""
+
     id: str
     name: str
     description: str
@@ -92,6 +101,7 @@ class BackupResponse(BaseModel):
 
 class ShardSettingsResponse(BaseModel):
     """Response model for shard settings."""
+
     shard_name: str
     shard_version: str
     is_enabled: bool
@@ -100,6 +110,7 @@ class ShardSettingsResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     """Health check response."""
+
     status: str
     shard: str
     version: str
@@ -108,6 +119,7 @@ class HealthResponse(BaseModel):
 
 class ValidationResponse(BaseModel):
     """Response model for validation."""
+
     is_valid: bool
     errors: List[str] = []
     warnings: List[str] = []
@@ -120,11 +132,10 @@ class ValidationResponse(BaseModel):
 def _check_cloud_api_available() -> bool:
     """Check if a cloud API key is configured for embeddings."""
     import os
+
     # Check for API keys that would enable cloud embeddings
     return bool(
-        os.environ.get("OPENAI_API_KEY") or
-        os.environ.get("LLM_API_KEY") or
-        os.environ.get("ANTHROPIC_API_KEY")
+        os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
     )
 
 
@@ -138,11 +149,13 @@ def _filter_embedding_options(options: list, api_available: bool) -> list:
     for opt in options:
         if "[CLOUD API]" in opt.get("label", ""):
             # Add disabled flag and warning to cloud options
-            filtered.append({
-                **opt,
-                "disabled": True,
-                "disabledReason": "Requires API key (OPENAI_API_KEY or LLM_API_KEY)",
-            })
+            filtered.append(
+                {
+                    **opt,
+                    "disabled": True,
+                    "disabledReason": "Requires API key (OPENAI_API_KEY or LLM_API_KEY)",
+                }
+            )
         else:
             filtered.append(opt)
     return filtered
@@ -206,11 +219,7 @@ async def list_settings(
 ):
     """List all settings."""
     shard = get_shard(request)
-    settings = await shard.get_all_settings(
-        category=category,
-        search=search,
-        modified_only=modified_only
-    )
+    settings = await shard.get_all_settings(category=category, search=search, modified_only=modified_only)
     cloud_api_available = _check_cloud_api_available()
     return [setting_to_response(s, cloud_api_available) for s in settings]
 
@@ -221,6 +230,7 @@ async def list_settings(
 
 class StorageStatsResponse(BaseModel):
     """Response model for storage statistics."""
+
     database_connected: bool
     database_schemas: List[str]
     vector_store_connected: bool
@@ -231,6 +241,7 @@ class StorageStatsResponse(BaseModel):
 
 class DataActionResponse(BaseModel):
     """Response for data management actions."""
+
     success: bool
     message: str
     details: Dict[str, Any] = {}
@@ -327,7 +338,7 @@ async def clear_database(request: Request):
             tables = await db.fetch_all(
                 "SELECT table_name FROM information_schema.tables "
                 "WHERE table_schema = :schema AND table_type = 'BASE TABLE'",
-                {"schema": schema}
+                {"schema": schema},
             )
 
             for table in tables:
@@ -371,6 +382,7 @@ async def clear_temp_storage(request: Request):
 
 class VectorMaintenanceResponse(BaseModel):
     """Response model for vector maintenance operations."""
+
     success: bool
     message: str
     operation: str
@@ -379,6 +391,7 @@ class VectorMaintenanceResponse(BaseModel):
 
 class VectorHealthResponse(BaseModel):
     """Response model for vector health check."""
+
     status: str
     total_vectors: int
     total_collections: int
@@ -410,18 +423,22 @@ async def get_vector_health(request: Request):
         collection_data = []
 
         for coll in collections:
-            info = await vectors.get_collection_info(coll.name if hasattr(coll, 'name') else coll)
-            coll_vectors = info.vector_count if hasattr(info, 'vector_count') else 0
+            info = await vectors.get_collection_info(coll.name if hasattr(coll, "name") else coll)
+            coll_vectors = info.vector_count if hasattr(info, "vector_count") else 0
             total_vectors += coll_vectors
-            collection_data.append({
-                "name": info.name if hasattr(info, 'name') else str(coll),
-                "vector_count": coll_vectors,
-                "vector_size": info.vector_size if hasattr(info, 'vector_size') else 0,
-                "index_type": info.index_type if hasattr(info, 'index_type') else "unknown",
-                "lists": info.lists if hasattr(info, 'lists') else 0,
-                "probes": info.probes if hasattr(info, 'probes') else 0,
-                "last_reindex": info.last_reindex.isoformat() if hasattr(info, 'last_reindex') and info.last_reindex else None,
-            })
+            collection_data.append(
+                {
+                    "name": info.name if hasattr(info, "name") else str(coll),
+                    "vector_count": coll_vectors,
+                    "vector_size": info.vector_size if hasattr(info, "vector_size") else 0,
+                    "index_type": info.index_type if hasattr(info, "index_type") else "unknown",
+                    "lists": info.lists if hasattr(info, "lists") else 0,
+                    "probes": info.probes if hasattr(info, "probes") else 0,
+                    "last_reindex": info.last_reindex.isoformat()
+                    if hasattr(info, "last_reindex") and info.last_reindex
+                    else None,
+                }
+            )
 
         # Get maintenance status if available
         last_reindex = None
@@ -566,7 +583,7 @@ async def reset_all_data(request: Request):
                 tables = await db.fetch_all(
                     "SELECT table_name FROM information_schema.tables "
                     "WHERE table_schema = :schema AND table_type = 'BASE TABLE'",
-                    {"schema": schema}
+                    {"schema": schema},
                 )
                 for table in tables:
                     table_name = table["table_name"]
@@ -614,6 +631,7 @@ async def reset_all_data(request: Request):
 
 class ModelInfoResponse(BaseModel):
     """Response model for ML model information."""
+
     id: str
     name: str
     model_type: str
@@ -629,6 +647,7 @@ class ModelInfoResponse(BaseModel):
 
 class ModelsListResponse(BaseModel):
     """Response for listing all models."""
+
     offline_mode: bool
     cache_path: str
     models: List[ModelInfoResponse]
@@ -638,6 +657,7 @@ class ModelsListResponse(BaseModel):
 
 class ModelDownloadResponse(BaseModel):
     """Response for model download action."""
+
     success: bool
     message: str
     model: Optional[ModelInfoResponse] = None
@@ -664,12 +684,12 @@ async def list_models(
     type_filter = None
     if model_type:
         from arkham_frame.services.models import ModelType
+
         try:
             type_filter = ModelType(model_type)
         except ValueError:
             raise HTTPException(
-                status_code=400,
-                detail=f"Invalid model_type: {model_type}. Must be: embedding, ocr, vision"
+                status_code=400, detail=f"Invalid model_type: {model_type}. Must be: embedding, ocr, vision"
             )
 
     models = models_service.list_models(model_type=type_filter)
@@ -712,8 +732,8 @@ async def list_models(
                 required_by=m.required_by,
                 is_default=m.is_default,
                 is_selected=(
-                    (m.model_type.value == "embedding" and m.id == selected_embedding) or
-                    (m.model_type.value == "ocr" and m.id == selected_ocr)
+                    (m.model_type.value == "embedding" and m.id == selected_embedding)
+                    or (m.model_type.value == "ocr" and m.id == selected_ocr)
                 ),
             )
             for m in models
@@ -767,7 +787,7 @@ async def download_model(model_id: str, request: Request):
     if models_service.offline_mode:
         raise HTTPException(
             status_code=400,
-            detail="Cannot download models in offline mode. Disable ARKHAM_OFFLINE_MODE or pre-cache models."
+            detail="Cannot download models in offline mode. Disable ARKHAM_OFFLINE_MODE or pre-cache models.",
         )
 
     try:
@@ -1089,6 +1109,7 @@ async def import_settings(
 
 class ValidateRequest(BaseModel):
     """Request to validate a setting."""
+
     key: str
     value: Any
 

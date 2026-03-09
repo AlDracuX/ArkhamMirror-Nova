@@ -49,11 +49,7 @@ export const CytoscapeControls: React.FC<CytoscapeControlsProps> = ({
           <Icon name="LayoutGrid" size={16} />
           Layout Algorithm
         </h4>
-        <select
-          value={layout}
-          onChange={(e) => onLayoutChange(e.target.value)}
-          className="select"
-        >
+        <select value={layout} onChange={(e) => onLayoutChange(e.target.value)} className="select">
           {LAYOUT_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}

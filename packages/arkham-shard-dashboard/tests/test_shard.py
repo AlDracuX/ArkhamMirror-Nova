@@ -5,9 +5,9 @@ Tests for the DashboardShard class including initialization,
 lifecycle, and service monitoring methods.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from arkham_shard_dashboard.shard import DashboardShard
 
 
@@ -288,12 +288,16 @@ class TestWorkerControls:
         shard = DashboardShard()
         shard.frame = MagicMock()
         shard.frame.workers = MagicMock()
-        shard.frame.workers.get_workers = AsyncMock(return_value=[
-            {"id": "w1", "queue": "embeddings", "status": "running"},
-        ])
-        shard.frame.workers.get_queue_stats = AsyncMock(return_value=[
-            {"queue": "embeddings", "pending": 10},
-        ])
+        shard.frame.workers.get_workers = AsyncMock(
+            return_value=[
+                {"id": "w1", "queue": "embeddings", "status": "running"},
+            ]
+        )
+        shard.frame.workers.get_queue_stats = AsyncMock(
+            return_value=[
+                {"queue": "embeddings", "pending": 10},
+            ]
+        )
         shard.frame.workers.scale = AsyncMock(return_value=True)
         shard.frame.workers.start_worker = AsyncMock(return_value={"success": True})
         shard.frame.workers.stop_worker = AsyncMock(return_value={"success": True})

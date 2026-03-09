@@ -6,9 +6,10 @@ Provides Shell integration endpoints:
 - /api/frame/health - Frame health status
 """
 
-from fastapi import APIRouter
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
+from fastapi import APIRouter
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -46,18 +47,19 @@ async def get_all_badges() -> Dict[str, Any]:
             continue
 
         # Main nav badge
-        badge_endpoint = getattr(nav, "badge_endpoint", None) if hasattr(nav, "badge_endpoint") else nav.get("badge_endpoint")
-        badge_type = getattr(nav, "badge_type", "count") if hasattr(nav, "badge_type") else nav.get("badge_type", "count")
+        badge_endpoint = (
+            getattr(nav, "badge_endpoint", None) if hasattr(nav, "badge_endpoint") else nav.get("badge_endpoint")
+        )
+        badge_type = (
+            getattr(nav, "badge_type", "count") if hasattr(nav, "badge_type") else nav.get("badge_type", "count")
+        )
 
         if badge_endpoint:
             try:
                 # Check if shard has get_badge_count method
                 if hasattr(shard, "get_badge_count"):
                     count = await shard.get_badge_count()
-                    badges[name] = {
-                        "count": count,
-                        "type": badge_type or "count"
-                    }
+                    badges[name] = {"count": count, "type": badge_type or "count"}
             except Exception as e:
                 logger.warning(f"Failed to get badge for {name}: {e}")
 
@@ -73,10 +75,7 @@ async def get_all_badges() -> Dict[str, Any]:
                 try:
                     if hasattr(shard, "get_subroute_badge_count"):
                         count = await shard.get_subroute_badge_count(sub_id)
-                        badges[f"{name}:{sub_id}"] = {
-                            "count": count,
-                            "type": sub_badge_type or "count"
-                        }
+                        badges[f"{name}:{sub_id}"] = {"count": count, "type": sub_badge_type or "count"}
                 except Exception as e:
                     logger.warning(f"Failed to get badge for {name}:{sub_id}: {e}")
 

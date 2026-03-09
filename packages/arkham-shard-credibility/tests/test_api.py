@@ -2,13 +2,10 @@
 Tests for credibility shard API endpoints.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from fastapi.testclient import TestClient
-from httpx import AsyncClient
-
+import pytest
 from arkham_shard_credibility.api import router
 from arkham_shard_credibility.models import (
     AssessmentMethod,
@@ -18,6 +15,8 @@ from arkham_shard_credibility.models import (
     SourceCredibility,
     SourceType,
 )
+from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
 
 @pytest.fixture
@@ -68,6 +67,7 @@ async def test_health_endpoint():
     """Test health check endpoint."""
     with patch("arkham_shard_credibility.api._get_shard"):
         from fastapi import FastAPI
+
         app = FastAPI()
         app.include_router(router)
 
@@ -87,6 +87,7 @@ async def test_create_assessment(mock_shard, sample_assessment):
 
     with patch("arkham_shard_credibility.api._get_shard", return_value=mock_shard):
         from fastapi import FastAPI
+
         app = FastAPI()
         app.include_router(router)
 
@@ -101,7 +102,7 @@ async def test_create_assessment(mock_shard, sample_assessment):
                     "assessed_by": "manual",
                     "assessor_id": "analyst-1",
                     "notes": "Test assessment",
-                }
+                },
             )
 
         assert response.status_code == 201
@@ -118,6 +119,7 @@ async def test_get_assessment(mock_shard, sample_assessment):
 
     with patch("arkham_shard_credibility.api._get_shard", return_value=mock_shard):
         from fastapi import FastAPI
+
         app = FastAPI()
         app.include_router(router)
 
@@ -137,6 +139,7 @@ async def test_get_assessment_not_found(mock_shard):
 
     with patch("arkham_shard_credibility.api._get_shard", return_value=mock_shard):
         from fastapi import FastAPI
+
         app = FastAPI()
         app.include_router(router)
 
@@ -154,6 +157,7 @@ async def test_list_assessments(mock_shard, sample_assessment):
 
     with patch("arkham_shard_credibility.api._get_shard", return_value=mock_shard):
         from fastapi import FastAPI
+
         app = FastAPI()
         app.include_router(router)
 
@@ -176,14 +180,12 @@ async def test_update_assessment(mock_shard, sample_assessment):
 
     with patch("arkham_shard_credibility.api._get_shard", return_value=mock_shard):
         from fastapi import FastAPI
+
         app = FastAPI()
         app.include_router(router)
 
         async with AsyncClient(app=app, base_url="http://test") as client:
-            response = await client.put(
-                "/api/credibility/test-123",
-                json={"score": 85}
-            )
+            response = await client.put("/api/credibility/test-123", json={"score": 85})
 
         assert response.status_code == 200
         data = response.json()
@@ -197,6 +199,7 @@ async def test_delete_assessment(mock_shard):
 
     with patch("arkham_shard_credibility.api._get_shard", return_value=mock_shard):
         from fastapi import FastAPI
+
         app = FastAPI()
         app.include_router(router)
 
@@ -213,6 +216,7 @@ async def test_get_count(mock_shard):
 
     with patch("arkham_shard_credibility.api._get_shard", return_value=mock_shard):
         from fastapi import FastAPI
+
         app = FastAPI()
         app.include_router(router)
 
@@ -247,6 +251,7 @@ async def test_get_statistics(mock_shard):
 
     with patch("arkham_shard_credibility.api._get_shard", return_value=mock_shard):
         from fastapi import FastAPI
+
         app = FastAPI()
         app.include_router(router)
 
@@ -273,6 +278,7 @@ async def test_get_standard_factors(mock_shard):
 
     with patch("arkham_shard_credibility.api._get_shard", return_value=mock_shard):
         from fastapi import FastAPI
+
         app = FastAPI()
         app.include_router(router)
 

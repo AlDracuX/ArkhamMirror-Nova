@@ -3,7 +3,7 @@
 import logging
 from typing import List
 
-from ..models import EntityMention, Entity, EntityLinkingResult
+from ..models import Entity, EntityLinkingResult, EntityMention
 
 logger = logging.getLogger(__name__)
 

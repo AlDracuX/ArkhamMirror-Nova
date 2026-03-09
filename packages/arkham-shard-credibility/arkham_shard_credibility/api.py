@@ -13,10 +13,10 @@ from pydantic import BaseModel, Field
 from .models import (
     AssessmentMethod,
     CredibilityLevel,
-    SourceType,
     DeceptionChecklistType,
     DeceptionRisk,
     IndicatorStrength,
+    SourceType,
 )
 
 router = APIRouter(prefix="/api/credibility", tags=["credibility"])
@@ -26,6 +26,7 @@ router = APIRouter(prefix="/api/credibility", tags=["credibility"])
 
 class CredibilityFactorModel(BaseModel):
     """Request/response model for credibility factor."""
+
     factor_type: str = Field(..., description="Factor type identifier")
     weight: float = Field(..., ge=0.0, le=1.0, description="Factor weight (0-1)")
     score: int = Field(..., ge=0, le=100, description="Factor score (0-100)")
@@ -34,6 +35,7 @@ class CredibilityFactorModel(BaseModel):
 
 class AssessmentCreate(BaseModel):
     """Request model for creating an assessment."""
+
     source_type: SourceType
     source_id: str = Field(..., description="ID of the source being assessed")
     score: int = Field(..., ge=0, le=100, description="Credibility score (0-100)")
@@ -47,6 +49,7 @@ class AssessmentCreate(BaseModel):
 
 class AssessmentUpdate(BaseModel):
     """Request model for updating an assessment."""
+
     score: Optional[int] = Field(None, ge=0, le=100)
     confidence: Optional[float] = Field(None, ge=0.0, le=1.0)
     factors: Optional[List[CredibilityFactorModel]] = None
@@ -55,6 +58,7 @@ class AssessmentUpdate(BaseModel):
 
 class AssessmentResponse(BaseModel):
     """Response model for an assessment."""
+
     id: str
     source_type: str
     source_id: str
@@ -72,6 +76,7 @@ class AssessmentResponse(BaseModel):
 
 class AssessmentListResponse(BaseModel):
     """Response model for listing assessments."""
+
     items: List[AssessmentResponse]
     total: int
     page: int
@@ -80,6 +85,7 @@ class AssessmentListResponse(BaseModel):
 
 class SourceCredibilityResponse(BaseModel):
     """Response model for source aggregate credibility."""
+
     source_type: str
     source_id: str
     avg_score: float
@@ -93,6 +99,7 @@ class SourceCredibilityResponse(BaseModel):
 
 class CalculateRequest(BaseModel):
     """Request model for calculating credibility."""
+
     source_type: SourceType
     source_id: str
     use_llm: bool = Field(default=False, description="Use LLM for analysis")
@@ -100,6 +107,7 @@ class CalculateRequest(BaseModel):
 
 class CalculationResponse(BaseModel):
     """Response model for credibility calculation."""
+
     source_type: str
     source_id: str
     calculated_score: int
@@ -113,6 +121,7 @@ class CalculationResponse(BaseModel):
 
 class StandardFactorResponse(BaseModel):
     """Response model for standard factor."""
+
     factor_type: str
     default_weight: float
     description: str
@@ -121,6 +130,7 @@ class StandardFactorResponse(BaseModel):
 
 class StatisticsResponse(BaseModel):
     """Response model for statistics."""
+
     total_assessments: int
     by_source_type: Dict[str, int]
     by_level: Dict[str, int]
@@ -138,11 +148,13 @@ class StatisticsResponse(BaseModel):
 
 class CountResponse(BaseModel):
     """Response model for count endpoint."""
+
     count: int
 
 
 class HistoryResponse(BaseModel):
     """Response model for source history."""
+
     source_type: str
     source_id: str
     assessments: List[AssessmentResponse]
@@ -318,8 +330,7 @@ async def get_source_credibility(source_type: SourceType, source_id: str, reques
 
     if not source_cred:
         raise HTTPException(
-            status_code=404,
-            detail=f"No credibility assessments found for {source_type.value}:{source_id}"
+            status_code=404, detail=f"No credibility assessments found for {source_type.value}:{source_id}"
         )
 
     return SourceCredibilityResponse(
@@ -458,8 +469,7 @@ async def list_by_level(
         cred_level = CredibilityLevel(level.lower())
     except ValueError:
         raise HTTPException(
-            status_code=400,
-            detail=f"Invalid level: {level}. Must be one of: unreliable, low, medium, high, verified"
+            status_code=400, detail=f"Invalid level: {level}. Must be one of: unreliable, low, medium, high, verified"
         )
 
     shard = _get_shard(request)
@@ -489,6 +499,7 @@ async def list_by_level(
 
 class DeceptionIndicatorModel(BaseModel):
     """Request/response model for deception indicator."""
+
     id: str
     checklist: str
     question: str
@@ -501,6 +512,7 @@ class DeceptionIndicatorModel(BaseModel):
 
 class DeceptionChecklistModel(BaseModel):
     """Request/response model for a single checklist."""
+
     checklist_type: str
     indicators: List[DeceptionIndicatorModel]
     overall_score: int = Field(0, ge=0, le=100)
@@ -511,22 +523,27 @@ class DeceptionChecklistModel(BaseModel):
 
 class DeceptionAssessmentCreate(BaseModel):
     """Request model for creating a deception assessment."""
+
     source_type: SourceType
     source_id: str = Field(..., description="ID of the source being assessed")
     source_name: Optional[str] = Field(None, description="Human-readable source name")
     linked_assessment_id: Optional[str] = None
     affects_credibility: bool = True
-    credibility_weight: float = Field(0.7, ge=0.0, le=1.0, description="Weight in credibility calc (higher = more impact)")
+    credibility_weight: float = Field(
+        0.7, ge=0.0, le=1.0, description="Weight in credibility calc (higher = more impact)"
+    )
 
 
 class DeceptionChecklistUpdate(BaseModel):
     """Request model for updating a single checklist."""
+
     indicators: List[DeceptionIndicatorModel]
     summary: Optional[str] = None
 
 
 class DeceptionAssessmentUpdate(BaseModel):
     """Request model for updating a deception assessment."""
+
     source_name: Optional[str] = None
     summary: Optional[str] = None
     red_flags: Optional[List[str]] = None
@@ -536,6 +553,7 @@ class DeceptionAssessmentUpdate(BaseModel):
 
 class DeceptionAssessmentResponse(BaseModel):
     """Response model for a deception assessment."""
+
     id: str
     source_type: str
     source_id: str
@@ -561,6 +579,7 @@ class DeceptionAssessmentResponse(BaseModel):
 
 class DeceptionAssessmentListResponse(BaseModel):
     """Response model for listing deception assessments."""
+
     assessments: List[DeceptionAssessmentResponse]
     total: int
     limit: int
@@ -569,11 +588,13 @@ class DeceptionAssessmentListResponse(BaseModel):
 
 class LLMChecklistRequest(BaseModel):
     """Request for LLM-assisted checklist completion."""
+
     context: Optional[str] = Field(None, description="Additional context for LLM analysis")
 
 
 class LLMChecklistResponse(BaseModel):
     """Response from LLM checklist analysis."""
+
     checklist: DeceptionChecklistModel
     reasoning: str
     confidence: float
@@ -582,6 +603,7 @@ class LLMChecklistResponse(BaseModel):
 
 class StandardIndicatorResponse(BaseModel):
     """Response model for standard indicator."""
+
     id: str
     checklist: str
     question: str
@@ -746,14 +768,13 @@ async def get_checklist_indicators(checklist_type: str, request: Request):
 
     checklist_type: 'mom', 'pop', 'moses', or 'eve'
     """
-    from .models import get_indicators_for_checklist, DeceptionChecklistType
+    from .models import DeceptionChecklistType, get_indicators_for_checklist
 
     try:
         ct = DeceptionChecklistType(checklist_type.lower())
     except ValueError:
         raise HTTPException(
-            status_code=400,
-            detail=f"Invalid checklist type: {checklist_type}. Must be one of: mom, pop, moses, eve"
+            status_code=400, detail=f"Invalid checklist type: {checklist_type}. Must be one of: mom, pop, moses, eve"
         )
 
     indicators = get_indicators_for_checklist(ct)
@@ -832,8 +853,7 @@ async def update_checklist(
         ct = DeceptionChecklistType(checklist_type.lower())
     except ValueError:
         raise HTTPException(
-            status_code=400,
-            detail=f"Invalid checklist type: {checklist_type}. Must be one of: mom, pop, moses, eve"
+            status_code=400, detail=f"Invalid checklist type: {checklist_type}. Must be one of: mom, pop, moses, eve"
         )
 
     shard = _get_shard(request)
@@ -881,8 +901,7 @@ async def analyze_checklist_with_llm(
         ct = DeceptionChecklistType(checklist_type.lower())
     except ValueError:
         raise HTTPException(
-            status_code=400,
-            detail=f"Invalid checklist type: {checklist_type}. Must be one of: mom, pop, moses, eve"
+            status_code=400, detail=f"Invalid checklist type: {checklist_type}. Must be one of: mom, pop, moses, eve"
         )
 
     shard = _get_shard(request)
@@ -895,8 +914,7 @@ async def analyze_checklist_with_llm(
     # Check if LLM is available
     if not shard._llm or not shard._llm.is_available():
         raise HTTPException(
-            status_code=503,
-            detail="LLM service is not available. Please configure LLM in Dashboard > LLM Config."
+            status_code=503, detail="LLM service is not available. Please configure LLM in Dashboard > LLM Config."
         )
 
     result = await shard.analyze_checklist_with_llm(
@@ -906,10 +924,7 @@ async def analyze_checklist_with_llm(
     )
 
     if not result:
-        raise HTTPException(
-            status_code=500,
-            detail="LLM analysis failed. Check server logs for details."
-        )
+        raise HTTPException(status_code=500, detail="LLM analysis failed. Check server logs for details.")
 
     return LLMChecklistResponse(
         checklist=_checklist_to_model(result["checklist"]),
@@ -1010,7 +1025,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     if not frame or not getattr(frame, "ai_analyst", None):
         raise HTTPException(status_code=503, detail="AI Analyst service not available")
 
-    from arkham_frame.services import AnalysisRequest, AnalysisDepth, AnalystMessage
+    from arkham_frame.services import AnalysisDepth, AnalysisRequest, AnalystMessage
 
     # Map depth string to enum
     depth_map = {
@@ -1024,10 +1039,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     # Build conversation history
     history = None
     if body.conversation_history:
-        history = [
-            AnalystMessage(role=m["role"], content=m["content"])
-            for m in body.conversation_history
-        ]
+        history = [AnalystMessage(role=m["role"], content=m["content"]) for m in body.conversation_history]
 
     # Create analysis request
     analysis_request = AnalysisRequest(

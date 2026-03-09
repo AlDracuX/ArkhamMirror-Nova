@@ -19,19 +19,19 @@ Usage:
             return {"result": "done"}
 """
 
-from .base import BaseWorker, WorkerState, WorkerMetrics, run_worker
-from .runner import WorkerRunner, run_single_worker
-from .registry import WorkerRegistry, WorkerInfo
-from .examples import EchoWorker, FailWorker, SlowWorker, EXAMPLE_WORKERS
-
-# Frame workers (infrastructure workers that stay in Frame)
-from .light_worker import LightWorker
+from .analysis_worker import AnalysisWorker
+from .base import BaseWorker, WorkerMetrics, WorkerState, run_worker
 from .db_worker import DBWorker
 
 # Future shard workers (will be moved when shards are created)
 from .enrich_worker import EnrichWorker
+from .examples import EXAMPLE_WORKERS, EchoWorker, FailWorker, SlowWorker
+
+# Frame workers (infrastructure workers that stay in Frame)
+from .light_worker import LightWorker
+from .registry import WorkerInfo, WorkerRegistry
+from .runner import WorkerRunner, run_single_worker
 from .whisper_worker import WhisperWorker
-from .analysis_worker import AnalysisWorker
 
 # Note: The following workers have been moved to their respective shards:
 # - ExtractWorker, FileWorker, ArchiveWorker, ImageWorker -> arkham-shard-ingest

@@ -17,6 +17,7 @@ class LocationExtractor:
 
         try:
             from geopy.geocoders import Nominatim
+
             self.geocoder = Nominatim(user_agent="arkham-parse-shard")
             logger.info("Geocoder initialized")
         except ImportError:

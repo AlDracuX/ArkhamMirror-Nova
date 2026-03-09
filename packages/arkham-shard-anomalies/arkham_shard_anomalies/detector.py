@@ -2,8 +2,8 @@
 
 import logging
 import re
-from typing import Any
 from datetime import datetime
+from typing import Any
 
 import numpy as np
 from scipy import stats
@@ -11,9 +11,9 @@ from scipy import stats
 from .models import (
     Anomaly,
     AnomalyType,
-    SeverityLevel,
     DetectionConfig,
     OutlierResult,
+    SeverityLevel,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,22 +43,29 @@ class AnomalyDetector:
 
         # Red flag patterns
         self.money_pattern = re.compile(
-            r'\$\s*\d+(?:,\d{3})*(?:\.\d{2})?|'
-            r'\d+(?:,\d{3})*(?:\.\d{2})?\s*(?:USD|EUR|GBP|dollars?|euros?|pounds?)',
-            re.IGNORECASE
+            r"\$\s*\d+(?:,\d{3})*(?:\.\d{2})?|"
+            r"\d+(?:,\d{3})*(?:\.\d{2})?\s*(?:USD|EUR|GBP|dollars?|euros?|pounds?)",
+            re.IGNORECASE,
         )
         self.date_pattern = re.compile(
-            r'\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|'
-            r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4}\b',
-            re.IGNORECASE
+            r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|"
+            r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4}\b",
+            re.IGNORECASE,
         )
         self.name_pattern = re.compile(
-            r'\b[A-Z][a-z]+\s+[A-Z][a-z]+\b'  # Simple capitalized name pattern
+            r"\b[A-Z][a-z]+\s+[A-Z][a-z]+\b"  # Simple capitalized name pattern
         )
 
         self.sensitive_keywords = {
-            'confidential', 'secret', 'classified', 'private', 'restricted',
-            'internal only', 'do not distribute', 'proprietary', 'privileged'
+            "confidential",
+            "secret",
+            "classified",
+            "private",
+            "restricted",
+            "internal only",
+            "do not distribute",
+            "proprietary",
+            "privileged",
         }
 
     def detect_content_anomalies(
@@ -93,9 +100,7 @@ class AnomalyDetector:
             distances = []
             for other_emb in corpus_embeddings:
                 # Cosine distance
-                cos_sim = np.dot(embedding, other_emb) / (
-                    np.linalg.norm(embedding) * np.linalg.norm(other_emb)
-                )
+                cos_sim = np.dot(embedding, other_emb) / (np.linalg.norm(embedding) * np.linalg.norm(other_emb))
                 distance = 1 - cos_sim
                 distances.append(distance)
 
@@ -123,11 +128,11 @@ class AnomalyDetector:
                     confidence=min(1.0, z_score / 5.0),  # Scale confidence
                     explanation=f"Document is semantically distant from corpus (z-score: {z_score:.2f})",
                     details={
-                        'z_score': float(z_score),
-                        'min_distance': float(min_dist),
-                        'mean_distance': float(mean_dist),
-                        'std_distance': float(std_dist),
-                    }
+                        "z_score": float(z_score),
+                        "min_distance": float(min_dist),
+                        "mean_distance": float(mean_dist),
+                        "std_distance": float(std_dist),
+                    },
                 )
                 anomalies.append(anomaly)
 
@@ -173,8 +178,8 @@ class AnomalyDetector:
                 if metric_name not in corpus_stats:
                     continue
 
-                corpus_mean = corpus_stats[metric_name]['mean']
-                corpus_std = corpus_stats[metric_name]['std']
+                corpus_mean = corpus_stats[metric_name]["mean"]
+                corpus_std = corpus_stats[metric_name]["std"]
 
                 if corpus_std > 0:
                     z_score = abs((doc_value - corpus_mean) / corpus_std)
@@ -191,14 +196,14 @@ class AnomalyDetector:
                             confidence=min(1.0, z_score / 5.0),
                             explanation=f"Unusual {metric_name}: {doc_value:.2f} (expected: {corpus_mean:.2f})",
                             details={
-                                'metric': metric_name,
-                                'value': float(doc_value),
-                                'expected_mean': float(corpus_mean),
-                                'expected_std': float(corpus_std),
-                                'z_score': float(z_score),
+                                "metric": metric_name,
+                                "value": float(doc_value),
+                                "expected_mean": float(corpus_mean),
+                                "expected_std": float(corpus_std),
+                                "z_score": float(z_score),
                             },
                             field_name=metric_name,
-                            expected_range=f"{corpus_mean - 2*corpus_std:.2f} - {corpus_mean + 2*corpus_std:.2f}",
+                            expected_range=f"{corpus_mean - 2 * corpus_std:.2f} - {corpus_mean + 2 * corpus_std:.2f}",
                             actual_value=f"{doc_value:.2f}",
                         )
                         anomalies.append(anomaly)
@@ -245,10 +250,10 @@ class AnomalyDetector:
                         confidence=0.9,
                         explanation=f"High frequency of monetary references ({len(money_matches)} found)",
                         details={
-                            'pattern_type': 'money',
-                            'count': len(money_matches),
-                            'examples': money_matches[:5],
-                        }
+                            "pattern_type": "money",
+                            "count": len(money_matches),
+                            "examples": money_matches[:5],
+                        },
                     )
                     anomalies.append(anomaly)
 
@@ -265,10 +270,10 @@ class AnomalyDetector:
                         confidence=0.8,
                         explanation=f"High frequency of date references ({len(date_matches)} found)",
                         details={
-                            'pattern_type': 'dates',
-                            'count': len(date_matches),
-                            'examples': date_matches[:5],
-                        }
+                            "pattern_type": "dates",
+                            "count": len(date_matches),
+                            "examples": date_matches[:5],
+                        },
                     )
                     anomalies.append(anomaly)
 
@@ -286,10 +291,10 @@ class AnomalyDetector:
                         confidence=0.7,
                         explanation=f"High frequency of name patterns ({unique_names} unique found)",
                         details={
-                            'pattern_type': 'names',
-                            'count': unique_names,
-                            'examples': list(set(name_matches))[:5],
-                        }
+                            "pattern_type": "names",
+                            "count": unique_names,
+                            "examples": list(set(name_matches))[:5],
+                        },
                     )
                     anomalies.append(anomaly)
 
@@ -307,9 +312,9 @@ class AnomalyDetector:
                         confidence=1.0,
                         explanation=f"Contains sensitive keywords: {', '.join(found_keywords)}",
                         details={
-                            'pattern_type': 'sensitive_keywords',
-                            'keywords': found_keywords,
-                        }
+                            "pattern_type": "sensitive_keywords",
+                            "keywords": found_keywords,
+                        },
                     )
                     anomalies.append(anomaly)
 
@@ -348,10 +353,10 @@ class AnomalyDetector:
 
         try:
             # File size check
-            if 'file_size' in metadata and 'file_size' in corpus_metadata_stats:
-                size = metadata['file_size']
-                mean = corpus_metadata_stats['file_size']['mean']
-                std = corpus_metadata_stats['file_size']['std']
+            if "file_size" in metadata and "file_size" in corpus_metadata_stats:
+                size = metadata["file_size"]
+                mean = corpus_metadata_stats["file_size"]["mean"]
+                std = corpus_metadata_stats["file_size"]["std"]
 
                 if std > 0:
                     z_score = abs((size - mean) / std)
@@ -366,13 +371,13 @@ class AnomalyDetector:
                             confidence=min(1.0, z_score / 5.0),
                             explanation=f"Unusual file size: {size} bytes (expected: {mean:.0f})",
                             details={
-                                'field': 'file_size',
-                                'value': size,
-                                'mean': mean,
-                                'std': std,
-                                'z_score': float(z_score),
+                                "field": "file_size",
+                                "value": size,
+                                "mean": mean,
+                                "std": std,
+                                "z_score": float(z_score),
                             },
-                            field_name='file_size',
+                            field_name="file_size",
                         )
                         anomalies.append(anomaly)
 
@@ -384,14 +389,14 @@ class AnomalyDetector:
     def _calculate_text_stats(self, text: str) -> dict[str, float]:
         """Calculate statistical properties of text."""
         words = text.split()
-        sentences = text.split('.')
+        sentences = text.split(".")
 
         return {
-            'word_count': float(len(words)),
-            'sentence_count': float(len(sentences)),
-            'avg_word_length': float(np.mean([len(w) for w in words])) if words else 0.0,
-            'avg_sentence_length': float(len(words) / len(sentences)) if sentences else 0.0,
-            'char_count': float(len(text)),
+            "word_count": float(len(words)),
+            "sentence_count": float(len(sentences)),
+            "avg_word_length": float(np.mean([len(w) for w in words])) if words else 0.0,
+            "avg_sentence_length": float(len(words) / len(sentences)) if sentences else 0.0,
+            "char_count": float(len(text)),
         }
 
     def _calculate_severity(self, z_score: float, threshold: float) -> SeverityLevel:
@@ -408,4 +413,5 @@ class AnomalyDetector:
     def _generate_id(self) -> str:
         """Generate unique anomaly ID."""
         import uuid
+
         return str(uuid.uuid4())

@@ -2,8 +2,8 @@
 Dashboard Shard - System monitoring and controls.
 """
 
-from typing import Dict, Any, List, Optional
 import logging
+from typing import Any, Dict, List, Optional
 
 from arkham_frame.shard_interface import ArkhamShard
 
@@ -48,6 +48,7 @@ class DashboardShard(ArkhamShard):
     def get_routes(self):
         """Return the FastAPI router for this shard."""
         from .api import router
+
         return router
 
     # === Service Health ===
@@ -181,9 +182,7 @@ class DashboardShard(ArkhamShard):
             # Emit event for other services to react
             if self.frame.events:
                 await self.frame.events.emit(
-                    "settings.llm.updated",
-                    {"endpoint": endpoint, "model": model},
-                    source="dashboard"
+                    "settings.llm.updated", {"endpoint": endpoint, "model": model}, source="dashboard"
                 )
 
         except Exception as e:
@@ -229,24 +228,21 @@ class DashboardShard(ArkhamShard):
     ) -> Dict[str, Any]:
         """
         Configure OpenRouter fallback models.
-        
+
         Args:
             models: List of model IDs in priority order
             enabled: Enable or disable fallback routing
         """
         if not self.frame.llm:
             return {"success": False, "error": "LLM service not initialized"}
-        
+
         if not self.frame.llm.is_openrouter():
-            return {
-                "success": False, 
-                "error": "Fallback routing is only available with OpenRouter"
-            }
-        
+            return {"success": False, "error": "Fallback routing is only available with OpenRouter"}
+
         # Set fallback models
         self.frame.llm.set_fallback_models(models)
         self.frame.llm.enable_fallback_routing(enabled)
-        
+
         return {
             "success": True,
             "fallback_models": self.frame.llm.get_fallback_models(),
@@ -261,7 +257,7 @@ class DashboardShard(ArkhamShard):
                 "fallback_models": [],
                 "fallback_routing_enabled": False,
             }
-        
+
         return {
             "is_openrouter": self.frame.llm.is_openrouter(),
             "fallback_models": self.frame.llm.get_fallback_models(),

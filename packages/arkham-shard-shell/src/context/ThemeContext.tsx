@@ -8,7 +8,15 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
 // Available theme presets
-export type ThemePreset = 'arkham' | 'newsroom' | 'ocean' | 'forest' | 'frost' | 'midnight' | 'terminal' | 'system';
+export type ThemePreset =
+  | 'arkham'
+  | 'newsroom'
+  | 'ocean'
+  | 'forest'
+  | 'frost'
+  | 'midnight'
+  | 'terminal'
+  | 'system';
 
 // Theme color definitions
 interface ThemeColors {
@@ -39,74 +47,74 @@ const THEMES: Record<Exclude<ThemePreset, 'system'>, ThemeColors> = {
   },
   newsroom: {
     // Light parchment theme for document work
-    bgPrimary: '#f5f0e6',      // Warm parchment
-    bgSecondary: '#ebe5d9',    // Slightly darker parchment
-    bgTertiary: '#e0d9c8',     // Card backgrounds
-    bgHover: '#d5cebf',        // Hover states
-    textPrimary: '#2c2416',    // Dark brown/black text
-    textSecondary: '#5a4d3a',  // Medium brown
-    textMuted: '#8a7b65',      // Light brown
-    border: '#c9c0ad',         // Subtle borders
+    bgPrimary: '#f5f0e6', // Warm parchment
+    bgSecondary: '#ebe5d9', // Slightly darker parchment
+    bgTertiary: '#e0d9c8', // Card backgrounds
+    bgHover: '#d5cebf', // Hover states
+    textPrimary: '#2c2416', // Dark brown/black text
+    textSecondary: '#5a4d3a', // Medium brown
+    textMuted: '#8a7b65', // Light brown
+    border: '#c9c0ad', // Subtle borders
     shadow: 'rgba(0, 0, 0, 0.1)',
   },
   ocean: {
     // Deep blue dark theme - calming data immersion
-    bgPrimary: '#0a1628',      // Deep ocean
-    bgSecondary: '#0f2137',    // Midnight blue
-    bgTertiary: '#1a3a5c',     // Sea depth
-    bgHover: '#234e75',        // Current
-    textPrimary: '#e6f1ff',    // Seafoam white
-    textSecondary: '#8bb8d9',  // Wave
-    textMuted: '#5a8ab0',      // Muted blue
-    border: '#1e4060',         // Deep border
+    bgPrimary: '#0a1628', // Deep ocean
+    bgSecondary: '#0f2137', // Midnight blue
+    bgTertiary: '#1a3a5c', // Sea depth
+    bgHover: '#234e75', // Current
+    textPrimary: '#e6f1ff', // Seafoam white
+    textSecondary: '#8bb8d9', // Wave
+    textMuted: '#5a8ab0', // Muted blue
+    border: '#1e4060', // Deep border
     shadow: 'rgba(0, 20, 40, 0.5)',
   },
   forest: {
     // Nature dark theme - organic, calming
-    bgPrimary: '#1a2416',      // Deep forest green-black
-    bgSecondary: '#243320',    // Dark moss
-    bgTertiary: '#2d4228',     // Forest shadow
-    bgHover: '#3a5535',        // Fern green
-    textPrimary: '#e8f0e4',    // Soft white-green
-    textSecondary: '#a8c4a0',  // Sage
-    textMuted: '#6b8c62',      // Muted olive
-    border: '#3a4a35',         // Dark bark
+    bgPrimary: '#1a2416', // Deep forest green-black
+    bgSecondary: '#243320', // Dark moss
+    bgTertiary: '#2d4228', // Forest shadow
+    bgHover: '#3a5535', // Fern green
+    textPrimary: '#e8f0e4', // Soft white-green
+    textSecondary: '#a8c4a0', // Sage
+    textMuted: '#6b8c62', // Muted olive
+    border: '#3a4a35', // Dark bark
     shadow: 'rgba(0, 20, 0, 0.4)',
   },
   frost: {
     // Cool light theme - clean modern SaaS
-    bgPrimary: '#f0f4f8',      // Ice white
-    bgSecondary: '#e2e8f0',    // Frost
-    bgTertiary: '#cbd5e1',     // Cool gray
-    bgHover: '#94a3b8',        // Steel
-    textPrimary: '#1e293b',    // Slate dark
-    textSecondary: '#475569',  // Slate medium
-    textMuted: '#64748b',      // Slate light
-    border: '#cbd5e1',         // Cool border
+    bgPrimary: '#f0f4f8', // Ice white
+    bgSecondary: '#e2e8f0', // Frost
+    bgTertiary: '#cbd5e1', // Cool gray
+    bgHover: '#94a3b8', // Steel
+    textPrimary: '#1e293b', // Slate dark
+    textSecondary: '#475569', // Slate medium
+    textMuted: '#64748b', // Slate light
+    border: '#cbd5e1', // Cool border
     shadow: 'rgba(100, 116, 139, 0.15)',
   },
   midnight: {
     // Pure dark OLED theme - maximum contrast
-    bgPrimary: '#000000',      // True black
-    bgSecondary: '#0a0a0a',    // Near black
-    bgTertiary: '#141414',     // Card dark
-    bgHover: '#1f1f1f',        // Hover
-    textPrimary: '#ffffff',    // Pure white
-    textSecondary: '#a3a3a3',  // Gray
-    textMuted: '#525252',      // Muted
-    border: '#262626',         // Subtle border
+    bgPrimary: '#000000', // True black
+    bgSecondary: '#0a0a0a', // Near black
+    bgTertiary: '#141414', // Card dark
+    bgHover: '#1f1f1f', // Hover
+    textPrimary: '#ffffff', // Pure white
+    textSecondary: '#a3a3a3', // Gray
+    textMuted: '#525252', // Muted
+    border: '#262626', // Subtle border
     shadow: 'rgba(0, 0, 0, 0.8)',
   },
   terminal: {
     // Hacker green theme - retro aesthetic
-    bgPrimary: '#0c0c0c',      // Terminal black
-    bgSecondary: '#1a1a1a',    // Slightly lighter
-    bgTertiary: '#2a2a2a',     // Card
-    bgHover: '#3a3a3a',        // Hover
-    textPrimary: '#33ff33',    // Matrix green
-    textSecondary: '#22cc22',  // Darker green
-    textMuted: '#119911',      // Muted green
-    border: '#1a3a1a',         // Green tint border
+    bgPrimary: '#0c0c0c', // Terminal black
+    bgSecondary: '#1a1a1a', // Slightly lighter
+    bgTertiary: '#2a2a2a', // Card
+    bgHover: '#3a3a3a', // Hover
+    textPrimary: '#33ff33', // Matrix green
+    textSecondary: '#22cc22', // Darker green
+    textMuted: '#119911', // Muted green
+    border: '#1a3a1a', // Green tint border
     shadow: 'rgba(51, 255, 51, 0.1)',
   },
 };
@@ -206,7 +214,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const savedTheme = localStorage.getItem(STORAGE_KEYS.theme) as ThemePreset | null;
       const savedAccent = localStorage.getItem(STORAGE_KEYS.accent);
 
-      const validThemes: ThemePreset[] = ['arkham', 'newsroom', 'ocean', 'forest', 'frost', 'midnight', 'terminal', 'system'];
+      const validThemes: ThemePreset[] = [
+        'arkham',
+        'newsroom',
+        'ocean',
+        'forest',
+        'frost',
+        'midnight',
+        'terminal',
+        'system',
+      ];
       if (savedTheme && validThemes.includes(savedTheme)) {
         setThemePresetState(savedTheme);
       }

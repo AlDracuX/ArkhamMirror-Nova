@@ -1,7 +1,7 @@
 """Coreference resolution - resolve pronouns to entities."""
 
 import logging
-from typing import List, Dict
+from typing import Dict, List
 
 from ..models import EntityMention
 
@@ -20,16 +20,26 @@ class CoreferenceResolver:
     def __init__(self):
         """Initialize coreference resolver."""
         self.pronouns = {
-            "he", "him", "his",
-            "she", "her", "hers",
-            "they", "them", "their",
-            "it", "its",
+            "he",
+            "him",
+            "his",
+            "she",
+            "her",
+            "hers",
+            "they",
+            "them",
+            "their",
+            "it",
+            "its",
         }
 
         self.generic_refs = {
-            "the company", "the organization",
-            "the person", "the individual",
-            "the agency", "the department",
+            "the company",
+            "the organization",
+            "the person",
+            "the individual",
+            "the agency",
+            "the department",
         }
 
     def resolve(
@@ -55,7 +65,7 @@ class CoreferenceResolver:
         last_org = None
 
         for i, word in enumerate(words):
-            word_lower = word.lower().strip('.,;:!?')
+            word_lower = word.lower().strip(".,;:!?")
 
             # Check if it's a pronoun
             if word_lower in {"he", "him", "his", "she", "her"}:
@@ -69,7 +79,7 @@ class CoreferenceResolver:
             # Update last seen entities
             for entity in entities:
                 entity_words = entity.text.split()
-                if all(w in words[i:i+len(entity_words)] for w in entity_words):
+                if all(w in words[i : i + len(entity_words)] for w in entity_words):
                     if entity.entity_type.value in ["PERSON"]:
                         last_person = entity
                     elif entity.entity_type.value in ["ORG", "GPE"]:

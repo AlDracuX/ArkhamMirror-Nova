@@ -4,11 +4,11 @@ Contradictions Shard - Detector Tests
 Tests for the ContradictionDetector and ChainDetector classes.
 """
 
-import pytest
-import numpy as np
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
-from arkham_shard_contradictions.detector import ContradictionDetector, ChainDetector
+import numpy as np
+import pytest
+from arkham_shard_contradictions.detector import ChainDetector, ContradictionDetector
 from arkham_shard_contradictions.models import (
     Claim,
     Contradiction,
@@ -90,9 +90,7 @@ class TestClaimExtractionLLM:
     def detector_with_llm(self):
         """Create detector with mock LLM service."""
         mock_llm = MagicMock()
-        mock_llm.generate = AsyncMock(return_value={
-            "text": '[{"claim": "Test claim", "type": "fact"}]'
-        })
+        mock_llm.generate = AsyncMock(return_value={"text": '[{"claim": "Test claim", "type": "fact"}]'})
         return ContradictionDetector(llm_service=mock_llm)
 
     @pytest.fixture
@@ -197,9 +195,7 @@ class TestContradictionVerification:
     @pytest.mark.asyncio
     async def test_verify_contradiction_numeric(self, detector, claim_numeric_a, claim_numeric_b):
         """Test detecting numeric contradiction."""
-        contradiction = detector._verify_contradiction_heuristic(
-            claim_numeric_a, claim_numeric_b, 0.75
-        )
+        contradiction = detector._verify_contradiction_heuristic(claim_numeric_a, claim_numeric_b, 0.75)
 
         assert contradiction is not None
         assert contradiction.contradiction_type == ContradictionType.NUMERIC
@@ -340,16 +336,25 @@ class TestChainDetector:
         """Create contradictions that form a chain."""
         return [
             Contradiction(
-                id="c1", doc_a_id="doc-1", doc_b_id="doc-2",
-                claim_a="A", claim_b="B",
+                id="c1",
+                doc_a_id="doc-1",
+                doc_b_id="doc-2",
+                claim_a="A",
+                claim_b="B",
             ),
             Contradiction(
-                id="c2", doc_a_id="doc-2", doc_b_id="doc-3",
-                claim_a="B", claim_b="C",
+                id="c2",
+                doc_a_id="doc-2",
+                doc_b_id="doc-3",
+                claim_a="B",
+                claim_b="C",
             ),
             Contradiction(
-                id="c3", doc_a_id="doc-3", doc_b_id="doc-4",
-                claim_a="C", claim_b="D",
+                id="c3",
+                doc_a_id="doc-3",
+                doc_b_id="doc-4",
+                claim_a="C",
+                claim_b="D",
             ),
         ]
 
@@ -358,12 +363,18 @@ class TestChainDetector:
         """Create contradictions without chains."""
         return [
             Contradiction(
-                id="c1", doc_a_id="doc-1", doc_b_id="doc-2",
-                claim_a="A", claim_b="B",
+                id="c1",
+                doc_a_id="doc-1",
+                doc_b_id="doc-2",
+                claim_a="A",
+                claim_b="B",
             ),
             Contradiction(
-                id="c2", doc_a_id="doc-3", doc_b_id="doc-4",
-                claim_a="C", claim_b="D",
+                id="c2",
+                doc_a_id="doc-3",
+                doc_b_id="doc-4",
+                claim_a="C",
+                claim_b="D",
             ),
         ]
 

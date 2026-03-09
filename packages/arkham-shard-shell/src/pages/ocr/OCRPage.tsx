@@ -101,7 +101,7 @@ export function OCRPage() {
       return;
     }
 
-    const selectedDoc = documents.find(d => d.id === selectedDocId);
+    const selectedDoc = documents.find((d) => d.id === selectedDocId);
     setIsProcessing(true);
     setUploadedFileName(selectedDoc?.name || 'Document');
     setResult(null);
@@ -170,11 +170,15 @@ export function OCRPage() {
         ) : (
           <div className="engine-grid">
             {/* PaddleOCR */}
-            <div className={`engine-card ${engineAvailable('paddle') ? 'available' : 'unavailable'}`}>
+            <div
+              className={`engine-card ${engineAvailable('paddle') ? 'available' : 'unavailable'}`}
+            >
               <div className="engine-header">
                 <Icon name="Zap" size={20} />
                 <span className="engine-name">PaddleOCR</span>
-                <span className={`status-badge ${engineAvailable('paddle') ? 'healthy' : 'offline'}`}>
+                <span
+                  className={`status-badge ${engineAvailable('paddle') ? 'healthy' : 'offline'}`}
+                >
                   {engineAvailable('paddle') ? 'Available' : 'Unavailable'}
                 </span>
               </div>
@@ -312,7 +316,8 @@ export function OCRPage() {
               </button>
 
               <p className="upload-hint">
-                Supported: PNG, JPEG, WebP, BMP (max 10MB). For PDFs, use the Ingest tab first, then select from "Existing Document".
+                Supported: PNG, JPEG, WebP, BMP (max 10MB). For PDFs, use the Ingest tab first, then
+                select from "Existing Document".
               </p>
             </>
           )}
@@ -328,7 +333,9 @@ export function OCRPage() {
                     Loading documents...
                   </div>
                 ) : documents.length === 0 ? (
-                  <p className="no-documents">No OCR-able documents found. Upload images or PDFs first.</p>
+                  <p className="no-documents">
+                    No OCR-able documents found. Upload images or PDFs first.
+                  </p>
                 ) : (
                   <select
                     id="document-select"
@@ -339,7 +346,8 @@ export function OCRPage() {
                     <option value="">-- Select a document --</option>
                     {documents.map((doc) => (
                       <option key={doc.id} value={doc.id}>
-                        {doc.name} ({doc.file_type}, {doc.page_count} page{doc.page_count !== 1 ? 's' : ''})
+                        {doc.name} ({doc.file_type}, {doc.page_count} page
+                        {doc.page_count !== 1 ? 's' : ''})
                       </option>
                     ))}
                   </select>
@@ -375,10 +383,7 @@ export function OCRPage() {
             <Icon name="FileText" size={20} />
             OCR Result
           </h2>
-          <OCRResultView
-            result={result}
-            fileName={uploadedFileName}
-          />
+          <OCRResultView result={result} fileName={uploadedFileName} />
         </section>
       )}
 
@@ -392,12 +397,18 @@ export function OCRPage() {
           <div className="info-card">
             <Icon name="FileSearch" size={24} />
             <h3>When to use PaddleOCR</h3>
-            <p>Use for clean, well-formatted documents where speed is important. Ideal for batch processing.</p>
+            <p>
+              Use for clean, well-formatted documents where speed is important. Ideal for batch
+              processing.
+            </p>
           </div>
           <div className="info-card">
             <Icon name="Sparkles" size={24} />
             <h3>When to use Qwen-VL</h3>
-            <p>Use for complex layouts, handwriting, or challenging documents where accuracy is critical.</p>
+            <p>
+              Use for complex layouts, handwriting, or challenging documents where accuracy is
+              critical.
+            </p>
           </div>
           <div className="info-card">
             <Icon name="Languages" size={24} />

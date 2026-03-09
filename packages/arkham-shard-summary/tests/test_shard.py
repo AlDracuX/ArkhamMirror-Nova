@@ -1,18 +1,18 @@
 """Tests for Summary Shard implementation."""
 
-import pytest
 from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
 from arkham_shard_summary import SummaryShard
 from arkham_shard_summary.models import (
-    Summary,
-    SummaryType,
-    SummaryStatus,
+    BatchSummaryRequest,
     SourceType,
+    Summary,
+    SummaryFilter,
     SummaryLength,
     SummaryRequest,
-    SummaryFilter,
-    BatchSummaryRequest,
+    SummaryStatus,
+    SummaryType,
 )
 
 

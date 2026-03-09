@@ -60,7 +60,8 @@ export async function listAnalyses(filters?: {
   if (filters?.limit !== undefined) params.set('limit', filters.limit.toString());
   if (filters?.status) params.set('status', filters.status);
   if (filters?.verification_status) params.set('verification_status', filters.verification_status);
-  if (filters?.has_findings !== undefined) params.set('has_findings', filters.has_findings.toString());
+  if (filters?.has_findings !== undefined)
+    params.set('has_findings', filters.has_findings.toString());
   if (filters?.doc_id) params.set('doc_id', filters.doc_id);
 
   const query = params.toString();
@@ -77,14 +78,18 @@ export async function getAnalysis(analysisId: string): Promise<{ analysis: Media
 /**
  * Get analysis for a specific document
  */
-export async function getDocumentAnalysis(docId: string): Promise<{ analysis: MediaAnalysis | null }> {
+export async function getDocumentAnalysis(
+  docId: string
+): Promise<{ analysis: MediaAnalysis | null }> {
   return fetchAPI<{ analysis: MediaAnalysis | null }>(`/document/${docId}`);
 }
 
 /**
  * Analyze a document for media forensics
  */
-export async function analyzeDocument(request: AnalyzeDocumentRequest): Promise<AnalyzeDocumentResponse> {
+export async function analyzeDocument(
+  request: AnalyzeDocumentRequest
+): Promise<AnalyzeDocumentResponse> {
   return fetchAPI<AnalyzeDocumentResponse>('/analyze', {
     method: 'POST',
     body: JSON.stringify(request),
@@ -306,9 +311,7 @@ export async function batchAnalyze(
 /**
  * Get batch job status
  */
-export async function getBatchStatus(
-  jobId: string
-): Promise<{
+export async function getBatchStatus(jobId: string): Promise<{
   job_id: string;
   status: string;
   total: number;

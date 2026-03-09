@@ -55,14 +55,19 @@ export function MilestonesSection({
       case 1:
         return { label: 'OBSERVED', color: 'success', bgColor: '#166534', borderColor: '#22c55e' };
       case -1:
-        return { label: 'CONTRADICTED', color: 'danger', bgColor: '#991b1b', borderColor: '#ef4444' };
+        return {
+          label: 'CONTRADICTED',
+          color: 'danger',
+          bgColor: '#991b1b',
+          borderColor: '#ef4444',
+        };
       default:
         return { label: 'PENDING', color: 'muted', bgColor: '#374151', borderColor: '#6b7280' };
     }
   };
 
   const getHypothesisLabel = (hypId: string): string => {
-    const hyp = hypotheses.find(h => h.id === hypId);
+    const hyp = hypotheses.find((h) => h.id === hypId);
     return hyp ? hyp.title : hypId.substring(0, 8);
   };
 
@@ -134,7 +139,12 @@ export function MilestonesSection({
                       <select
                         className="status-select"
                         value={milestone.observed}
-                        onChange={(e) => onUpdateMilestoneStatus(milestone.id, parseInt(e.target.value) as -1 | 0 | 1)}
+                        onChange={(e) =>
+                          onUpdateMilestoneStatus(
+                            milestone.id,
+                            parseInt(e.target.value) as -1 | 0 | 1
+                          )
+                        }
                         style={{
                           backgroundColor: status.bgColor,
                           borderColor: status.borderColor,
@@ -146,9 +156,7 @@ export function MilestonesSection({
                       </select>
                     </div>
                     <div className="milestone-text">
-                      <span className="milestone-description">
-                        {milestone.description}
-                      </span>
+                      <span className="milestone-description">{milestone.description}</span>
                       {milestone.hypothesis_id && (
                         <span className="milestone-hypothesis">
                           <Icon name="Lightbulb" size={12} />

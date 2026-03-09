@@ -20,12 +20,7 @@ import { SunPositionPanel } from './components/SunPositionPanel';
 import { SimilarImagesPanel } from './components/SimilarImagesPanel';
 import { WarningsPanel } from './components/WarningsPanel';
 
-import type {
-  MediaAnalysis,
-  AnalysisStats,
-  AnalysisStatus,
-  VerificationStatus,
-} from './types';
+import type { MediaAnalysis, AnalysisStats, AnalysisStatus, VerificationStatus } from './types';
 import {
   STATUS_LABELS,
   STATUS_COLORS,
@@ -196,22 +191,35 @@ export function MediaForensicsPage() {
   };
 
   // Handle file drop
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(false);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragActive(false);
 
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      const file = files[0];
-      // Validate file type
-      const validTypes = ['image/jpeg', 'image/png', 'image/tiff', 'image/webp', 'image/gif', 'image/bmp'];
-      if (validTypes.includes(file.type) || /\.(jpg|jpeg|png|tiff|tif|webp|gif|bmp)$/i.test(file.name)) {
-        setSelectedFile(file);
-      } else {
-        toast.error('Unsupported file type. Please upload JPEG, PNG, TIFF, WebP, GIF, or BMP.');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const file = files[0];
+        // Validate file type
+        const validTypes = [
+          'image/jpeg',
+          'image/png',
+          'image/tiff',
+          'image/webp',
+          'image/gif',
+          'image/bmp',
+        ];
+        if (
+          validTypes.includes(file.type) ||
+          /\.(jpg|jpeg|png|tiff|tif|webp|gif|bmp)$/i.test(file.name)
+        ) {
+          setSelectedFile(file);
+        } else {
+          toast.error('Unsupported file type. Please upload JPEG, PNG, TIFF, WebP, GIF, or BMP.');
+        }
       }
-    }
-  }, [toast]);
+    },
+    [toast]
+  );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -444,9 +452,7 @@ export function MediaForensicsPage() {
                   className={`analysis-card ${selectedAnalysis?.id === analysis.id ? 'selected' : ''}`}
                   onClick={() => handleSelectAnalysis(analysis)}
                 >
-                  {selectedAnalysis?.id === analysis.id && (
-                    <div className="selection-indicator" />
-                  )}
+                  {selectedAnalysis?.id === analysis.id && <div className="selection-indicator" />}
 
                   <div className="analysis-header">
                     <div className="analysis-file-info">
@@ -807,7 +813,10 @@ export function MediaForensicsPage() {
                           type="checkbox"
                           checked={analyzeOptions.run_sun_position}
                           onChange={(e) =>
-                            setAnalyzeOptions({ ...analyzeOptions, run_sun_position: e.target.checked })
+                            setAnalyzeOptions({
+                              ...analyzeOptions,
+                              run_sun_position: e.target.checked,
+                            })
                           }
                         />
                         <span>Verify Sun Position (requires GPS)</span>

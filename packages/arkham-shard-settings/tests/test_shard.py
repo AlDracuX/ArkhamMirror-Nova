@@ -1,7 +1,8 @@
 """Tests for SettingsShard implementation."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from arkham_shard_settings.shard import SettingsShard
 
 

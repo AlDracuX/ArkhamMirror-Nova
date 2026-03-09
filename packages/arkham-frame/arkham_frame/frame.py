@@ -4,8 +4,8 @@ ArkhamFrame - The core orchestrator.
 Initializes and manages all Frame services.
 """
 
-from typing import Optional, Dict, Any
 import logging
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -76,12 +76,14 @@ class ArkhamFrame:
 
         # Initialize config first
         from arkham_frame.services.config import ConfigService
+
         self.config = ConfigService()
         logger.info("ConfigService initialized")
 
         # Initialize model service (for ML model management in air-gap deployments)
         try:
             from arkham_frame.services.models import ModelService
+
             self.models = ModelService(
                 offline_mode=self.config.offline_mode,
                 cache_path=self.config.model_cache_path or None,
@@ -96,6 +98,7 @@ class ArkhamFrame:
         # Initialize resources (hardware detection) - early because workers depend on it
         try:
             from arkham_frame.services.resources import ResourceService
+
             self.resources = ResourceService(config=self.config)
             await self.resources.initialize()
             logger.info(f"ResourceService initialized (tier: {self.resources.get_tier_name()})")
@@ -105,6 +108,7 @@ class ArkhamFrame:
         # Initialize storage
         try:
             from arkham_frame.services.storage import StorageService
+
             self.storage = StorageService(config=self.config)
             await self.storage.initialize()
             logger.info("StorageService initialized")
@@ -114,6 +118,7 @@ class ArkhamFrame:
         # Initialize database
         try:
             from arkham_frame.services.database import DatabaseService
+
             self.db = DatabaseService(config=self.config)
             await self.db.initialize()
             logger.info("DatabaseService initialized")
@@ -123,6 +128,7 @@ class ArkhamFrame:
         # Initialize vectors
         try:
             from arkham_frame.services.vectors import VectorService
+
             self.vectors = VectorService(config=self.config)
             await self.vectors.initialize()
             logger.info("VectorService initialized")
@@ -132,6 +138,7 @@ class ArkhamFrame:
         # Initialize LLM (pass db for loading persisted settings)
         try:
             from arkham_frame.services.llm import LLMService
+
             self.llm = LLMService(config=self.config, db=self.db)
             await self.llm.initialize()
             logger.info("LLMService initialized")
@@ -141,6 +148,7 @@ class ArkhamFrame:
         # Initialize AI Junior Analyst (depends on LLM)
         try:
             from arkham_frame.services.ai_analyst import AIJuniorAnalystService
+
             self.ai_analyst = AIJuniorAnalystService(llm_service=self.llm)
             logger.info("AIJuniorAnalystService initialized")
         except Exception as e:
@@ -149,6 +157,7 @@ class ArkhamFrame:
         # Initialize chunks (text chunking and tokenization)
         try:
             from arkham_frame.services.chunks import ChunkService
+
             self.chunks = ChunkService(config=self.config)
             await self.chunks.initialize()
             logger.info("ChunkService initialized")
@@ -158,6 +167,7 @@ class ArkhamFrame:
         # Initialize events
         try:
             from arkham_frame.services.events import EventBus
+
             self.events = EventBus(config=self.config)
             await self.events.initialize()
             logger.info("EventBus initialized")
@@ -172,12 +182,14 @@ class ArkhamFrame:
         # Initialize workers
         try:
             from arkham_frame.services.workers import WorkerService
+
             self.workers = WorkerService(config=self.config)
             self.workers.set_event_bus(self.events)  # Connect EventBus for job notifications
             await self.workers.initialize()
             logger.info("WorkerService initialized")
         except Exception as e:
             import traceback
+
             logger.warning(f"WorkerService failed to initialize: {e}")
             logger.warning(f"Traceback: {traceback.format_exc()}")
 
@@ -187,9 +199,7 @@ class ArkhamFrame:
             from arkham_frame.services.entities import EntityService
             from arkham_frame.services.projects import ProjectService
 
-            self.documents = DocumentService(
-                db=self.db, vectors=self.vectors, storage=self.storage, config=self.config
-            )
+            self.documents = DocumentService(db=self.db, vectors=self.vectors, storage=self.storage, config=self.config)
             await self.documents.initialize()
 
             self.entities = EntityService(db=self.db, config=self.config)
@@ -370,7 +380,9 @@ class ArkhamFrame:
                 "chunks": self.chunks is not None,
                 "vectors": self.vectors is not None,
                 "llm": self.llm is not None and self.llm.is_available() if self.llm else False,
-                "ai_analyst": self.ai_analyst is not None and self.ai_analyst.is_available() if self.ai_analyst else False,
+                "ai_analyst": self.ai_analyst is not None and self.ai_analyst.is_available()
+                if self.ai_analyst
+                else False,
                 "events": self.events is not None,
                 "workers": self.workers is not None,
                 "models": self.models is not None,

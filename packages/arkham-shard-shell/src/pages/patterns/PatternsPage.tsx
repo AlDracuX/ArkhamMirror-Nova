@@ -120,7 +120,6 @@ const STATUS_LABELS: Record<string, string> = {
   archived: 'Archived',
 };
 
-
 type TabType = 'all' | 'recurring' | 'behavioral' | 'temporal' | 'analyze';
 
 export function PatternsPage() {
@@ -198,9 +197,9 @@ export function PatternsPage() {
     items: patterns,
     loading,
     error,
-    refetch
+    refetch,
   } = usePaginatedFetch<Pattern>('/api/patterns/', {
-    params: getFilterParams()
+    params: getFilterParams(),
   });
 
   // Fetch stats
@@ -210,9 +209,10 @@ export function PatternsPage() {
   const { data: capabilities } = useFetch<Capabilities>('/api/patterns/capabilities');
 
   // Fetch matches for selected pattern
-  const { data: matchesData, loading: matchesLoading } = useFetch<{ items: PatternMatch[]; total: number }>(
-    selectedPattern ? `/api/patterns/${selectedPattern.id}/matches` : null
-  );
+  const { data: matchesData, loading: matchesLoading } = useFetch<{
+    items: PatternMatch[];
+    total: number;
+  }>(selectedPattern ? `/api/patterns/${selectedPattern.id}/matches` : null);
   const matches = matchesData?.items || [];
 
   // Refresh patterns when tab changes
@@ -247,8 +247,14 @@ export function PatternsPage() {
   // Create pattern
   const handleCreatePattern = async () => {
     try {
-      const keywords = formKeywords.split(',').map(k => k.trim()).filter(k => k);
-      const regexPatterns = formRegex.split('\n').map(r => r.trim()).filter(r => r);
+      const keywords = formKeywords
+        .split(',')
+        .map((k) => k.trim())
+        .filter((k) => k);
+      const regexPatterns = formRegex
+        .split('\n')
+        .map((r) => r.trim())
+        .filter((r) => r);
 
       const response = await fetch('/api/patterns/', {
         method: 'POST',
@@ -285,8 +291,14 @@ export function PatternsPage() {
     if (!selectedPattern) return;
 
     try {
-      const keywords = formKeywords.split(',').map(k => k.trim()).filter(k => k);
-      const regexPatterns = formRegex.split('\n').map(r => r.trim()).filter(r => r);
+      const keywords = formKeywords
+        .split(',')
+        .map((k) => k.trim())
+        .filter((k) => k);
+      const regexPatterns = formRegex
+        .split('\n')
+        .map((r) => r.trim())
+        .filter((r) => r);
 
       const response = await fetch(`/api/patterns/${selectedPattern.id}`, {
         method: 'PUT',
@@ -435,7 +447,11 @@ export function PatternsPage() {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return (
+      date.toLocaleDateString() +
+      ' ' +
+      date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    );
   };
 
   return (
@@ -464,17 +480,19 @@ export function PatternsPage() {
             targetId={selectedPattern?.id || 'overview'}
             context={{
               statistics: stats || null,
-              selected_pattern: selectedPattern ? {
-                id: selectedPattern.id,
-                name: selectedPattern.name,
-                description: selectedPattern.description,
-                pattern_type: selectedPattern.pattern_type,
-                status: selectedPattern.status,
-                confidence: selectedPattern.confidence,
-                match_count: selectedPattern.match_count,
-                criteria: selectedPattern.criteria,
-              } : null,
-              patterns: patterns.slice(0, 20).map(p => ({
+              selected_pattern: selectedPattern
+                ? {
+                    id: selectedPattern.id,
+                    name: selectedPattern.name,
+                    description: selectedPattern.description,
+                    pattern_type: selectedPattern.pattern_type,
+                    status: selectedPattern.status,
+                    confidence: selectedPattern.confidence,
+                    match_count: selectedPattern.match_count,
+                    criteria: selectedPattern.criteria,
+                  }
+                : null,
+              patterns: patterns.slice(0, 20).map((p) => ({
                 id: p.id,
                 name: p.name,
                 pattern_type: p.pattern_type,
@@ -624,7 +642,9 @@ export function PatternsPage() {
                     <Icon name={PATTERN_TYPE_ICONS[pattern.pattern_type] || 'Circle'} size={20} />
                     <div className="pattern-info">
                       <h3>{pattern.name}</h3>
-                      <p className="pattern-type">{PATTERN_TYPE_LABELS[pattern.pattern_type] || pattern.pattern_type}</p>
+                      <p className="pattern-type">
+                        {PATTERN_TYPE_LABELS[pattern.pattern_type] || pattern.pattern_type}
+                      </p>
                     </div>
                     <span className={`confidence-badge ${getConfidenceBadge(pattern.confidence)}`}>
                       {(pattern.confidence * 100).toFixed(0)}%
@@ -654,7 +674,10 @@ export function PatternsPage() {
             <div className="pattern-detail">
               <div className="detail-header">
                 <div className="detail-title">
-                  <Icon name={PATTERN_TYPE_ICONS[selectedPattern.pattern_type] || 'Fingerprint'} size={24} />
+                  <Icon
+                    name={PATTERN_TYPE_ICONS[selectedPattern.pattern_type] || 'Fingerprint'}
+                    size={24}
+                  />
                   <h2>{selectedPattern.name}</h2>
                   <span className={`status-badge status-${selectedPattern.status}`}>
                     {STATUS_LABELS[selectedPattern.status]}
@@ -692,10 +715,7 @@ export function PatternsPage() {
                   >
                     <Icon name="Trash2" size={16} />
                   </button>
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() => setSelectedPattern(null)}
-                  >
+                  <button className="btn btn-ghost" onClick={() => setSelectedPattern(null)}>
                     <Icon name="X" size={16} />
                   </button>
                 </div>
@@ -708,12 +728,17 @@ export function PatternsPage() {
                   <dl className="detail-list">
                     <dt>Type:</dt>
                     <dd>
-                      <Icon name={PATTERN_TYPE_ICONS[selectedPattern.pattern_type] || 'Circle'} size={14} />
+                      <Icon
+                        name={PATTERN_TYPE_ICONS[selectedPattern.pattern_type] || 'Circle'}
+                        size={14}
+                      />
                       {PATTERN_TYPE_LABELS[selectedPattern.pattern_type]}
                     </dd>
                     <dt>Confidence:</dt>
                     <dd>
-                      <span className={`confidence-badge ${getConfidenceBadge(selectedPattern.confidence)}`}>
+                      <span
+                        className={`confidence-badge ${getConfidenceBadge(selectedPattern.confidence)}`}
+                      >
                         {(selectedPattern.confidence * 100).toFixed(0)}%
                       </span>
                     </dd>
@@ -741,32 +766,39 @@ export function PatternsPage() {
                   <div className="detail-section">
                     <h3>Matching Criteria</h3>
                     <div className="criteria-display">
-                      {selectedPattern.criteria.keywords && selectedPattern.criteria.keywords.length > 0 && (
-                        <div className="criteria-item">
-                          <span className="criteria-label">Keywords:</span>
-                          <div className="criteria-tags">
-                            {selectedPattern.criteria.keywords.map((kw, i) => (
-                              <span key={i} className="criteria-tag">{kw}</span>
-                            ))}
+                      {selectedPattern.criteria.keywords &&
+                        selectedPattern.criteria.keywords.length > 0 && (
+                          <div className="criteria-item">
+                            <span className="criteria-label">Keywords:</span>
+                            <div className="criteria-tags">
+                              {selectedPattern.criteria.keywords.map((kw, i) => (
+                                <span key={i} className="criteria-tag">
+                                  {kw}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      {selectedPattern.criteria.regex_patterns && selectedPattern.criteria.regex_patterns.length > 0 && (
-                        <div className="criteria-item">
-                          <span className="criteria-label">Regex:</span>
-                          <div className="criteria-patterns">
-                            {selectedPattern.criteria.regex_patterns.map((rx, i) => (
-                              <code key={i} className="criteria-regex">{rx}</code>
-                            ))}
+                        )}
+                      {selectedPattern.criteria.regex_patterns &&
+                        selectedPattern.criteria.regex_patterns.length > 0 && (
+                          <div className="criteria-item">
+                            <span className="criteria-label">Regex:</span>
+                            <div className="criteria-patterns">
+                              {selectedPattern.criteria.regex_patterns.map((rx, i) => (
+                                <code key={i} className="criteria-regex">
+                                  {rx}
+                                </code>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      {selectedPattern.criteria.min_occurrences && selectedPattern.criteria.min_occurrences > 1 && (
-                        <div className="criteria-item">
-                          <span className="criteria-label">Min Occurrences:</span>
-                          <span>{selectedPattern.criteria.min_occurrences}</span>
-                        </div>
-                      )}
+                        )}
+                      {selectedPattern.criteria.min_occurrences &&
+                        selectedPattern.criteria.min_occurrences > 1 && (
+                          <div className="criteria-item">
+                            <span className="criteria-label">Min Occurrences:</span>
+                            <span>{selectedPattern.criteria.min_occurrences}</span>
+                          </div>
+                        )}
                     </div>
                   </div>
                 )}
@@ -810,13 +842,13 @@ export function PatternsPage() {
                             <span className="match-source">
                               {match.source_type}: {match.source_title || match.source_id}
                             </span>
-                            <span className={`confidence-badge ${getConfidenceBadge(match.match_score)}`}>
+                            <span
+                              className={`confidence-badge ${getConfidenceBadge(match.match_score)}`}
+                            >
                               {(match.match_score * 100).toFixed(0)}%
                             </span>
                           </div>
-                          {match.excerpt && (
-                            <p className="match-excerpt">"{match.excerpt}"</p>
-                          )}
+                          {match.excerpt && <p className="match-excerpt">"{match.excerpt}"</p>}
                           <div className="match-meta">
                             <span>Matched: {formatDate(match.matched_at)}</span>
                           </div>
@@ -871,7 +903,9 @@ export function PatternsPage() {
                     className="form-select"
                   >
                     {Object.entries(PATTERN_TYPE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -923,7 +957,11 @@ export function PatternsPage() {
               <button className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={handleCreatePattern} disabled={!formName.trim()}>
+              <button
+                className="btn btn-primary"
+                onClick={handleCreatePattern}
+                disabled={!formName.trim()}
+              >
                 <Icon name="Plus" size={16} />
                 Create Pattern
               </button>
@@ -1006,7 +1044,11 @@ export function PatternsPage() {
               <button className="btn btn-secondary" onClick={() => setShowEditModal(false)}>
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={handleUpdatePattern} disabled={!formName.trim()}>
+              <button
+                className="btn btn-primary"
+                onClick={handleUpdatePattern}
+                disabled={!formName.trim()}
+              >
                 <Icon name="Save" size={16} />
                 Save Changes
               </button>
@@ -1080,9 +1122,14 @@ export function PatternsPage() {
                       {analysisResult.patterns_detected.map((pattern) => (
                         <div key={pattern.id} className="detected-pattern">
                           <div className="detected-header">
-                            <Icon name={PATTERN_TYPE_ICONS[pattern.pattern_type] || 'Circle'} size={16} />
+                            <Icon
+                              name={PATTERN_TYPE_ICONS[pattern.pattern_type] || 'Circle'}
+                              size={16}
+                            />
                             <span className="detected-name">{pattern.name}</span>
-                            <span className={`confidence-badge ${getConfidenceBadge(pattern.confidence)}`}>
+                            <span
+                              className={`confidence-badge ${getConfidenceBadge(pattern.confidence)}`}
+                            >
                               {(pattern.confidence * 100).toFixed(0)}%
                             </span>
                           </div>
@@ -1094,7 +1141,9 @@ export function PatternsPage() {
                   {analysisResult.errors.length > 0 && (
                     <div className="analysis-errors">
                       {analysisResult.errors.map((err, i) => (
-                        <p key={i} className="error-message">{err}</p>
+                        <p key={i} className="error-message">
+                          {err}
+                        </p>
                       ))}
                     </div>
                   )}

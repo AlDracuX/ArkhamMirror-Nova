@@ -9,11 +9,10 @@ from typing import Any, Dict, List, Optional
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
-from .matrix import MatrixManager
-from .scoring import ACHScorer
+from .corpus import CorpusSearchService
 from .evidence import EvidenceAnalyzer
 from .export import MatrixExporter
-from .corpus import CorpusSearchService
+from .matrix import MatrixManager
 from .models import (
     ACHMatrix,
     ConsistencyRating,
@@ -32,6 +31,7 @@ from .models import (
     ScenarioStatus,
     ScenarioTree,
 )
+from .scoring import ACHScorer
 
 logger = logging.getLogger(__name__)
 
@@ -386,9 +386,7 @@ class ACHShard(ArkhamShard):
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_ach_evidence_matrix ON arkham_ach.evidence(matrix_id)"
             )
-            await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_ach_ratings_matrix ON arkham_ach.ratings(matrix_id)"
-            )
+            await self._db.execute("CREATE INDEX IF NOT EXISTS idx_ach_ratings_matrix ON arkham_ach.ratings(matrix_id)")
 
             # ===========================================
             # Premortem and Scenario Tables
@@ -542,9 +540,7 @@ class ACHShard(ArkhamShard):
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_ach_evidence_tenant ON arkham_ach.evidence(tenant_id)"
             )
-            await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_ach_ratings_tenant ON arkham_ach.ratings(tenant_id)"
-            )
+            await self._db.execute("CREATE INDEX IF NOT EXISTS idx_ach_ratings_tenant ON arkham_ach.ratings(tenant_id)")
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_ach_premortems_tenant ON arkham_ach.premortems(tenant_id)"
             )
@@ -593,7 +589,7 @@ class ACHShard(ArkhamShard):
                 "created_at": premortem.created_at,
                 "updated_at": premortem.updated_at,
                 "created_by": premortem.created_by,
-            }
+            },
         )
 
         # Save failure modes
@@ -626,7 +622,7 @@ class ACHShard(ArkhamShard):
                     "converted_to": fm.converted_to.value if fm.converted_to else None,
                     "converted_id": fm.converted_id,
                     "created_at": fm.created_at,
-                }
+                },
             )
 
         return premortem
@@ -642,7 +638,7 @@ class ACHShard(ArkhamShard):
             WHERE matrix_id = :matrix_id
             ORDER BY created_at DESC
             """,
-            {"matrix_id": matrix_id}
+            {"matrix_id": matrix_id},
         )
 
         premortems = []
@@ -654,7 +650,7 @@ class ACHShard(ArkhamShard):
                 WHERE premortem_id = :premortem_id
                 ORDER BY created_at
                 """,
-                {"premortem_id": row["id"]}
+                {"premortem_id": row["id"]},
             )
 
             failure_modes = [
@@ -673,21 +669,23 @@ class ACHShard(ArkhamShard):
                 for fm in fm_rows
             ]
 
-            premortems.append(PremortemAnalysis(
-                id=row["id"],
-                matrix_id=row["matrix_id"],
-                hypothesis_id=row["hypothesis_id"],
-                hypothesis_title=row["hypothesis_title"],
-                scenario_description=row["scenario_description"] or "",
-                failure_modes=failure_modes,
-                overall_vulnerability=row["overall_vulnerability"],
-                key_risks=_parse_json_field(row["key_risks"]),
-                recommendations=_parse_json_field(row["recommendations"]),
-                model_used=row["model_used"],
-                created_at=row["created_at"],
-                updated_at=row["updated_at"],
-                created_by=row["created_by"],
-            ))
+            premortems.append(
+                PremortemAnalysis(
+                    id=row["id"],
+                    matrix_id=row["matrix_id"],
+                    hypothesis_id=row["hypothesis_id"],
+                    hypothesis_title=row["hypothesis_title"],
+                    scenario_description=row["scenario_description"] or "",
+                    failure_modes=failure_modes,
+                    overall_vulnerability=row["overall_vulnerability"],
+                    key_risks=_parse_json_field(row["key_risks"]),
+                    recommendations=_parse_json_field(row["recommendations"]),
+                    model_used=row["model_used"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"],
+                    created_by=row["created_by"],
+                )
+            )
 
         return premortems
 
@@ -696,10 +694,7 @@ class ACHShard(ArkhamShard):
         if not self._db:
             return None
 
-        row = await self._db.fetch_one(
-            "SELECT * FROM arkham_ach.premortems WHERE id = :id",
-            {"id": premortem_id}
-        )
+        row = await self._db.fetch_one("SELECT * FROM arkham_ach.premortems WHERE id = :id", {"id": premortem_id})
 
         if not row:
             return None
@@ -711,7 +706,7 @@ class ACHShard(ArkhamShard):
             WHERE premortem_id = :premortem_id
             ORDER BY created_at
             """,
-            {"premortem_id": premortem_id}
+            {"premortem_id": premortem_id},
         )
 
         failure_modes = [
@@ -751,10 +746,7 @@ class ACHShard(ArkhamShard):
         if not self._db:
             return False
 
-        result = await self._db.execute(
-            "DELETE FROM arkham_ach.premortems WHERE id = :id",
-            {"id": premortem_id}
-        )
+        result = await self._db.execute("DELETE FROM arkham_ach.premortems WHERE id = :id", {"id": premortem_id})
         return True
 
     # --- Scenario Tree Persistence ---
@@ -789,7 +781,7 @@ class ACHShard(ArkhamShard):
                 "created_at": tree.created_at,
                 "updated_at": tree.updated_at,
                 "created_by": tree.created_by,
-            }
+            },
         )
 
         # Save nodes
@@ -816,7 +808,7 @@ class ACHShard(ArkhamShard):
                     "description": driver.description,
                     "current_state": driver.current_state,
                     "possible_states": json.dumps(driver.possible_states),
-                }
+                },
             )
 
         return tree
@@ -861,7 +853,7 @@ class ACHShard(ArkhamShard):
                 "notes": node.notes,
                 "created_at": node.created_at,
                 "updated_at": node.updated_at,
-            }
+            },
         )
 
         # Save indicators
@@ -884,7 +876,7 @@ class ACHShard(ArkhamShard):
                     "is_triggered": ind.is_triggered,
                     "triggered_at": ind.triggered_at,
                     "notes": ind.notes,
-                }
+                },
             )
 
     async def get_scenario_trees(self, matrix_id: str) -> List[ScenarioTree]:
@@ -898,7 +890,7 @@ class ACHShard(ArkhamShard):
             WHERE matrix_id = :matrix_id
             ORDER BY created_at DESC
             """,
-            {"matrix_id": matrix_id}
+            {"matrix_id": matrix_id},
         )
 
         trees = []
@@ -914,10 +906,7 @@ class ACHShard(ArkhamShard):
         if not self._db:
             return None
 
-        row = await self._db.fetch_one(
-            "SELECT * FROM arkham_ach.scenario_trees WHERE id = :id",
-            {"id": tree_id}
-        )
+        row = await self._db.fetch_one("SELECT * FROM arkham_ach.scenario_trees WHERE id = :id", {"id": tree_id})
 
         if not row:
             return None
@@ -935,7 +924,7 @@ class ACHShard(ArkhamShard):
             WHERE tree_id = :tree_id
             ORDER BY depth, branch_order
             """,
-            {"tree_id": tree_id}
+            {"tree_id": tree_id},
         )
 
         nodes = []
@@ -946,7 +935,7 @@ class ACHShard(ArkhamShard):
                 SELECT * FROM arkham_ach.scenario_indicators
                 WHERE scenario_id = :scenario_id
                 """,
-                {"scenario_id": nr["id"]}
+                {"scenario_id": nr["id"]},
             )
 
             indicators = [
@@ -961,25 +950,27 @@ class ACHShard(ArkhamShard):
                 for ir in ind_rows
             ]
 
-            nodes.append(ScenarioNode(
-                id=nr["id"],
-                tree_id=nr["tree_id"],
-                parent_id=nr["parent_id"],
-                title=nr["title"],
-                description=nr["description"] or "",
-                probability=nr["probability"],
-                timeframe=nr["timeframe"] or "",
-                key_drivers=_parse_json_field(nr["key_drivers"]),
-                trigger_conditions=_parse_json_field(nr["trigger_conditions"]),
-                indicators=indicators,
-                status=ScenarioStatus(nr["status"]),
-                converted_hypothesis_id=nr["converted_hypothesis_id"],
-                depth=nr["depth"],
-                branch_order=nr["branch_order"],
-                notes=nr["notes"] or "",
-                created_at=nr["created_at"],
-                updated_at=nr["updated_at"],
-            ))
+            nodes.append(
+                ScenarioNode(
+                    id=nr["id"],
+                    tree_id=nr["tree_id"],
+                    parent_id=nr["parent_id"],
+                    title=nr["title"],
+                    description=nr["description"] or "",
+                    probability=nr["probability"],
+                    timeframe=nr["timeframe"] or "",
+                    key_drivers=_parse_json_field(nr["key_drivers"]),
+                    trigger_conditions=_parse_json_field(nr["trigger_conditions"]),
+                    indicators=indicators,
+                    status=ScenarioStatus(nr["status"]),
+                    converted_hypothesis_id=nr["converted_hypothesis_id"],
+                    depth=nr["depth"],
+                    branch_order=nr["branch_order"],
+                    notes=nr["notes"] or "",
+                    created_at=nr["created_at"],
+                    updated_at=nr["updated_at"],
+                )
+            )
 
         # Load drivers
         driver_rows = await self._db.fetch_all(
@@ -987,7 +978,7 @@ class ACHShard(ArkhamShard):
             SELECT * FROM arkham_ach.scenario_drivers
             WHERE tree_id = :tree_id
             """,
-            {"tree_id": tree_id}
+            {"tree_id": tree_id},
         )
 
         drivers = [
@@ -1022,10 +1013,7 @@ class ACHShard(ArkhamShard):
         if not self._db:
             return False
 
-        await self._db.execute(
-            "DELETE FROM arkham_ach.scenario_trees WHERE id = :id",
-            {"id": tree_id}
-        )
+        await self._db.execute("DELETE FROM arkham_ach.scenario_trees WHERE id = :id", {"id": tree_id})
         return True
 
     async def update_scenario_node(self, node: ScenarioNode) -> ScenarioNode:
@@ -1093,7 +1081,7 @@ class ACHShard(ArkhamShard):
                     "created_by": matrix.created_by,
                     "status": matrix.status.value,
                     "metadata": json.dumps(metadata),
-                }
+                },
             )
 
             # Save hypotheses
@@ -1124,7 +1112,7 @@ class ACHShard(ArkhamShard):
                         "author": hyp.author,
                         "created_at": hyp.created_at,
                         "updated_at": hyp.updated_at,
-                    }
+                    },
                 )
 
             # Save evidence items
@@ -1173,7 +1161,7 @@ class ACHShard(ArkhamShard):
                         "similarity_score": ev.similarity_score,
                         "created_at": ev.created_at,
                         "updated_at": ev.updated_at,
-                    }
+                    },
                 )
 
             # Save ratings
@@ -1201,7 +1189,7 @@ class ACHShard(ArkhamShard):
                         "rated_by": rating.author,
                         "created_at": rating.created_at,
                         "updated_at": rating.updated_at,
-                    }
+                    },
                 )
 
             logger.debug(f"Saved matrix {matrix.id} to database")
@@ -1226,10 +1214,7 @@ class ACHShard(ArkhamShard):
 
         try:
             # Load matrix record
-            row = await self._db.fetch_one(
-                "SELECT * FROM arkham_ach.matrices WHERE id = :id",
-                {"id": matrix_id}
-            )
+            row = await self._db.fetch_one("SELECT * FROM arkham_ach.matrices WHERE id = :id", {"id": matrix_id})
 
             if not row:
                 return None
@@ -1244,7 +1229,7 @@ class ACHShard(ArkhamShard):
                 WHERE matrix_id = :matrix_id
                 ORDER BY column_index
                 """,
-                {"matrix_id": matrix_id}
+                {"matrix_id": matrix_id},
             )
 
             hypotheses = [
@@ -1270,7 +1255,7 @@ class ACHShard(ArkhamShard):
                 WHERE matrix_id = :matrix_id
                 ORDER BY row_index
                 """,
-                {"matrix_id": matrix_id}
+                {"matrix_id": matrix_id},
             )
 
             evidence = [
@@ -1304,7 +1289,7 @@ class ACHShard(ArkhamShard):
                 SELECT * FROM arkham_ach.ratings
                 WHERE matrix_id = :matrix_id
                 """,
-                {"matrix_id": matrix_id}
+                {"matrix_id": matrix_id},
             )
 
             ratings = [
@@ -1424,10 +1409,7 @@ class ACHShard(ArkhamShard):
             return False
 
         try:
-            await self._db.execute(
-                "DELETE FROM arkham_ach.matrices WHERE id = :id",
-                {"id": matrix_id}
-            )
+            await self._db.execute("DELETE FROM arkham_ach.matrices WHERE id = :id", {"id": matrix_id})
             logger.info(f"Deleted matrix {matrix_id} from database")
             return True
 
@@ -1452,15 +1434,9 @@ class ACHShard(ArkhamShard):
 
         try:
             # Delete ratings for this hypothesis first
-            await self._db.execute(
-                "DELETE FROM arkham_ach.ratings WHERE hypothesis_id = :id",
-                {"id": hypothesis_id}
-            )
+            await self._db.execute("DELETE FROM arkham_ach.ratings WHERE hypothesis_id = :id", {"id": hypothesis_id})
             # Delete the hypothesis
-            await self._db.execute(
-                "DELETE FROM arkham_ach.hypotheses WHERE id = :id",
-                {"id": hypothesis_id}
-            )
+            await self._db.execute("DELETE FROM arkham_ach.hypotheses WHERE id = :id", {"id": hypothesis_id})
             logger.debug(f"Deleted hypothesis {hypothesis_id} from database")
             return True
 
@@ -1485,15 +1461,9 @@ class ACHShard(ArkhamShard):
 
         try:
             # Delete ratings for this evidence first
-            await self._db.execute(
-                "DELETE FROM arkham_ach.ratings WHERE evidence_id = :id",
-                {"id": evidence_id}
-            )
+            await self._db.execute("DELETE FROM arkham_ach.ratings WHERE evidence_id = :id", {"id": evidence_id})
             # Delete the evidence
-            await self._db.execute(
-                "DELETE FROM arkham_ach.evidence WHERE id = :id",
-                {"id": evidence_id}
-            )
+            await self._db.execute("DELETE FROM arkham_ach.evidence WHERE id = :id", {"id": evidence_id})
             logger.debug(f"Deleted evidence {evidence_id} from database")
             return True
 
@@ -1574,7 +1544,7 @@ class ACHShard(ArkhamShard):
                     "author": hypothesis.author,
                     "created_at": hypothesis.created_at,
                     "updated_at": hypothesis.updated_at,
-                }
+                },
             )
             logger.debug(f"Saved hypothesis {hypothesis.id} for matrix {hypothesis.matrix_id}")
             return hypothesis
@@ -1594,7 +1564,7 @@ class ACHShard(ArkhamShard):
                 WHERE matrix_id = :matrix_id
                 ORDER BY column_index
                 """,
-                {"matrix_id": matrix_id}
+                {"matrix_id": matrix_id},
             )
 
             return [
@@ -1623,15 +1593,9 @@ class ACHShard(ArkhamShard):
 
         try:
             # Delete ratings for this hypothesis first
-            await self._db.execute(
-                "DELETE FROM arkham_ach.ratings WHERE hypothesis_id = :id",
-                {"id": hypothesis_id}
-            )
+            await self._db.execute("DELETE FROM arkham_ach.ratings WHERE hypothesis_id = :id", {"id": hypothesis_id})
             # Delete the hypothesis
-            await self._db.execute(
-                "DELETE FROM arkham_ach.hypotheses WHERE id = :id",
-                {"id": hypothesis_id}
-            )
+            await self._db.execute("DELETE FROM arkham_ach.hypotheses WHERE id = :id", {"id": hypothesis_id})
             logger.debug(f"Deleted hypothesis {hypothesis_id}")
             return True
         except Exception as e:
@@ -1651,7 +1615,7 @@ class ACHShard(ArkhamShard):
                     SET column_index = :column_index, updated_at = NOW()
                     WHERE id = :id
                     """,
-                    {"id": h.id, "column_index": h.column_index}
+                    {"id": h.id, "column_index": h.column_index},
                 )
         except Exception as e:
             logger.error(f"Failed to update hypothesis indexes for matrix {matrix_id}: {e}")
@@ -1712,7 +1676,7 @@ class ACHShard(ArkhamShard):
                     "similarity_score": evidence.similarity_score,
                     "created_at": evidence.created_at,
                     "updated_at": evidence.updated_at,
-                }
+                },
             )
             logger.debug(f"Saved evidence {evidence.id} for matrix {evidence.matrix_id}")
             return evidence
@@ -1732,7 +1696,7 @@ class ACHShard(ArkhamShard):
                 WHERE matrix_id = :matrix_id
                 ORDER BY row_index
                 """,
-                {"matrix_id": matrix_id}
+                {"matrix_id": matrix_id},
             )
 
             return [
@@ -1770,15 +1734,9 @@ class ACHShard(ArkhamShard):
 
         try:
             # Delete ratings for this evidence first
-            await self._db.execute(
-                "DELETE FROM arkham_ach.ratings WHERE evidence_id = :id",
-                {"id": evidence_id}
-            )
+            await self._db.execute("DELETE FROM arkham_ach.ratings WHERE evidence_id = :id", {"id": evidence_id})
             # Delete the evidence
-            await self._db.execute(
-                "DELETE FROM arkham_ach.evidence WHERE id = :id",
-                {"id": evidence_id}
-            )
+            await self._db.execute("DELETE FROM arkham_ach.evidence WHERE id = :id", {"id": evidence_id})
             logger.debug(f"Deleted evidence {evidence_id}")
             return True
         except Exception as e:
@@ -1798,7 +1756,7 @@ class ACHShard(ArkhamShard):
                     SET row_index = :row_index, updated_at = NOW()
                     WHERE id = :id
                     """,
-                    {"id": e.id, "row_index": e.row_index}
+                    {"id": e.id, "row_index": e.row_index},
                 )
         except Exception as e:
             logger.error(f"Failed to update evidence indexes for matrix {matrix_id}: {e}")
@@ -1833,7 +1791,7 @@ class ACHShard(ArkhamShard):
                     "rated_by": rating.author,
                     "created_at": rating.created_at,
                     "updated_at": rating.updated_at,
-                }
+                },
             )
             logger.debug(f"Saved rating for hypothesis {rating.hypothesis_id}, evidence {rating.evidence_id}")
             return rating
@@ -1856,7 +1814,7 @@ class ACHShard(ArkhamShard):
                 SELECT * FROM arkham_ach.ratings
                 WHERE matrix_id = :matrix_id
                 """,
-                {"matrix_id": matrix_id}
+                {"matrix_id": matrix_id},
             )
 
             ratings = []
@@ -1866,17 +1824,19 @@ class ACHShard(ArkhamShard):
                 except (ValueError, KeyError):
                     rating_value = ConsistencyRating.NEUTRAL
 
-                ratings.append(Rating(
-                    matrix_id=row["matrix_id"],
-                    evidence_id=row["evidence_id"],
-                    hypothesis_id=row["hypothesis_id"],
-                    rating=rating_value,
-                    reasoning=row["notes"] or "",
-                    confidence=1.0,
-                    author=row["rated_by"],
-                    created_at=row["created_at"],
-                    updated_at=row["updated_at"],
-                ))
+                ratings.append(
+                    Rating(
+                        matrix_id=row["matrix_id"],
+                        evidence_id=row["evidence_id"],
+                        hypothesis_id=row["hypothesis_id"],
+                        rating=rating_value,
+                        reasoning=row["notes"] or "",
+                        confidence=1.0,
+                        author=row["rated_by"],
+                        created_at=row["created_at"],
+                        updated_at=row["updated_at"],
+                    )
+                )
 
             return ratings
         except Exception as e:
@@ -1894,7 +1854,7 @@ class ACHShard(ArkhamShard):
                 DELETE FROM arkham_ach.ratings
                 WHERE matrix_id = :matrix_id AND hypothesis_id = :hypothesis_id AND evidence_id = :evidence_id
                 """,
-                {"matrix_id": matrix_id, "hypothesis_id": hypothesis_id, "evidence_id": evidence_id}
+                {"matrix_id": matrix_id, "hypothesis_id": hypothesis_id, "evidence_id": evidence_id},
             )
             logger.debug(f"Deleted rating for hypothesis {hypothesis_id}, evidence {evidence_id}")
             return True
@@ -1909,8 +1869,7 @@ class ACHShard(ArkhamShard):
 
         try:
             await self._db.execute(
-                "DELETE FROM arkham_ach.ratings WHERE hypothesis_id = :hypothesis_id",
-                {"hypothesis_id": hypothesis_id}
+                "DELETE FROM arkham_ach.ratings WHERE hypothesis_id = :hypothesis_id", {"hypothesis_id": hypothesis_id}
             )
             logger.debug(f"Deleted all ratings for hypothesis {hypothesis_id}")
             return True
@@ -1925,8 +1884,7 @@ class ACHShard(ArkhamShard):
 
         try:
             await self._db.execute(
-                "DELETE FROM arkham_ach.ratings WHERE evidence_id = :evidence_id",
-                {"evidence_id": evidence_id}
+                "DELETE FROM arkham_ach.ratings WHERE evidence_id = :evidence_id", {"evidence_id": evidence_id}
             )
             logger.debug(f"Deleted all ratings for evidence {evidence_id}")
             return True

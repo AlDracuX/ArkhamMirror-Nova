@@ -89,7 +89,15 @@ export function DeduplicationPanel({
     } catch {
       // Error handled by hook
     }
-  }, [selectedDuplicates, documentId, mergeStrategy, merge, refetchExact, refetchSimilar, onRefresh]);
+  }, [
+    selectedDuplicates,
+    documentId,
+    mergeStrategy,
+    merge,
+    refetchExact,
+    refetchSimilar,
+    onRefresh,
+  ]);
 
   const renderDuplicateList = (
     duplicates: DuplicateResult[] | undefined,
@@ -142,8 +150,8 @@ export function DeduplicationPanel({
                   <span className="dedup-exact">Exact match (100%)</span>
                 ) : (
                   <span className="dedup-similar">
-                    {(dup.similarity_score * 100).toFixed(1)}% similar
-                    (hamming: {dup.hamming_distance})
+                    {(dup.similarity_score * 100).toFixed(1)}% similar (hamming:{' '}
+                    {dup.hamming_distance})
                   </span>
                 )}
               </div>
@@ -161,8 +169,7 @@ export function DeduplicationPanel({
     );
   };
 
-  const totalDuplicates =
-    (exactDuplicates?.length || 0) + (similarDuplicates?.length || 0);
+  const totalDuplicates = (exactDuplicates?.length || 0) + (similarDuplicates?.length || 0);
 
   return (
     <div className="dedup-panel">
@@ -172,16 +179,10 @@ export function DeduplicationPanel({
           <Icon name="Copy" size={18} />
           <h3>Deduplication</h3>
           {totalDuplicates > 0 && (
-            <span className="dedup-badge dedup-badge-warning">
-              {totalDuplicates} found
-            </span>
+            <span className="dedup-badge dedup-badge-warning">{totalDuplicates} found</span>
           )}
         </div>
-        <button
-          onClick={handleComputeHash}
-          disabled={hashLoading}
-          className="btn btn-secondary"
-        >
+        <button onClick={handleComputeHash} disabled={hashLoading} className="btn btn-secondary">
           {hashLoading ? (
             <Icon name="Loader2" size={16} className="spin" />
           ) : (
@@ -200,35 +201,26 @@ export function DeduplicationPanel({
 
       {/* Exact Duplicates Section */}
       <div className="dedup-section">
-        <button
-          onClick={() => setShowExact(!showExact)}
-          className="dedup-section-header"
-        >
+        <button onClick={() => setShowExact(!showExact)} className="dedup-section-header">
           <div className="dedup-section-title">
             <span>Exact Duplicates</span>
             {exactDuplicates && exactDuplicates.length > 0 && (
-              <span className="dedup-badge dedup-badge-error">
-                {exactDuplicates.length}
-              </span>
+              <span className="dedup-badge dedup-badge-error">{exactDuplicates.length}</span>
             )}
           </div>
           <Icon name={showExact ? 'ChevronUp' : 'ChevronDown'} size={16} />
         </button>
-        {showExact && renderDuplicateList(exactDuplicates ?? undefined, exactLoading, exactError, 'exact')}
+        {showExact &&
+          renderDuplicateList(exactDuplicates ?? undefined, exactLoading, exactError, 'exact')}
       </div>
 
       {/* Similar Duplicates Section */}
       <div className="dedup-section">
-        <button
-          onClick={() => setShowSimilar(!showSimilar)}
-          className="dedup-section-header"
-        >
+        <button onClick={() => setShowSimilar(!showSimilar)} className="dedup-section-header">
           <div className="dedup-section-title">
             <span>Similar Documents</span>
             {similarDuplicates && similarDuplicates.length > 0 && (
-              <span className="dedup-badge dedup-badge-warning">
-                {similarDuplicates.length}
-              </span>
+              <span className="dedup-badge dedup-badge-warning">{similarDuplicates.length}</span>
             )}
           </div>
           <Icon name={showSimilar ? 'ChevronUp' : 'ChevronDown'} size={16} />
@@ -249,7 +241,12 @@ export function DeduplicationPanel({
                 <span>{(similarThreshold * 100).toFixed(0)}%</span>
               </div>
             </div>
-            {renderDuplicateList(similarDuplicates ?? undefined, similarLoading, similarError, 'similar')}
+            {renderDuplicateList(
+              similarDuplicates ?? undefined,
+              similarLoading,
+              similarError,
+              'similar'
+            )}
           </>
         )}
       </div>
@@ -257,9 +254,7 @@ export function DeduplicationPanel({
       {/* Merge Actions */}
       {selectedDuplicates.size > 0 && (
         <div className="dedup-merge">
-          <span className="dedup-merge-count">
-            {selectedDuplicates.size} selected for merge
-          </span>
+          <span className="dedup-merge-count">{selectedDuplicates.size} selected for merge</span>
           <select
             value={mergeStrategy}
             onChange={(e) => setMergeStrategy(e.target.value as MergeRequest['cleanup_action'])}
@@ -270,11 +265,7 @@ export function DeduplicationPanel({
             <option value="hard_delete">Hard Delete</option>
             <option value="keep">Keep All</option>
           </select>
-          <button
-            onClick={handleMerge}
-            disabled={mergeLoading}
-            className="btn btn-primary"
-          >
+          <button onClick={handleMerge} disabled={mergeLoading} className="btn btn-primary">
             {mergeLoading ? (
               <Icon name="Loader2" size={16} className="spin" />
             ) : (

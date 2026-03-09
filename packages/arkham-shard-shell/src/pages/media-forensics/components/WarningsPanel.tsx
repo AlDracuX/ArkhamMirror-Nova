@@ -148,10 +148,7 @@ export function WarningsPanel({ analysis }: WarningsPanelProps) {
           </div>
           <div className="findings-list">
             {categoryFindings.map((finding) => (
-              <div
-                key={finding.id}
-                className={`finding-card severity-${finding.severity}`}
-              >
+              <div key={finding.id} className={`finding-card severity-${finding.severity}`}>
                 <div className="finding-header">
                   <div className="finding-title-row">
                     <Icon name={getSeverityIcon(finding.severity) as any} size={16} />

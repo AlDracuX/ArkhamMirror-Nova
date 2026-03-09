@@ -628,7 +628,7 @@
   font-weight: 500;
 }
 
-.checkbox-label input[type="checkbox"] {
+.checkbox-label input[type='checkbox'] {
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -657,7 +657,7 @@
   background: var(--bg-hover);
 }
 
-.document-item input[type="checkbox"] {
+.document-item input[type='checkbox'] {
   width: 16px;
   height: 16px;
   cursor: pointer;

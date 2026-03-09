@@ -4,13 +4,12 @@ Ingest Shard - Shard Class Tests
 Tests for IngestShard with mocked Frame services.
 """
 
-import pytest
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from arkham_shard_ingest.shard import IngestShard
+import pytest
 from arkham_shard_ingest.models import (
     FileCategory,
     FileInfo,
@@ -19,7 +18,7 @@ from arkham_shard_ingest.models import (
     JobPriority,
     JobStatus,
 )
-
+from arkham_shard_ingest.shard import IngestShard
 
 # === Fixtures ===
 
@@ -58,10 +57,12 @@ def mock_frame(mock_events, mock_workers, mock_config):
     frame = MagicMock()
     frame.config = MagicMock()
     frame.config.get = MagicMock(side_effect=lambda key, default=None: mock_config.get(key, default))
-    frame.get_service = MagicMock(side_effect=lambda name: {
-        "events": mock_events,
-        "workers": mock_workers,
-    }.get(name))
+    frame.get_service = MagicMock(
+        side_effect=lambda name: {
+            "events": mock_events,
+            "workers": mock_workers,
+        }.get(name)
+    )
     return frame
 
 
@@ -169,10 +170,12 @@ class TestInitialization:
         frame = MagicMock()
         frame.config = MagicMock()
         frame.config.get = MagicMock(return_value="/tmp/test")
-        frame.get_service = MagicMock(side_effect=lambda name: {
-            "events": mock_events,
-            "workers": None,
-        }.get(name))
+        frame.get_service = MagicMock(
+            side_effect=lambda name: {
+                "events": mock_events,
+                "workers": None,
+            }.get(name)
+        )
 
         with patch("arkham_shard_ingest.shard.IntakeManager"):
             shard = IngestShard()
@@ -553,10 +556,12 @@ class TestIntegration:
                 assert status is not None
 
                 # 3. Simulate job completion
-                await shard._on_job_completed({
-                    "job_id": "job-123",
-                    "result": {"pages": 5, "text": "extracted text"},
-                })
+                await shard._on_job_completed(
+                    {
+                        "job_id": "job-123",
+                        "result": {"pages": 5, "text": "extracted text"},
+                    }
+                )
 
                 # Verify advance was called
                 mock_dispatcher.advance.assert_called()

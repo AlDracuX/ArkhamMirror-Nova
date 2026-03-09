@@ -1,9 +1,9 @@
 """Tests for OCR shard implementation."""
 
-import pytest
-import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+import pytest_asyncio
 from arkham_shard_ocr.shard import OCRShard
 
 
@@ -109,6 +109,7 @@ class TestOCRShardInitialization:
 
         # Check both workers were registered
         from arkham_shard_ocr.workers import PaddleWorker, QwenWorker
+
         calls = worker_service.register_worker.call_args_list
         registered_workers = [call[0][0] for call in calls]
         assert PaddleWorker in registered_workers
@@ -139,6 +140,7 @@ class TestOCRShardInitialization:
     @pytest.mark.asyncio
     async def test_initialize_without_event_bus(self, mock_frame):
         """Test initialization when event bus unavailable."""
+
         def get_service(name):
             if name == "workers":
                 return MagicMock()
@@ -158,6 +160,7 @@ class TestOCRShardInitialization:
 
         # Verify API was initialized with shard reference
         from arkham_shard_ocr import api
+
         assert api._shard == shard
 
 
@@ -216,6 +219,7 @@ class TestOCRShardRoutes:
         routes = shard.get_routes()
 
         from arkham_shard_ocr.api import router
+
         assert routes == router
 
     def test_routes_has_endpoints(self):
@@ -377,6 +381,7 @@ class TestOCRDocumentMethod:
     @pytest.mark.asyncio
     async def test_ocr_document_without_event_bus(self, mock_frame):
         """Test OCR document when event bus unavailable."""
+
         def get_service(name):
             if name == "events":
                 return None
@@ -394,6 +399,7 @@ class TestOCRDocumentMethod:
     @pytest.mark.asyncio
     async def test_ocr_document_without_doc_service(self, mock_frame):
         """Test OCR document when document service unavailable."""
+
         def get_service(name):
             if name == "documents":
                 return None

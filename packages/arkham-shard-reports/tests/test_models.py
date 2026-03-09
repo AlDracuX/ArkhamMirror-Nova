@@ -4,22 +4,22 @@ Reports Shard - Model Tests
 Tests for all enums, dataclasses, and data models.
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_reports.models import (
-    # Enums
-    ReportType,
-    ReportStatus,
-    ReportFormat,
+    GeneratedSection,
     # Dataclasses
     Report,
-    ReportTemplate,
-    ReportSchedule,
-    GeneratedSection,
-    ReportGenerationResult,
-    ReportStatistics,
     ReportFilter,
+    ReportFormat,
+    ReportGenerationResult,
+    ReportSchedule,
+    ReportStatistics,
+    ReportStatus,
+    ReportTemplate,
+    # Enums
+    ReportType,
 )
 
 

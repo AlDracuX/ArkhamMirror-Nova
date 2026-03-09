@@ -4,20 +4,20 @@ Projects Shard - Model Tests
 Tests for all enums, dataclasses, and data models.
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_projects.models import (
-    # Enums
-    ProjectStatus,
-    ProjectRole,
     # Dataclasses
     Project,
-    ProjectMember,
-    ProjectDocument,
     ProjectActivity,
-    ProjectStatistics,
+    ProjectDocument,
     ProjectFilter,
+    ProjectMember,
+    ProjectRole,
+    ProjectStatistics,
+    # Enums
+    ProjectStatus,
 )
 
 

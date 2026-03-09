@@ -7,7 +7,7 @@ to verify the worker infrastructure is functioning correctly.
 
 import asyncio
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 from .base import BaseWorker
 
@@ -117,15 +117,13 @@ async def test_worker_infrastructure():
     Run this to verify workers can connect and process jobs.
     Uses PostgreSQL for job queuing (arkham_jobs schema).
     """
-    import os
     import json
+    import os
     import uuid
+
     import asyncpg
 
-    database_url = os.environ.get(
-        "DATABASE_URL",
-        "postgresql://arkham:arkhampass@localhost:5432/arkhamdb"
-    )
+    database_url = os.environ.get("DATABASE_URL", "postgresql://arkham:arkhampass@localhost:5432/arkhamdb")
 
     print("Testing Worker Infrastructure")
     print("=" * 50)
@@ -135,7 +133,7 @@ async def test_worker_infrastructure():
     try:
         conn = await asyncpg.connect(database_url)
         await conn.execute("SELECT 1")
-        print(f"   OK - Connected to PostgreSQL")
+        print("   OK - Connected to PostgreSQL")
     except Exception as e:
         print(f"   FAILED - {e}")
         print("   Make sure PostgreSQL is running!")
@@ -146,10 +144,17 @@ async def test_worker_infrastructure():
     job_id = f"test-{uuid.uuid4().hex[:8]}"
 
     try:
-        await conn.execute("""
+        await conn.execute(
+            """
             INSERT INTO arkham_jobs.jobs (id, pool, payload, priority, status)
             VALUES ($1, $2, $3, $4, $5)
-        """, job_id, "cpu-light", json.dumps({"message": "Test message", "delay": 0.1}), 1, "pending")
+        """,
+            job_id,
+            "cpu-light",
+            json.dumps({"message": "Test message", "delay": 0.1}),
+            1,
+            "pending",
+        )
         print(f"   OK - Created job {job_id}")
     except Exception as e:
         print(f"   FAILED - {e}")
@@ -182,9 +187,12 @@ async def test_worker_infrastructure():
 
     # 4. Check job status
     print("\n4. Checking job status...")
-    status = await conn.fetchval("""
+    status = await conn.fetchval(
+        """
         SELECT status FROM arkham_jobs.jobs WHERE id = $1
-    """, job_id)
+    """,
+        job_id,
+    )
     print(f"   Job status: {status}")
 
     # Cleanup

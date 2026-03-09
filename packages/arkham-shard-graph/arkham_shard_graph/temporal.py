@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
-from .models import Graph, GraphNode, GraphEdge
+from .models import Graph, GraphEdge, GraphNode
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +20,13 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TemporalSnapshot:
     """A snapshot of the graph at a point in time."""
+
     timestamp: datetime
     nodes: list[GraphNode] = field(default_factory=list)
     edges: list[GraphEdge] = field(default_factory=list)
 
     # Change tracking (relative to previous snapshot)
-    added_nodes: list[str] = field(default_factory=list)   # Node IDs added since previous
+    added_nodes: list[str] = field(default_factory=list)  # Node IDs added since previous
     removed_nodes: list[str] = field(default_factory=list)  # Node IDs removed since previous
     added_edges: list[tuple[str, str]] = field(default_factory=list)  # Edge pairs added
     removed_edges: list[tuple[str, str]] = field(default_factory=list)  # Edge pairs removed
@@ -54,6 +55,7 @@ class TemporalSnapshot:
 @dataclass
 class TemporalRange:
     """Time range for temporal analysis."""
+
     start_date: datetime
     end_date: datetime
     interval: timedelta
@@ -72,6 +74,7 @@ class TemporalRange:
 @dataclass
 class EvolutionMetrics:
     """Metrics describing graph evolution over time."""
+
     total_nodes_added: int = 0
     total_nodes_removed: int = 0
     total_edges_added: int = 0
@@ -82,12 +85,12 @@ class EvolutionMetrics:
     edge_growth_rate: float = 0.0  # Average new edges per interval
 
     # Churn metrics
-    node_churn_rate: float = 0.0   # (added + removed) / total
+    node_churn_rate: float = 0.0  # (added + removed) / total
     edge_churn_rate: float = 0.0
 
     # Stability
-    stable_node_count: int = 0     # Nodes present in all snapshots
-    stable_edge_count: int = 0     # Edges present in all snapshots
+    stable_node_count: int = 0  # Nodes present in all snapshots
+    stable_edge_count: int = 0  # Edges present in all snapshots
 
     # Peak values
     peak_node_count: int = 0
@@ -461,15 +464,11 @@ class TemporalGraphEngine:
         # Churn rates
         final_count = snapshots[-1].node_count if snapshots else 0
         if final_count > 0:
-            metrics.node_churn_rate = (
-                metrics.total_nodes_added + metrics.total_nodes_removed
-            ) / final_count
+            metrics.node_churn_rate = (metrics.total_nodes_added + metrics.total_nodes_removed) / final_count
 
         final_edges = snapshots[-1].edge_count if snapshots else 0
         if final_edges > 0:
-            metrics.edge_churn_rate = (
-                metrics.total_edges_added + metrics.total_edges_removed
-            ) / final_edges
+            metrics.edge_churn_rate = (metrics.total_edges_added + metrics.total_edges_removed) / final_edges
 
         return metrics
 

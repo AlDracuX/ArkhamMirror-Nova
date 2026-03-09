@@ -13,7 +13,13 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../../components/common/Icon';
 import { useToast } from '../../context/ToastContext';
-import { useParseText, useParseStats, useChunkingConfig, updateChunkingConfig, ChunkingConfig } from './api';
+import {
+  useParseText,
+  useParseStats,
+  useChunkingConfig,
+  updateChunkingConfig,
+  ChunkingConfig,
+} from './api';
 import type { EntityMention, DateMention, EntityType } from './types';
 
 export function ParsePage() {
@@ -68,18 +74,21 @@ export function ParsePage() {
     setResults(null);
   }, []);
 
-  const handleChunkingChange = useCallback(async (field: keyof ChunkingConfig, value: number | string) => {
-    setSavingChunking(true);
-    try {
-      await updateChunkingConfig({ [field]: value });
-      toast.success('Chunking settings updated');
-      refetchChunking();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update settings');
-    } finally {
-      setSavingChunking(false);
-    }
-  }, [toast, refetchChunking]);
+  const handleChunkingChange = useCallback(
+    async (field: keyof ChunkingConfig, value: number | string) => {
+      setSavingChunking(true);
+      try {
+        await updateChunkingConfig({ [field]: value });
+        toast.success('Chunking settings updated');
+        refetchChunking();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to update settings');
+      } finally {
+        setSavingChunking(false);
+      }
+    },
+    [toast, refetchChunking]
+  );
 
   // Get entity icon and color by type
   const getEntityTypeConfig = (type: EntityType) => {
@@ -108,7 +117,7 @@ export function ParsePage() {
   const groupEntitiesByType = (entities: EntityMention[], dates: DateMention[]) => {
     const grouped: Record<string, Array<EntityMention | DateMention>> = {};
 
-    entities.forEach(entity => {
+    entities.forEach((entity) => {
       const type = entity.entity_type;
       if (!grouped[type]) {
         grouped[type] = [];
@@ -123,9 +132,7 @@ export function ParsePage() {
     return grouped;
   };
 
-  const entityGroups = results
-    ? groupEntitiesByType(results.entities, results.dates)
-    : {};
+  const entityGroups = results ? groupEntitiesByType(results.entities, results.dates) : {};
 
   return (
     <div className="parse-page">
@@ -146,8 +153,6 @@ export function ParsePage() {
           Chunking Settings
         </button>
       </header>
-
-
 
       {/* Chunking Settings Panel */}
       {showChunkingSettings && chunkingConfig && (
@@ -175,7 +180,9 @@ export function ParsePage() {
                 id="chunk-size"
                 type="number"
                 value={chunkingConfig.chunk_size}
-                onChange={(e) => handleChunkingChange('chunk_size', parseInt(e.target.value) || 500)}
+                onChange={(e) =>
+                  handleChunkingChange('chunk_size', parseInt(e.target.value) || 500)
+                }
                 min={100}
                 max={2000}
                 step={50}
@@ -189,7 +196,9 @@ export function ParsePage() {
                 id="chunk-overlap"
                 type="number"
                 value={chunkingConfig.chunk_overlap}
-                onChange={(e) => handleChunkingChange('chunk_overlap', parseInt(e.target.value) || 50)}
+                onChange={(e) =>
+                  handleChunkingChange('chunk_overlap', parseInt(e.target.value) || 50)
+                }
                 min={0}
                 max={500}
                 step={10}
@@ -214,7 +223,8 @@ export function ParsePage() {
               <span className="setting-hint">
                 {chunkingConfig.chunk_method === 'fixed' && 'Split at fixed token intervals'}
                 {chunkingConfig.chunk_method === 'sentence' && 'Split at sentence boundaries'}
-                {chunkingConfig.chunk_method === 'semantic' && 'Split at semantic boundaries using NLP'}
+                {chunkingConfig.chunk_method === 'semantic' &&
+                  'Split at semantic boundaries using NLP'}
               </span>
             </div>
           </div>
@@ -229,39 +239,39 @@ export function ParsePage() {
 
       {/* Statistics Cards */}
       <section className="stats-grid">
-        <div 
-          className="stat-card clickable" 
+        <div
+          className="stat-card clickable"
           onClick={() => navigate('/entities')}
           title="View all entities"
         >
           <Icon name="Tag" size={24} className="stat-icon" style={{ color: '#6366f1' }} />
           <div className="stat-content">
-            <div className="stat-value">{loadingStats ? '...' : stats?.total_entities ?? 0}</div>
+            <div className="stat-value">{loadingStats ? '...' : (stats?.total_entities ?? 0)}</div>
             <div className="stat-label">Total Entities</div>
           </div>
           <Icon name="ChevronRight" size={16} className="stat-arrow" />
         </div>
-        <div 
-          className="stat-card clickable" 
+        <div
+          className="stat-card clickable"
           onClick={() => navigate('/parse/chunks')}
           title="View all text chunks"
         >
           <Icon name="FileText" size={24} className="stat-icon" style={{ color: '#3b82f6' }} />
           <div className="stat-content">
-            <div className="stat-value">{loadingStats ? '...' : stats?.total_chunks ?? 0}</div>
+            <div className="stat-value">{loadingStats ? '...' : (stats?.total_chunks ?? 0)}</div>
             <div className="stat-label">Text Chunks</div>
           </div>
           <Icon name="ChevronRight" size={16} className="stat-arrow" />
         </div>
-        <div 
-          className="stat-card clickable" 
+        <div
+          className="stat-card clickable"
           onClick={() => navigate('/documents')}
           title="View all documents"
         >
           <Icon name="File" size={24} className="stat-icon" style={{ color: '#22c55e' }} />
           <div className="stat-content">
             <div className="stat-value">
-              {loadingStats ? '...' : stats?.total_documents_parsed ?? 0}
+              {loadingStats ? '...' : (stats?.total_documents_parsed ?? 0)}
             </div>
             <div className="stat-label">Documents Parsed</div>
           </div>
@@ -307,7 +317,7 @@ export function ParsePage() {
           className="text-input"
           placeholder="Enter or paste text to extract entities, people, organizations, locations, dates, and more..."
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={(e) => setText(e.target.value)}
           rows={10}
         />
       </section>
@@ -321,9 +331,7 @@ export function ParsePage() {
               Extracted Entities
             </h2>
             <div className="results-meta">
-              <span>
-                {results.entities.length + results.dates.length} entities
-              </span>
+              <span>{results.entities.length + results.dates.length} entities</span>
               <span className="separator">•</span>
               <span>{results.processing_time_ms.toFixed(0)}ms</span>
             </div>

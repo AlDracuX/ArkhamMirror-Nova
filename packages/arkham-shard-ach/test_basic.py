@@ -6,17 +6,17 @@ from pathlib import Path
 # Add package to path
 sys.path.insert(0, str(Path(__file__).parent))
 
+from arkham_shard_ach.export import MatrixExporter
+from arkham_shard_ach.matrix import MatrixManager
 from arkham_shard_ach.models import (
     ACHMatrix,
-    Hypothesis,
-    Evidence,
-    Rating,
     ConsistencyRating,
+    Evidence,
+    Hypothesis,
     MatrixStatus,
+    Rating,
 )
-from arkham_shard_ach.matrix import MatrixManager
 from arkham_shard_ach.scoring import ACHScorer
-from arkham_shard_ach.export import MatrixExporter
 
 
 def test_basic_workflow():

@@ -2,15 +2,17 @@
 Event API endpoints.
 """
 
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
 
 router = APIRouter()
 
 
 class EmitEventRequest(BaseModel):
     """Request body for emitting an event."""
+
     event_type: str
     payload: Dict[str, Any]
     source: str = "api"

@@ -4,13 +4,13 @@ Search Shard - API Tests
 Tests for all FastAPI endpoints.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock
-from fastapi.testclient import TestClient
-from fastapi import FastAPI
+from unittest.mock import AsyncMock, MagicMock
 
-from arkham_shard_search.api import router, init_api
+import pytest
+from arkham_shard_search.api import init_api, router
 from arkham_shard_search.models import SearchResultItem
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -43,12 +43,14 @@ def mock_hybrid_engine():
 def mock_filter_optimizer():
     """Create mock filter optimizer."""
     mock = MagicMock()
-    mock.get_available_filters = AsyncMock(return_value={
-        "file_types": [],
-        "entities": [],
-        "projects": [],
-        "date_ranges": {},
-    })
+    mock.get_available_filters = AsyncMock(
+        return_value={
+            "file_types": [],
+            "entities": [],
+            "projects": [],
+            "date_ranges": {},
+        }
+    )
     return mock
 
 
@@ -374,9 +376,7 @@ class TestSimilarDocumentsEndpoint:
 
     def test_find_similar_with_options(self, client, mock_semantic_engine):
         """Test find similar with custom options."""
-        response = client.post(
-            "/api/search/similar/doc-1?limit=20&min_similarity=0.7"
-        )
+        response = client.post("/api/search/similar/doc-1?limit=20&min_similarity=0.7")
 
         assert response.status_code == 200
         mock_semantic_engine.find_similar.assert_called_with(
@@ -459,8 +459,7 @@ class TestSearchErrorHandling:
     """Tests for error handling in search endpoints."""
 
     def test_search_engine_exception(
-        self, mock_hybrid_engine, mock_semantic_engine, mock_keyword_engine,
-        mock_filter_optimizer, mock_event_bus
+        self, mock_hybrid_engine, mock_semantic_engine, mock_keyword_engine, mock_filter_optimizer, mock_event_bus
     ):
         """Test handling search engine exception."""
         mock_hybrid_engine.search.side_effect = Exception("Search failed")
@@ -486,8 +485,7 @@ class TestSearchErrorHandling:
         assert "Search failed" in response.json()["detail"]
 
     def test_suggest_exception(
-        self, mock_hybrid_engine, mock_semantic_engine, mock_keyword_engine,
-        mock_filter_optimizer, mock_event_bus
+        self, mock_hybrid_engine, mock_semantic_engine, mock_keyword_engine, mock_filter_optimizer, mock_event_bus
     ):
         """Test handling suggest exception."""
         mock_keyword_engine.suggest.side_effect = Exception("Autocomplete failed")
@@ -510,8 +508,7 @@ class TestSearchErrorHandling:
         assert "Autocomplete failed" in response.json()["detail"]
 
     def test_similar_exception(
-        self, mock_hybrid_engine, mock_semantic_engine, mock_keyword_engine,
-        mock_filter_optimizer, mock_event_bus
+        self, mock_hybrid_engine, mock_semantic_engine, mock_keyword_engine, mock_filter_optimizer, mock_event_bus
     ):
         """Test handling find similar exception."""
         mock_semantic_engine.find_similar.side_effect = Exception("Similar search failed")

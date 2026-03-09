@@ -46,8 +46,9 @@ interface EventRowProps {
 
 function EventRow({ event, onShowPayload }: EventRowProps) {
   const category = getEventCategory(event.event_type);
-  const isError = event.event_type.toLowerCase().includes('error') ||
-                  event.event_type.toLowerCase().includes('fail');
+  const isError =
+    event.event_type.toLowerCase().includes('error') ||
+    event.event_type.toLowerCase().includes('fail');
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -139,9 +140,7 @@ function PayloadModal({ event, onClose }: PayloadModalProps) {
           </div>
           <div className="event-payload-section">
             <label>Payload:</label>
-            <pre className="payload-content">
-              {JSON.stringify(event.payload, null, 2)}
-            </pre>
+            <pre className="payload-content">{JSON.stringify(event.payload, null, 2)}</pre>
           </div>
         </div>
       </div>
@@ -152,7 +151,10 @@ function PayloadModal({ event, onClose }: PayloadModalProps) {
 export function EventsTab() {
   const [filters, setFilters] = useState<EventFilters>({ limit: 100 });
   const [selectedEvent, setSelectedEvent] = useState<SystemEvent | null>(null);
-  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [actionMessage, setActionMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   const { events, total, loading, error, refresh } = useEvents(filters);
   const { types } = useEventTypes();
@@ -177,7 +179,7 @@ export function EventsTab() {
   };
 
   const handleFilterChange = (key: keyof EventFilters, value: string | undefined) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       [key]: value || undefined,
       offset: 0, // Reset offset when filters change
@@ -185,9 +187,9 @@ export function EventsTab() {
   };
 
   const errorCount = useMemo(() => {
-    return events.filter(e =>
-      e.event_type.toLowerCase().includes('error') ||
-      e.event_type.toLowerCase().includes('fail')
+    return events.filter(
+      (e) =>
+        e.event_type.toLowerCase().includes('error') || e.event_type.toLowerCase().includes('fail')
     ).length;
   }, [events]);
 
@@ -263,8 +265,10 @@ export function EventsTab() {
               onChange={(e) => handleFilterChange('event_type', e.target.value)}
             >
               <option value="">All Types</option>
-              {types.map(type => (
-                <option key={type} value={type}>{type}</option>
+              {types.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
               ))}
             </select>
           </div>
@@ -275,8 +279,10 @@ export function EventsTab() {
               onChange={(e) => handleFilterChange('source', e.target.value)}
             >
               <option value="">All Sources</option>
-              {sources.map(source => (
-                <option key={source} value={source}>{source}</option>
+              {sources.map((source) => (
+                <option key={source} value={source}>
+                  {source}
+                </option>
               ))}
             </select>
           </div>

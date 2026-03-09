@@ -57,9 +57,7 @@ export function LinkedDocumentsSection({
       if (response.ok) {
         const data: DocumentsResponse = await response.json();
         // Filter out already linked documents
-        const available = data.items.filter(
-          (doc) => !linkedDocumentIds.includes(doc.id)
-        );
+        const available = data.items.filter((doc) => !linkedDocumentIds.includes(doc.id));
         setAvailableDocuments(available);
       }
     } catch (err) {
@@ -134,8 +132,8 @@ export function LinkedDocumentsSection({
       </div>
 
       <p className="section-description">
-        Link documents to focus corpus search on specific sources. When linked documents
-        exist, corpus search will only search within these documents.
+        Link documents to focus corpus search on specific sources. When linked documents exist,
+        corpus search will only search within these documents.
       </p>
 
       {linkedDocumentIds.length === 0 ? (
@@ -180,10 +178,7 @@ export function LinkedDocumentsSection({
                 <Icon name="FilePlus" size={20} />
                 Link Documents
               </h2>
-              <button
-                className="btn btn-icon"
-                onClick={() => setShowAddDialog(false)}
-              >
+              <button className="btn btn-icon" onClick={() => setShowAddDialog(false)}>
                 <Icon name="X" size={18} />
               </button>
             </div>
@@ -231,14 +226,9 @@ export function LinkedDocumentsSection({
             </div>
 
             <div className="dialog-footer">
-              <span className="selection-count">
-                {selectedDocs.length} document(s) selected
-              </span>
+              <span className="selection-count">{selectedDocs.length} document(s) selected</span>
               <div className="dialog-actions">
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => setShowAddDialog(false)}
-                >
+                <button className="btn btn-secondary" onClick={() => setShowAddDialog(false)}>
                   Cancel
                 </button>
                 <button

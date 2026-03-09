@@ -8,16 +8,19 @@ import { useState } from 'react';
 import { Icon } from '../../../components/common/Icon';
 
 // Guidance content for each step
-const STEP_GUIDANCE: Record<number, {
-  title: string;
-  icon: string;
-  color: string;
-  sections: Array<{
-    heading: string;
-    items?: string[];
-    text?: string;
-  }>;
-}> = {
+const STEP_GUIDANCE: Record<
+  number,
+  {
+    title: string;
+    icon: string;
+    color: string;
+    sections: Array<{
+      heading: string;
+      items?: string[];
+      text?: string;
+    }>;
+  }
+> = {
   1: {
     title: 'STEP 1: IDENTIFY HYPOTHESES',
     icon: 'Lightbulb',
@@ -27,14 +30,14 @@ const STEP_GUIDANCE: Record<number, {
         heading: 'Best Practices',
         items: [
           'List ALL plausible explanations, not just likely ones',
-          'Include a \'null hypothesis\' - what if nothing unusual happened?',
+          "Include a 'null hypothesis' - what if nothing unusual happened?",
           'Consider adversarial perspectives: What would a skeptic argue?',
           'If working with a team, brainstorm together before individual analysis',
         ],
       },
       {
         heading: 'Tip',
-        text: 'You can always add more hypotheses later if you discover alternatives you hadn\'t considered.',
+        text: "You can always add more hypotheses later if you discover alternatives you hadn't considered.",
       },
     ],
   },
@@ -55,7 +58,7 @@ const STEP_GUIDANCE: Record<number, {
       {
         heading: 'Also include',
         items: [
-          'Key assumptions you\'re making',
+          "Key assumptions you're making",
           'Logical arguments or inferences',
           'Absence of expected evidence (significant gaps)',
         ],
@@ -77,7 +80,7 @@ const STEP_GUIDANCE: Record<number, {
     sections: [
       {
         heading: 'Key Question',
-        text: 'For each cell, ask: \'If this hypothesis is true, how likely is it that I would see this evidence?\'',
+        text: "For each cell, ask: 'If this hypothesis is true, how likely is it that I would see this evidence?'",
       },
       {
         heading: 'Rating Scale',
@@ -91,7 +94,7 @@ const STEP_GUIDANCE: Record<number, {
       },
       {
         heading: 'Key Insight',
-        text: 'Focus on INCONSISTENCIES. The winning hypothesis isn\'t the one with most support - it\'s the one with LEAST contradiction.',
+        text: "Focus on INCONSISTENCIES. The winning hypothesis isn't the one with most support - it's the one with LEAST contradiction.",
       },
     ],
   },
@@ -102,20 +105,20 @@ const STEP_GUIDANCE: Record<number, {
     sections: [
       {
         heading: 'What is Diagnosticity?',
-        text: '\'Diagnostic\' evidence helps you distinguish between hypotheses.',
+        text: "'Diagnostic' evidence helps you distinguish between hypotheses.",
       },
       {
         heading: 'HIGH DIAGNOSTIC VALUE (helpful)',
         items: [
           'Evidence rated differently across hypotheses',
-          'Example: \'++\' for H1, \'--\' for H2 - this discriminates!',
+          "Example: '++' for H1, '--' for H2 - this discriminates!",
         ],
       },
       {
         heading: 'LOW DIAGNOSTIC VALUE (less helpful)',
         items: [
           'Evidence rated the same for all hypotheses',
-          'Example: \'N\' for H1, H2, H3, H4 - doesn\'t help choose',
+          "Example: 'N' for H1, H2, H3, H4 - doesn't help choose",
         ],
       },
       {
@@ -179,8 +182,8 @@ const STEP_GUIDANCE: Record<number, {
         heading: 'Important Caveats',
         items: [
           'Scores are NOT probabilities',
-          'A low score doesn\'t mean \'definitely true\'',
-          'A high score doesn\'t mean \'definitely false\'',
+          "A low score doesn't mean 'definitely true'",
+          "A high score doesn't mean 'definitely false'",
           'Scores depend on evidence quality and rating accuracy',
         ],
       },
@@ -211,7 +214,7 @@ const STEP_GUIDANCE: Record<number, {
         heading: '1. What if my most important evidence is WRONG?',
         items: [
           'Identify the 2-3 pieces of evidence that most influenced your conclusion',
-          'For each: What if it\'s inaccurate, deceptive, or misinterpreted?',
+          "For each: What if it's inaccurate, deceptive, or misinterpreted?",
           'Would your conclusion change?',
         ],
       },
@@ -250,14 +253,14 @@ const STEP_GUIDANCE: Record<number, {
       },
       {
         heading: 'Setting Milestones (Critical)',
-        text: 'For EACH hypothesis, answer: \'If this hypothesis is true, what would we expect to see in the future?\'',
+        text: "For EACH hypothesis, answer: 'If this hypothesis is true, what would we expect to see in the future?'",
       },
       {
         heading: 'Examples',
         items: [
-          'H1 (Embezzlement): \'Expect to find hidden accounts\'',
-          'H2 (Incompetence): \'Expect similar errors in other depts\'',
-          'H3 (Deliberate fraud): \'Expect more whistleblowers\'',
+          "H1 (Embezzlement): 'Expect to find hidden accounts'",
+          "H2 (Incompetence): 'Expect similar errors in other depts'",
+          "H3 (Deliberate fraud): 'Expect more whistleblowers'",
         ],
       },
       {
@@ -319,9 +322,7 @@ export function GuidancePanel({ currentStep, defaultExpanded = true }: GuidanceP
           {guidance.sections.map((section, index) => (
             <div key={index} className="guidance-section">
               <h4 className="guidance-section-heading">{section.heading}</h4>
-              {section.text && (
-                <p className="guidance-section-text">{section.text}</p>
-              )}
+              {section.text && <p className="guidance-section-text">{section.text}</p>}
               {section.items && (
                 <ul className="guidance-section-items">
                   {section.items.map((item, i) => (

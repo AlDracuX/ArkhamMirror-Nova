@@ -4,11 +4,11 @@ Search Shard - Ranking Tests
 Tests for ResultRanker and DiversityRanker classes.
 """
 
-import pytest
 from datetime import datetime, timedelta
 
-from arkham_shard_search.ranking import ResultRanker, DiversityRanker
+import pytest
 from arkham_shard_search.models import SearchResultItem, SortBy, SortOrder
+from arkham_shard_search.ranking import DiversityRanker, ResultRanker
 
 
 class TestResultRankerSort:
@@ -449,7 +449,7 @@ class TestDiversityRanker:
     def test_diversify_single_source(self):
         """Test diversification with single source."""
         results = [
-            SearchResultItem(doc_id="doc-1", chunk_id=f"chunk-{i}", title="D1", excerpt="...", score=0.9-i*0.1)
+            SearchResultItem(doc_id="doc-1", chunk_id=f"chunk-{i}", title="D1", excerpt="...", score=0.9 - i * 0.1)
             for i in range(5)
         ]
         diversified = DiversityRanker.diversify_by_source(results, max_per_source=3)

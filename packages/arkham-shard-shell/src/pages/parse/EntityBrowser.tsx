@@ -38,7 +38,7 @@ export function EntityBrowser({ entities, dates = [], onEntityClick }: EntityBro
       ALL: allEntities.length,
     };
 
-    entities.forEach(entity => {
+    entities.forEach((entity) => {
       const type = entity.entity_type;
       counts[type] = (counts[type] || 0) + 1;
     });
@@ -81,14 +81,14 @@ export function EntityBrowser({ entities, dates = [], onEntityClick }: EntityBro
     if (selectedType === 'DATE') {
       return dates;
     }
-    return entities.filter(e => e.entity_type === selectedType);
+    return entities.filter((e) => e.entity_type === selectedType);
   }, [selectedType, entities, dates, allEntities]);
 
   // Group entities by text for occurrence counting
   const entityOccurrences = useMemo(() => {
     const occurrences = new Map<string, Array<EntityMention | DateMention>>();
 
-    filteredEntities.forEach(entity => {
+    filteredEntities.forEach((entity) => {
       const key = entity.text.toLowerCase();
       if (!occurrences.has(key)) {
         occurrences.set(key, []);
@@ -114,7 +114,7 @@ export function EntityBrowser({ entities, dates = [], onEntityClick }: EntityBro
     'MONEY',
   ];
 
-  const handleEntityClick = (occurrence: typeof entityOccurrences[0]) => {
+  const handleEntityClick = (occurrence: (typeof entityOccurrences)[0]) => {
     const key = occurrence.text.toLowerCase();
     if (expandedEntity === key) {
       setExpandedEntity(null);
@@ -127,13 +127,14 @@ export function EntityBrowser({ entities, dates = [], onEntityClick }: EntityBro
     <div className="entity-browser">
       {/* Type Filter Tabs */}
       <div className="filter-tabs">
-        {entityTypes.map(type => {
+        {entityTypes.map((type) => {
           const count = entityCounts[type] || 0;
           if (count === 0 && type !== 'ALL') return null;
 
-          const config = type === 'ALL'
-            ? { icon: 'List' as const, color: '#6b7280', label: 'All' }
-            : getEntityTypeConfig(type as EntityType | 'DATE');
+          const config =
+            type === 'ALL'
+              ? { icon: 'List' as const, color: '#6b7280', label: 'All' }
+              : getEntityTypeConfig(type as EntityType | 'DATE');
 
           return (
             <button

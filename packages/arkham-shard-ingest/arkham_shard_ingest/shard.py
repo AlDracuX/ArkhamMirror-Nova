@@ -141,7 +141,8 @@ class IngestShard(ArkhamShard):
 
         # Register workers with Frame
         if worker_service:
-            from .workers import ExtractWorker, FileWorker, ArchiveWorker, ImageWorker
+            from .workers import ArchiveWorker, ExtractWorker, FileWorker, ImageWorker
+
             worker_service.register_worker(ExtractWorker)
             worker_service.register_worker(FileWorker)
             worker_service.register_worker(ArchiveWorker)
@@ -183,7 +184,8 @@ class IngestShard(ArkhamShard):
         if self._frame:
             worker_service = self._frame.get_service("workers")
             if worker_service:
-                from .workers import ExtractWorker, FileWorker, ArchiveWorker, ImageWorker
+                from .workers import ArchiveWorker, ExtractWorker, FileWorker, ImageWorker
+
                 worker_service.unregister_worker(ExtractWorker)
                 worker_service.unregister_worker(FileWorker)
                 worker_service.unregister_worker(ArchiveWorker)
@@ -235,9 +237,7 @@ class IngestShard(ArkhamShard):
 
         if not advanced:
             # Job complete - update status in database
-            await self.intake_manager.update_job_status(
-                job_id, JobStatus.COMPLETED, result=result
-            )
+            await self.intake_manager.update_job_status(job_id, JobStatus.COMPLETED, result=result)
             logger.info(f"Job {job_id} completed successfully")
 
             # Register the document with the Frame's document service
@@ -558,18 +558,10 @@ class IngestShard(ArkhamShard):
         """)
 
         # Create indexes
-        await self._db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_ingest_jobs_status ON arkham_ingest.jobs(status)"
-        )
-        await self._db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_ingest_jobs_batch ON arkham_ingest.jobs(batch_id)"
-        )
-        await self._db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_ingest_jobs_checksum ON arkham_ingest.jobs(checksum)"
-        )
-        await self._db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_ingest_batches_status ON arkham_ingest.batches(status)"
-        )
+        await self._db.execute("CREATE INDEX IF NOT EXISTS idx_ingest_jobs_status ON arkham_ingest.jobs(status)")
+        await self._db.execute("CREATE INDEX IF NOT EXISTS idx_ingest_jobs_batch ON arkham_ingest.jobs(batch_id)")
+        await self._db.execute("CREATE INDEX IF NOT EXISTS idx_ingest_jobs_checksum ON arkham_ingest.jobs(checksum)")
+        await self._db.execute("CREATE INDEX IF NOT EXISTS idx_ingest_batches_status ON arkham_ingest.batches(status)")
 
         # ===========================================
         # Multi-tenancy Migration
@@ -593,9 +585,7 @@ class IngestShard(ArkhamShard):
             END $$;
         """)
 
-        await self._db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_ingest_jobs_tenant ON arkham_ingest.jobs(tenant_id)"
-        )
+        await self._db.execute("CREATE INDEX IF NOT EXISTS idx_ingest_jobs_tenant ON arkham_ingest.jobs(tenant_id)")
         await self._db.execute(
             "CREATE INDEX IF NOT EXISTS idx_ingest_batches_tenant ON arkham_ingest.batches(tenant_id)"
         )
@@ -610,17 +600,19 @@ class IngestShard(ArkhamShard):
         # Build quality_score JSON
         quality_json = None
         if job.quality_score:
-            quality_json = json.dumps({
-                "dpi": job.quality_score.dpi,
-                "skew_angle": job.quality_score.skew_angle,
-                "contrast_ratio": job.quality_score.contrast_ratio,
-                "is_grayscale": job.quality_score.is_grayscale,
-                "compression_ratio": job.quality_score.compression_ratio,
-                "has_noise": job.quality_score.has_noise,
-                "layout_complexity": job.quality_score.layout_complexity,
-                "is_blank": job.quality_score.is_blank,
-                "analysis_ms": job.quality_score.analysis_ms,
-            })
+            quality_json = json.dumps(
+                {
+                    "dpi": job.quality_score.dpi,
+                    "skew_angle": job.quality_score.skew_angle,
+                    "contrast_ratio": job.quality_score.contrast_ratio,
+                    "is_grayscale": job.quality_score.is_grayscale,
+                    "compression_ratio": job.quality_score.compression_ratio,
+                    "has_noise": job.quality_score.has_noise,
+                    "layout_complexity": job.quality_score.layout_complexity,
+                    "is_blank": job.quality_score.is_blank,
+                    "analysis_ms": job.quality_score.analysis_ms,
+                }
+            )
 
         # Get tenant_id for multi-tenancy
         tenant_id = self.get_tenant_id_or_none()
@@ -820,7 +812,7 @@ class IngestShard(ArkhamShard):
                 "id": batch.id,
                 "name": None,
                 "status": status,
-                "priority": batch.priority.value if hasattr(batch.priority, 'value') else str(batch.priority),
+                "priority": batch.priority.value if hasattr(batch.priority, "value") else str(batch.priority),
                 "total_files": batch.total_files,
                 "completed_files": batch.completed,
                 "failed_files": batch.failed,
@@ -1042,9 +1034,7 @@ class IngestShard(ArkhamShard):
         if not self._db:
             return {}
 
-        rows = await self._db.fetch_all(
-            "SELECT checksum, job_id FROM arkham_ingest.checksums"
-        )
+        rows = await self._db.fetch_all("SELECT checksum, job_id FROM arkham_ingest.checksums")
 
         return {row["checksum"]: row["job_id"] for row in rows}
 

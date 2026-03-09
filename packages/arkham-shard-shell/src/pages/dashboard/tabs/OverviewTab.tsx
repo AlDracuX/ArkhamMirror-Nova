@@ -33,7 +33,7 @@ function ServiceCard({ title, icon, available, info }: ServiceCardProps) {
           if (typeof value === 'object' && value !== null) {
             // Only keep objects with string/number/boolean values (like endpoint/model)
             const vals = Object.values(value);
-            return vals.every(v => typeof v !== 'object');
+            return vals.every((v) => typeof v !== 'object');
           }
           return true;
         })
@@ -92,7 +92,9 @@ function QueueTable({ queues }: QueueTableProps) {
         <tbody>
           {queues.map((q) => (
             <tr key={q.name}>
-              <td><strong>{q.name}</strong></td>
+              <td>
+                <strong>{q.name}</strong>
+              </td>
               <td>{q.pending}</td>
               <td className={q.active > 0 ? 'text-info' : ''}>{q.active}</td>
               <td className="text-success">{q.completed}</td>

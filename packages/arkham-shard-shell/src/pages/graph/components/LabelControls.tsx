@@ -13,7 +13,11 @@ interface LabelControlsProps {
 const LABEL_MODES = [
   { value: 'top', label: 'Top entities only', description: 'Show labels for most connected nodes' },
   { value: 'zoom', label: 'Zoom-based', description: 'Show more labels when zoomed in' },
-  { value: 'selected', label: 'Selected + neighbors', description: 'Only selected node and connections' },
+  {
+    value: 'selected',
+    label: 'Selected + neighbors',
+    description: 'Only selected node and connections',
+  },
   { value: 'all', label: 'All labels', description: 'Show all node labels (slower)' },
 ] as const;
 
@@ -29,31 +33,29 @@ export function LabelControls({ settings, onChange }: LabelControlsProps) {
         <label>Display Mode</label>
         <select
           value={settings.mode}
-          onChange={e => onChange({ mode: e.target.value as LabelSettings['mode'] })}
+          onChange={(e) => onChange({ mode: e.target.value as LabelSettings['mode'] })}
           className="control-select"
         >
-          {LABEL_MODES.map(mode => (
+          {LABEL_MODES.map((mode) => (
             <option key={mode.value} value={mode.value}>
               {mode.label}
             </option>
           ))}
         </select>
         <span className="control-hint">
-          {LABEL_MODES.find(m => m.value === settings.mode)?.description}
+          {LABEL_MODES.find((m) => m.value === settings.mode)?.description}
         </span>
       </div>
 
       {settings.mode === 'top' && (
         <div className="control-group">
-          <label>
-            Top Entities: {settings.topPercent}%
-          </label>
+          <label>Top Entities: {settings.topPercent}%</label>
           <input
             type="range"
             min="1"
             max="100"
             value={settings.topPercent}
-            onChange={e => onChange({ topPercent: Number(e.target.value) })}
+            onChange={(e) => onChange({ topPercent: Number(e.target.value) })}
             className="control-slider"
           />
           <div className="slider-labels">
@@ -66,16 +68,14 @@ export function LabelControls({ settings, onChange }: LabelControlsProps) {
 
       {settings.mode === 'zoom' && (
         <div className="control-group">
-          <label>
-            Zoom Threshold: {settings.zoomThreshold.toFixed(1)}x
-          </label>
+          <label>Zoom Threshold: {settings.zoomThreshold.toFixed(1)}x</label>
           <input
             type="range"
             min="0.1"
             max="2"
             step="0.1"
             value={settings.zoomThreshold}
-            onChange={e => onChange({ zoomThreshold: Number(e.target.value) })}
+            onChange={(e) => onChange({ zoomThreshold: Number(e.target.value) })}
             className="control-slider"
           />
           <div className="slider-labels">
@@ -87,15 +87,13 @@ export function LabelControls({ settings, onChange }: LabelControlsProps) {
       )}
 
       <div className="control-group">
-        <label>
-          Font Size: {settings.fontSize}px
-        </label>
+        <label>Font Size: {settings.fontSize}px</label>
         <input
           type="range"
           min="8"
           max="20"
           value={settings.fontSize}
-          onChange={e => onChange({ fontSize: Number(e.target.value) })}
+          onChange={(e) => onChange({ fontSize: Number(e.target.value) })}
           className="control-slider"
         />
         <div className="slider-labels">

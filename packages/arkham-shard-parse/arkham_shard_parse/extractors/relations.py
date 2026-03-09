@@ -3,7 +3,7 @@
 import logging
 from typing import List
 
-from ..models import EntityRelationship, EntityMention
+from ..models import EntityMention, EntityRelationship
 
 logger = logging.getLogger(__name__)
 
@@ -33,29 +33,52 @@ class RelationExtractor:
         """
         return {
             "employment": [
-                "works for", "worked for", "employed by",
-                "employee of", "CEO of", "founder of",
-                "president of", "director of", "manager of",
+                "works for",
+                "worked for",
+                "employed by",
+                "employee of",
+                "CEO of",
+                "founder of",
+                "president of",
+                "director of",
+                "manager of",
             ],
             "ownership": [
-                "owns", "owned by", "acquired",
-                "purchased", "bought", "sold to",
+                "owns",
+                "owned by",
+                "acquired",
+                "purchased",
+                "bought",
+                "sold to",
             ],
             "association": [
-                "member of", "part of", "partner of",
-                "affiliated with", "associated with",
+                "member of",
+                "part of",
+                "partner of",
+                "affiliated with",
+                "associated with",
             ],
             "location": [
-                "based in", "located in", "headquartered in",
-                "office in", "resides in", "from",
+                "based in",
+                "located in",
+                "headquartered in",
+                "office in",
+                "resides in",
+                "from",
             ],
             "transaction": [
-                "paid", "received", "transferred",
-                "sent to", "received from",
+                "paid",
+                "received",
+                "transferred",
+                "sent to",
+                "received from",
             ],
             "communication": [
-                "contacted", "called", "emailed",
-                "met with", "spoke with",
+                "contacted",
+                "called",
+                "emailed",
+                "met with",
+                "spoke with",
             ],
         }
 
@@ -80,7 +103,7 @@ class RelationExtractor:
 
         # For each pair of entities, check if there's a relation
         for i, entity1 in enumerate(entities):
-            for entity2 in entities[i+1:]:
+            for entity2 in entities[i + 1 :]:
                 relation = self._find_relation(text, entity1, entity2)
 
                 if relation:

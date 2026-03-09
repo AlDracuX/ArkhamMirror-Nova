@@ -11,7 +11,6 @@ from pydantic import BaseModel
 
 from .models import JobPriority, JobStatus
 
-
 # --- Path Traversal Protection ---
 
 ALLOWED_INGEST_PATHS: list[Path] = []
@@ -68,10 +67,8 @@ def validate_ingest_path(user_path: Path) -> Path:
         except ValueError:
             pass
 
-    raise HTTPException(
-        status_code=403,
-        detail="Access denied: Path must be within allowed directories"
-    )
+    raise HTTPException(status_code=403, detail="Access denied: Path must be within allowed directories")
+
 
 # Batch staggering configuration
 BATCH_STAGGER_THRESHOLD = 10  # Start staggering after this many jobs

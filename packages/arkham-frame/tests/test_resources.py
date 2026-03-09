@@ -10,24 +10,25 @@ Run with:
 """
 
 import asyncio
+from typing import Optional
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
 import pytest_asyncio
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from typing import Optional
 
 from arkham_frame.services.resources import (
+    CPUAllocationError,
+    GPUMemoryError,
+    PoolConfig,
     ResourceService,
     ResourceTier,
     SystemResources,
-    PoolConfig,
-    GPUMemoryError,
-    CPUAllocationError,
 )
-
 
 # =============================================================================
 # Test 1: Hardware Detection
 # =============================================================================
+
 
 class TestHardwareDetection:
     """Test system hardware detection capabilities."""
@@ -37,15 +38,12 @@ class TestHardwareDetection:
         """Should detect CPU cores using psutil."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(side_effect=lambda logical: 8 if logical else 4)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(
-            total=16 * 1024 * 1024 * 1024,
-            available=8 * 1024 * 1024 * 1024
-        ))
-        mock_psutil.disk_usage = Mock(return_value=Mock(
-            free=100 * 1024 * 1024 * 1024
-        ))
+        mock_psutil.virtual_memory = Mock(
+            return_value=Mock(total=16 * 1024 * 1024 * 1024, available=8 * 1024 * 1024 * 1024)
+        )
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024 * 1024 * 1024))
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil}):
             service = ResourceService()
             await service.initialize()
 
@@ -57,8 +55,8 @@ class TestHardwareDetection:
     @pytest.mark.asyncio
     async def test_cpu_detection_without_psutil(self):
         """Should fall back to os.cpu_count when psutil unavailable."""
-        with patch.dict('sys.modules', {'psutil': None}):
-            with patch('os.cpu_count', return_value=4):
+        with patch.dict("sys.modules", {"psutil": None}):
+            with patch("os.cpu_count", return_value=4):
                 service = ResourceService()
                 await service.initialize()
 
@@ -77,7 +75,7 @@ class TestHardwareDetection:
         mock_psutil.virtual_memory = Mock(return_value=mock_memory)
         mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024 * 1024 * 1024))
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil}):
             service = ResourceService()
             await service.initialize()
 
@@ -100,10 +98,10 @@ class TestHardwareDetection:
 
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=8)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16*1024**3, available=8*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
-        with patch.dict('sys.modules', {'torch': mock_torch, 'psutil': mock_psutil}):
+        with patch.dict("sys.modules", {"torch": mock_torch, "psutil": mock_psutil}):
             service = ResourceService()
             await service.initialize()
 
@@ -121,10 +119,10 @@ class TestHardwareDetection:
 
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=8)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16*1024**3, available=8*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
-        with patch.dict('sys.modules', {'torch': mock_torch, 'psutil': mock_psutil}):
+        with patch.dict("sys.modules", {"torch": mock_torch, "psutil": mock_psutil}):
             service = ResourceService()
             await service.initialize()
 
@@ -137,17 +135,17 @@ class TestHardwareDetection:
         """Should handle when PyTorch is not installed."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=8)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16*1024**3, available=8*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         # Simulate ImportError for torch
         def mock_import(name, *args, **kwargs):
-            if name == 'torch':
+            if name == "torch":
                 raise ImportError("No module named 'torch'")
             return __import__(name, *args, **kwargs)
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil}):
-            with patch('builtins.__import__', side_effect=mock_import):
+        with patch.dict("sys.modules", {"psutil": mock_psutil}):
+            with patch("builtins.__import__", side_effect=mock_import):
                 service = ResourceService()
                 await service.initialize()
 
@@ -158,6 +156,7 @@ class TestHardwareDetection:
 # Test 2: Tier Assignment
 # =============================================================================
 
+
 class TestTierAssignment:
     """Test resource tier assignment based on detected hardware."""
 
@@ -166,13 +165,13 @@ class TestTierAssignment:
         """Should assign MINIMAL tier when no GPU available."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=4)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=8*1024**3, available=4*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=8 * 1024**3, available=4 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=False)
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -183,8 +182,8 @@ class TestTierAssignment:
         """Should assign STANDARD tier with < 6GB VRAM."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=8)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16*1024**3, available=8*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=True)
@@ -196,7 +195,7 @@ class TestTierAssignment:
         mock_torch.cuda.get_device_properties = Mock(return_value=mock_props)
         mock_torch.version.cuda = "11.8"
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -208,8 +207,8 @@ class TestTierAssignment:
         """Should assign RECOMMENDED tier with 6-12GB VRAM."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=12)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=32*1024**3, available=16*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=500*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=32 * 1024**3, available=16 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=500 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=True)
@@ -221,7 +220,7 @@ class TestTierAssignment:
         mock_torch.cuda.get_device_properties = Mock(return_value=mock_props)
         mock_torch.version.cuda = "12.0"
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -233,8 +232,8 @@ class TestTierAssignment:
         """Should assign POWER tier with > 12GB VRAM."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=16)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=64*1024**3, available=32*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=1000*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=64 * 1024**3, available=32 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=1000 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=True)
@@ -246,7 +245,7 @@ class TestTierAssignment:
         mock_torch.cuda.get_device_properties = Mock(return_value=mock_props)
         mock_torch.version.cuda = "12.1"
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -257,19 +256,19 @@ class TestTierAssignment:
     async def test_force_tier_override(self):
         """Should allow forcing a specific tier via config."""
         mock_config = Mock()
-        mock_config.get = Mock(side_effect=lambda key, default=None: {
-            "resources.force_tier": "recommended"
-        }.get(key, default))
+        mock_config.get = Mock(
+            side_effect=lambda key, default=None: {"resources.force_tier": "recommended"}.get(key, default)
+        )
 
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=4)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=8*1024**3, available=4*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=8 * 1024**3, available=4 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=False)
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService(config=mock_config)
             await service.initialize()
 
@@ -281,6 +280,7 @@ class TestTierAssignment:
 # Test 3: Pool Configuration
 # =============================================================================
 
+
 class TestPoolConfiguration:
     """Test worker pool configuration based on tier."""
 
@@ -289,13 +289,13 @@ class TestPoolConfiguration:
         """Should return pool configs for MINIMAL tier."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=4)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=8*1024**3, available=4*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=8 * 1024**3, available=4 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=False)
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -312,8 +312,8 @@ class TestPoolConfiguration:
         """Should return pool configs for POWER tier."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=16)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=64*1024**3, available=32*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=1000*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=64 * 1024**3, available=32 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=1000 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=True)
@@ -325,7 +325,7 @@ class TestPoolConfiguration:
         mock_torch.cuda.get_device_properties = Mock(return_value=mock_props)
         mock_torch.version.cuda = "12.1"
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -341,14 +341,16 @@ class TestPoolConfiguration:
     async def test_disabled_pools_handling(self):
         """Should handle disabled pools correctly."""
         mock_config = Mock()
-        mock_config.get = Mock(side_effect=lambda key, default=None: {
-            "resources.disabled_pools": ["gpu-embed", "llm-analysis"]
-        }.get(key, default))
+        mock_config.get = Mock(
+            side_effect=lambda key, default=None: {"resources.disabled_pools": ["gpu-embed", "llm-analysis"]}.get(
+                key, default
+            )
+        )
 
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=8)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16*1024**3, available=8*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=True)
@@ -360,7 +362,7 @@ class TestPoolConfiguration:
         mock_torch.cuda.get_device_properties = Mock(return_value=mock_props)
         mock_torch.version.cuda = "12.0"
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService(config=mock_config)
             await service.initialize()
 
@@ -377,13 +379,13 @@ class TestPoolConfiguration:
         """Should correctly map disabled GPU pools to CPU fallbacks."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=4)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=8*1024**3, available=4*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=8 * 1024**3, available=4 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=False)
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -397,13 +399,13 @@ class TestPoolConfiguration:
         """Should return best available pool (preferred or fallback)."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=4)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=8*1024**3, available=4*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=8 * 1024**3, available=4 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=False)
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -420,6 +422,7 @@ class TestPoolConfiguration:
 # Test 4: GPU Memory Management
 # =============================================================================
 
+
 class TestGPUMemoryManagement:
     """Test GPU memory allocation and tracking."""
 
@@ -428,8 +431,8 @@ class TestGPUMemoryManagement:
         """Should allocate GPU memory for models."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=8)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16*1024**3, available=8*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=True)
@@ -441,7 +444,7 @@ class TestGPUMemoryManagement:
         mock_torch.cuda.get_device_properties = Mock(return_value=mock_props)
         mock_torch.version.cuda = "12.0"
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -459,8 +462,8 @@ class TestGPUMemoryManagement:
         """Should release GPU memory."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=8)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16*1024**3, available=8*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=True)
@@ -472,7 +475,7 @@ class TestGPUMemoryManagement:
         mock_torch.cuda.get_device_properties = Mock(return_value=mock_props)
         mock_torch.version.cuda = "12.0"
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -487,8 +490,8 @@ class TestGPUMemoryManagement:
         """Should wait and allocate when memory becomes available."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=8)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16*1024**3, available=8*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=True)
@@ -500,7 +503,7 @@ class TestGPUMemoryManagement:
         mock_torch.cuda.get_device_properties = Mock(return_value=mock_props)
         mock_torch.version.cuda = "12.0"
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -523,8 +526,8 @@ class TestGPUMemoryManagement:
         """Should raise GPUMemoryError on timeout."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=8)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16*1024**3, available=8*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=True)
@@ -536,7 +539,7 @@ class TestGPUMemoryManagement:
         mock_torch.cuda.get_device_properties = Mock(return_value=mock_props)
         mock_torch.version.cuda = "12.0"
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -549,8 +552,8 @@ class TestGPUMemoryManagement:
         """Should track multiple GPU allocations."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(return_value=16)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=64*1024**3, available=32*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=1000*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=64 * 1024**3, available=32 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=1000 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=True)
@@ -562,7 +565,7 @@ class TestGPUMemoryManagement:
         mock_torch.cuda.get_device_properties = Mock(return_value=mock_props)
         mock_torch.version.cuda = "12.1"
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -580,6 +583,7 @@ class TestGPUMemoryManagement:
 # Test 5: CPU Thread Management
 # =============================================================================
 
+
 class TestCPUThreadManagement:
     """Test CPU thread allocation and tracking."""
 
@@ -588,13 +592,13 @@ class TestCPUThreadManagement:
         """Should acquire CPU threads."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(side_effect=lambda logical: 8 if logical else 4)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16*1024**3, available=8*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=False)
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -614,13 +618,13 @@ class TestCPUThreadManagement:
         """Should release CPU threads."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(side_effect=lambda logical: 8 if logical else 4)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16*1024**3, available=8*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=False)
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -635,13 +639,13 @@ class TestCPUThreadManagement:
         """Should enforce CPU thread limits."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(side_effect=lambda logical: 8 if logical else 4)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16*1024**3, available=8*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=100*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=False)
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -658,13 +662,13 @@ class TestCPUThreadManagement:
         """Should track CPU thread allocation state."""
         mock_psutil = Mock()
         mock_psutil.cpu_count = Mock(side_effect=lambda logical: 16 if logical else 8)
-        mock_psutil.virtual_memory = Mock(return_value=Mock(total=32*1024**3, available=16*1024**3))
-        mock_psutil.disk_usage = Mock(return_value=Mock(free=500*1024**3))
+        mock_psutil.virtual_memory = Mock(return_value=Mock(total=32 * 1024**3, available=16 * 1024**3))
+        mock_psutil.disk_usage = Mock(return_value=Mock(free=500 * 1024**3))
 
         mock_torch = Mock()
         mock_torch.cuda.is_available = Mock(return_value=False)
 
-        with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
             service = ResourceService()
             await service.initialize()
 
@@ -681,6 +685,7 @@ class TestCPUThreadManagement:
 # Smoke Test (can run directly)
 # =============================================================================
 
+
 async def smoke_test():
     """Quick smoke test for ResourceService."""
     print("=" * 60)
@@ -689,10 +694,9 @@ async def smoke_test():
 
     mock_psutil = Mock()
     mock_psutil.cpu_count = Mock(side_effect=lambda logical: 8 if logical else 4)
-    mock_psutil.virtual_memory = Mock(return_value=Mock(
-        total=16 * 1024 * 1024 * 1024,
-        available=8 * 1024 * 1024 * 1024
-    ))
+    mock_psutil.virtual_memory = Mock(
+        return_value=Mock(total=16 * 1024 * 1024 * 1024, available=8 * 1024 * 1024 * 1024)
+    )
     mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024 * 1024 * 1024))
 
     mock_torch = Mock()
@@ -705,7 +709,7 @@ async def smoke_test():
     mock_torch.cuda.get_device_properties = Mock(return_value=mock_props)
     mock_torch.version.cuda = "12.0"
 
-    with patch.dict('sys.modules', {'psutil': mock_psutil, 'torch': mock_torch}):
+    with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": mock_torch}):
         print("\n1. Testing initialization...")
         service = ResourceService()
         await service.initialize()

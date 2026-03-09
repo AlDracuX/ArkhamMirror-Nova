@@ -2,12 +2,12 @@
 ArkhamFrame Pipeline - Document processing stages.
 """
 
-from .base import PipelineStage, PipelineError, StageResult
+from .base import PipelineError, PipelineStage, StageResult
+from .coordinator import PipelineCoordinator
+from .embed import EmbedStage
 from .ingest import IngestStage
 from .ocr import OCRStage
 from .parse import ParseStage
-from .embed import EmbedStage
-from .coordinator import PipelineCoordinator
 
 __all__ = [
     "PipelineStage",

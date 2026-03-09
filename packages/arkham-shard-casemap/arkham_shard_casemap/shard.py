@@ -166,45 +166,57 @@ class CasemapShard(ArkhamShard):
         theory_id = str(uuid.uuid4())
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_casemap.legal_theories
             (id, tenant_id, title, claim_type, description, statutory_basis,
              respondent_ids, status, notes, metadata)
             VALUES (:id, :tid, :title, :ct, :desc, :stat,
                     :resp, :status, :notes, :meta)
-        """, {
-            "id": theory_id, "tid": tenant_id,
-            "title": data.get("title", ""),
-            "ct": data.get("claim_type", "custom"),
-            "desc": data.get("description", ""),
-            "stat": data.get("statutory_basis", ""),
-            "resp": json.dumps(data.get("respondent_ids", [])),
-            "status": data.get("status", "active"),
-            "notes": data.get("notes", ""),
-            "meta": json.dumps(data.get("metadata", {})),
-        })
+        """,
+            {
+                "id": theory_id,
+                "tid": tenant_id,
+                "title": data.get("title", ""),
+                "ct": data.get("claim_type", "custom"),
+                "desc": data.get("description", ""),
+                "stat": data.get("statutory_basis", ""),
+                "resp": json.dumps(data.get("respondent_ids", [])),
+                "status": data.get("status", "active"),
+                "notes": data.get("notes", ""),
+                "meta": json.dumps(data.get("metadata", {})),
+            },
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("casemap.theory.created", {
-                "theory_id": theory_id,
-                "title": data.get("title"),
-                "claim_type": data.get("claim_type"),
-            }, source="casemap-shard")
+            await self._event_bus.emit(
+                "casemap.theory.created",
+                {
+                    "theory_id": theory_id,
+                    "title": data.get("title"),
+                    "claim_type": data.get("claim_type"),
+                },
+                source="casemap-shard",
+            )
 
         return await self.get_theory(theory_id)
 
     async def get_theory(self, theory_id: str) -> Optional[LegalTheory]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        row = await self._db.fetch_one("""
+        row = await self._db.fetch_one(
+            """
             SELECT * FROM arkham_casemap.legal_theories
             WHERE id = :id AND tenant_id = :tid
-        """, {"id": theory_id, "tid": tenant_id})
+        """,
+            {"id": theory_id, "tid": tenant_id},
+        )
         if not row:
             return None
         return self._row_to_theory(row)
 
-    async def list_theories(self, filters: Optional[TheoryFilter] = None,
-                             limit: int = 100, offset: int = 0) -> List[LegalTheory]:
+    async def list_theories(
+        self, filters: Optional[TheoryFilter] = None, limit: int = 100, offset: int = 0
+    ) -> List[LegalTheory]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         conditions = ["tenant_id = :tid"]
         params: Dict[str, Any] = {"tid": tenant_id}
@@ -227,20 +239,26 @@ class CasemapShard(ArkhamShard):
         params["limit"] = limit
         params["offset"] = offset
 
-        rows = await self._db.fetch_all(f"""
+        rows = await self._db.fetch_all(
+            f"""
             SELECT * FROM arkham_casemap.legal_theories
             WHERE {where}
             ORDER BY created_at DESC
             LIMIT :limit OFFSET :offset
-        """, params)
+        """,
+            params,
+        )
         return [self._row_to_theory(r) for r in rows]
 
     async def count_theories(self) -> int:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        row = await self._db.fetch_one("""
+        row = await self._db.fetch_one(
+            """
             SELECT COUNT(*) as cnt FROM arkham_casemap.legal_theories
             WHERE tenant_id = :tid
-        """, {"tid": tenant_id})
+        """,
+            {"tid": tenant_id},
+        )
         return row["cnt"] if row else 0
 
     async def update_theory(self, theory_id: str, data: Dict[str, Any]) -> Optional[LegalTheory]:
@@ -260,30 +278,44 @@ class CasemapShard(ArkhamShard):
             params["meta"] = json.dumps(data["metadata"])
 
         set_clause = ", ".join(sets)
-        await self._db.execute(f"""
+        await self._db.execute(
+            f"""
             UPDATE arkham_casemap.legal_theories
             SET {set_clause}
             WHERE id = :id AND tenant_id = :tid
-        """, params)
+        """,
+            params,
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("casemap.theory.updated", {
-                "theory_id": theory_id,
-            }, source="casemap-shard")
+            await self._event_bus.emit(
+                "casemap.theory.updated",
+                {
+                    "theory_id": theory_id,
+                },
+                source="casemap-shard",
+            )
 
         return await self.get_theory(theory_id)
 
     async def delete_theory(self, theory_id: str) -> bool:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        await self._db.execute("""
+        await self._db.execute(
+            """
             DELETE FROM arkham_casemap.legal_theories
             WHERE id = :id AND tenant_id = :tid
-        """, {"id": theory_id, "tid": tenant_id})
+        """,
+            {"id": theory_id, "tid": tenant_id},
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("casemap.theory.deleted", {
-                "theory_id": theory_id,
-            }, source="casemap-shard")
+            await self._event_bus.emit(
+                "casemap.theory.deleted",
+                {
+                    "theory_id": theory_id,
+                },
+                source="casemap-shard",
+            )
         return True
 
     # === Elements ===
@@ -293,58 +325,75 @@ class CasemapShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
 
         # Auto-increment display_order
-        row = await self._db.fetch_one("""
+        row = await self._db.fetch_one(
+            """
             SELECT COALESCE(MAX(display_order), 0) + 1 as next_ord
             FROM arkham_casemap.legal_elements
             WHERE theory_id = :tid_theory AND tenant_id = :tid
-        """, {"tid_theory": theory_id, "tid": tenant_id})
+        """,
+            {"tid_theory": theory_id, "tid": tenant_id},
+        )
         order = row["next_ord"] if row else 1
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_casemap.legal_elements
             (id, tenant_id, theory_id, title, description, burden, status,
              required, statutory_reference, notes, display_order)
             VALUES (:id, :tid, :theory_id, :title, :desc, :burden,
                     :status, :req, :stat_ref, :notes, :order)
-        """, {
-            "id": elem_id, "tid": tenant_id,
-            "theory_id": theory_id,
-            "title": data.get("title", ""),
-            "desc": data.get("description", ""),
-            "burden": data.get("burden", "claimant"),
-            "status": data.get("status", "unproven"),
-            "req": data.get("required", True),
-            "stat_ref": data.get("statutory_reference", ""),
-            "notes": data.get("notes", ""),
-            "order": data.get("display_order", order),
-        })
+        """,
+            {
+                "id": elem_id,
+                "tid": tenant_id,
+                "theory_id": theory_id,
+                "title": data.get("title", ""),
+                "desc": data.get("description", ""),
+                "burden": data.get("burden", "claimant"),
+                "status": data.get("status", "unproven"),
+                "req": data.get("required", True),
+                "stat_ref": data.get("statutory_reference", ""),
+                "notes": data.get("notes", ""),
+                "order": data.get("display_order", order),
+            },
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("casemap.element.created", {
-                "theory_id": theory_id,
-                "element_id": elem_id,
-                "title": data.get("title"),
-            }, source="casemap-shard")
+            await self._event_bus.emit(
+                "casemap.element.created",
+                {
+                    "theory_id": theory_id,
+                    "element_id": elem_id,
+                    "title": data.get("title"),
+                },
+                source="casemap-shard",
+            )
 
         return await self.get_element(elem_id)
 
     async def get_element(self, element_id: str) -> Optional[LegalElement]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        row = await self._db.fetch_one("""
+        row = await self._db.fetch_one(
+            """
             SELECT * FROM arkham_casemap.legal_elements
             WHERE id = :id AND tenant_id = :tid
-        """, {"id": element_id, "tid": tenant_id})
+        """,
+            {"id": element_id, "tid": tenant_id},
+        )
         if not row:
             return None
         return self._row_to_element(row)
 
     async def list_elements(self, theory_id: str) -> List[LegalElement]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        rows = await self._db.fetch_all("""
+        rows = await self._db.fetch_all(
+            """
             SELECT * FROM arkham_casemap.legal_elements
             WHERE theory_id = :theory_id AND tenant_id = :tid
             ORDER BY display_order ASC
-        """, {"theory_id": theory_id, "tid": tenant_id})
+        """,
+            {"theory_id": theory_id, "tid": tenant_id},
+        )
         return [self._row_to_element(r) for r in rows]
 
     async def update_element(self, element_id: str, data: Dict[str, Any]) -> Optional[LegalElement]:
@@ -364,20 +413,26 @@ class CasemapShard(ArkhamShard):
             params["order"] = data["display_order"]
 
         set_clause = ", ".join(sets)
-        await self._db.execute(f"""
+        await self._db.execute(
+            f"""
             UPDATE arkham_casemap.legal_elements
             SET {set_clause}
             WHERE id = :id AND tenant_id = :tid
-        """, params)
+        """,
+            params,
+        )
 
         return await self.get_element(element_id)
 
     async def delete_element(self, element_id: str) -> bool:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        await self._db.execute("""
+        await self._db.execute(
+            """
             DELETE FROM arkham_casemap.legal_elements
             WHERE id = :id AND tenant_id = :tid
-        """, {"id": element_id, "tid": tenant_id})
+        """,
+            {"id": element_id, "tid": tenant_id},
+        )
         return True
 
     # === Evidence Links ===
@@ -386,32 +441,41 @@ class CasemapShard(ArkhamShard):
         link_id = str(uuid.uuid4())
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_casemap.evidence_links
             (id, tenant_id, element_id, document_id, witness_id, description,
              strength, source_reference, supports_element, notes)
             VALUES (:id, :tid, :eid, :doc_id, :wit_id, :desc,
                     :strength, :src_ref, :supports, :notes)
-        """, {
-            "id": link_id, "tid": tenant_id,
-            "eid": element_id,
-            "doc_id": data.get("document_id"),
-            "wit_id": data.get("witness_id"),
-            "desc": data.get("description", ""),
-            "strength": data.get("strength", "neutral"),
-            "src_ref": data.get("source_reference", ""),
-            "supports": data.get("supports_element", True),
-            "notes": data.get("notes", ""),
-        })
+        """,
+            {
+                "id": link_id,
+                "tid": tenant_id,
+                "eid": element_id,
+                "doc_id": data.get("document_id"),
+                "wit_id": data.get("witness_id"),
+                "desc": data.get("description", ""),
+                "strength": data.get("strength", "neutral"),
+                "src_ref": data.get("source_reference", ""),
+                "supports": data.get("supports_element", True),
+                "notes": data.get("notes", ""),
+            },
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("casemap.evidence.linked", {
-                "element_id": element_id,
-                "evidence_link_id": link_id,
-            }, source="casemap-shard")
+            await self._event_bus.emit(
+                "casemap.evidence.linked",
+                {
+                    "element_id": element_id,
+                    "evidence_link_id": link_id,
+                },
+                source="casemap-shard",
+            )
 
         return EvidenceLink(
-            id=link_id, element_id=element_id,
+            id=link_id,
+            element_id=element_id,
             document_id=data.get("document_id"),
             witness_id=data.get("witness_id"),
             description=data.get("description", ""),
@@ -423,19 +487,25 @@ class CasemapShard(ArkhamShard):
 
     async def list_evidence(self, element_id: str) -> List[EvidenceLink]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        rows = await self._db.fetch_all("""
+        rows = await self._db.fetch_all(
+            """
             SELECT * FROM arkham_casemap.evidence_links
             WHERE element_id = :eid AND tenant_id = :tid
             ORDER BY created_at DESC
-        """, {"eid": element_id, "tid": tenant_id})
+        """,
+            {"eid": element_id, "tid": tenant_id},
+        )
         return [self._row_to_evidence(r) for r in rows]
 
     async def delete_evidence(self, link_id: str) -> bool:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        await self._db.execute("""
+        await self._db.execute(
+            """
             DELETE FROM arkham_casemap.evidence_links
             WHERE id = :id AND tenant_id = :tid
-        """, {"id": link_id, "tid": tenant_id})
+        """,
+            {"id": link_id, "tid": tenant_id},
+        )
         return True
 
     # === Strength Assessment ===
@@ -487,17 +557,24 @@ class CasemapShard(ArkhamShard):
 
         # Update theory strength
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        await self._db.execute("""
+        await self._db.execute(
+            """
             UPDATE arkham_casemap.legal_theories
             SET overall_strength = :strength, updated_at = NOW()
             WHERE id = :id AND tenant_id = :tid
-        """, {"strength": assessment.overall_score, "id": theory_id, "tid": tenant_id})
+        """,
+            {"strength": assessment.overall_score, "id": theory_id, "tid": tenant_id},
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("casemap.strength.updated", {
-                "theory_id": theory_id,
-                "overall_score": assessment.overall_score,
-            }, source="casemap-shard")
+            await self._event_bus.emit(
+                "casemap.strength.updated",
+                {
+                    "theory_id": theory_id,
+                    "overall_score": assessment.overall_score,
+                },
+                source="casemap-shard",
+            )
 
         return assessment
 
@@ -510,19 +587,25 @@ class CasemapShard(ArkhamShard):
             evidence = await self.list_evidence(elem.id)
             supporting = [e for e in evidence if e.supports_element]
             if not supporting:
-                gaps.append({
-                    "element_id": elem.id,
-                    "title": elem.title,
-                    "burden": elem.burden,
-                    "statutory_reference": elem.statutory_reference,
-                    "status": elem.status,
-                })
+                gaps.append(
+                    {
+                        "element_id": elem.id,
+                        "title": elem.title,
+                        "burden": elem.burden,
+                        "statutory_reference": elem.statutory_reference,
+                        "status": elem.status,
+                    }
+                )
 
         if gaps and self._event_bus:
-            await self._event_bus.emit("casemap.gap.identified", {
-                "theory_id": theory_id,
-                "gap_count": len(gaps),
-            }, source="casemap-shard")
+            await self._event_bus.emit(
+                "casemap.gap.identified",
+                {
+                    "theory_id": theory_id,
+                    "gap_count": len(gaps),
+                },
+                source="casemap-shard",
+            )
 
         return gaps
 
@@ -552,9 +635,7 @@ class CasemapShard(ArkhamShard):
                 }
             matrix["elements"].append(elem_row)
 
-        matrix["evidence_columns"] = [
-            {"id": k, "label": v} for k, v in all_evidence.items()
-        ]
+        matrix["evidence_columns"] = [{"id": k, "label": v} for k, v in all_evidence.items()]
         return matrix
 
     async def get_theory_tree(self, theory_id: str) -> Dict[str, Any]:
@@ -570,10 +651,12 @@ class CasemapShard(ArkhamShard):
         }
         for elem in elements:
             evidence = await self.list_evidence(elem.id)
-            tree["elements"].append({
-                "element": _element_dict(elem),
-                "evidence": [_evidence_dict(e) for e in evidence],
-            })
+            tree["elements"].append(
+                {
+                    "element": _element_dict(elem),
+                    "evidence": [_evidence_dict(e) for e in evidence],
+                }
+            )
         return tree
 
     # === Seed Templates ===
@@ -583,13 +666,16 @@ class CasemapShard(ArkhamShard):
         templates = CLAIM_ELEMENT_TEMPLATES.get(claim_type, [])
         elements = []
         for i, tmpl in enumerate(templates):
-            elem = await self.create_element(theory_id, {
-                "title": tmpl["title"],
-                "burden": tmpl["burden"],
-                "statutory_reference": tmpl.get("statutory_reference", ""),
-                "required": tmpl.get("required", True),
-                "display_order": i + 1,
-            })
+            elem = await self.create_element(
+                theory_id,
+                {
+                    "title": tmpl["title"],
+                    "burden": tmpl["burden"],
+                    "statutory_reference": tmpl.get("statutory_reference", ""),
+                    "required": tmpl.get("required", True),
+                    "display_order": i + 1,
+                },
+            )
             elements.append(elem)
         return elements
 
@@ -644,31 +730,51 @@ class CasemapShard(ArkhamShard):
 
 # === Helper dicts (module-level for API use) ===
 
+
 def _theory_dict(t: LegalTheory) -> dict:
     return {
-        "id": t.id, "title": t.title, "claim_type": t.claim_type,
-        "description": t.description, "statutory_basis": t.statutory_basis,
-        "respondent_ids": t.respondent_ids, "status": t.status,
-        "overall_strength": t.overall_strength, "notes": t.notes,
-        "created_at": str(t.created_at), "updated_at": str(t.updated_at),
+        "id": t.id,
+        "title": t.title,
+        "claim_type": t.claim_type,
+        "description": t.description,
+        "statutory_basis": t.statutory_basis,
+        "respondent_ids": t.respondent_ids,
+        "status": t.status,
+        "overall_strength": t.overall_strength,
+        "notes": t.notes,
+        "created_at": str(t.created_at),
+        "updated_at": str(t.updated_at),
         "metadata": t.metadata,
     }
 
+
 def _element_dict(e: LegalElement) -> dict:
     return {
-        "id": e.id, "theory_id": e.theory_id, "title": e.title,
-        "description": e.description, "burden": e.burden, "status": e.status,
-        "required": e.required, "statutory_reference": e.statutory_reference,
-        "notes": e.notes, "display_order": e.display_order,
-        "created_at": str(e.created_at), "updated_at": str(e.updated_at),
+        "id": e.id,
+        "theory_id": e.theory_id,
+        "title": e.title,
+        "description": e.description,
+        "burden": e.burden,
+        "status": e.status,
+        "required": e.required,
+        "statutory_reference": e.statutory_reference,
+        "notes": e.notes,
+        "display_order": e.display_order,
+        "created_at": str(e.created_at),
+        "updated_at": str(e.updated_at),
     }
+
 
 def _evidence_dict(e: EvidenceLink) -> dict:
     return {
-        "id": e.id, "element_id": e.element_id,
-        "document_id": e.document_id, "witness_id": e.witness_id,
-        "description": e.description, "strength": e.strength,
+        "id": e.id,
+        "element_id": e.element_id,
+        "document_id": e.document_id,
+        "witness_id": e.witness_id,
+        "description": e.description,
+        "strength": e.strength,
         "source_reference": e.source_reference,
-        "supports_element": e.supports_element, "notes": e.notes,
+        "supports_element": e.supports_element,
+        "notes": e.notes,
         "created_at": str(e.created_at),
     }

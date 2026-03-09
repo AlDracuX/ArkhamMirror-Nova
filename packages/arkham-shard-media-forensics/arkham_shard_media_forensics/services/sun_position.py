@@ -3,9 +3,9 @@ Sun position verification service.
 Calculates expected shadow direction based on GPS and timestamp.
 """
 
-from typing import Dict, Any
-from datetime import datetime, timezone
 import math
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 import structlog
 
@@ -13,6 +13,7 @@ logger = structlog.get_logger()
 
 try:
     from pysolar.solar import get_altitude, get_azimuth
+
     PYSOLAR_AVAILABLE = True
 except ImportError:
     PYSOLAR_AVAILABLE = False
@@ -188,8 +189,7 @@ class SunPositionService:
         result = await self.calculate_sun_position(latitude, longitude, dt)
         result["timestamp_source"] = "exif"
         result["timezone_note"] = (
-            "Timezone assumed UTC if not specified in EXIF. "
-            "Actual local time may differ, affecting accuracy."
+            "Timezone assumed UTC if not specified in EXIF. Actual local time may differ, affecting accuracy."
         )
 
         return result

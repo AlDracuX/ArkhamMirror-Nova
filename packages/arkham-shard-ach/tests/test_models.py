@@ -4,22 +4,22 @@ ACH Shard - Model Tests
 Tests for all enums, dataclasses, and data models.
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_ach.models import (
+    ACHMatrix,
     # Enums
     ConsistencyRating,
+    DevilsAdvocateChallenge,
+    Evidence,
     EvidenceType,
-    MatrixStatus,
     # Dataclasses
     Hypothesis,
-    Evidence,
-    Rating,
     HypothesisScore,
-    ACHMatrix,
-    DevilsAdvocateChallenge,
     MatrixExport,
+    MatrixStatus,
+    Rating,
 )
 
 

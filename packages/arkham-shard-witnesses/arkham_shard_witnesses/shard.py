@@ -175,7 +175,8 @@ class WitnessesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         now = datetime.utcnow()
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_witnesses.witnesses
             (id, tenant_id, name, role, status, party, organization, position,
              contact_info, notes, credibility_level, credibility_notes,
@@ -184,48 +185,58 @@ class WitnessesShard(ArkhamShard):
                     :organization, :position, :contact_info, :notes,
                     :credibility_level, :credibility_notes, :linked_entity_id,
                     :linked_document_ids, :created_at, :updated_at, :metadata)
-        """, {
-            "id": witness_id,
-            "tenant_id": tenant_id,
-            "name": data.get("name", ""),
-            "role": data.get("role", WitnessRole.CLAIMANT.value),
-            "status": data.get("status", WitnessStatus.IDENTIFIED.value),
-            "party": data.get("party", Party.CLAIMANT.value),
-            "organization": data.get("organization"),
-            "position": data.get("position"),
-            "contact_info": json.dumps(data.get("contact_info", {})),
-            "notes": data.get("notes", ""),
-            "credibility_level": data.get("credibility_level", CredibilityLevel.UNKNOWN.value),
-            "credibility_notes": data.get("credibility_notes", ""),
-            "linked_entity_id": data.get("linked_entity_id"),
-            "linked_document_ids": json.dumps(data.get("linked_document_ids", [])),
-            "created_at": now,
-            "updated_at": now,
-            "metadata": json.dumps(data.get("metadata", {})),
-        })
+        """,
+            {
+                "id": witness_id,
+                "tenant_id": tenant_id,
+                "name": data.get("name", ""),
+                "role": data.get("role", WitnessRole.CLAIMANT.value),
+                "status": data.get("status", WitnessStatus.IDENTIFIED.value),
+                "party": data.get("party", Party.CLAIMANT.value),
+                "organization": data.get("organization"),
+                "position": data.get("position"),
+                "contact_info": json.dumps(data.get("contact_info", {})),
+                "notes": data.get("notes", ""),
+                "credibility_level": data.get("credibility_level", CredibilityLevel.UNKNOWN.value),
+                "credibility_notes": data.get("credibility_notes", ""),
+                "linked_entity_id": data.get("linked_entity_id"),
+                "linked_document_ids": json.dumps(data.get("linked_document_ids", [])),
+                "created_at": now,
+                "updated_at": now,
+                "metadata": json.dumps(data.get("metadata", {})),
+            },
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("witnesses.witness.created", {
-                "witness_id": witness_id,
-                "name": data.get("name"),
-                "role": data.get("role", "claimant"),
-            }, source="witnesses-shard")
+            await self._event_bus.emit(
+                "witnesses.witness.created",
+                {
+                    "witness_id": witness_id,
+                    "name": data.get("name"),
+                    "role": data.get("role", "claimant"),
+                },
+                source="witnesses-shard",
+            )
 
         return await self.get_witness(witness_id)
 
     async def get_witness(self, witness_id: str) -> Optional[Witness]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        row = await self._db.fetch_one("""
+        row = await self._db.fetch_one(
+            """
             SELECT * FROM arkham_witnesses.witnesses
             WHERE id = :id AND tenant_id = :tenant_id
-        """, {"id": witness_id, "tenant_id": tenant_id})
+        """,
+            {"id": witness_id, "tenant_id": tenant_id},
+        )
 
         if not row:
             return None
         return self._row_to_witness(row)
 
-    async def list_witnesses(self, filters: Optional[WitnessFilter] = None,
-                              limit: int = 100, offset: int = 0) -> List[Witness]:
+    async def list_witnesses(
+        self, filters: Optional[WitnessFilter] = None, limit: int = 100, offset: int = 0
+    ) -> List[Witness]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         conditions = ["tenant_id = :tenant_id"]
         params: Dict[str, Any] = {"tenant_id": tenant_id}
@@ -251,21 +262,27 @@ class WitnessesShard(ArkhamShard):
         params["limit"] = limit
         params["offset"] = offset
 
-        rows = await self._db.fetch_all(f"""
+        rows = await self._db.fetch_all(
+            f"""
             SELECT * FROM arkham_witnesses.witnesses
             WHERE {where}
             ORDER BY created_at DESC
             LIMIT :limit OFFSET :offset
-        """, params)
+        """,
+            params,
+        )
 
         return [self._row_to_witness(r) for r in rows]
 
     async def count_witnesses(self) -> int:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        row = await self._db.fetch_one("""
+        row = await self._db.fetch_one(
+            """
             SELECT COUNT(*) as cnt FROM arkham_witnesses.witnesses
             WHERE tenant_id = :tenant_id
-        """, {"tenant_id": tenant_id})
+        """,
+            {"tenant_id": tenant_id},
+        )
         return row["cnt"] if row else 0
 
     async def update_witness(self, witness_id: str, data: Dict[str, Any]) -> Optional[Witness]:
@@ -274,9 +291,15 @@ class WitnessesShard(ArkhamShard):
         params: Dict[str, Any] = {"id": witness_id, "tenant_id": tenant_id}
 
         field_map = {
-            "name": "name", "role": "role", "status": "status", "party": "party",
-            "organization": "organization", "position": "position", "notes": "notes",
-            "credibility_level": "credibility_level", "credibility_notes": "credibility_notes",
+            "name": "name",
+            "role": "role",
+            "status": "status",
+            "party": "party",
+            "organization": "organization",
+            "position": "position",
+            "notes": "notes",
+            "credibility_level": "credibility_level",
+            "credibility_notes": "credibility_notes",
             "linked_entity_id": "linked_entity_id",
         }
         for key, col in field_map.items():
@@ -295,30 +318,44 @@ class WitnessesShard(ArkhamShard):
             params["metadata"] = json.dumps(data["metadata"])
 
         set_clause = ", ".join(sets)
-        await self._db.execute(f"""
+        await self._db.execute(
+            f"""
             UPDATE arkham_witnesses.witnesses
             SET {set_clause}
             WHERE id = :id AND tenant_id = :tenant_id
-        """, params)
+        """,
+            params,
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("witnesses.witness.updated", {
-                "witness_id": witness_id,
-            }, source="witnesses-shard")
+            await self._event_bus.emit(
+                "witnesses.witness.updated",
+                {
+                    "witness_id": witness_id,
+                },
+                source="witnesses-shard",
+            )
 
         return await self.get_witness(witness_id)
 
     async def delete_witness(self, witness_id: str) -> bool:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        await self._db.execute("""
+        await self._db.execute(
+            """
             DELETE FROM arkham_witnesses.witnesses
             WHERE id = :id AND tenant_id = :tenant_id
-        """, {"id": witness_id, "tenant_id": tenant_id})
+        """,
+            {"id": witness_id, "tenant_id": tenant_id},
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("witnesses.witness.deleted", {
-                "witness_id": witness_id,
-            }, source="witnesses-shard")
+            await self._event_bus.emit(
+                "witnesses.witness.deleted",
+                {
+                    "witness_id": witness_id,
+                },
+                source="witnesses-shard",
+            )
         return True
 
     # === Statements ===
@@ -328,66 +365,85 @@ class WitnessesShard(ArkhamShard):
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
 
         # Auto-increment version
-        row = await self._db.fetch_one("""
+        row = await self._db.fetch_one(
+            """
             SELECT COALESCE(MAX(version), 0) + 1 as next_ver
             FROM arkham_witnesses.witness_statements
             WHERE witness_id = :wid AND tenant_id = :tid
-        """, {"wid": witness_id, "tid": tenant_id})
+        """,
+            {"wid": witness_id, "tid": tenant_id},
+        )
         version = row["next_ver"] if row else 1
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_witnesses.witness_statements
             (id, tenant_id, witness_id, version, title, content, status,
              key_points, contradictions_found, filed_date, created_at, updated_at)
             VALUES (:id, :tid, :wid, :version, :title, :content,
                     :status, :key_points, :contradictions, :filed_date,
                     NOW(), NOW())
-        """, {
-            "id": stmt_id,
-            "tid": tenant_id,
-            "wid": witness_id,
-            "version": version,
-            "title": data.get("title", ""),
-            "content": data.get("content", ""),
-            "status": data.get("status", StatementStatus.DRAFT.value),
-            "key_points": json.dumps(data.get("key_points", [])),
-            "contradictions": json.dumps(data.get("contradictions_found", [])),
-            "filed_date": data.get("filed_date"),
-        })
+        """,
+            {
+                "id": stmt_id,
+                "tid": tenant_id,
+                "wid": witness_id,
+                "version": version,
+                "title": data.get("title", ""),
+                "content": data.get("content", ""),
+                "status": data.get("status", StatementStatus.DRAFT.value),
+                "key_points": json.dumps(data.get("key_points", [])),
+                "contradictions": json.dumps(data.get("contradictions_found", [])),
+                "filed_date": data.get("filed_date"),
+            },
+        )
 
         # Update witness status
-        await self._db.execute("""
+        await self._db.execute(
+            """
             UPDATE arkham_witnesses.witnesses
             SET status = 'statement_taken', updated_at = NOW()
             WHERE id = :wid AND tenant_id = :tid
-        """, {"wid": witness_id, "tid": tenant_id})
+        """,
+            {"wid": witness_id, "tid": tenant_id},
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("witnesses.statement.added", {
-                "witness_id": witness_id,
-                "statement_id": stmt_id,
-                "version": version,
-            }, source="witnesses-shard")
+            await self._event_bus.emit(
+                "witnesses.statement.added",
+                {
+                    "witness_id": witness_id,
+                    "statement_id": stmt_id,
+                    "version": version,
+                },
+                source="witnesses-shard",
+            )
 
         return await self.get_statement(stmt_id)
 
     async def get_statement(self, statement_id: str) -> Optional[WitnessStatement]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        row = await self._db.fetch_one("""
+        row = await self._db.fetch_one(
+            """
             SELECT * FROM arkham_witnesses.witness_statements
             WHERE id = :id AND tenant_id = :tid
-        """, {"id": statement_id, "tid": tenant_id})
+        """,
+            {"id": statement_id, "tid": tenant_id},
+        )
         if not row:
             return None
         return self._row_to_statement(row)
 
     async def list_statements(self, witness_id: str) -> List[WitnessStatement]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        rows = await self._db.fetch_all("""
+        rows = await self._db.fetch_all(
+            """
             SELECT * FROM arkham_witnesses.witness_statements
             WHERE witness_id = :wid AND tenant_id = :tid
             ORDER BY version DESC
-        """, {"wid": witness_id, "tid": tenant_id})
+        """,
+            {"wid": witness_id, "tid": tenant_id},
+        )
         return [self._row_to_statement(r) for r in rows]
 
     async def update_statement(self, statement_id: str, data: Dict[str, Any]) -> Optional[WitnessStatement]:
@@ -410,16 +466,23 @@ class WitnessesShard(ArkhamShard):
             params["fd"] = data["filed_date"]
 
         set_clause = ", ".join(sets)
-        await self._db.execute(f"""
+        await self._db.execute(
+            f"""
             UPDATE arkham_witnesses.witness_statements
             SET {set_clause}
             WHERE id = :id AND tenant_id = :tid
-        """, params)
+        """,
+            params,
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("witnesses.statement.updated", {
-                "statement_id": statement_id,
-            }, source="witnesses-shard")
+            await self._event_bus.emit(
+                "witnesses.statement.updated",
+                {
+                    "statement_id": statement_id,
+                },
+                source="witnesses-shard",
+            )
 
         return await self.get_statement(statement_id)
 
@@ -429,26 +492,30 @@ class WitnessesShard(ArkhamShard):
         note_id = str(uuid.uuid4())
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_witnesses.cross_exam_notes
             (id, tenant_id, witness_id, statement_id, topic, question,
              expected_answer, actual_answer, effectiveness, notes, created_at)
             VALUES (:id, :tid, :wid, :sid, :topic, :question,
                     :expected, :actual, :effectiveness, :notes, NOW())
-        """, {
-            "id": note_id,
-            "tid": tenant_id,
-            "wid": witness_id,
-            "sid": data.get("statement_id"),
-            "topic": data.get("topic", ""),
-            "question": data.get("question", ""),
-            "expected": data.get("expected_answer", ""),
-            "actual": data.get("actual_answer", ""),
-            "effectiveness": data.get("effectiveness", ""),
-            "notes": data.get("notes", ""),
-        })
+        """,
+            {
+                "id": note_id,
+                "tid": tenant_id,
+                "wid": witness_id,
+                "sid": data.get("statement_id"),
+                "topic": data.get("topic", ""),
+                "question": data.get("question", ""),
+                "expected": data.get("expected_answer", ""),
+                "actual": data.get("actual_answer", ""),
+                "effectiveness": data.get("effectiveness", ""),
+                "notes": data.get("notes", ""),
+            },
+        )
         return CrossExamNote(
-            id=note_id, witness_id=witness_id,
+            id=note_id,
+            witness_id=witness_id,
             statement_id=data.get("statement_id"),
             topic=data.get("topic", ""),
             question=data.get("question", ""),
@@ -460,11 +527,14 @@ class WitnessesShard(ArkhamShard):
 
     async def list_cross_exam_notes(self, witness_id: str) -> List[CrossExamNote]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        rows = await self._db.fetch_all("""
+        rows = await self._db.fetch_all(
+            """
             SELECT * FROM arkham_witnesses.cross_exam_notes
             WHERE witness_id = :wid AND tenant_id = :tid
             ORDER BY created_at DESC
-        """, {"wid": witness_id, "tid": tenant_id})
+        """,
+            {"wid": witness_id, "tid": tenant_id},
+        )
         return [self._row_to_cross_exam(r) for r in rows]
 
     # === Entity Linking ===
@@ -480,15 +550,21 @@ class WitnessesShard(ArkhamShard):
         if not witness:
             return {}
 
-        stmt_row = await self._db.fetch_one("""
+        stmt_row = await self._db.fetch_one(
+            """
             SELECT COUNT(*) as cnt FROM arkham_witnesses.witness_statements
             WHERE witness_id = :wid AND tenant_id = :tid
-        """, {"wid": witness_id, "tid": tenant_id})
+        """,
+            {"wid": witness_id, "tid": tenant_id},
+        )
 
-        note_row = await self._db.fetch_one("""
+        note_row = await self._db.fetch_one(
+            """
             SELECT COUNT(*) as cnt FROM arkham_witnesses.cross_exam_notes
             WHERE witness_id = :wid AND tenant_id = :tid
-        """, {"wid": witness_id, "tid": tenant_id})
+        """,
+            {"wid": witness_id, "tid": tenant_id},
+        )
 
         return {
             "witness_id": witness_id,
@@ -504,12 +580,15 @@ class WitnessesShard(ArkhamShard):
 
     async def get_stats(self) -> WitnessStats:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        rows = await self._db.fetch_all("""
+        rows = await self._db.fetch_all(
+            """
             SELECT role, status, party, COUNT(*) as cnt
             FROM arkham_witnesses.witnesses
             WHERE tenant_id = :tid
             GROUP BY role, status, party
-        """, {"tid": tenant_id})
+        """,
+            {"tid": tenant_id},
+        )
 
         stats = WitnessStats()
         for r in rows:
@@ -518,16 +597,22 @@ class WitnessesShard(ArkhamShard):
             stats.by_status[r["status"]] = stats.by_status.get(r["status"], 0) + r["cnt"]
             stats.by_party[r["party"]] = stats.by_party.get(r["party"], 0) + r["cnt"]
 
-        stmt_row = await self._db.fetch_one("""
+        stmt_row = await self._db.fetch_one(
+            """
             SELECT COUNT(*) as cnt FROM arkham_witnesses.witness_statements
             WHERE tenant_id = :tid
-        """, {"tid": tenant_id})
+        """,
+            {"tid": tenant_id},
+        )
         stats.total_statements = stmt_row["cnt"] if stmt_row else 0
 
-        note_row = await self._db.fetch_one("""
+        note_row = await self._db.fetch_one(
+            """
             SELECT COUNT(*) as cnt FROM arkham_witnesses.cross_exam_notes
             WHERE tenant_id = :tid
-        """, {"tid": tenant_id})
+        """,
+            {"tid": tenant_id},
+        )
         stats.total_cross_exam_notes = note_row["cnt"] if note_row else 0
 
         return stats

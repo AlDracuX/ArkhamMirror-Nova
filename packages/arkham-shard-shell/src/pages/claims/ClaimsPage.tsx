@@ -98,7 +98,10 @@ export function ClaimsPage() {
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set());
   const [extracting, setExtracting] = useState(false);
-  const [extractionProgress, setExtractionProgress] = useState<{current: number; total: number} | null>(null);
+  const [extractionProgress, setExtractionProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
 
   // Fetch documents when modal opens
   useEffect(() => {
@@ -123,7 +126,7 @@ export function ClaimsPage() {
   };
 
   const toggleDocumentSelection = (docId: string) => {
-    setSelectedDocuments(prev => {
+    setSelectedDocuments((prev) => {
       const next = new Set(prev);
       if (next.has(docId)) {
         next.delete(docId);
@@ -138,7 +141,7 @@ export function ClaimsPage() {
     if (selectedDocuments.size === documents.length) {
       setSelectedDocuments(new Set());
     } else {
-      setSelectedDocuments(new Set(documents.map(d => d.id)));
+      setSelectedDocuments(new Set(documents.map((d) => d.id)));
     }
   };
 
@@ -188,15 +191,18 @@ export function ClaimsPage() {
   };
 
   // Fetch claims with filtering using usePaginatedFetch
-  const { items: claims, total, loading, error, refetch } = usePaginatedFetch<Claim>(
-    '/api/claims/',
-    {
-      params: {
-        status: statusFilter || undefined,
-        search: searchQuery || undefined,
-      },
-    }
-  );
+  const {
+    items: claims,
+    total,
+    loading,
+    error,
+    refetch,
+  } = usePaginatedFetch<Claim>('/api/claims/', {
+    params: {
+      status: statusFilter || undefined,
+      search: searchQuery || undefined,
+    },
+  });
 
   // Fetch evidence for selected claim
   const { data: evidence, loading: evidenceLoading } = useFetch<Evidence[]>(
@@ -250,7 +256,7 @@ export function ClaimsPage() {
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     });
   };
 
@@ -278,10 +284,7 @@ export function ClaimsPage() {
             label="AI Analysis"
             disabled={false}
           />
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowExtractModal(true)}
-          >
+          <button className="btn btn-primary" onClick={() => setShowExtractModal(true)}>
             <Icon name="Sparkles" size={16} />
             Extract Claims
           </button>
@@ -476,8 +479,8 @@ export function ClaimsPage() {
                 <div className="metadata-row">
                   <span className="label">Evidence:</span>
                   <span>
-                    {selectedClaim.evidence_count} total
-                    ({selectedClaim.supporting_count} supporting, {selectedClaim.refuting_count} refuting)
+                    {selectedClaim.evidence_count} total ({selectedClaim.supporting_count}{' '}
+                    supporting, {selectedClaim.refuting_count} refuting)
                   </span>
                 </div>
               </div>
@@ -497,10 +500,13 @@ export function ClaimsPage() {
                       <span className={`evidence-type-badge evidence-type-${ev.evidence_type}`}>
                         <Icon
                           name={
-                            ev.evidence_type === 'document' ? 'FileText' :
-                            ev.evidence_type === 'entity' ? 'User' :
-                            ev.evidence_type === 'claim' ? 'Quote' :
-                            'ExternalLink'
+                            ev.evidence_type === 'document'
+                              ? 'FileText'
+                              : ev.evidence_type === 'entity'
+                                ? 'User'
+                                : ev.evidence_type === 'claim'
+                                  ? 'Quote'
+                                  : 'ExternalLink'
                           }
                           size={12}
                         />
@@ -508,7 +514,13 @@ export function ClaimsPage() {
                       </span>
                       <span className={`relationship-badge relationship-${ev.relationship}`}>
                         <Icon
-                          name={ev.relationship === 'supports' ? 'ThumbsUp' : ev.relationship === 'refutes' ? 'ThumbsDown' : 'Link'}
+                          name={
+                            ev.relationship === 'supports'
+                              ? 'ThumbsUp'
+                              : ev.relationship === 'refutes'
+                                ? 'ThumbsDown'
+                                : 'Link'
+                          }
                           size={12}
                         />
                         {ev.relationship}
@@ -590,18 +602,23 @@ export function ClaimsPage() {
             </div>
 
             <p className="dialog-description">
-              Select documents to extract factual claims using AI analysis.
-              Claims will be added to your collection for review and verification.
+              Select documents to extract factual claims using AI analysis. Claims will be added to
+              your collection for review and verification.
             </p>
 
             {extracting && extractionProgress ? (
               <div className="extraction-progress">
                 <Icon name="Loader2" size={32} className="spin" />
-                <p>Extracting claims from document {extractionProgress.current} of {extractionProgress.total}...</p>
+                <p>
+                  Extracting claims from document {extractionProgress.current} of{' '}
+                  {extractionProgress.total}...
+                </p>
                 <div className="progress-bar">
                   <div
                     className="progress-fill"
-                    style={{ width: `${(extractionProgress.current / extractionProgress.total) * 100}%` }}
+                    style={{
+                      width: `${(extractionProgress.current / extractionProgress.total) * 100}%`,
+                    }}
                   />
                 </div>
               </div>
@@ -621,9 +638,7 @@ export function ClaimsPage() {
                     />
                     <span>Select All ({documents.length} documents)</span>
                   </label>
-                  <span className="selection-count">
-                    {selectedDocuments.size} selected
-                  </span>
+                  <span className="selection-count">{selectedDocuments.size} selected</span>
                 </div>
 
                 <div className="document-list">
@@ -639,9 +654,7 @@ export function ClaimsPage() {
                           <Icon name="FileText" size={14} />
                           {doc.title || doc.filename}
                         </span>
-                        <span className="document-date">
-                          {formatDate(doc.created_at)}
-                        </span>
+                        <span className="document-date">{formatDate(doc.created_at)}</span>
                       </div>
                     </label>
                   ))}
@@ -669,7 +682,8 @@ export function ClaimsPage() {
                 disabled={extracting || selectedDocuments.size === 0}
               >
                 <Icon name="Sparkles" size={14} />
-                Extract from {selectedDocuments.size} Document{selectedDocuments.size !== 1 ? 's' : ''}
+                Extract from {selectedDocuments.size} Document
+                {selectedDocuments.size !== 1 ? 's' : ''}
               </button>
             </div>
           </div>

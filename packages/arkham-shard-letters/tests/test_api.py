@@ -2,10 +2,9 @@
 Tests for Letters Shard - API Endpoints
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi.testclient import TestClient
 
+import pytest
 from arkham_shard_letters.api import router
 from arkham_shard_letters.models import (
     ExportFormat,
@@ -16,6 +15,7 @@ from arkham_shard_letters.models import (
     LetterTemplate,
     LetterType,
 )
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -34,6 +34,7 @@ def mock_shard():
 def client():
     """Create a test client."""
     from fastapi import FastAPI
+
     app = FastAPI()
     app.include_router(router)
     return TestClient(app)

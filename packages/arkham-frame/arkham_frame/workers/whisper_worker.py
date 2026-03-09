@@ -5,12 +5,12 @@ Pool: gpu-whisper
 Purpose: Transcribe audio and video files to text with timestamps.
 """
 
-from typing import Dict, Any, List, Optional
+import base64
+import json
 import logging
 import os
 import tempfile
-import base64
-import json
+from typing import Any, Dict, List, Optional
 
 from .base import BaseWorker
 
@@ -87,6 +87,7 @@ class WhisperWorker(BaseWorker):
             if device == "auto":
                 try:
                     import torch
+
                     device = "cuda" if torch.cuda.is_available() else "cpu"
                 except ImportError:
                     device = "cpu"
@@ -106,38 +107,26 @@ class WhisperWorker(BaseWorker):
                     compute_type = "int8"
                     logger.info(f"Adjusted compute_type to {compute_type} for CPU")
 
-                cls._model = WhisperModel(
-                    cls.DEFAULT_MODEL,
-                    device=device,
-                    compute_type=compute_type
-                )
+                cls._model = WhisperModel(cls.DEFAULT_MODEL, device=device, compute_type=compute_type)
                 cls._model_name = cls.DEFAULT_MODEL
                 cls._device = device
                 cls._using_faster_whisper = True
 
-                logger.info(
-                    f"Loaded faster-whisper model {cls._model_name} on {cls._device}"
-                )
+                logger.info(f"Loaded faster-whisper model {cls._model_name} on {cls._device}")
 
             except ImportError:
-                logger.warning(
-                    "faster-whisper not available, falling back to openai-whisper"
-                )
+                logger.warning("faster-whisper not available, falling back to openai-whisper")
                 try:
                     import whisper
 
-                    logger.info(
-                        f"Loading Whisper model (openai-whisper): {cls.DEFAULT_MODEL}"
-                    )
+                    logger.info(f"Loading Whisper model (openai-whisper): {cls.DEFAULT_MODEL}")
 
                     cls._model = whisper.load_model(cls.DEFAULT_MODEL, device=device)
                     cls._model_name = cls.DEFAULT_MODEL
                     cls._device = device
                     cls._using_faster_whisper = False
 
-                    logger.info(
-                        f"Loaded openai-whisper model {cls._model_name} on {cls._device}"
-                    )
+                    logger.info(f"Loaded openai-whisper model {cls._model_name} on {cls._device}")
 
                 except ImportError:
                     raise ImportError(
@@ -167,10 +156,7 @@ class WhisperWorker(BaseWorker):
 
         ext = os.path.splitext(audio_path)[1].lower()
         if ext not in self.AUDIO_FORMATS and ext not in self.VIDEO_FORMATS:
-            raise ValueError(
-                f"Unsupported format: {ext}. "
-                f"Supported: {self.AUDIO_FORMATS | self.VIDEO_FORMATS}"
-            )
+            raise ValueError(f"Unsupported format: {ext}. Supported: {self.AUDIO_FORMATS | self.VIDEO_FORMATS}")
 
         return True
 
@@ -198,9 +184,7 @@ class WhisperWorker(BaseWorker):
         audio_data = base64.b64decode(audio_base64)
 
         # Save to temp file
-        with tempfile.NamedTemporaryFile(
-            mode="wb", suffix=format, delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=format, delete=False) as f:
             f.write(audio_data)
             temp_path = f.name
 
@@ -404,9 +388,7 @@ class WhisperWorker(BaseWorker):
             "language": result.get("language", "unknown"),
         }
 
-    async def _operation_transcribe(
-        self, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _operation_transcribe(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Operation: Basic transcription.
 
@@ -440,19 +422,13 @@ class WhisperWorker(BaseWorker):
             language = payload.get("language")
             task = payload.get("task", "transcribe")
 
-            logger.info(
-                f"Transcribing {audio_path} (language={language}, task={task})"
-            )
+            logger.info(f"Transcribing {audio_path} (language={language}, task={task})")
 
             # Transcribe
             if using_faster:
-                result = await self._transcribe_faster_whisper(
-                    model, audio_path, language=language, task=task
-                )
+                result = await self._transcribe_faster_whisper(model, audio_path, language=language, task=task)
             else:
-                result = await self._transcribe_openai_whisper(
-                    model, audio_path, language=language, task=task
-                )
+                result = await self._transcribe_openai_whisper(model, audio_path, language=language, task=task)
 
             result["model"] = model_name
             result["device"] = device
@@ -469,9 +445,7 @@ class WhisperWorker(BaseWorker):
                 except Exception as e:
                     logger.warning(f"Failed to clean up temp file {temp_file}: {e}")
 
-    async def _operation_transcribe_with_timestamps(
-        self, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _operation_transcribe_with_timestamps(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Operation: Transcription with word-level timestamps.
 
@@ -535,9 +509,7 @@ class WhisperWorker(BaseWorker):
                 except Exception as e:
                     logger.warning(f"Failed to clean up temp file {temp_file}: {e}")
 
-    async def _operation_translate(
-        self, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _operation_translate(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Operation: Transcribe and translate to English.
 
@@ -557,9 +529,7 @@ class WhisperWorker(BaseWorker):
 
         return result
 
-    async def _operation_detect_language(
-        self, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _operation_detect_language(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Operation: Detect spoken language.
 
@@ -632,9 +602,7 @@ class WhisperWorker(BaseWorker):
                 except Exception as e:
                     logger.warning(f"Failed to clean up temp file {temp_file}: {e}")
 
-    async def _operation_segments(
-        self, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _operation_segments(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Operation: Get timed segments for subtitles.
 
@@ -729,6 +697,7 @@ def run_whisper_worker(database_url: str = None, worker_id: str = None):
         python -m arkham_frame.workers.whisper_worker
     """
     import asyncio
+
     worker = WhisperWorker(database_url=database_url, worker_id=worker_id)
     asyncio.run(worker.run())
 

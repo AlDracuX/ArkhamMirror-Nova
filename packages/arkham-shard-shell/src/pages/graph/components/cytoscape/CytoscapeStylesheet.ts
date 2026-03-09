@@ -33,9 +33,9 @@ export function createStylesheet(
       selector: 'node',
       style: {
         // Shape and size
-        'shape': 'ellipse',
-        'width': 50,
-        'height': 50,
+        shape: 'ellipse',
+        width: 50,
+        height: 50,
 
         // Background color (will be overridden by entity type)
         'background-color': '#718096',
@@ -65,13 +65,13 @@ export function createStylesheet(
         'border-opacity': 1,
 
         // Label styling
-        'label': showLabels ? 'data(label)' : '',
+        label: showLabels ? 'data(label)' : '',
         'text-valign': 'bottom',
         'text-halign': 'center',
         'text-margin-y': 5,
         'font-size': 11,
         'font-family': 'Inter, system-ui, -apple-system, sans-serif',
-        'color': '#1a202c',
+        color: '#1a202c',
         'text-background-color': '#ffffff',
         'text-background-opacity': 0.85,
         'text-background-padding': '3px',
@@ -83,7 +83,8 @@ export function createStylesheet(
         'min-zoomed-font-size': 8,
 
         // Transition for smooth state changes
-        'transition-property': 'background-color, border-color, border-width, width, height, opacity',
+        'transition-property':
+          'background-color, border-color, border-width, width, height, opacity',
         'transition-duration': '0.2s',
         'transition-timing-function': 'ease-out',
       } as any,
@@ -95,8 +96,8 @@ export function createStylesheet(
     {
       selector: 'node[degree > 5]',
       style: {
-        'width': 60,
-        'height': 60,
+        width: 60,
+        height: 60,
         'background-width': 28,
         'background-height': 28,
       },
@@ -104,8 +105,8 @@ export function createStylesheet(
     {
       selector: 'node[degree > 10]',
       style: {
-        'width': 70,
-        'height': 70,
+        width: 70,
+        height: 70,
         'background-width': 32,
         'background-height': 32,
       },
@@ -113,8 +114,8 @@ export function createStylesheet(
     {
       selector: 'node[degree > 20]',
       style: {
-        'width': 80,
-        'height': 80,
+        width: 80,
+        height: 80,
         'background-width': 36,
         'background-height': 36,
       },
@@ -166,7 +167,7 @@ export function createStylesheet(
     {
       selector: 'node.hidden',
       style: {
-        'display': 'none',
+        display: 'none',
       },
     },
 
@@ -181,13 +182,13 @@ export function createStylesheet(
         'border-width': 2,
         'border-style': 'dashed',
         'border-color': '#2b6cb0',
-        'padding': 30,
+        padding: 30,
         'text-valign': 'top',
         'text-halign': 'center',
         'font-weight': 'bold',
         'font-size': 14,
-        'label': 'data(label)',
-        'shape': 'roundrectangle',
+        label: 'data(label)',
+        shape: 'roundrectangle',
       },
     },
 
@@ -197,7 +198,7 @@ export function createStylesheet(
     {
       selector: 'edge',
       style: {
-        'width': 2,
+        width: 2,
         'line-color': '#a0aec0',
         'curve-style': 'bezier',
         'target-arrow-shape': 'triangle',
@@ -205,11 +206,11 @@ export function createStylesheet(
         'arrow-scale': 0.8,
 
         // Edge label
-        'label': showEdgeLabels ? 'data(label)' : '',
+        label: showEdgeLabels ? 'data(label)' : '',
         'font-size': 9,
         'text-rotation': 'autorotate',
         'text-margin-y': -8,
-        'color': '#4a5568',
+        color: '#4a5568',
         'text-background-color': '#ffffff',
         'text-background-opacity': 0.8,
         'text-background-padding': '2px',
@@ -230,19 +231,19 @@ export function createStylesheet(
     {
       selector: 'edge[weight > 3]',
       style: {
-        'width': 3,
+        width: 3,
       },
     },
     {
       selector: 'edge[weight > 5]',
       style: {
-        'width': 4,
+        width: 4,
       },
     },
     {
       selector: 'edge[weight > 10]',
       style: {
-        'width': 5,
+        width: 5,
       },
     },
 
@@ -256,7 +257,7 @@ export function createStylesheet(
         'target-arrow-color': style.color,
         'target-arrow-shape': style.directed ? 'triangle' : 'none',
         'line-style': style.dash ? 'dashed' : 'solid',
-        ...(style.width ? { 'width': style.width } : {}),
+        ...(style.width ? { width: style.width } : {}),
       },
     })),
 
@@ -268,9 +269,9 @@ export function createStylesheet(
       style: {
         'line-color': '#68d391',
         'target-arrow-color': '#68d391',
-        'width': 4,
+        width: 4,
         'z-index': 999,
-        'opacity': 1,
+        opacity: 1,
       },
     },
 
@@ -333,7 +334,7 @@ export function createStylesheet(
         'haystack-radius': 0.5,
         'line-opacity': 0.6,
         // Hide labels in performance mode
-        'label': '',
+        label: '',
         'target-arrow-shape': 'none',
       },
     },
@@ -347,7 +348,7 @@ export function createStylesheet(
       selector: 'node.seed-node',
       style: {
         'border-width': 4,
-        'border-color': '#f59e0b',  // Amber
+        'border-color': '#f59e0b', // Amber
         'border-style': 'double',
       },
     },
@@ -376,7 +377,7 @@ export function createStylesheet(
     {
       selector: 'node.fully-expanded',
       style: {
-        'opacity': 0.8,
+        opacity: 0.8,
         'border-style': 'dotted',
       },
     },
@@ -385,7 +386,7 @@ export function createStylesheet(
     {
       selector: 'node.newly-expanded',
       style: {
-        'opacity': 0.3,
+        opacity: 0.3,
       },
     },
 
@@ -393,13 +394,13 @@ export function createStylesheet(
     {
       selector: 'node.collapsed-neighbor',
       style: {
-        'display': 'none',
+        display: 'none',
       },
     },
     {
       selector: 'edge.collapsed-neighbor',
       style: {
-        'display': 'none',
+        display: 'none',
       },
     },
 
@@ -407,13 +408,13 @@ export function createStylesheet(
     {
       selector: 'node[depth > 1]',
       style: {
-        'opacity': 0.85,
+        opacity: 0.85,
       },
     },
     {
       selector: 'node[depth > 2]',
       style: {
-        'opacity': 0.7,
+        opacity: 0.7,
       },
     },
 
@@ -430,7 +431,7 @@ export function createStylesheet(
       selector: 'edge:active',
       style: {
         'overlay-opacity': 0.2,
-        'width': 4,
+        width: 4,
       },
     },
 
@@ -440,13 +441,13 @@ export function createStylesheet(
     {
       selector: 'node.dimmed',
       style: {
-        'opacity': 0.3,
+        opacity: 0.3,
       },
     },
     {
       selector: 'edge.dimmed',
       style: {
-        'opacity': 0.15,
+        opacity: 0.15,
       },
     },
 
@@ -456,7 +457,7 @@ export function createStylesheet(
     {
       selector: 'edge.viewport-hidden',
       style: {
-        'opacity': 0.2,
+        opacity: 0.2,
       },
     },
   ];
@@ -471,22 +472,22 @@ export function createPerformanceStylesheet(): StylesheetStyle[] {
     {
       selector: 'node',
       style: {
-        'shape': 'ellipse',
-        'width': 30,
-        'height': 30,
+        shape: 'ellipse',
+        width: 30,
+        height: 30,
         'background-color': (ele: any) => {
           const type = ele.data('type')?.toLowerCase() || 'unknown';
           return getEntityColor(type);
         },
         'border-width': 1,
         'border-color': '#2d3748',
-        'label': '',
+        label: '',
       } as any,
     },
     {
       selector: 'edge',
       style: {
-        'width': 1,
+        width: 1,
         'line-color': '#a0aec0',
         'curve-style': 'haystack',
         'haystack-radius': 0.5,
@@ -499,22 +500,22 @@ export function createPerformanceStylesheet(): StylesheetStyle[] {
       style: {
         'border-width': 3,
         'border-color': '#f56565',
-        'width': 40,
-        'height': 40,
+        width: 40,
+        height: 40,
       },
     },
     {
       selector: 'edge.highlighted',
       style: {
         'line-color': '#68d391',
-        'width': 2,
+        width: 2,
         'line-opacity': 1,
       },
     },
     {
       selector: '.hidden',
       style: {
-        'display': 'none',
+        display: 'none',
       },
     },
   ];

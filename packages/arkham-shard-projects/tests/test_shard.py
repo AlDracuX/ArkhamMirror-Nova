@@ -4,17 +4,16 @@ Projects Shard - Shard Class Tests
 Tests for ProjectsShard with mocked Frame services.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
-from arkham_shard_projects.shard import ProjectsShard
+import pytest
 from arkham_shard_projects.models import (
-    ProjectStatus,
-    ProjectRole,
     ProjectFilter,
+    ProjectRole,
+    ProjectStatus,
 )
-
+from arkham_shard_projects.shard import ProjectsShard
 
 # === Fixtures ===
 

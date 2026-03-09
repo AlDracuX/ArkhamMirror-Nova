@@ -81,7 +81,7 @@ export function AIAnalystPanel({
 
   // Run analysis (initial or follow-up)
   const runAnalysis = async (followUpMessage: string | null) => {
-    setState(s => ({ ...s, isStreaming: true, error: null }));
+    setState((s) => ({ ...s, isStreaming: true, error: null }));
 
     // Add user message if follow-up
     if (followUpMessage) {
@@ -91,7 +91,7 @@ export function AIAnalystPanel({
         content: followUpMessage,
         timestamp: new Date(),
       };
-      setState(s => ({ ...s, messages: [...s.messages, userMessage] }));
+      setState((s) => ({ ...s, messages: [...s.messages, userMessage] }));
     }
 
     try {
@@ -103,7 +103,7 @@ export function AIAnalystPanel({
           context,
           session_id: state.sessionId,
           message: followUpMessage,
-          conversation_history: state.messages.map(m => ({
+          conversation_history: state.messages.map((m) => ({
             role: m.role,
             content: m.content,
           })),
@@ -123,7 +123,7 @@ export function AIAnalystPanel({
       const messageId = crypto.randomUUID();
 
       // Add empty assistant message that we'll stream into
-      setState(s => ({
+      setState((s) => ({
         ...s,
         messages: [
           ...s.messages,
@@ -156,21 +156,21 @@ export function AIAnalystPanel({
 
             switch (event.type) {
               case 'session':
-                setState(s => ({ ...s, sessionId: event.session_id || null }));
+                setState((s) => ({ ...s, sessionId: event.session_id || null }));
                 break;
 
               case 'text':
                 assistantContent += event.content || '';
-                setState(s => ({
+                setState((s) => ({
                   ...s,
-                  messages: s.messages.map(m =>
+                  messages: s.messages.map((m) =>
                     m.id === messageId ? { ...m, content: assistantContent } : m
                   ),
                 }));
                 break;
 
               case 'done':
-                setState(s => ({ ...s, isStreaming: false }));
+                setState((s) => ({ ...s, isStreaming: false }));
                 break;
 
               case 'error':
@@ -184,7 +184,7 @@ export function AIAnalystPanel({
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Analysis failed';
-      setState(s => ({
+      setState((s) => ({
         ...s,
         isStreaming: false,
         error: errorMessage,
@@ -234,11 +234,9 @@ export function AIAnalystPanel({
       });
 
       // Update message with feedback
-      setState(s => ({
+      setState((s) => ({
         ...s,
-        messages: s.messages.map(m =>
-          m.id === messageId ? { ...m, feedback: rating } : m
-        ),
+        messages: s.messages.map((m) => (m.id === messageId ? { ...m, feedback: rating } : m)),
       }));
     } catch (err) {
       console.error('Failed to submit feedback:', err);
@@ -271,11 +269,7 @@ export function AIAnalystPanel({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="ai-analyst-panel"
-      ref={panelRef}
-      style={{ width: panelWidth }}
-    >
+    <div className="ai-analyst-panel" ref={panelRef} style={{ width: panelWidth }}>
       {/* Resize handle */}
       <div className="ai-analyst-resize-handle" onMouseDown={startResize} />
 
@@ -294,11 +288,7 @@ export function AIAnalystPanel({
           >
             <Icon name="RotateCcw" size={16} />
           </button>
-          <button
-            className="ai-analyst-btn-icon"
-            onClick={onClose}
-            title="Close panel"
-          >
+          <button className="ai-analyst-btn-icon" onClick={onClose} title="Close panel">
             <Icon name="X" size={16} />
           </button>
         </div>
@@ -313,13 +303,10 @@ export function AIAnalystPanel({
           </div>
         )}
 
-        {state.messages.map(msg => (
+        {state.messages.map((msg) => (
           <div key={msg.id} className={`ai-analyst-message ${msg.role}`}>
             <div className="ai-analyst-message-header">
-              <Icon
-                name={msg.role === 'user' ? 'User' : 'Bot'}
-                size={14}
-              />
+              <Icon name={msg.role === 'user' ? 'User' : 'Bot'} size={14} />
               <span>{msg.role === 'user' ? 'You' : 'AI Analyst'}</span>
             </div>
             <div className="ai-analyst-message-content">
@@ -346,9 +333,7 @@ export function AIAnalystPanel({
                 >
                   <Icon name="ThumbsDown" size={14} />
                 </button>
-                {msg.feedback && (
-                  <span className="feedback-thanks">Thanks!</span>
-                )}
+                {msg.feedback && <span className="feedback-thanks">Thanks!</span>}
               </div>
             )}
           </div>
@@ -365,10 +350,7 @@ export function AIAnalystPanel({
           <div className="ai-analyst-error">
             <Icon name="AlertCircle" size={16} />
             <span>{state.error}</span>
-            <button
-              className="ai-analyst-retry"
-              onClick={() => runAnalysis(null)}
-            >
+            <button className="ai-analyst-retry" onClick={() => runAnalysis(null)}>
               Retry
             </button>
           </div>
@@ -383,7 +365,7 @@ export function AIAnalystPanel({
           type="text"
           placeholder="Ask a follow-up question..."
           value={followUpInput}
-          onChange={e => setFollowUpInput(e.target.value)}
+          onChange={(e) => setFollowUpInput(e.target.value)}
           onKeyPress={handleKeyPress}
           disabled={state.isStreaming}
         />

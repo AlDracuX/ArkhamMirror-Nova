@@ -108,9 +108,7 @@ function PoolCard({
       {isExpanded && (
         <div className="pool-details">
           <p className="pool-description">{description}</p>
-          {pool.vram_mb && (
-            <p className="pool-vram">VRAM: {pool.vram_mb} MB</p>
-          )}
+          {pool.vram_mb && <p className="pool-vram">VRAM: {pool.vram_mb} MB</p>}
 
           <div className="pool-controls">
             <div className="control-group">
@@ -243,9 +241,7 @@ function WorkerRow({ worker }: WorkerRowProps) {
       <td>
         <span className="jobs-stats">
           <span className="success">{worker.jobs_completed}</span>
-          {worker.jobs_failed > 0 && (
-            <span className="error">/ {worker.jobs_failed}</span>
-          )}
+          {worker.jobs_failed > 0 && <span className="error">/ {worker.jobs_failed}</span>}
         </span>
         <span className="uptime">{formatUptime(worker.uptime_seconds)}</span>
       </td>
@@ -256,7 +252,11 @@ function WorkerRow({ worker }: WorkerRowProps) {
           disabled={stopping || worker.status === 'stopping'}
           title="Stop worker"
         >
-          <Icon name={stopping ? 'Loader2' : 'Square'} size={14} className={stopping ? 'spin' : ''} />
+          <Icon
+            name={stopping ? 'Loader2' : 'Square'}
+            size={14}
+            className={stopping ? 'spin' : ''}
+          />
         </button>
       </td>
     </tr>
@@ -268,7 +268,10 @@ export function WorkersTab() {
   const { workers, refresh: refreshWorkers } = useWorkers();
   const { pools, loading, error, refresh: refreshPools } = usePools();
   const { health } = useHealth();
-  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [actionMessage, setActionMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   const dbAvailable = health?.workers.available ?? false;
 
@@ -353,11 +356,11 @@ export function WorkersTab() {
   }
 
   // Build a map of queue stats by pool name
-  const queueStatsMap = new Map(queues.map(q => [q.name, q]));
+  const queueStatsMap = new Map(queues.map((q) => [q.name, q]));
 
   // Group workers by pool
   const workersByPool = new Map<string, WorkerInfo[]>();
-  workers.forEach(w => {
+  workers.forEach((w) => {
     const list = workersByPool.get(w.pool) || [];
     list.push(w);
     workersByPool.set(w.pool, list);
@@ -365,7 +368,7 @@ export function WorkersTab() {
 
   // Separate pools by type for better organization
   const poolsByType = new Map<string, PoolInfo[]>();
-  pools.forEach(p => {
+  pools.forEach((p) => {
     const list = poolsByType.get(p.type) || [];
     list.push(p);
     poolsByType.set(p.type, list);
@@ -419,7 +422,7 @@ export function WorkersTab() {
             <span className="refresh-hint">Auto-refreshes every 3s</span>
           </h3>
 
-          {typeOrder.map(type => {
+          {typeOrder.map((type) => {
             const typePools = poolsByType.get(type);
             if (!typePools || typePools.length === 0) return null;
 
@@ -432,7 +435,7 @@ export function WorkersTab() {
                   {type.toUpperCase()} Pools
                 </h4>
                 <div className="pools-grid">
-                  {typePools.map(pool => (
+                  {typePools.map((pool) => (
                     <PoolCard
                       key={pool.name}
                       pool={pool}

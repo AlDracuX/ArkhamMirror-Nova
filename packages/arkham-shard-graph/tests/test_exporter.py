@@ -1,11 +1,11 @@
 """Tests for graph exporter."""
 
-import pytest
 import json
 from xml.etree import ElementTree as ET
 
+import pytest
 from arkham_shard_graph.exporter import GraphExporter
-from arkham_shard_graph.models import Graph, GraphNode, GraphEdge, ExportFormat
+from arkham_shard_graph.models import ExportFormat, Graph, GraphEdge, GraphNode
 
 
 class TestGraphExporterCreation:
@@ -343,6 +343,7 @@ class TestExportFormatSelection:
             # Try to use invalid format by mocking
             class InvalidFormat:
                 pass
+
             exporter.export_graph(graph, InvalidFormat())
 
 
@@ -353,14 +354,10 @@ class TestComplexGraphExport:
         """Test exporting larger graph as JSON."""
         exporter = GraphExporter()
 
-        nodes = [
-            GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person")
-            for i in range(50)
-        ]
+        nodes = [GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person") for i in range(50)]
 
         edges = [
-            GraphEdge(source=f"n{i}", target=f"n{i+1}", relationship_type="works_for", weight=0.8)
-            for i in range(49)
+            GraphEdge(source=f"n{i}", target=f"n{i + 1}", relationship_type="works_for", weight=0.8) for i in range(49)
         ]
 
         graph = Graph(project_id="proj1", nodes=nodes, edges=edges)
@@ -375,10 +372,7 @@ class TestComplexGraphExport:
         """Test exporting graph with various relationship types."""
         exporter = GraphExporter()
 
-        nodes = [
-            GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person")
-            for i in range(4)
-        ]
+        nodes = [GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person") for i in range(4)]
 
         edges = [
             GraphEdge(source="n0", target="n1", relationship_type="works_for", weight=0.8),

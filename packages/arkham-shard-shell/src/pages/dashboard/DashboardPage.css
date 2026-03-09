@@ -917,8 +917,12 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Workers Tab - Pool Cards */
@@ -1853,7 +1857,7 @@
   font-size: 0.95rem;
 }
 
-.toggle-label input[type="checkbox"] {
+.toggle-label input[type='checkbox'] {
   width: 18px;
   height: 18px;
   accent-color: var(--accent-color);

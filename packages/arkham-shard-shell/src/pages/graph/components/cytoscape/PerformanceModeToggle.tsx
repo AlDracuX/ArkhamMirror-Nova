@@ -59,9 +59,7 @@ export const PerformanceModeToggle: React.FC<PerformanceModeToggleProps> = ({
           <span className="toggle-label">
             Performance Mode
             {autoDetected && !performanceMode && (
-              <span className="auto-suggest">
-                (Recommended for {nodeCount} nodes)
-              </span>
+              <span className="auto-suggest">(Recommended for {nodeCount} nodes)</span>
             )}
           </span>
         </div>
@@ -77,10 +75,7 @@ export const PerformanceModeToggle: React.FC<PerformanceModeToggleProps> = ({
       {/* Expandable settings when enabled */}
       {performanceMode && (
         <>
-          <button
-            className="settings-expand-btn"
-            onClick={() => setShowSettings(!showSettings)}
-          >
+          <button className="settings-expand-btn" onClick={() => setShowSettings(!showSettings)}>
             <Icon name={showSettings ? 'ChevronUp' : 'ChevronDown'} size={14} />
             {showSettings ? 'Hide Settings' : 'Show Settings'}
           </button>
@@ -91,9 +86,7 @@ export const PerformanceModeToggle: React.FC<PerformanceModeToggleProps> = ({
                 <input
                   type="checkbox"
                   checked={settings.hideEdgeLabels}
-                  onChange={(e) =>
-                    onSettingsChange({ hideEdgeLabels: e.target.checked })
-                  }
+                  onChange={(e) => onSettingsChange({ hideEdgeLabels: e.target.checked })}
                 />
                 <span>Hide edge labels</span>
               </label>
@@ -102,9 +95,7 @@ export const PerformanceModeToggle: React.FC<PerformanceModeToggleProps> = ({
                 <input
                   type="checkbox"
                   checked={settings.simplifyEdges}
-                  onChange={(e) =>
-                    onSettingsChange({ simplifyEdges: e.target.checked })
-                  }
+                  onChange={(e) => onSettingsChange({ simplifyEdges: e.target.checked })}
                 />
                 <span>Simplify edge rendering</span>
               </label>
@@ -113,9 +104,7 @@ export const PerformanceModeToggle: React.FC<PerformanceModeToggleProps> = ({
                 <input
                   type="checkbox"
                   checked={settings.hideEdgesOnPan}
-                  onChange={(e) =>
-                    onSettingsChange({ hideEdgesOnPan: e.target.checked })
-                  }
+                  onChange={(e) => onSettingsChange({ hideEdgesOnPan: e.target.checked })}
                 />
                 <span>Hide edges while panning</span>
               </label>
@@ -124,9 +113,7 @@ export const PerformanceModeToggle: React.FC<PerformanceModeToggleProps> = ({
                 <input
                   type="checkbox"
                   checked={settings.lowerPixelRatio}
-                  onChange={(e) =>
-                    onSettingsChange({ lowerPixelRatio: e.target.checked })
-                  }
+                  onChange={(e) => onSettingsChange({ lowerPixelRatio: e.target.checked })}
                 />
                 <span>Lower render quality</span>
               </label>
@@ -159,9 +146,7 @@ export const PerformanceModeToggle: React.FC<PerformanceModeToggleProps> = ({
       {autoDetected && !performanceMode && (
         <div className="performance-tip">
           <Icon name="Info" size={14} />
-          <span>
-            Enable performance mode for smoother interaction with large graphs.
-          </span>
+          <span>Enable performance mode for smoother interaction with large graphs.</span>
         </div>
       )}
     </div>

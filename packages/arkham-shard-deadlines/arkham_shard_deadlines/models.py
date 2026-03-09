@@ -29,19 +29,19 @@ class DeadlineStatus(str, Enum):
 
 
 class UrgencyLevel(str, Enum):
-    CRITICAL = "critical"       # 0-2 days
-    HIGH = "high"               # 3-7 days
-    MEDIUM = "medium"           # 8-14 days
-    LOW = "low"                 # 15-30 days
-    FUTURE = "future"           # 31+ days
-    OVERDUE = "overdue"         # Past due
+    CRITICAL = "critical"  # 0-2 days
+    HIGH = "high"  # 3-7 days
+    MEDIUM = "medium"  # 8-14 days
+    LOW = "low"  # 15-30 days
+    FUTURE = "future"  # 31+ days
+    OVERDUE = "overdue"  # Past due
 
 
 class CaseType(str, Enum):
-    ET = "et"                   # Employment Tribunal
-    EAT = "eat"                 # Employment Appeal Tribunal
+    ET = "et"  # Employment Tribunal
+    EAT = "eat"  # Employment Appeal Tribunal
     HOUSING = "housing"
-    JR = "jr"                   # Judicial Review
+    JR = "jr"  # Judicial Review
     OTHER = "other"
 
 

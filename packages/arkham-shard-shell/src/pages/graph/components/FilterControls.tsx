@@ -9,7 +9,7 @@ import {
   getRelationshipStyle,
   RELATIONSHIP_CATEGORIES,
   CATEGORY_ORDER,
-  type RelationshipCategory
+  type RelationshipCategory,
 } from '../constants/relationshipStyles';
 
 interface FilterControlsProps {
@@ -25,7 +25,7 @@ export function FilterControls({
   onChange,
   availableEntityTypes,
   availableRelationshipTypes = [],
-  availableDocumentSources = []
+  availableDocumentSources = [],
 }: FilterControlsProps) {
   const [searchInput, setSearchInput] = useState(settings.searchQuery);
   const [showRelTypes, setShowRelTypes] = useState(false);
@@ -72,12 +72,10 @@ export function FilterControls({
     }
 
     // Sort by category order
-    return CATEGORY_ORDER
-      .filter(cat => grouped.has(cat))
-      .map(cat => ({
-        category: cat,
-        types: grouped.get(cat)!
-      }));
+    return CATEGORY_ORDER.filter((cat) => grouped.has(cat)).map((cat) => ({
+      category: cat,
+      types: grouped.get(cat)!,
+    }));
   }, [availableRelationshipTypes]);
 
   const toggleRelationshipType = (type: string) => {
@@ -99,19 +97,20 @@ export function FilterControls({
   };
 
   const toggleRelCategory = (category: RelationshipCategory) => {
-    const categoryTypes = relationshipTypesByCategory.find(g => g.category === category)?.types || [];
+    const categoryTypes =
+      relationshipTypesByCategory.find((g) => g.category === category)?.types || [];
     const current = new Set(settings.relationshipTypes);
 
     // Check if all types in this category are currently selected
-    const allSelected = settings.relationshipTypes.length === 0 ||
-      categoryTypes.every(t => current.has(t));
+    const allSelected =
+      settings.relationshipTypes.length === 0 || categoryTypes.every((t) => current.has(t));
 
     if (allSelected && settings.relationshipTypes.length > 0) {
       // Deselect all in category
-      categoryTypes.forEach(t => current.delete(t));
+      categoryTypes.forEach((t) => current.delete(t));
     } else {
       // Select all in category
-      categoryTypes.forEach(t => current.add(t));
+      categoryTypes.forEach((t) => current.add(t));
     }
 
     onChange({ relationshipTypes: Array.from(current) });
@@ -132,15 +131,12 @@ export function FilterControls({
           <input
             type="text"
             value={searchInput}
-            onChange={e => handleSearchChange(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Filter by name..."
             className="control-input"
           />
           {searchInput && (
-            <button
-              className="search-clear"
-              onClick={() => handleSearchChange('')}
-            >
+            <button className="search-clear" onClick={() => handleSearchChange('')}>
               <Icon name="X" size={12} />
             </button>
           )}
@@ -152,12 +148,16 @@ export function FilterControls({
         <div className="control-group-header">
           <label>Entity Types</label>
           <div className="control-group-actions">
-            <button className="mini-btn" onClick={selectAllTypes}>All</button>
-            <button className="mini-btn" onClick={clearAllTypes}>None</button>
+            <button className="mini-btn" onClick={selectAllTypes}>
+              All
+            </button>
+            <button className="mini-btn" onClick={clearAllTypes}>
+              None
+            </button>
           </div>
         </div>
         <div className="checkbox-grid">
-          {availableEntityTypes.map(type => (
+          {availableEntityTypes.map((type) => (
             <label key={type} className="checkbox-item">
               <input
                 type="checkbox"
@@ -176,13 +176,18 @@ export function FilterControls({
           <div className="control-group-header">
             <label>
               Relationship Types
-              {settings.relationshipTypes.length > 0 && settings.relationshipTypes[0] !== '__none__' && (
-                <span className="filter-count">({settings.relationshipTypes.length})</span>
-              )}
+              {settings.relationshipTypes.length > 0 &&
+                settings.relationshipTypes[0] !== '__none__' && (
+                  <span className="filter-count">({settings.relationshipTypes.length})</span>
+                )}
             </label>
             <div className="control-group-actions">
-              <button className="mini-btn" onClick={selectAllRelTypes}>All</button>
-              <button className="mini-btn" onClick={clearAllRelTypes}>None</button>
+              <button className="mini-btn" onClick={selectAllRelTypes}>
+                All
+              </button>
+              <button className="mini-btn" onClick={clearAllRelTypes}>
+                None
+              </button>
               <button
                 className="mini-btn"
                 onClick={() => setShowRelTypes(!showRelTypes)}
@@ -198,9 +203,10 @@ export function FilterControls({
             <div className="rel-type-chips">
               {relationshipTypesByCategory.map(({ category, types }) => {
                 const catMeta = RELATIONSHIP_CATEGORIES[category];
-                const activeCount = settings.relationshipTypes.length === 0
-                  ? types.length
-                  : types.filter(t => settings.relationshipTypes.includes(t)).length;
+                const activeCount =
+                  settings.relationshipTypes.length === 0
+                    ? types.length
+                    : types.filter((t) => settings.relationshipTypes.includes(t)).length;
                 const isActive = activeCount > 0;
 
                 return (
@@ -208,19 +214,20 @@ export function FilterControls({
                     key={category}
                     className={`rel-category-chip ${isActive ? 'active' : ''}`}
                     onClick={() => toggleRelCategory(category)}
-                    style={{
-                      '--cat-color': catMeta.color,
-                      borderColor: isActive ? catMeta.color : undefined,
-                      backgroundColor: isActive ? `${catMeta.color}20` : undefined
-                    } as React.CSSProperties}
+                    style={
+                      {
+                        '--cat-color': catMeta.color,
+                        borderColor: isActive ? catMeta.color : undefined,
+                        backgroundColor: isActive ? `${catMeta.color}20` : undefined,
+                      } as React.CSSProperties
+                    }
                     title={`${catMeta.label}: ${activeCount}/${types.length} types`}
                   >
-                    <span
-                      className="chip-dot"
-                      style={{ backgroundColor: catMeta.color }}
-                    />
+                    <span className="chip-dot" style={{ backgroundColor: catMeta.color }} />
                     {catMeta.label}
-                    <span className="chip-count">{activeCount}/{types.length}</span>
+                    <span className="chip-count">
+                      {activeCount}/{types.length}
+                    </span>
                   </button>
                 );
               })}
@@ -245,9 +252,10 @@ export function FilterControls({
                       <span className="category-label">{catMeta.label}</span>
                     </button>
                     <div className="rel-type-list">
-                      {types.map(type => {
+                      {types.map((type) => {
                         const style = getRelationshipStyle(type);
-                        const isChecked = settings.relationshipTypes.length === 0 ||
+                        const isChecked =
+                          settings.relationshipTypes.length === 0 ||
                           settings.relationshipTypes.includes(type);
                         return (
                           <label key={type} className="rel-type-item">
@@ -278,7 +286,8 @@ export function FilterControls({
       {/* Degree Range */}
       <div className="control-group">
         <label>
-          Degree Range: {settings.minDegree} - {settings.maxDegree === 1000 ? '∞' : settings.maxDegree}
+          Degree Range: {settings.minDegree} -{' '}
+          {settings.maxDegree === 1000 ? '∞' : settings.maxDegree}
         </label>
         <div className="dual-slider-row">
           <span className="slider-label-inline">Min:</span>
@@ -287,7 +296,7 @@ export function FilterControls({
             min="0"
             max="50"
             value={settings.minDegree}
-            onChange={e => onChange({ minDegree: Number(e.target.value) })}
+            onChange={(e) => onChange({ minDegree: Number(e.target.value) })}
             className="control-slider"
           />
           <span className="slider-value">{settings.minDegree}</span>
@@ -299,26 +308,26 @@ export function FilterControls({
             min="1"
             max="1000"
             value={settings.maxDegree}
-            onChange={e => onChange({ maxDegree: Number(e.target.value) })}
+            onChange={(e) => onChange({ maxDegree: Number(e.target.value) })}
             className="control-slider"
           />
-          <span className="slider-value">{settings.maxDegree === 1000 ? '∞' : settings.maxDegree}</span>
+          <span className="slider-value">
+            {settings.maxDegree === 1000 ? '∞' : settings.maxDegree}
+          </span>
         </div>
         <span className="control-hint">Filter nodes by connection count</span>
       </div>
 
       {/* Edge Weight Threshold */}
       <div className="control-group">
-        <label>
-          Min Edge Weight: {settings.minEdgeWeight.toFixed(2)}
-        </label>
+        <label>Min Edge Weight: {settings.minEdgeWeight.toFixed(2)}</label>
         <input
           type="range"
           min="0"
           max="1"
           step="0.05"
           value={settings.minEdgeWeight}
-          onChange={e => onChange({ minEdgeWeight: Number(e.target.value) })}
+          onChange={(e) => onChange({ minEdgeWeight: Number(e.target.value) })}
           className="control-slider"
         />
         <div className="slider-labels">
@@ -336,13 +345,13 @@ export function FilterControls({
           <select
             multiple
             value={settings.documentSources}
-            onChange={e => {
-              const selected = Array.from(e.target.selectedOptions, option => option.value);
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions, (option) => option.value);
               onChange({ documentSources: selected });
             }}
             className="control-select multi-select"
           >
-            {availableDocumentSources.map(doc => (
+            {availableDocumentSources.map((doc) => (
               <option key={doc.id} value={doc.id}>
                 {doc.name}
               </option>
@@ -354,16 +363,14 @@ export function FilterControls({
 
       {/* Max Nodes Limit */}
       <div className="control-group">
-        <label>
-          Max Nodes: {settings.maxNodes === 0 ? 'Unlimited' : settings.maxNodes}
-        </label>
+        <label>Max Nodes: {settings.maxNodes === 0 ? 'Unlimited' : settings.maxNodes}</label>
         <input
           type="range"
           min="0"
           max="500"
           step="10"
           value={settings.maxNodes}
-          onChange={e => onChange({ maxNodes: Number(e.target.value) })}
+          onChange={(e) => onChange({ maxNodes: Number(e.target.value) })}
           className="control-slider"
         />
         <div className="slider-labels">
@@ -380,7 +387,7 @@ export function FilterControls({
           <input
             type="checkbox"
             checked={settings.showGiantComponentOnly}
-            onChange={e => onChange({ showGiantComponentOnly: e.target.checked })}
+            onChange={(e) => onChange({ showGiantComponentOnly: e.target.checked })}
           />
           <span>Show Giant Component Only</span>
         </label>

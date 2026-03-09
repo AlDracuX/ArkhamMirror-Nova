@@ -1,14 +1,15 @@
 """Tests for entities shard data models."""
 
-import pytest
 from datetime import datetime
+
+import pytest
 from arkham_shard_entities.models import (
-    EntityType,
-    RelationshipType,
     Entity,
     EntityMention,
-    EntityRelationship,
     EntityMergeCandidate,
+    EntityRelationship,
+    EntityType,
+    RelationshipType,
 )
 
 

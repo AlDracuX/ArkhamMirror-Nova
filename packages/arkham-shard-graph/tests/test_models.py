@@ -1,37 +1,36 @@
 """Tests for graph shard models."""
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_graph.models import (
-    # Enums
-    RelationshipType,
-    CentralityMetric,
-    ExportFormat,
-    CommunityAlgorithm,
-    # Dataclasses
-    GraphNode,
-    GraphEdge,
-    Graph,
-    GraphPath,
-    CentralityResult,
-    Community,
-    GraphStatistics,
     # Pydantic models
     BuildGraphRequest,
-    PathRequest,
-    PathResponse,
+    CentralityMetric,
     CentralityRequest,
     CentralityResponse,
+    CentralityResult,
+    Community,
+    CommunityAlgorithm,
     CommunityRequest,
     CommunityResponse,
-    NeighborsRequest,
+    ExportFormat,
     ExportRequest,
     ExportResponse,
     FilterRequest,
+    Graph,
+    GraphEdge,
+    # Dataclasses
+    GraphNode,
+    GraphPath,
     GraphResponse,
+    GraphStatistics,
+    NeighborsRequest,
+    PathRequest,
+    PathResponse,
+    # Enums
+    RelationshipType,
 )
-
 
 # --- Enum Tests ---
 
@@ -246,9 +245,7 @@ class TestGraph:
             GraphNode(id="n1", entity_id="e1", label="E1", entity_type="person"),
             GraphNode(id="n2", entity_id="e2", label="E2", entity_type="org"),
         ]
-        edges = [
-            GraphEdge(source="n1", target="n2", relationship_type="works_for", weight=0.9)
-        ]
+        edges = [GraphEdge(source="n1", target="n2", relationship_type="works_for", weight=0.9)]
 
         graph = Graph(
             project_id="proj1",
@@ -266,9 +263,7 @@ class TestGraph:
         nodes = [
             GraphNode(id="n1", entity_id="e1", label="E1", entity_type="person"),
         ]
-        edges = [
-            GraphEdge(source="n1", target="n1", relationship_type="related_to", weight=0.5)
-        ]
+        edges = [GraphEdge(source="n1", target="n1", relationship_type="related_to", weight=0.5)]
 
         graph = Graph(project_id="proj1", nodes=nodes, edges=edges)
         data = graph.to_dict()
@@ -310,9 +305,7 @@ class TestGraphPath:
 
     def test_path_to_dict(self):
         """Test converting path to dictionary."""
-        edges = [
-            GraphEdge(source="n1", target="n2", relationship_type="works_for", weight=0.8)
-        ]
+        edges = [GraphEdge(source="n1", target="n2", relationship_type="works_for", weight=0.8)]
 
         path = GraphPath(
             source_entity_id="e1",

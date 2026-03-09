@@ -1,7 +1,7 @@
 """Casemap Shard API endpoints."""
 
 import logging
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
@@ -31,6 +31,7 @@ def get_shard(request: Request) -> "CasemapShard":
 
 
 # === Request Models ===
+
 
 class TheoryCreate(BaseModel):
     title: str
@@ -93,6 +94,7 @@ class SeedRequest(BaseModel):
 
 # === Theory Endpoints ===
 
+
 @router.get("/theories")
 async def list_theories(
     request: Request,
@@ -104,7 +106,7 @@ async def list_theories(
     offset: int = Query(default=0, ge=0),
 ):
     shard = get_shard(request)
-    from .models import TheoryFilter, ClaimType, TheoryStatus
+    from .models import ClaimType, TheoryFilter, TheoryStatus
 
     filters = TheoryFilter(
         claim_type=ClaimType(claim_type) if claim_type else None,
@@ -114,6 +116,7 @@ async def list_theories(
     )
     theories = await shard.list_theories(filters=filters, limit=limit, offset=offset)
     from .shard import _theory_dict
+
     return {"theories": [_theory_dict(t) for t in theories], "total": len(theories)}
 
 
@@ -132,11 +135,13 @@ async def create_theory(request: Request, body: TheoryCreate):
     theory = await shard.create_theory(data)
 
     from .shard import _theory_dict
+
     result = _theory_dict(theory)
 
     if seed and body.claim_type != "custom":
         elements = await shard.seed_elements(theory.id, body.claim_type)
         from .shard import _element_dict
+
         result["seeded_elements"] = [_element_dict(e) for e in elements]
 
     return result
@@ -148,7 +153,8 @@ async def get_theory(request: Request, theory_id: str):
     theory = await shard.get_theory(theory_id)
     if not theory:
         raise HTTPException(status_code=404, detail="Theory not found")
-    from .shard import _theory_dict, _element_dict
+    from .shard import _element_dict, _theory_dict
+
     result = _theory_dict(theory)
     elements = await shard.list_elements(theory_id)
     result["elements"] = [_element_dict(e) for e in elements]
@@ -162,6 +168,7 @@ async def update_theory(request: Request, theory_id: str, body: TheoryUpdate):
     if not theory:
         raise HTTPException(status_code=404, detail="Theory not found")
     from .shard import _theory_dict
+
     return _theory_dict(theory)
 
 
@@ -174,11 +181,13 @@ async def delete_theory(request: Request, theory_id: str):
 
 # === Element Endpoints ===
 
+
 @router.post("/theories/{theory_id}/elements")
 async def create_element(request: Request, theory_id: str, body: ElementCreate):
     shard = get_shard(request)
     elem = await shard.create_element(theory_id, body.model_dump(exclude_none=True))
     from .shard import _element_dict
+
     return _element_dict(elem)
 
 
@@ -187,6 +196,7 @@ async def list_elements(request: Request, theory_id: str):
     shard = get_shard(request)
     elements = await shard.list_elements(theory_id)
     from .shard import _element_dict
+
     return {"elements": [_element_dict(e) for e in elements]}
 
 
@@ -197,6 +207,7 @@ async def update_element(request: Request, element_id: str, body: ElementUpdate)
     if not elem:
         raise HTTPException(status_code=404, detail="Element not found")
     from .shard import _element_dict
+
     return _element_dict(elem)
 
 
@@ -209,11 +220,13 @@ async def delete_element(request: Request, element_id: str):
 
 # === Evidence Endpoints ===
 
+
 @router.post("/elements/{element_id}/evidence")
 async def link_evidence(request: Request, element_id: str, body: EvidenceLinkCreate):
     shard = get_shard(request)
     link = await shard.link_evidence(element_id, body.model_dump(exclude_none=True))
     from .shard import _evidence_dict
+
     return _evidence_dict(link)
 
 
@@ -222,6 +235,7 @@ async def list_evidence(request: Request, element_id: str):
     shard = get_shard(request)
     evidence = await shard.list_evidence(element_id)
     from .shard import _evidence_dict
+
     return {"evidence": [_evidence_dict(e) for e in evidence]}
 
 
@@ -233,6 +247,7 @@ async def delete_evidence(request: Request, link_id: str):
 
 
 # === Analysis Endpoints ===
+
 
 @router.get("/theories/{theory_id}/strength")
 async def assess_strength(request: Request, theory_id: str):
@@ -275,18 +290,16 @@ async def seed_elements(request: Request, theory_id: str, body: SeedRequest):
     shard = get_shard(request)
     elements = await shard.seed_elements(theory_id, body.claim_type)
     from .shard import _element_dict
+
     return {"seeded": len(elements), "elements": [_element_dict(e) for e in elements]}
 
 
 # === Claim Type Templates ===
 
+
 @router.get("/templates")
 async def list_templates():
     """List available claim type element templates."""
     from .models import CLAIM_ELEMENT_TEMPLATES
-    return {
-        "templates": {
-            k: {"element_count": len(v), "elements": v}
-            for k, v in CLAIM_ELEMENT_TEMPLATES.items()
-        }
-    }
+
+    return {"templates": {k: {"element_count": len(v), "elements": v} for k, v in CLAIM_ELEMENT_TEMPLATES.items()}}

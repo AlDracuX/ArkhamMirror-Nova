@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 class DocumentStatus(Enum):
     """Document processing status."""
+
     UPLOADED = "uploaded"
     PROCESSING = "processing"
     PROCESSED = "processed"
@@ -18,6 +19,7 @@ class DocumentStatus(Enum):
 
 class ViewMode(Enum):
     """Document view mode."""
+
     METADATA = "metadata"
     CONTENT = "content"
     CHUNKS = "chunks"
@@ -26,6 +28,7 @@ class ViewMode(Enum):
 
 class ChunkDisplayMode(Enum):
     """Chunk display mode preference."""
+
     COMPACT = "compact"
     DETAILED = "detailed"
     CONTEXT = "context"
@@ -38,6 +41,7 @@ class DocumentRecord:
 
     Used for database operations and internal processing.
     """
+
     id: str
     title: str
     filename: str
@@ -74,6 +78,7 @@ class ViewingRecord:
 
     Tracks when users view documents for analytics and history.
     """
+
     id: str
     document_id: str
     user_id: Optional[str]
@@ -92,6 +97,7 @@ class CustomMetadataField:
 
     Allows users to add custom metadata fields to documents.
     """
+
     id: str
     field_name: str
     field_type: str  # text, number, date, boolean, tags
@@ -108,6 +114,7 @@ class UserPreferences:
 
     Stored per-user to customize the viewing experience.
     """
+
     user_id: str
 
     # Viewer preferences
@@ -134,6 +141,7 @@ class DocumentPage:
 
     Represents a single page with its content and metadata.
     """
+
     document_id: str
     page_number: int
     content: str
@@ -155,6 +163,7 @@ class DocumentChunkRecord:
 
     Represents a chunk of document text created during processing.
     """
+
     id: str
     document_id: str
     chunk_index: int
@@ -182,6 +191,7 @@ class EntityOccurrence:
     """
     Single occurrence of an entity in a document.
     """
+
     document_id: str
     entity_id: str
     page_number: Optional[int] = None
@@ -204,6 +214,7 @@ class DocumentEntity:
 
     Aggregates all occurrences of an entity across the document.
     """
+
     id: str
     document_id: str
     entity_type: str  # PERSON, ORG, GPE, DATE, EVENT, etc.
@@ -229,6 +240,7 @@ class DocumentFilter:
     """
     Filter criteria for document queries.
     """
+
     status: Optional[DocumentStatus] = None
     file_type: Optional[str] = None
     project_id: Optional[str] = None
@@ -253,6 +265,7 @@ class DocumentStatistics:
     """
     Aggregate statistics about documents.
     """
+
     # Counts
     total_documents: int = 0
     uploaded_count: int = 0
@@ -285,6 +298,7 @@ class BatchOperationResult:
     """
     Result of a batch operation on documents.
     """
+
     success: bool
     processed: int
     failed: int

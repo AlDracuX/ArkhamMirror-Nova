@@ -24,6 +24,7 @@ def _to_python_native(value: Any) -> Any:
         return None
     try:
         import numpy as np
+
         if isinstance(value, np.bool_):
             return bool(value)
         if isinstance(value, np.integer):
@@ -33,6 +34,7 @@ def _to_python_native(value: Any) -> Any:
     except ImportError:
         pass
     return value
+
 
 router = APIRouter(prefix="/api/media-forensics", tags=["media-forensics"])
 
@@ -62,16 +64,19 @@ def init_api(shard: "MediaForensicsShard"):
 
 class AnalyzeRequest(BaseModel):
     """Request to analyze a document."""
+
     document_id: str
 
 
 class BatchAnalyzeRequest(BaseModel):
     """Request to analyze multiple documents."""
+
     document_ids: list[str]
 
 
 class ELARequest(BaseModel):
     """Request to generate ELA analysis."""
+
     analysis_id: str
     quality: int = Field(default=95, ge=70, le=100)
     scale: int = Field(default=15, ge=5, le=30)
@@ -79,6 +84,7 @@ class ELARequest(BaseModel):
 
 class SunPositionManualRequest(BaseModel):
     """Request to calculate sun position with manual coordinates."""
+
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
     datetime: str  # ISO format
@@ -86,6 +92,7 @@ class SunPositionManualRequest(BaseModel):
 
 class SunPositionRequest(BaseModel):
     """Request to verify sun position from an analysis."""
+
     analysis_id: str
     override_location: Optional[dict] = None  # {"lat": float, "lon": float}
     override_time: Optional[str] = None  # ISO format
@@ -93,6 +100,7 @@ class SunPositionRequest(BaseModel):
 
 class SimilarSearchRequest(BaseModel):
     """Request to find similar images."""
+
     analysis_id: str
     hash_type: str = Field(default="phash", pattern="^(phash|dhash|ahash)$")
     threshold: int = Field(default=15, ge=0, le=64)  # Default 15 allows more visually similar results
@@ -255,25 +263,31 @@ async def analyze_batch(request: Request, body: BatchAnalyzeRequest):
     for doc_id in body.document_ids:
         try:
             result = await shard.analyze_document(doc_id)
-            results.append({
-                "document_id": doc_id,
-                "status": "success",
-                "analysis_id": result["analysis_id"],
-                "integrity_status": result["integrity_status"],
-            })
+            results.append(
+                {
+                    "document_id": doc_id,
+                    "status": "success",
+                    "analysis_id": result["analysis_id"],
+                    "integrity_status": result["integrity_status"],
+                }
+            )
         except FileNotFoundError as e:
-            results.append({
-                "document_id": doc_id,
-                "status": "error",
-                "error": str(e),
-            })
+            results.append(
+                {
+                    "document_id": doc_id,
+                    "status": "error",
+                    "error": str(e),
+                }
+            )
         except Exception as e:
             logger.error(f"Batch analysis failed for {doc_id}: {e}")
-            results.append({
-                "document_id": doc_id,
-                "status": "error",
-                "error": str(e),
-            })
+            results.append(
+                {
+                    "document_id": doc_id,
+                    "status": "error",
+                    "error": str(e),
+                }
+            )
 
     return {
         "results": results,
@@ -313,19 +327,21 @@ async def upload_and_analyze(
     shard = get_shard(request)
 
     # Validate file type
-    allowed_types = {
-        "image/jpeg", "image/png", "image/tiff", "image/webp",
-        "image/gif", "image/bmp", "image/jpg"
-    }
+    allowed_types = {"image/jpeg", "image/png", "image/tiff", "image/webp", "image/gif", "image/bmp", "image/jpg"}
     content_type = file.content_type or ""
     filename = file.filename or "unknown"
 
     # Check by extension if content_type is generic
     ext = Path(filename).suffix.lower()
     ext_to_mime = {
-        ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
-        ".tiff": "image/tiff", ".tif": "image/tiff", ".webp": "image/webp",
-        ".gif": "image/gif", ".bmp": "image/bmp"
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".tiff": "image/tiff",
+        ".tif": "image/tiff",
+        ".webp": "image/webp",
+        ".gif": "image/gif",
+        ".bmp": "image/bmp",
     }
 
     if content_type not in allowed_types:
@@ -334,7 +350,7 @@ async def upload_and_analyze(
         else:
             raise HTTPException(
                 status_code=400,
-                detail=f"Unsupported file type: {content_type}. Supported: JPEG, PNG, TIFF, WebP, GIF, BMP"
+                detail=f"Unsupported file type: {content_type}. Supported: JPEG, PNG, TIFF, WebP, GIF, BMP",
             )
 
     try:
@@ -343,11 +359,11 @@ async def upload_and_analyze(
 
         # Get storage path from frame config
         storage_path = "data_silo"
-        if hasattr(shard._frame, 'config'):
+        if hasattr(shard._frame, "config"):
             config = shard._frame.config
-            if hasattr(config, 'get'):
+            if hasattr(config, "get"):
                 storage_path = config.get("storage_path", "data_silo")
-            elif hasattr(config, 'storage_path'):
+            elif hasattr(config, "storage_path"):
                 storage_path = config.storage_path or "data_silo"
 
         # Store in media_forensics subdirectory (persistent for ELA)
@@ -409,8 +425,7 @@ async def analyze_file_path(
     allowed_ext = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".webp", ".gif", ".bmp"}
     if ext not in allowed_ext:
         raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type: {ext}. Supported: {', '.join(allowed_ext)}"
+            status_code=400, detail=f"Unsupported file type: {ext}. Supported: {', '.join(allowed_ext)}"
         )
 
     try:
@@ -457,10 +472,7 @@ async def generate_ela(request: Request, body: ELARequest):
     shard = get_shard(request)
 
     if not shard.ela_analyzer:
-        raise HTTPException(
-            status_code=503,
-            detail="ELA analyzer not available. Pillow library may not be installed."
-        )
+        raise HTTPException(status_code=503, detail="ELA analyzer not available. Pillow library may not be installed.")
 
     try:
         result = await shard.generate_ela(
@@ -485,7 +497,8 @@ async def generate_ela(request: Request, body: ELARequest):
             "global_avg_intensity": interpretation.get("mean_error", 0),
             "global_max_intensity": interpretation.get("max_error", 0),
             "suspicious_regions": [],  # TODO: detect suspicious regions
-            "is_potentially_edited": interpretation.get("uniformity_score", 1.0) < 0.5 or interpretation.get("std_error", 0) > 30,
+            "is_potentially_edited": interpretation.get("uniformity_score", 1.0) < 0.5
+            or interpretation.get("std_error", 0) > 30,
             "confidence": interpretation.get("uniformity_score", 0.5),
             "generated_at": datetime.utcnow().isoformat(),
         }
@@ -524,8 +537,7 @@ async def verify_sun_position(request: Request, body: SunPositionRequest):
 
     if not shard.sun_position:
         raise HTTPException(
-            status_code=503,
-            detail="Sun position service not available. Pysolar library may not be installed."
+            status_code=503, detail="Sun position service not available. Pysolar library may not be installed."
         )
 
     try:
@@ -638,9 +650,7 @@ async def verify_sun_position(request: Request, body: SunPositionRequest):
                     "consistency_score": 1.0 if sun_above_horizon else 0.5,
                 },
                 "is_consistent": sun_above_horizon,
-                "inconsistency_details": [] if sun_above_horizon else [
-                    "Sun was below the horizon at the claimed time"
-                ],
+                "inconsistency_details": [] if sun_above_horizon else ["Sun was below the horizon at the claimed time"],
                 "confidence": 0.85 if sun_above_horizon else 0.3,
                 "generated_at": datetime.utcnow().isoformat(),
             }
@@ -678,8 +688,7 @@ async def calculate_sun_position_manual(request: Request, body: SunPositionManua
 
     if not shard.sun_position:
         raise HTTPException(
-            status_code=503,
-            detail="Sun position service not available. Pysolar library may not be installed."
+            status_code=503, detail="Sun position service not available. Pysolar library may not be installed."
         )
 
     try:
@@ -727,8 +736,7 @@ async def get_sun_position_from_exif(request: Request, analysis_id: str):
 
     if not shard.sun_position:
         raise HTTPException(
-            status_code=503,
-            detail="Sun position service not available. Pysolar library may not be installed."
+            status_code=503, detail="Sun position service not available. Pysolar library may not be installed."
         )
 
     try:
@@ -777,8 +785,7 @@ async def find_similar_images(request: Request, body: SimilarSearchRequest):
 
     if not shard.hash_service:
         raise HTTPException(
-            status_code=503,
-            detail="Hash service not available. ImageHash library may not be installed."
+            status_code=503, detail="Hash service not available. ImageHash library may not be installed."
         )
 
     try:
@@ -796,7 +803,7 @@ async def find_similar_images(request: Request, body: SimilarSearchRequest):
                 threshold=body.threshold,
             )
 
-            for img in similar[:body.limit]:
+            for img in similar[: body.limit]:
                 # Determine similarity type based on hamming distance
                 distance = img.get("hamming_distance", 64)
                 similarity_score = img.get("similarity_score", 0)
@@ -817,20 +824,22 @@ async def find_similar_images(request: Request, body: SimilarSearchRequest):
                 if similar_analysis:
                     filename = similar_analysis.get("filename", "unknown")
 
-                transformed_images.append({
-                    "id": img.get("analysis_id", str(uuid.uuid4())),
-                    "doc_id": img.get("document_id", ""),
-                    "filename": filename,
-                    "similarity_score": similarity_score,
-                    "similarity_type": similarity_type,
-                    "match_details": {
-                        "hash_distance": distance,
-                    },
-                    "thumbnail_url": None,
-                    "thumbnail_base64": None,
-                    "source": "internal",
-                    "found_at": datetime.utcnow().isoformat(),
-                })
+                transformed_images.append(
+                    {
+                        "id": img.get("analysis_id", str(uuid.uuid4())),
+                        "doc_id": img.get("document_id", ""),
+                        "filename": filename,
+                        "similarity_score": similarity_score,
+                        "similarity_type": similarity_type,
+                        "match_details": {
+                            "hash_distance": distance,
+                        },
+                        "thumbnail_url": None,
+                        "thumbnail_base64": None,
+                        "source": "internal",
+                        "found_at": datetime.utcnow().isoformat(),
+                    }
+                )
 
         # External search: reverse image search via web APIs or URL generators
         search_urls = []
@@ -845,22 +854,24 @@ async def find_similar_images(request: Request, body: SimilarSearchRequest):
             search_urls = external_data.get("search_urls", [])
 
             # Add any API-based results
-            for result in external_data.get("api_results", [])[:body.limit - len(transformed_images)]:
-                transformed_images.append({
-                    "id": str(uuid.uuid4()),
-                    "doc_id": "",
-                    "filename": result.get("title", "External Result"),
-                    "similarity_score": result.get("similarity_score", 0.5),
-                    "similarity_type": "content_similar",
-                    "match_details": {
-                        "source_url": result.get("url"),
-                        "source_domain": result.get("domain"),
-                    },
-                    "thumbnail_url": result.get("thumbnail_url"),
-                    "thumbnail_base64": None,
-                    "source": result.get("source", "external"),
-                    "found_at": datetime.utcnow().isoformat(),
-                })
+            for result in external_data.get("api_results", [])[: body.limit - len(transformed_images)]:
+                transformed_images.append(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "doc_id": "",
+                        "filename": result.get("title", "External Result"),
+                        "similarity_score": result.get("similarity_score", 0.5),
+                        "similarity_type": "content_similar",
+                        "match_details": {
+                            "source_url": result.get("url"),
+                            "source_domain": result.get("domain"),
+                        },
+                        "thumbnail_url": result.get("thumbnail_url"),
+                        "thumbnail_base64": None,
+                        "source": result.get("source", "external"),
+                        "found_at": datetime.utcnow().isoformat(),
+                    }
+                )
 
         return {
             "result": {
@@ -1001,8 +1012,7 @@ async def check_c2pa_support(request: Request):
     return {
         "c2pa_available": shard.c2pa_parser is not None,
         "signature_verification_available": (
-            shard.c2pa_parser is not None
-            and hasattr(shard.c2pa_parser, "verify_signature")
+            shard.c2pa_parser is not None and hasattr(shard.c2pa_parser, "verify_signature")
         ),
         "pysolar_available": shard.sun_position is not None,
         "imagehash_available": shard.hash_service is not None,
@@ -1031,22 +1041,15 @@ async def delete_analysis(request: Request, analysis_id: str):
 
     try:
         # Delete related records first (cascade should handle this, but explicit is safer)
+        await shard._db.execute("DELETE FROM arkham_media_ela WHERE analysis_id = :id", {"id": analysis_id})
         await shard._db.execute(
-            "DELETE FROM arkham_media_ela WHERE analysis_id = :id",
-            {"id": analysis_id}
-        )
-        await shard._db.execute(
-            "DELETE FROM arkham_media_sun_verification WHERE analysis_id = :id",
-            {"id": analysis_id}
+            "DELETE FROM arkham_media_sun_verification WHERE analysis_id = :id", {"id": analysis_id}
         )
         await shard._db.execute(
             "DELETE FROM arkham_media_similar WHERE source_analysis_id = :id OR target_analysis_id = :id",
-            {"id": analysis_id}
+            {"id": analysis_id},
         )
-        await shard._db.execute(
-            "DELETE FROM arkham_media_analyses WHERE id = :id",
-            {"id": analysis_id}
-        )
+        await shard._db.execute("DELETE FROM arkham_media_analyses WHERE id = :id", {"id": analysis_id})
 
         # Emit event
         if shard._event_bus:
@@ -1103,6 +1106,7 @@ async def reanalyze(request: Request, analysis_id: str):
 
 class AIJuniorAnalystRequest(BaseModel):
     """Request for AI Junior Analyst analysis."""
+
     target_id: str
     context: dict[str, Any] = {}
     depth: str = "quick"
@@ -1139,19 +1143,13 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     frame = shard._frame
 
     if not frame or not getattr(frame, "ai_analyst", None):
-        raise HTTPException(
-            status_code=503,
-            detail="AI Analyst service not available"
-        )
+        raise HTTPException(status_code=503, detail="AI Analyst service not available")
 
     # Build context from request
     try:
-        from arkham_frame.services import AnalysisRequest, AnalysisDepth, AnalystMessage
+        from arkham_frame.services import AnalysisDepth, AnalysisRequest, AnalystMessage
     except ImportError:
-        raise HTTPException(
-            status_code=503,
-            detail="AI Analyst service not available (import failed)"
-        )
+        raise HTTPException(status_code=503, detail="AI Analyst service not available (import failed)")
 
     # Parse depth
     try:
@@ -1162,10 +1160,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     # Build conversation history
     history = None
     if body.conversation_history:
-        history = [
-            AnalystMessage(role=msg["role"], content=msg["content"])
-            for msg in body.conversation_history
-        ]
+        history = [AnalystMessage(role=msg["role"], content=msg["content"]) for msg in body.conversation_history]
 
     analysis_request = AnalysisRequest(
         shard="media-forensics",

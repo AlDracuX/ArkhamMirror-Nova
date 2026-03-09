@@ -4,28 +4,27 @@ Claims Shard - API Tests
 Tests for FastAPI endpoints using TestClient.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi.testclient import TestClient
-from fastapi import FastAPI
 
+import pytest
 from arkham_shard_claims.api import router
 from arkham_shard_claims.models import (
     Claim,
-    Evidence,
-    ClaimStatus,
-    ClaimType,
     ClaimExtractionResult,
     ClaimMatch,
     ClaimMergeResult,
     ClaimStatistics,
-    EvidenceType,
+    ClaimStatus,
+    ClaimType,
+    Evidence,
     EvidenceRelationship,
     EvidenceStrength,
+    EvidenceType,
     ExtractionMethod,
 )
-
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 # === Test Setup ===
 
@@ -179,9 +178,7 @@ class TestListEndpoint:
         mock_shard.get_count.return_value = 0
 
         with patch("arkham_shard_claims.api._get_shard", return_value=mock_shard):
-            response = client.get(
-                "/api/claims/?status=verified&claim_type=factual&min_confidence=0.8"
-            )
+            response = client.get("/api/claims/?status=verified&claim_type=factual&min_confidence=0.8")
 
         assert response.status_code == 200
         mock_shard.list_claims.assert_called_once()

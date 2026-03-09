@@ -434,11 +434,26 @@
   border-radius: 12px;
 }
 
-.checklist-score.risk-minimal { background: #10b98120; color: #10b981; }
-.checklist-score.risk-low { background: #22c55e20; color: #22c55e; }
-.checklist-score.risk-moderate { background: #eab30820; color: #eab308; }
-.checklist-score.risk-high { background: #f9731620; color: #f97316; }
-.checklist-score.risk-critical { background: #ef444420; color: #ef4444; }
+.checklist-score.risk-minimal {
+  background: #10b98120;
+  color: #10b981;
+}
+.checklist-score.risk-low {
+  background: #22c55e20;
+  color: #22c55e;
+}
+.checklist-score.risk-moderate {
+  background: #eab30820;
+  color: #eab308;
+}
+.checklist-score.risk-high {
+  background: #f9731620;
+  color: #f97316;
+}
+.checklist-score.risk-critical {
+  background: #ef444420;
+  color: #ef4444;
+}
 
 /* Progress Bar */
 .checklist-progress-bar {
@@ -742,6 +757,10 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

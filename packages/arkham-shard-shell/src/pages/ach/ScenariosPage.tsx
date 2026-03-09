@@ -170,9 +170,7 @@ export function ScenariosPage() {
         if (!prev) return null;
         return {
           ...prev,
-          nodes: prev.nodes.map((n) =>
-            n.id === nodeId ? { ...n, status } : n
-          ),
+          nodes: prev.nodes.map((n) => (n.id === nodeId ? { ...n, status } : n)),
         };
       });
     } catch (error) {
@@ -269,9 +267,7 @@ export function ScenariosPage() {
               <select
                 className="status-select"
                 value={node.status}
-                onChange={(e) =>
-                  handleUpdateStatus(node.id, e.target.value as ScenarioStatus)
-                }
+                onChange={(e) => handleUpdateStatus(node.id, e.target.value as ScenarioStatus)}
                 style={{
                   backgroundColor: statusColor.bg,
                   borderColor: statusColor.border,
@@ -334,10 +330,7 @@ export function ScenariosPage() {
     <div className="scenarios-page">
       <div className="page-header">
         <div className="header-left">
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => navigate(`/ach/${matrixId}`)}
-          >
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/ach/${matrixId}`)}>
             <Icon name="ArrowLeft" size={16} />
             Back to Matrix
           </button>
@@ -351,10 +344,7 @@ export function ScenariosPage() {
         </div>
         <div className="header-actions">
           {aiAvailable && (
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowNewTreeDialog(true)}
-            >
+            <button className="btn btn-primary" onClick={() => setShowNewTreeDialog(true)}>
               <Icon name="Plus" size={16} />
               New Scenario Tree
             </button>
@@ -421,9 +411,7 @@ export function ScenariosPage() {
                   </div>
                 )}
               </div>
-              <div className="tree-body">
-                {buildTreeDisplay(selectedTree.nodes)}
-              </div>
+              <div className="tree-body">{buildTreeDisplay(selectedTree.nodes)}</div>
             </div>
           ) : (
             <div className="empty-visualization">
@@ -473,10 +461,7 @@ export function ScenariosPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <button
-                className="btn btn-ghost"
-                onClick={() => setShowNewTreeDialog(false)}
-              >
+              <button className="btn btn-ghost" onClick={() => setShowNewTreeDialog(false)}>
                 Cancel
               </button>
               <button

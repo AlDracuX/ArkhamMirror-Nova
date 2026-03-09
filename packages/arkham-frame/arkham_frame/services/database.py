@@ -2,31 +2,35 @@
 DatabaseService - PostgreSQL database access with schema isolation.
 """
 
-from typing import Optional, List, Dict, Any
 import logging
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class DatabaseError(Exception):
     """Base database error."""
+
     pass
 
 
 class SchemaNotFoundError(DatabaseError):
     """Schema does not exist."""
+
     def __init__(self, schema: str):
         super().__init__(f"Schema not found: {schema}")
 
 
 class SchemaExistsError(DatabaseError):
     """Schema already exists."""
+
     def __init__(self, schema: str):
         super().__init__(f"Schema already exists: {schema}")
 
 
 class QueryExecutionError(DatabaseError):
     """Query execution failed."""
+
     def __init__(self, message: str, query: str = ""):
         super().__init__(f"{message} - Query: {query[:100]}")
 
@@ -76,6 +80,7 @@ class DatabaseService:
             return False
         try:
             from sqlalchemy import text
+
             with self._engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
             return True
@@ -88,11 +93,11 @@ class DatabaseService:
             return []
         try:
             from sqlalchemy import text
+
             with self._engine.connect() as conn:
-                result = conn.execute(text(
-                    "SELECT schema_name FROM information_schema.schemata "
-                    "WHERE schema_name LIKE 'arkham_%'"
-                ))
+                result = conn.execute(
+                    text("SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE 'arkham_%'")
+                )
                 return [row[0] for row in result]
         except Exception as e:
             logger.error(f"Failed to list schemas: {e}")
@@ -110,9 +115,7 @@ class DatabaseService:
 
             with self._engine.connect() as conn:
                 # Database size
-                size_result = conn.execute(text(
-                    "SELECT pg_database_size(current_database()) as size"
-                ))
+                size_result = conn.execute(text("SELECT pg_database_size(current_database()) as size"))
                 row = size_result.fetchone()
                 stats["database_size_bytes"] = row[0] if row else 0
 
@@ -122,33 +125,41 @@ class DatabaseService:
 
                 for schema in schemas:
                     # Get table count
-                    table_result = conn.execute(text(
-                        "SELECT COUNT(*) FROM information_schema.tables "
-                        "WHERE table_schema = :schema"
-                    ), {"schema": schema})
+                    table_result = conn.execute(
+                        text("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = :schema"),
+                        {"schema": schema},
+                    )
                     table_count = table_result.fetchone()[0]
 
                     # Get total row count (approximate via pg_stat)
-                    row_result = conn.execute(text(
-                        "SELECT COALESCE(SUM(n_live_tup), 0) as rows "
-                        "FROM pg_stat_user_tables "
-                        "WHERE schemaname = :schema"
-                    ), {"schema": schema})
+                    row_result = conn.execute(
+                        text(
+                            "SELECT COALESCE(SUM(n_live_tup), 0) as rows "
+                            "FROM pg_stat_user_tables "
+                            "WHERE schemaname = :schema"
+                        ),
+                        {"schema": schema},
+                    )
                     row_count = row_result.fetchone()[0]
 
                     # Get schema size
-                    size_result = conn.execute(text(
-                        "SELECT COALESCE(SUM(pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))), 0) "
-                        "FROM pg_tables WHERE schemaname = :schema"
-                    ), {"schema": schema})
+                    size_result = conn.execute(
+                        text(
+                            "SELECT COALESCE(SUM(pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))), 0) "
+                            "FROM pg_tables WHERE schemaname = :schema"
+                        ),
+                        {"schema": schema},
+                    )
                     schema_size = size_result.fetchone()[0]
 
-                    schema_stats.append({
-                        "name": schema,
-                        "tables": table_count,
-                        "rows": int(row_count),
-                        "size_bytes": int(schema_size),
-                    })
+                    schema_stats.append(
+                        {
+                            "name": schema,
+                            "tables": table_count,
+                            "rows": int(row_count),
+                            "size_bytes": int(schema_size),
+                        }
+                    )
 
                 stats["schemas"] = schema_stats
                 stats["total_tables"] = sum(s["tables"] for s in schema_stats)
@@ -169,7 +180,8 @@ class DatabaseService:
             from sqlalchemy import text
 
             with self._engine.connect() as conn:
-                result = conn.execute(text("""
+                result = conn.execute(
+                    text("""
                     SELECT
                         t.table_name,
                         COALESCE(s.n_live_tup, 0) as row_count,
@@ -181,7 +193,9 @@ class DatabaseService:
                         ON s.schemaname = t.table_schema AND s.relname = t.table_name
                     WHERE t.table_schema = :schema
                     ORDER BY t.table_name
-                """), {"schema": schema})
+                """),
+                    {"schema": schema},
+                )
 
                 return [
                     {
@@ -214,17 +228,15 @@ class DatabaseService:
 
                 for schema in schemas:
                     # Get tables in schema
-                    result = conn.execute(text(
-                        "SELECT table_name FROM information_schema.tables "
-                        "WHERE table_schema = :schema"
-                    ), {"schema": schema})
+                    result = conn.execute(
+                        text("SELECT table_name FROM information_schema.tables WHERE table_schema = :schema"),
+                        {"schema": schema},
+                    )
 
                     for row in result.fetchall():
                         table_name = row[0]
                         try:
-                            conn.execute(text(
-                                f'VACUUM ANALYZE "{schema}"."{table_name}"'
-                            ))
+                            conn.execute(text(f'VACUUM ANALYZE "{schema}"."{table_name}"'))
                             vacuumed_tables += 1
                         except Exception as e:
                             logger.warning(f"Failed to vacuum {schema}.{table_name}: {e}")
@@ -264,10 +276,12 @@ class DatabaseService:
 
                 # Also drop arkham_* tables in public schema (e.g., arkham_entities)
                 try:
-                    result = conn.execute(text(
-                        "SELECT table_name FROM information_schema.tables "
-                        "WHERE table_schema = 'public' AND table_name LIKE 'arkham_%'"
-                    ))
+                    result = conn.execute(
+                        text(
+                            "SELECT table_name FROM information_schema.tables "
+                            "WHERE table_schema = 'public' AND table_name LIKE 'arkham_%'"
+                        )
+                    )
                     public_tables = [row[0] for row in result.fetchall()]
 
                     for table in public_tables:
@@ -319,6 +333,7 @@ class DatabaseService:
             raise DatabaseError("Database not connected")
         try:
             from sqlalchemy import text
+
             query, params = self._convert_params(query, params)
             with self._engine.connect() as conn:
                 conn.execute(text(query), params)
@@ -332,6 +347,7 @@ class DatabaseService:
             raise DatabaseError("Database not connected")
         try:
             from sqlalchemy import text
+
             query, params = self._convert_params(query, params)
             with self._engine.connect() as conn:
                 result = conn.execute(text(query), params)
@@ -348,6 +364,7 @@ class DatabaseService:
             raise DatabaseError("Database not connected")
         try:
             from sqlalchemy import text
+
             query, params = self._convert_params(query, params)
             with self._engine.connect() as conn:
                 result = conn.execute(text(query), params)

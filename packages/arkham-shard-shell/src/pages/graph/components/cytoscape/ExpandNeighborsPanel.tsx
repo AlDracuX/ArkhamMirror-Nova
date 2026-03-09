@@ -76,9 +76,7 @@ export const ExpandNeighborsPanel: React.FC<ExpandNeighborsPanelProps> = ({
             Network Exploration
           </h4>
         </div>
-        <p className="empty-message">
-          Select a node to explore its network connections.
-        </p>
+        <p className="empty-message">Select a node to explore its network connections.</p>
       </div>
     );
   }

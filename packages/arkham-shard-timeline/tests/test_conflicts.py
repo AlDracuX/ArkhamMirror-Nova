@@ -4,14 +4,14 @@ Timeline Shard - Conflict Detection Tests
 Tests for the ConflictDetector class.
 """
 
-import pytest
 from datetime import datetime, timedelta
 
+import pytest
 from arkham_shard_timeline.conflicts import ConflictDetector
 from arkham_shard_timeline.models import (
-    TimelineEvent,
-    ConflictType,
     ConflictSeverity,
+    ConflictType,
+    TimelineEvent,
 )
 
 
@@ -212,20 +212,24 @@ class TestGapDetection:
 
         # Events every 7 days
         for i in range(5):
-            events.append(TimelineEvent(
-                id=f"e-{i}",
-                document_id="doc-1",
-                text=f"Event {i}",
-                date_start=base_date + timedelta(days=i * 7),
-            ))
+            events.append(
+                TimelineEvent(
+                    id=f"e-{i}",
+                    document_id="doc-1",
+                    text=f"Event {i}",
+                    date_start=base_date + timedelta(days=i * 7),
+                )
+            )
 
         # Add one event with huge gap
-        events.append(TimelineEvent(
-            id="e-gap",
-            document_id="doc-1",
-            text="Event after gap",
-            date_start=base_date + timedelta(days=365),  # One year later
-        ))
+        events.append(
+            TimelineEvent(
+                id="e-gap",
+                document_id="doc-1",
+                text="Event after gap",
+                date_start=base_date + timedelta(days=365),  # One year later
+            )
+        )
 
         conflicts = detector.detect_conflicts(events, [ConflictType.GAP])
 
@@ -240,12 +244,14 @@ class TestGapDetection:
 
         # Events every 7 days, consistently
         for i in range(10):
-            events.append(TimelineEvent(
-                id=f"e-{i}",
-                document_id="doc-1",
-                text=f"Event {i}",
-                date_start=base_date + timedelta(days=i * 7),
-            ))
+            events.append(
+                TimelineEvent(
+                    id=f"e-{i}",
+                    document_id="doc-1",
+                    text=f"Event {i}",
+                    date_start=base_date + timedelta(days=i * 7),
+                )
+            )
 
         conflicts = detector.detect_conflicts(events, [ConflictType.GAP])
 

@@ -6,19 +6,20 @@ DAG structure, finding causal paths, identifying confounders, and
 estimating intervention effects using simplified do-calculus.
 """
 
-from dataclasses import dataclass, field
-from typing import Any
-from collections import defaultdict, deque
-from enum import Enum
 import logging
+from collections import defaultdict, deque
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any
 
-from .models import Graph, GraphNode, GraphEdge
+from .models import Graph, GraphEdge, GraphNode
 
 logger = logging.getLogger(__name__)
 
 
 class CausalEdgeType(str, Enum):
     """Types of causal relationships."""
+
     CAUSES = "causes"
     INFLUENCES = "influences"
     CORRELATES = "correlates"
@@ -27,6 +28,7 @@ class CausalEdgeType(str, Enum):
 
 class NodeState(str, Enum):
     """Possible states for causal variables."""
+
     TRUE = "true"
     FALSE = "false"
     UNKNOWN = "unknown"
@@ -38,6 +40,7 @@ class NodeState(str, Enum):
 @dataclass
 class CausalNode:
     """Variable in a causal graph."""
+
     id: str
     label: str
     description: str = ""
@@ -51,6 +54,7 @@ class CausalNode:
 @dataclass
 class CausalEdge:
     """Causal relationship between variables."""
+
     cause: str
     effect: str
     strength: float = 1.0  # Causal strength estimate (0-1)
@@ -62,6 +66,7 @@ class CausalEdge:
 @dataclass
 class CausalPath:
     """A path through the causal graph."""
+
     nodes: list[str]
     edges: list[CausalEdge]
     path_type: str = "direct"  # direct, backdoor, frontdoor
@@ -73,6 +78,7 @@ class CausalPath:
 @dataclass
 class ConfounderInfo:
     """Information about a confounding variable."""
+
     id: str
     label: str
     affects_treatment: bool
@@ -84,6 +90,7 @@ class ConfounderInfo:
 @dataclass
 class InterventionResult:
     """Result of a causal intervention analysis."""
+
     intervention_node: str
     intervention_value: str
     target_node: str
@@ -97,6 +104,7 @@ class InterventionResult:
 @dataclass
 class CausalGraph:
     """A causal graph with nodes and directed edges."""
+
     id: str
     name: str
     nodes: list[CausalNode] = field(default_factory=list)
@@ -125,8 +133,13 @@ class CausalGraphEngine:
             CausalGraph with validated structure
         """
         causal_edge_types = causal_edge_types or [
-            "causes", "influences", "leads_to", "results_in",
-            "precedes", "triggers", "enables"
+            "causes",
+            "influences",
+            "leads_to",
+            "results_in",
+            "precedes",
+            "triggers",
+            "enables",
         ]
 
         nodes = []
@@ -134,14 +147,16 @@ class CausalGraphEngine:
 
         # Convert nodes
         for node in graph.nodes:
-            nodes.append(CausalNode(
-                id=node.id,
-                label=node.label or node.id,
-                description=node.properties.get("description", "") if node.properties else "",
-                states=node.properties.get("states", ["true", "false"]) if node.properties else ["true", "false"],
-                observed_state=node.properties.get("observed_state") if node.properties else None,
-                node_type=node.properties.get("causal_type", "variable") if node.properties else "variable",
-            ))
+            nodes.append(
+                CausalNode(
+                    id=node.id,
+                    label=node.label or node.id,
+                    description=node.properties.get("description", "") if node.properties else "",
+                    states=node.properties.get("states", ["true", "false"]) if node.properties else ["true", "false"],
+                    observed_state=node.properties.get("observed_state") if node.properties else None,
+                    node_type=node.properties.get("causal_type", "variable") if node.properties else "variable",
+                )
+            )
 
         # Convert edges (only causal types)
         for edge in graph.edges:
@@ -149,16 +164,18 @@ class CausalGraphEngine:
             if causal_edge_types and edge_type not in [t.lower() for t in causal_edge_types]:
                 continue
 
-            edges.append(CausalEdge(
-                cause=edge.source,
-                effect=edge.target,
-                strength=edge.weight if edge.weight else 1.0,
-                edge_type=CausalEdgeType.CAUSES,
-                confidence=edge.properties.get("confidence", 1.0) if edge.properties else 1.0,
-                mechanism=edge.properties.get("mechanism", "") if edge.properties else "",
-            ))
+            edges.append(
+                CausalEdge(
+                    cause=edge.source,
+                    effect=edge.target,
+                    strength=edge.weight if edge.weight else 1.0,
+                    edge_type=CausalEdgeType.CAUSES,
+                    confidence=edge.properties.get("confidence", 1.0) if edge.properties else 1.0,
+                    mechanism=edge.properties.get("mechanism", "") if edge.properties else "",
+                )
+            )
 
-        graph_id = getattr(graph, 'id', None) or getattr(graph, 'project_id', 'unknown')
+        graph_id = getattr(graph, "id", None) or getattr(graph, "project_id", "unknown")
         causal_graph = CausalGraph(
             id=f"causal_{graph_id}",
             name=f"Causal Graph: {graph_id}",
@@ -249,8 +266,7 @@ class CausalGraphEngine:
 
         paths: list[CausalPath] = []
 
-        def dfs(current: str, target: str, visited: set[str],
-                path_nodes: list[str], path_edges: list[CausalEdge]):
+        def dfs(current: str, target: str, visited: set[str], path_nodes: list[str], path_edges: list[CausalEdge]):
             if len(path_nodes) > max_length:
                 return
 
@@ -260,12 +276,14 @@ class CausalGraphEngine:
                 for edge in path_edges:
                     total_strength *= edge.strength
 
-                paths.append(CausalPath(
-                    nodes=path_nodes.copy(),
-                    edges=path_edges.copy(),
-                    path_type="direct" if len(path_edges) == 1 else "indirect",
-                    total_strength=total_strength,
-                ))
+                paths.append(
+                    CausalPath(
+                        nodes=path_nodes.copy(),
+                        edges=path_edges.copy(),
+                        path_type="direct" if len(path_edges) == 1 else "indirect",
+                        total_strength=total_strength,
+                    )
+                )
                 return
 
             for edge in adjacency[current]:
@@ -314,18 +332,19 @@ class CausalGraphEngine:
         backdoor_paths: list[CausalPath] = []
 
         # Find paths that start by going backwards from treatment
-        def find_paths(current: str, target: str, visited: set[str],
-                      path: list[str], started_backward: bool):
+        def find_paths(current: str, target: str, visited: set[str], path: list[str], started_backward: bool):
             if len(path) > 10:
                 return
 
             if current == target and started_backward:
-                backdoor_paths.append(CausalPath(
-                    nodes=path.copy(),
-                    edges=[],
-                    path_type="backdoor",
-                    total_strength=1.0,
-                ))
+                backdoor_paths.append(
+                    CausalPath(
+                        nodes=path.copy(),
+                        edges=[],
+                        path_type="backdoor",
+                        total_strength=1.0,
+                    )
+                )
                 return
 
             # If at treatment and haven't started backward, go backward first
@@ -418,14 +437,16 @@ class CausalGraphEngine:
             path_to_treatment = self._find_path_to(conf_id, treatment, children)
             path_to_outcome = self._find_path_to(conf_id, outcome, children)
 
-            confounders.append(ConfounderInfo(
-                id=conf_id,
-                label=node.label,
-                affects_treatment=bool(path_to_treatment),
-                affects_outcome=bool(path_to_outcome),
-                path_to_treatment=path_to_treatment,
-                path_to_outcome=path_to_outcome,
-            ))
+            confounders.append(
+                ConfounderInfo(
+                    id=conf_id,
+                    label=node.label,
+                    affects_treatment=bool(path_to_treatment),
+                    affects_outcome=bool(path_to_outcome),
+                    path_to_treatment=path_to_treatment,
+                    path_to_outcome=path_to_outcome,
+                )
+            )
 
         return confounders
 
@@ -525,7 +546,7 @@ class CausalGraphEngine:
         path_descriptions = []
         for i, path in enumerate(causal_paths):
             path_str = " → ".join(path.nodes)
-            path_descriptions.append(f"Path {i+1}: {path_str} (strength: {path.total_strength:.2f})")
+            path_descriptions.append(f"Path {i + 1}: {path_str} (strength: {path.total_strength:.2f})")
 
         explanation = f"Intervention do({intervention_node}={intervention_value}) on {target_node}:\n"
         explanation += f"Found {len(causal_paths)} causal path(s):\n"
@@ -600,35 +621,39 @@ class CausalGraphEngine:
         layer_map = {node_id: i for i, node_id in enumerate(ordering)}
 
         for node in causal_graph.nodes:
-            nodes.append(GraphNode(
-                id=node.id,
-                label=node.label,
-                type="causal_variable",
-                entity_type=node.node_type,
-                weight=1.0,
-                properties={
-                    "description": node.description,
-                    "states": node.states,
-                    "observed_state": node.observed_state,
-                    "is_intervention": node.is_intervention,
-                    "layer": layer_map.get(node.id, 0),
-                    "causal_type": node.node_type,
-                },
-            ))
+            nodes.append(
+                GraphNode(
+                    id=node.id,
+                    label=node.label,
+                    type="causal_variable",
+                    entity_type=node.node_type,
+                    weight=1.0,
+                    properties={
+                        "description": node.description,
+                        "states": node.states,
+                        "observed_state": node.observed_state,
+                        "is_intervention": node.is_intervention,
+                        "layer": layer_map.get(node.id, 0),
+                        "causal_type": node.node_type,
+                    },
+                )
+            )
 
         for edge in causal_graph.edges:
-            edges.append(GraphEdge(
-                source=edge.cause,
-                target=edge.effect,
-                weight=edge.strength,
-                type=edge.edge_type.value,
-                relationship_type=edge.edge_type.value,
-                properties={
-                    "strength": edge.strength,
-                    "confidence": edge.confidence,
-                    "mechanism": edge.mechanism,
-                },
-            ))
+            edges.append(
+                GraphEdge(
+                    source=edge.cause,
+                    target=edge.effect,
+                    weight=edge.strength,
+                    type=edge.edge_type.value,
+                    relationship_type=edge.edge_type.value,
+                    properties={
+                        "strength": edge.strength,
+                        "confidence": edge.confidence,
+                        "mechanism": edge.mechanism,
+                    },
+                )
+            )
 
         return Graph(
             id=causal_graph.id,

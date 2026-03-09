@@ -68,7 +68,11 @@ export default function RegexSearchPanel({ projectId, onMatchClick }: RegexSearc
         const result = await validatePattern(pattern);
         setValidation(result);
       } catch {
-        setValidation({ valid: false, error: 'Validation failed', estimated_performance: 'invalid' });
+        setValidation({
+          valid: false,
+          error: 'Validation failed',
+          estimated_performance: 'invalid',
+        });
       } finally {
         setValidating(false);
       }
@@ -115,12 +119,15 @@ export default function RegexSearchPanel({ projectId, onMatchClick }: RegexSearc
   }, []);
 
   // Group presets by category
-  const presetsByCategory = presets.reduce((acc, preset) => {
-    const cat = preset.category || 'custom';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(preset);
-    return acc;
-  }, {} as Record<string, RegexPreset[]>);
+  const presetsByCategory = presets.reduce(
+    (acc, preset) => {
+      const cat = preset.category || 'custom';
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(preset);
+      return acc;
+    },
+    {} as Record<string, RegexPreset[]>
+  );
 
   // Filter and group detected patterns that have searchable criteria
   const searchableDetectedPatterns = detectedPatterns.filter(
@@ -128,20 +135,28 @@ export default function RegexSearchPanel({ projectId, onMatchClick }: RegexSearc
   );
 
   // Group detected patterns by type
-  const detectedByType = searchableDetectedPatterns.reduce((acc, pattern) => {
-    const type = pattern.pattern_type || 'custom';
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(pattern);
-    return acc;
-  }, {} as Record<string, DetectedPattern[]>);
+  const detectedByType = searchableDetectedPatterns.reduce(
+    (acc, pattern) => {
+      const type = pattern.pattern_type || 'custom';
+      if (!acc[type]) acc[type] = [];
+      acc[type].push(pattern);
+      return acc;
+    },
+    {} as Record<string, DetectedPattern[]>
+  );
 
   const getPerformanceClass = (perf: string) => {
     switch (perf) {
-      case 'fast': return 'regex-perf-fast';
-      case 'moderate': return 'regex-perf-moderate';
-      case 'slow': return 'regex-perf-slow';
-      case 'dangerous': return 'regex-perf-dangerous';
-      default: return 'regex-perf-invalid';
+      case 'fast':
+        return 'regex-perf-fast';
+      case 'moderate':
+        return 'regex-perf-moderate';
+      case 'slow':
+        return 'regex-perf-slow';
+      case 'dangerous':
+        return 'regex-perf-dangerous';
+      default:
+        return 'regex-perf-invalid';
     }
   };
 
@@ -167,7 +182,11 @@ export default function RegexSearchPanel({ projectId, onMatchClick }: RegexSearc
             {!validating && validation && (
               <div className="regex-input-icon">
                 {validation.valid ? (
-                  <Icon name="CheckCircle" size={16} className={getPerformanceClass(validation.estimated_performance)} />
+                  <Icon
+                    name="CheckCircle"
+                    size={16}
+                    className={getPerformanceClass(validation.estimated_performance)}
+                  />
                 ) : (
                   <Icon name="AlertTriangle" size={16} className="regex-perf-invalid" />
                 )}
@@ -188,7 +207,9 @@ export default function RegexSearchPanel({ projectId, onMatchClick }: RegexSearc
         {validation && (
           <div className="regex-validation">
             {validation.valid ? (
-              <div className={`regex-validation-msg ${getPerformanceClass(validation.estimated_performance)}`}>
+              <div
+                className={`regex-validation-msg ${getPerformanceClass(validation.estimated_performance)}`}
+              >
                 <Icon name="Zap" size={14} />
                 <span>Performance: {validation.estimated_performance}</span>
                 {validation.estimated_performance === 'dangerous' && (
@@ -228,10 +249,7 @@ export default function RegexSearchPanel({ projectId, onMatchClick }: RegexSearc
 
       {/* Presets Section */}
       <div className="regex-presets-section">
-        <button
-          onClick={() => setShowPresets(!showPresets)}
-          className="regex-presets-toggle"
-        >
+        <button onClick={() => setShowPresets(!showPresets)} className="regex-presets-toggle">
           <span>Pattern Presets</span>
           <Icon name={showPresets ? 'ChevronUp' : 'ChevronDown'} size={16} />
         </button>
@@ -268,10 +286,7 @@ export default function RegexSearchPanel({ projectId, onMatchClick }: RegexSearc
 
       {/* Detected Patterns from Ingest Section */}
       <div className="regex-presets-section">
-        <button
-          onClick={() => setShowDetected(!showDetected)}
-          className="regex-presets-toggle"
-        >
+        <button onClick={() => setShowDetected(!showDetected)} className="regex-presets-toggle">
           <span>Detected Patterns</span>
           {searchableDetectedPatterns.length > 0 && (
             <span className="regex-detected-badge">{searchableDetectedPatterns.length}</span>
@@ -338,8 +353,8 @@ export default function RegexSearchPanel({ projectId, onMatchClick }: RegexSearc
             {/* Results Header */}
             <div className="regex-results-header">
               <span>
-                Found <strong>{searchResults.total_matches}</strong> matches
-                in <strong>{searchResults.documents_searched}</strong> documents
+                Found <strong>{searchResults.total_matches}</strong> matches in{' '}
+                <strong>{searchResults.documents_searched}</strong> documents
               </span>
               <span>{searchResults.duration_ms.toFixed(1)}ms</span>
             </div>

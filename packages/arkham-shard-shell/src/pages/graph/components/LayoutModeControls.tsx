@@ -12,9 +12,9 @@ import { useDebouncedSlider } from '../hooks/useDebounce';
 interface LayoutModeControlsProps {
   settings: LayoutSettings;
   onChange: (updates: Partial<LayoutSettings>) => void;
-  selectedNodeId?: string | null;  // For "use as root" action
-  entityTypes?: string[];  // Available entity types for bipartite
-  onApplyLayout?: () => void;  // Callback to trigger layout recalculation
+  selectedNodeId?: string | null; // For "use as root" action
+  entityTypes?: string[]; // Available entity types for bipartite
+  onApplyLayout?: () => void; // Callback to trigger layout recalculation
   isCalculating?: boolean;
 }
 
@@ -109,7 +109,7 @@ export function LayoutModeControls({
     100
   );
 
-  const currentLayout = LAYOUT_OPTIONS.find(l => l.id === settings.layoutType);
+  const currentLayout = LAYOUT_OPTIONS.find((l) => l.id === settings.layoutType);
   const showRootNodeOption = ['hierarchical', 'radial', 'tree'].includes(settings.layoutType);
   const showDirectionOption = ['hierarchical', 'tree'].includes(settings.layoutType);
   const showSpacingOptions = ['hierarchical', 'tree'].includes(settings.layoutType);
@@ -136,7 +136,7 @@ export function LayoutModeControls({
       <div className="control-group">
         <label>Layout Algorithm</label>
         <div className="layout-grid">
-          {LAYOUT_OPTIONS.map(option => (
+          {LAYOUT_OPTIONS.map((option) => (
             <button
               key={option.id}
               className={`layout-option ${settings.layoutType === option.id ? 'active' : ''}`}
@@ -148,19 +148,13 @@ export function LayoutModeControls({
             </button>
           ))}
         </div>
-        {currentLayout && (
-          <span className="control-hint">{currentLayout.description}</span>
-        )}
+        {currentLayout && <span className="control-hint">{currentLayout.description}</span>}
       </div>
 
       {/* Apply Layout Button (for server-calculated layouts) */}
       {settings.layoutType !== 'force' && (
         <div className="control-group">
-          <button
-            className="apply-layout-btn"
-            onClick={onApplyLayout}
-            disabled={isCalculating}
-          >
+          <button className="apply-layout-btn" onClick={onApplyLayout} disabled={isCalculating}>
             {isCalculating ? (
               <>
                 <Icon name="Loader2" size={16} className="spin" />
@@ -217,8 +211,10 @@ export function LayoutModeControls({
             onChange={(e) => onChange({ direction: e.target.value as LayoutDirection })}
             className="control-select"
           >
-            {DIRECTION_OPTIONS.map(opt => (
-              <option key={opt.id} value={opt.id}>{opt.label}</option>
+            {DIRECTION_OPTIONS.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.label}
+              </option>
             ))}
           </select>
           <span className="control-hint">Flow direction of hierarchy</span>
@@ -294,13 +290,16 @@ export function LayoutModeControls({
           <div className="control-group">
             <label>Left Column Types</label>
             <div className="type-chips">
-              {(entityTypes.length > 0 ? entityTypes : ['document', 'person', 'organization', 'location', 'event']).map(type => (
+              {(entityTypes.length > 0
+                ? entityTypes
+                : ['document', 'person', 'organization', 'location', 'event']
+              ).map((type) => (
                 <button
                   key={type}
                   className={`type-chip ${settings.leftTypes.includes(type) ? 'active' : ''}`}
                   onClick={() => {
                     const newTypes = settings.leftTypes.includes(type)
-                      ? settings.leftTypes.filter(t => t !== type)
+                      ? settings.leftTypes.filter((t) => t !== type)
                       : [...settings.leftTypes, type];
                     onChange({ leftTypes: newTypes });
                   }}
@@ -315,13 +314,16 @@ export function LayoutModeControls({
           <div className="control-group">
             <label>Right Column Types</label>
             <div className="type-chips">
-              {(entityTypes.length > 0 ? entityTypes : ['document', 'person', 'organization', 'location', 'event']).map(type => (
+              {(entityTypes.length > 0
+                ? entityTypes
+                : ['document', 'person', 'organization', 'location', 'event']
+              ).map((type) => (
                 <button
                   key={type}
                   className={`type-chip ${settings.rightTypes.includes(type) ? 'active' : ''}`}
                   onClick={() => {
                     const newTypes = settings.rightTypes.includes(type)
-                      ? settings.rightTypes.filter(t => t !== type)
+                      ? settings.rightTypes.filter((t) => t !== type)
                       : [...settings.rightTypes, type];
                     onChange({ rightTypes: newTypes });
                   }}
@@ -344,7 +346,9 @@ export function LayoutModeControls({
             min="1"
             max="20"
             value={settings.gridColumns || ''}
-            onChange={(e) => onChange({ gridColumns: e.target.value ? Number(e.target.value) : null })}
+            onChange={(e) =>
+              onChange({ gridColumns: e.target.value ? Number(e.target.value) : null })
+            }
             placeholder="Auto"
             className="control-input"
           />

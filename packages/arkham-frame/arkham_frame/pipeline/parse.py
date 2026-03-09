@@ -5,10 +5,10 @@ This stage dispatches NER jobs to the cpu-ner worker pool.
 Workers are registered by the arkham-shard-parse package.
 """
 
-from typing import Dict, Any
-from datetime import datetime
 import logging
 import uuid
+from datetime import datetime
+from typing import Any, Dict
 
 from .base import PipelineStage, StageResult, StageStatus
 

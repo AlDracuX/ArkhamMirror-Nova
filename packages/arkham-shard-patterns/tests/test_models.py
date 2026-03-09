@@ -2,26 +2,26 @@
 Tests for Patterns Shard Models
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_patterns.models import (
+    Correlation,
+    CorrelationRequest,
+    CorrelationResult,
+    DetectionMethod,
     Pattern,
-    PatternCreate,
-    PatternUpdate,
-    PatternMatch,
-    PatternMatchCreate,
-    PatternFilter,
-    PatternCriteria,
-    PatternStatistics,
     PatternAnalysisRequest,
     PatternAnalysisResult,
-    CorrelationRequest,
-    Correlation,
-    CorrelationResult,
-    PatternType,
+    PatternCreate,
+    PatternCriteria,
+    PatternFilter,
+    PatternMatch,
+    PatternMatchCreate,
+    PatternStatistics,
     PatternStatus,
-    DetectionMethod,
+    PatternType,
+    PatternUpdate,
     SourceType,
 )
 

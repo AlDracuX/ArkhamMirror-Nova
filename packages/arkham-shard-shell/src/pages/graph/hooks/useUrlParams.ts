@@ -76,7 +76,11 @@ function parseUrlParams(searchParams: URLSearchParams): Partial<UrlGraphSettings
 /**
  * Build URL params from graph settings
  */
-function buildUrlParams(settings: GraphSettings, tab?: string, selectedNode?: string): URLSearchParams {
+function buildUrlParams(
+  settings: GraphSettings,
+  tab?: string,
+  selectedNode?: string
+): URLSearchParams {
   const params = new URLSearchParams();
 
   const { filters, scoring } = settings;
@@ -147,7 +151,8 @@ export function useUrlParams(
     if (urlSettings.entityTypes !== undefined) filterUpdates.entityTypes = urlSettings.entityTypes;
     if (urlSettings.minDegree !== undefined) filterUpdates.minDegree = urlSettings.minDegree;
     if (urlSettings.maxDegree !== undefined) filterUpdates.maxDegree = urlSettings.maxDegree;
-    if (urlSettings.minEdgeWeight !== undefined) filterUpdates.minEdgeWeight = urlSettings.minEdgeWeight;
+    if (urlSettings.minEdgeWeight !== undefined)
+      filterUpdates.minEdgeWeight = urlSettings.minEdgeWeight;
     if (urlSettings.maxNodes !== undefined) filterUpdates.maxNodes = urlSettings.maxNodes;
     if (urlSettings.searchQuery !== undefined) filterUpdates.searchQuery = urlSettings.searchQuery;
 
@@ -160,7 +165,8 @@ export function useUrlParams(
       const scoringUpdates: Partial<ScoringSettings> = {};
       if (urlSettings.scoringEnabled) scoringUpdates.enabled = true;
       if (urlSettings.centralityType) {
-        scoringUpdates.centralityType = urlSettings.centralityType as ScoringSettings['centralityType'];
+        scoringUpdates.centralityType =
+          urlSettings.centralityType as ScoringSettings['centralityType'];
       }
       updateScoring(scoringUpdates);
     }

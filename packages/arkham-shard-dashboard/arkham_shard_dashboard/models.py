@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 class ServiceStatus(str, Enum):
     """Status of a frame service."""
+
     AVAILABLE = "available"
     UNAVAILABLE = "unavailable"
     DEGRADED = "degraded"
@@ -21,6 +22,7 @@ class ServiceStatus(str, Enum):
 
 class ServiceHealth(BaseModel):
     """Health status of a service."""
+
     available: bool = False
     status: ServiceStatus = ServiceStatus.UNAVAILABLE
     info: Optional[Dict[str, Any]] = None
@@ -29,6 +31,7 @@ class ServiceHealth(BaseModel):
 
 class SystemHealth(BaseModel):
     """Overall system health status."""
+
     database: ServiceHealth = Field(default_factory=ServiceHealth)
     vectors: ServiceHealth = Field(default_factory=ServiceHealth)
     llm: ServiceHealth = Field(default_factory=ServiceHealth)
@@ -39,6 +42,7 @@ class SystemHealth(BaseModel):
 
 class LLMConfig(BaseModel):
     """LLM service configuration."""
+
     endpoint: Optional[str] = None
     model: Optional[str] = None
     available: bool = False
@@ -48,6 +52,7 @@ class LLMConfig(BaseModel):
 
 class UpdateLLMRequest(BaseModel):
     """Request to update LLM configuration."""
+
     endpoint: Optional[str] = None
     model: Optional[str] = None
     max_tokens: Optional[int] = None
@@ -56,18 +61,16 @@ class UpdateLLMRequest(BaseModel):
 
 class SetFallbackModelsRequest(BaseModel):
     """Request to configure OpenRouter fallback models."""
+
     models: List[str] = Field(
-        default_factory=list,
-        description="List of model IDs in priority order for fallback routing"
+        default_factory=list, description="List of model IDs in priority order for fallback routing"
     )
-    enabled: bool = Field(
-        default=True,
-        description="Enable or disable fallback routing"
-    )
+    enabled: bool = Field(default=True, description="Enable or disable fallback routing")
 
 
 class LLMTestResult(BaseModel):
     """Result of LLM connection test."""
+
     success: bool
     response: Optional[str] = None
     error: Optional[str] = None
@@ -76,6 +79,7 @@ class LLMTestResult(BaseModel):
 
 class DatabaseInfo(BaseModel):
     """Database information."""
+
     available: bool = False
     url: Optional[str] = None  # Truncated for security
     schemas: List[str] = Field(default_factory=list)
@@ -85,6 +89,7 @@ class DatabaseInfo(BaseModel):
 
 class MigrationResult(BaseModel):
     """Result of database migration."""
+
     success: bool
     message: str
     migrations_applied: int = 0
@@ -93,11 +98,13 @@ class MigrationResult(BaseModel):
 
 class ResetDatabaseRequest(BaseModel):
     """Request to reset database (requires confirmation)."""
+
     confirm: bool = False
 
 
 class VacuumResult(BaseModel):
     """Result of VACUUM operation."""
+
     success: bool
     message: str
     space_reclaimed_mb: Optional[float] = None
@@ -105,6 +112,7 @@ class VacuumResult(BaseModel):
 
 class WorkerInfo(BaseModel):
     """Information about a worker."""
+
     id: str
     queue: str
     status: str
@@ -115,6 +123,7 @@ class WorkerInfo(BaseModel):
 
 class QueueStats(BaseModel):
     """Statistics for a worker queue."""
+
     queue: str
     pending: int = 0
     processing: int = 0
@@ -126,12 +135,14 @@ class QueueStats(BaseModel):
 
 class ScaleWorkersRequest(BaseModel):
     """Request to scale workers."""
+
     queue: str
     count: int = Field(ge=0, le=100)
 
 
 class ScaleWorkersResult(BaseModel):
     """Result of scaling workers."""
+
     success: bool
     queue: str
     target_count: int
@@ -141,11 +152,13 @@ class ScaleWorkersResult(BaseModel):
 
 class StartWorkerRequest(BaseModel):
     """Request to start a worker."""
+
     queue: str
 
 
 class StartWorkerResult(BaseModel):
     """Result of starting a worker."""
+
     success: bool
     worker_id: Optional[str] = None
     queue: str
@@ -154,11 +167,13 @@ class StartWorkerResult(BaseModel):
 
 class StopWorkerRequest(BaseModel):
     """Request to stop a worker."""
+
     worker_id: str
 
 
 class StopWorkerResult(BaseModel):
     """Result of stopping a worker."""
+
     success: bool
     worker_id: str
     error: Optional[str] = None
@@ -166,6 +181,7 @@ class StopWorkerResult(BaseModel):
 
 class EventInfo(BaseModel):
     """Information about a system event."""
+
     event_type: str
     payload: Dict[str, Any] = Field(default_factory=dict)
     source: str
@@ -174,12 +190,14 @@ class EventInfo(BaseModel):
 
 class EventListResponse(BaseModel):
     """Response for event listing."""
+
     events: List[EventInfo]
     total: int = 0
 
 
 class ErrorInfo(BaseModel):
     """Information about a system error."""
+
     event_type: str
     payload: Dict[str, Any] = Field(default_factory=dict)
     source: str
@@ -189,12 +207,14 @@ class ErrorInfo(BaseModel):
 
 class ErrorListResponse(BaseModel):
     """Response for error listing."""
+
     errors: List[ErrorInfo]
     total: int = 0
 
 
 class ShardInfo(BaseModel):
     """Information about a loaded shard."""
+
     name: str
     version: str
     description: str
@@ -205,6 +225,7 @@ class ShardInfo(BaseModel):
 
 class SystemInfo(BaseModel):
     """Overall system information."""
+
     frame_version: str = "0.1.0"
     shards_loaded: int = 0
     shards: List[ShardInfo] = Field(default_factory=list)
@@ -214,6 +235,7 @@ class SystemInfo(BaseModel):
 
 class DashboardStats(BaseModel):
     """Dashboard statistics."""
+
     total_documents: int = 0
     total_entities: int = 0
     total_projects: int = 0

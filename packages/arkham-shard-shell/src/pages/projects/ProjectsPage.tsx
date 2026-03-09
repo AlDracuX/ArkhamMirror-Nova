@@ -39,14 +39,17 @@ interface EmbeddingModel {
 
 interface CollectionStats {
   available: boolean;
-  collections: Record<string, {
-    name: string;
-    vector_count?: number;
-    dimensions?: number;
-    status?: string;
-    exists?: boolean;
-    error?: string;
-  }>;
+  collections: Record<
+    string,
+    {
+      name: string;
+      vector_count?: number;
+      dimensions?: number;
+      status?: string;
+      exists?: boolean;
+      error?: string;
+    }
+  >;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -74,135 +77,150 @@ export function ProjectsPage() {
   const [embeddingModels, setEmbeddingModels] = useState<EmbeddingModel[]>([]);
 
   // Fetch projects with usePaginatedFetch
-  const { items: projects, total, loading, error, refetch } = usePaginatedFetch<Project>(
-    '/api/projects/',
-    {
-      params: {
-        status: statusFilter || undefined,
-        search: searchQuery || undefined,
-      },
-    }
-  );
+  const {
+    items: projects,
+    total,
+    loading,
+    error,
+    refetch,
+  } = usePaginatedFetch<Project>('/api/projects/', {
+    params: {
+      status: statusFilter || undefined,
+      search: searchQuery || undefined,
+    },
+  });
 
   // Fetch available embedding models
   useEffect(() => {
     fetch('/api/projects/embedding-models')
-      .then(res => res.json())
-      .then(data => setEmbeddingModels(data))
-      .catch(err => console.error('Failed to fetch embedding models:', err));
+      .then((res) => res.json())
+      .then((data) => setEmbeddingModels(data))
+      .catch((err) => console.error('Failed to fetch embedding models:', err));
   }, []);
 
-  const handleCreateProject = useCallback(async (
-    name: string,
-    description: string,
-    embeddingModel?: string
-  ) => {
-    try {
-      const response = await fetch('/api/projects/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          description,
-          owner_id: 'system',
-          status: 'active',
-          embedding_model: embeddingModel || 'all-MiniLM-L6-v2',
-          create_collections: true,
-        }),
-      });
+  const handleCreateProject = useCallback(
+    async (name: string, description: string, embeddingModel?: string) => {
+      try {
+        const response = await fetch('/api/projects/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            description,
+            owner_id: 'system',
+            status: 'active',
+            embedding_model: embeddingModel || 'all-MiniLM-L6-v2',
+            create_collections: true,
+          }),
+        });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to create project');
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to create project');
+        }
+
+        toast.success('Project created with isolated vector collections');
+        setShowCreateModal(false);
+        refetch();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to create project');
       }
+    },
+    [toast, refetch]
+  );
 
-      toast.success('Project created with isolated vector collections');
-      setShowCreateModal(false);
-      refetch();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create project');
-    }
-  }, [toast, refetch]);
+  const handleUpdateProject = useCallback(
+    async (id: string, name: string, description: string, status: string) => {
+      try {
+        const response = await fetch(`/api/projects/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description, status }),
+        });
 
-  const handleUpdateProject = useCallback(async (id: string, name: string, description: string, status: string) => {
-    try {
-      const response = await fetch(`/api/projects/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, status }),
-      });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to update project');
+        }
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to update project');
+        toast.success('Project updated successfully');
+        setShowEditModal(false);
+        setSelectedProject(null);
+        refetch();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to update project');
       }
+    },
+    [toast, refetch]
+  );
 
-      toast.success('Project updated successfully');
-      setShowEditModal(false);
-      setSelectedProject(null);
-      refetch();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update project');
-    }
-  }, [toast, refetch]);
+  const handleArchiveProject = useCallback(
+    async (id: string) => {
+      if (!confirm('Are you sure you want to archive this project?')) return;
 
-  const handleArchiveProject = useCallback(async (id: string) => {
-    if (!confirm('Are you sure you want to archive this project?')) return;
+      try {
+        const response = await fetch(`/api/projects/${id}/archive`, {
+          method: 'POST',
+        });
 
-    try {
-      const response = await fetch(`/api/projects/${id}/archive`, {
-        method: 'POST',
-      });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to archive project');
+        }
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to archive project');
+        toast.success('Project archived');
+        refetch();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to archive project');
       }
+    },
+    [toast, refetch]
+  );
 
-      toast.success('Project archived');
-      refetch();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to archive project');
-    }
-  }, [toast, refetch]);
+  const handleRestoreProject = useCallback(
+    async (id: string) => {
+      try {
+        const response = await fetch(`/api/projects/${id}/restore`, {
+          method: 'POST',
+        });
 
-  const handleRestoreProject = useCallback(async (id: string) => {
-    try {
-      const response = await fetch(`/api/projects/${id}/restore`, {
-        method: 'POST',
-      });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to restore project');
+        }
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to restore project');
+        toast.success('Project restored');
+        refetch();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to restore project');
       }
+    },
+    [toast, refetch]
+  );
 
-      toast.success('Project restored');
-      refetch();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to restore project');
-    }
-  }, [toast, refetch]);
+  const handleDeleteProject = useCallback(
+    async (id: string) => {
+      if (!confirm('Are you sure you want to delete this project? This action cannot be undone.'))
+        return;
 
-  const handleDeleteProject = useCallback(async (id: string) => {
-    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) return;
+      try {
+        const response = await fetch(`/api/projects/${id}`, {
+          method: 'DELETE',
+        });
 
-    try {
-      const response = await fetch(`/api/projects/${id}`, {
-        method: 'DELETE',
-      });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to delete project');
+        }
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to delete project');
+        toast.success('Project deleted');
+        refetch();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to delete project');
       }
-
-      toast.success('Project deleted');
-      refetch();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete project');
-    }
-  }, [toast, refetch]);
+    },
+    [toast, refetch]
+  );
 
   return (
     <div className="projects-page">
@@ -215,10 +233,7 @@ export function ProjectsPage() {
           </div>
         </div>
 
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowCreateModal(true)}
-        >
+        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
           <Icon name="Plus" size={16} />
           New Project
         </button>
@@ -360,10 +375,7 @@ export function ProjectsPage() {
             <Icon name="FolderKanban" size={48} />
             <h3>No projects found</h3>
             <p>Create your first project to get started</p>
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowCreateModal(true)}
-            >
+            <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
               <Icon name="Plus" size={16} />
               Create Project
             </button>
@@ -372,7 +384,9 @@ export function ProjectsPage() {
 
         {projects.length > 0 && (
           <div className="projects-stats">
-            <span>Showing {projects.length} of {total} projects</span>
+            <span>
+              Showing {projects.length} of {total} projects
+            </span>
           </div>
         )}
       </main>
@@ -398,7 +412,12 @@ export function ProjectsPage() {
             setSelectedProject(null);
           }}
           onSave={(name, description, status) =>
-            handleUpdateProject(selectedProject.id, name, description, status || selectedProject.status)
+            handleUpdateProject(
+              selectedProject.id,
+              name,
+              description,
+              status || selectedProject.status
+            )
           }
         />
       )}
@@ -442,7 +461,7 @@ function ProjectModal({ title, project, embeddingModels, onClose, onSave }: Proj
     onSave(name, description, status, embeddingModel);
   };
 
-  const selectedModelInfo = embeddingModels.find(m => m.name === embeddingModel);
+  const selectedModelInfo = embeddingModels.find((m) => m.name === embeddingModel);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -507,7 +526,7 @@ function ProjectModal({ title, project, embeddingModels, onClose, onSave }: Proj
                 value={embeddingModel}
                 onChange={(e) => setEmbeddingModel(e.target.value)}
               >
-                {embeddingModels.map(model => (
+                {embeddingModels.map((model) => (
                   <option key={model.name} value={model.name}>
                     {model.name} ({model.dimensions}D)
                   </option>
@@ -517,8 +536,8 @@ function ProjectModal({ title, project, embeddingModels, onClose, onSave }: Proj
                 <p className="form-hint">
                   {selectedModelInfo.description}
                   <br />
-                  <strong>Note:</strong> Each project has isolated vector collections.
-                  Different projects can use different embedding models.
+                  <strong>Note:</strong> Each project has isolated vector collections. Different
+                  projects can use different embedding models.
                 </p>
               )}
             </div>
@@ -546,7 +565,12 @@ interface ProjectDetailsModalProps {
   onRefresh: () => void;
 }
 
-function ProjectDetailsModal({ project, embeddingModels, onClose, onRefresh }: ProjectDetailsModalProps) {
+function ProjectDetailsModal({
+  project,
+  embeddingModels,
+  onClose,
+  onRefresh,
+}: ProjectDetailsModalProps) {
   const { toast } = useToast();
   const [collectionStats, setCollectionStats] = useState<CollectionStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
@@ -558,15 +582,15 @@ function ProjectDetailsModal({ project, embeddingModels, onClose, onRefresh }: P
   useEffect(() => {
     setLoadingStats(true);
     fetch(`/api/projects/${project.id}/collections`)
-      .then(res => res.json())
-      .then(data => setCollectionStats(data))
-      .catch(err => console.error('Failed to fetch collection stats:', err))
+      .then((res) => res.json())
+      .then((data) => setCollectionStats(data))
+      .catch((err) => console.error('Failed to fetch collection stats:', err))
       .finally(() => setLoadingStats(false));
   }, [project.id]);
 
   const currentModel = project.settings?.embedding_model || 'all-MiniLM-L6-v2';
   const currentDims = project.settings?.embedding_dimensions || 384;
-  const newModelInfo = embeddingModels.find(m => m.name === newModel);
+  const newModelInfo = embeddingModels.find((m) => m.name === newModel);
   const requiresWipe = newModelInfo && newModelInfo.dimensions !== currentDims;
 
   const handleChangeModel = async () => {
@@ -575,9 +599,9 @@ function ProjectDetailsModal({ project, embeddingModels, onClose, onRefresh }: P
     if (requiresWipe) {
       const confirmed = confirm(
         `Changing from ${currentModel} (${currentDims}D) to ${newModel} (${newModelInfo?.dimensions}D) ` +
-        `requires wiping all vectors in this project's collections.\n\n` +
-        `This will delete all embedded vectors. You will need to re-embed documents.\n\n` +
-        `Are you sure you want to proceed?`
+          `requires wiping all vectors in this project's collections.\n\n` +
+          `This will delete all embedded vectors. You will need to re-embed documents.\n\n` +
+          `Are you sure you want to proceed?`
       );
       if (!confirmed) return;
     }
@@ -677,7 +701,7 @@ function ProjectDetailsModal({ project, embeddingModels, onClose, onRefresh }: P
                 <span className="dim-badge">{currentDims}D</span>
               </div>
               <p className="model-description">
-                {embeddingModels.find(m => m.name === currentModel)?.description || ''}
+                {embeddingModels.find((m) => m.name === currentModel)?.description || ''}
               </p>
               {!showChangeModel ? (
                 <button
@@ -694,7 +718,7 @@ function ProjectDetailsModal({ project, embeddingModels, onClose, onRefresh }: P
                     onChange={(e) => setNewModel(e.target.value)}
                     disabled={changing}
                   >
-                    {embeddingModels.map(model => (
+                    {embeddingModels.map((model) => (
                       <option key={model.name} value={model.name}>
                         {model.name} ({model.dimensions}D)
                       </option>
@@ -759,7 +783,9 @@ function ProjectDetailsModal({ project, embeddingModels, onClose, onRefresh }: P
                   <div key={type} className="collection-card">
                     <div className="collection-header">
                       <Icon
-                        name={type === 'documents' ? 'FileText' : type === 'chunks' ? 'Layers' : 'Users'}
+                        name={
+                          type === 'documents' ? 'FileText' : type === 'chunks' ? 'Layers' : 'Users'
+                        }
                         size={16}
                       />
                       <span>{type}</span>
@@ -771,7 +797,9 @@ function ProjectDetailsModal({ project, embeddingModels, onClose, onRefresh }: P
                     ) : (
                       <div className="collection-stats">
                         <div className="coll-stat">
-                          <span className="coll-stat-value">{info.vector_count?.toLocaleString() || 0}</span>
+                          <span className="coll-stat-value">
+                            {info.vector_count?.toLocaleString() || 0}
+                          </span>
                           <span className="coll-stat-label">vectors</span>
                         </div>
                         <div className="coll-stat">

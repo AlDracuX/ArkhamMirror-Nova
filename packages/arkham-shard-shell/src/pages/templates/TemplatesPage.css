@@ -266,7 +266,7 @@
   font-weight: normal;
 }
 
-.form-group input[type="text"],
+.form-group input[type='text'],
 .form-group textarea,
 .form-group select {
   width: 100%;
@@ -299,7 +299,7 @@
   margin-top: 2rem;
 }
 
-.checkbox-label input[type="checkbox"] {
+.checkbox-label input[type='checkbox'] {
   width: auto;
 }
 

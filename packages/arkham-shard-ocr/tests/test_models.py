@@ -1,15 +1,14 @@
 """Tests for OCR shard data models."""
 
 import pytest
-from pydantic import ValidationError
-
 from arkham_shard_ocr.models import (
-    OCREngine,
     BoundingBox,
-    TextBlock,
-    PageOCRResult,
     DocumentOCRResult,
+    OCREngine,
+    PageOCRResult,
+    TextBlock,
 )
+from pydantic import ValidationError
 
 
 class TestOCREngine:
@@ -247,10 +246,7 @@ class TestDocumentOCRResult:
 
     def test_multi_page_document(self):
         """Test document result with multiple pages."""
-        pages = [
-            PageOCRResult(page_number=i, text=f"Page {i}")
-            for i in range(1, 11)
-        ]
+        pages = [PageOCRResult(page_number=i, text=f"Page {i}") for i in range(1, 11)]
         result = DocumentOCRResult(
             document_id="doc123",
             pages=pages,

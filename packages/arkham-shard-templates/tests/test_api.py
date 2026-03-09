@@ -2,31 +2,33 @@
 Tests for Templates Shard API Routes
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi.testclient import TestClient
 
+import pytest
 from arkham_shard_templates import TemplatesShard
 from arkham_shard_templates.api import router, set_shard
 from arkham_shard_templates.models import (
+    OutputFormat,
     Template,
     TemplateCreate,
-    TemplateType,
     TemplatePlaceholder,
     TemplateRenderRequest,
-    OutputFormat,
+    TemplateType,
 )
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
 def mock_frame():
     """Create a mock ArkhamFrame."""
     frame = MagicMock()
-    frame.get_service = MagicMock(side_effect=lambda name: {
-        "database": MagicMock(),
-        "events": AsyncMock(),
-        "storage": None,
-    }.get(name))
+    frame.get_service = MagicMock(
+        side_effect=lambda name: {
+            "database": MagicMock(),
+            "events": AsyncMock(),
+            "storage": None,
+        }.get(name)
+    )
     return frame
 
 
@@ -43,6 +45,7 @@ async def shard(mock_frame):
 def client(shard):
     """Create a test client."""
     from fastapi import FastAPI
+
     app = FastAPI()
     app.include_router(router)
     return TestClient(app)
@@ -97,12 +100,7 @@ class TestTemplateCRUDEndpoints:
             "description": "A test template",
             "content": "Dear {{ name }},\n\nHello!",
             "placeholders": [
-                {
-                    "name": "name",
-                    "description": "Recipient name",
-                    "data_type": "string",
-                    "required": True
-                }
+                {"name": "name", "description": "Recipient name", "data_type": "string", "required": True}
             ],
             "is_active": True,
         }
@@ -266,10 +264,7 @@ class TestVersioningEndpoints:
 
         # Create version
         version_data = {"changes": "Updated for testing"}
-        response = client.post(
-            f"/api/templates/{template_id}/versions",
-            json=version_data
-        )
+        response = client.post(f"/api/templates/{template_id}/versions", json=version_data)
         assert response.status_code == 201
         data = response.json()
         assert data["version_number"] == 2
@@ -295,9 +290,7 @@ class TestVersioningEndpoints:
         client.put(f"/api/templates/{template_id}", json=update_data)
 
         # Restore version 1
-        response = client.post(
-            f"/api/templates/{template_id}/restore/{version1_id}"
-        )
+        response = client.post(f"/api/templates/{template_id}/restore/{version1_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["content"] == "Version 1 content"
@@ -313,9 +306,7 @@ class TestRenderingEndpoints:
             "name": "Render Test",
             "template_type": "LETTER",
             "content": "Hello {{ name }}!",
-            "placeholders": [
-                {"name": "name", "required": True}
-            ],
+            "placeholders": [{"name": "name", "required": True}],
         }
         create_response = client.post("/api/templates/", json=template_data)
         template_id = create_response.json()["id"]
@@ -325,10 +316,7 @@ class TestRenderingEndpoints:
             "data": {"name": "World"},
             "output_format": "text",
         }
-        response = client.post(
-            f"/api/templates/{template_id}/render",
-            json=render_data
-        )
+        response = client.post(f"/api/templates/{template_id}/render", json=render_data)
         assert response.status_code == 200
         data = response.json()
         assert "Hello World!" in data["rendered_content"]
@@ -340,10 +328,7 @@ class TestRenderingEndpoints:
             "data": {"name": "Test"},
             "output_format": "text",
         }
-        response = client.post(
-            "/api/templates/nonexistent_id/render",
-            json=render_data
-        )
+        response = client.post("/api/templates/nonexistent_id/render", json=render_data)
         assert response.status_code == 404
 
     def test_preview_template(self, client):
@@ -353,12 +338,7 @@ class TestRenderingEndpoints:
             "name": "Preview Test",
             "template_type": "LETTER",
             "content": "Hello {{ name }}!",
-            "placeholders": [
-                {
-                    "name": "name",
-                    "example": "Example User"
-                }
-            ],
+            "placeholders": [{"name": "name", "example": "Example User"}],
         }
         create_response = client.post("/api/templates/", json=template_data)
         template_id = create_response.json()["id"]
@@ -376,19 +356,14 @@ class TestRenderingEndpoints:
             "name": "Validate Test",
             "template_type": "LETTER",
             "content": "Hello {{ name }}!",
-            "placeholders": [
-                {"name": "name", "required": True}
-            ],
+            "placeholders": [{"name": "name", "required": True}],
         }
         create_response = client.post("/api/templates/", json=template_data)
         template_id = create_response.json()["id"]
 
         # Validate with missing required field
         validation_data = {}
-        response = client.post(
-            f"/api/templates/{template_id}/validate",
-            json=validation_data
-        )
+        response = client.post(f"/api/templates/{template_id}/validate", json=validation_data)
         assert response.status_code == 200
         warnings = response.json()
         assert len(warnings) > 0
@@ -415,12 +390,7 @@ class TestMetadataEndpoints:
             "template_type": "LETTER",
             "content": "Hello {{ name }}!",
             "placeholders": [
-                {
-                    "name": "name",
-                    "description": "Recipient name",
-                    "data_type": "string",
-                    "required": True
-                }
+                {"name": "name", "description": "Recipient name", "data_type": "string", "required": True}
             ],
         }
         create_response = client.post("/api/templates/", json=template_data)
@@ -541,16 +511,22 @@ class TestPaginationAndFiltering:
     def test_filter_by_type(self, client):
         """Test filtering by template type."""
         # Create templates of different types
-        client.post("/api/templates/", json={
-            "name": "Report 1",
-            "template_type": "REPORT",
-            "content": "Content",
-        })
-        client.post("/api/templates/", json={
-            "name": "Letter 1",
-            "template_type": "LETTER",
-            "content": "Content",
-        })
+        client.post(
+            "/api/templates/",
+            json={
+                "name": "Report 1",
+                "template_type": "REPORT",
+                "content": "Content",
+            },
+        )
+        client.post(
+            "/api/templates/",
+            json={
+                "name": "Letter 1",
+                "template_type": "LETTER",
+                "content": "Content",
+            },
+        )
 
         # Filter by REPORT
         response = client.get("/api/templates/?template_type=REPORT")
@@ -562,18 +538,24 @@ class TestPaginationAndFiltering:
     def test_filter_by_active_status(self, client):
         """Test filtering by active status."""
         # Create active and inactive templates
-        client.post("/api/templates/", json={
-            "name": "Active",
-            "template_type": "REPORT",
-            "content": "Content",
-            "is_active": True,
-        })
-        client.post("/api/templates/", json={
-            "name": "Inactive",
-            "template_type": "REPORT",
-            "content": "Content",
-            "is_active": False,
-        })
+        client.post(
+            "/api/templates/",
+            json={
+                "name": "Active",
+                "template_type": "REPORT",
+                "content": "Content",
+                "is_active": True,
+            },
+        )
+        client.post(
+            "/api/templates/",
+            json={
+                "name": "Inactive",
+                "template_type": "REPORT",
+                "content": "Content",
+                "is_active": False,
+            },
+        )
 
         # Filter by active
         response = client.get("/api/templates/?is_active=true")
@@ -585,16 +567,22 @@ class TestPaginationAndFiltering:
     def test_search_by_name(self, client):
         """Test searching by name."""
         # Create templates
-        client.post("/api/templates/", json={
-            "name": "FOIA Request Letter",
-            "template_type": "LETTER",
-            "content": "Content",
-        })
-        client.post("/api/templates/", json={
-            "name": "Report Template",
-            "template_type": "REPORT",
-            "content": "Content",
-        })
+        client.post(
+            "/api/templates/",
+            json={
+                "name": "FOIA Request Letter",
+                "template_type": "LETTER",
+                "content": "Content",
+            },
+        )
+        client.post(
+            "/api/templates/",
+            json={
+                "name": "Report Template",
+                "template_type": "REPORT",
+                "content": "Content",
+            },
+        )
 
         # Search for "FOIA"
         response = client.get("/api/templates/?name_contains=FOIA")

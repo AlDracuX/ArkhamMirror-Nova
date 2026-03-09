@@ -155,9 +155,9 @@ export function EgoMetricsPanel({
   const loading = isLoading || externalLoading;
 
   // Derive alters (non-ego nodes) and ties from the graph data
-  const alters = egoNetwork?.graph?.nodes?.filter(n => !n.properties?.is_ego) || [];
+  const alters = egoNetwork?.graph?.nodes?.filter((n) => !n.properties?.is_ego) || [];
   const ties = egoNetwork?.graph?.edges || [];
-  const egoNode = egoNetwork?.graph?.nodes?.find(n => n.properties?.is_ego);
+  const egoNode = egoNetwork?.graph?.nodes?.find((n) => n.properties?.is_ego);
 
   // Safely access metrics with defaults
   const metrics = egoNetwork?.metrics || {
@@ -272,7 +272,9 @@ export function EgoMetricsPanel({
                   >
                     {formatPercent(metrics.efficiency)}
                   </span>
-                  <span className="card-sub">{metrics.efficiency > 0.5 ? 'efficient' : 'redundant'}</span>
+                  <span className="card-sub">
+                    {metrics.efficiency > 0.5 ? 'efficient' : 'redundant'}
+                  </span>
                 </div>
               </div>
 
@@ -301,7 +303,7 @@ export function EgoMetricsPanel({
                         className="metric-fill constraint"
                         style={{
                           width: formatPercent(Math.min(1, metrics.constraint)),
-                          backgroundColor: getConstraintLevel(metrics.constraint).color
+                          backgroundColor: getConstraintLevel(metrics.constraint).color,
                         }}
                       />
                     </div>
@@ -358,18 +360,20 @@ export function EgoMetricsPanel({
                 <p>
                   {metrics.constraint < 0.3 ? (
                     <>
-                      <strong>Strong broker position:</strong> This entity bridges disconnected groups,
-                      providing access to diverse information and control over information flow.
+                      <strong>Strong broker position:</strong> This entity bridges disconnected
+                      groups, providing access to diverse information and control over information
+                      flow.
                     </>
                   ) : metrics.constraint > 0.6 ? (
                     <>
-                      <strong>Embedded position:</strong> This entity's contacts are well-connected to each other,
-                      limiting access to novel information but providing strong social support.
+                      <strong>Embedded position:</strong> This entity's contacts are well-connected
+                      to each other, limiting access to novel information but providing strong
+                      social support.
                     </>
                   ) : (
                     <>
-                      <strong>Moderate position:</strong> This entity has a balanced mix of bridging and
-                      redundant ties, with some brokerage opportunities.
+                      <strong>Moderate position:</strong> This entity has a balanced mix of bridging
+                      and redundant ties, with some brokerage opportunities.
                     </>
                   )}
                 </p>
@@ -388,7 +392,10 @@ export function EgoMetricsPanel({
                   </div>
                 ) : (
                   alters
-                    .sort((a, b) => (a.properties?.ego_distance || 0) - (b.properties?.ego_distance || 0))
+                    .sort(
+                      (a, b) =>
+                        (a.properties?.ego_distance || 0) - (b.properties?.ego_distance || 0)
+                    )
                     .map((alter) => (
                       <div
                         key={alter.id}
@@ -434,11 +441,14 @@ export function EgoMetricsPanel({
                     </div>
                   ) : (
                     Object.entries(
-                      alters.reduce((acc, alter) => {
-                        const type = alter.entity_type || 'Unknown';
-                        acc[type] = (acc[type] || 0) + 1;
-                        return acc;
-                      }, {} as Record<string, number>)
+                      alters.reduce(
+                        (acc, alter) => {
+                          const type = alter.entity_type || 'Unknown';
+                          acc[type] = (acc[type] || 0) + 1;
+                          return acc;
+                        },
+                        {} as Record<string, number>
+                      )
                     )
                       .sort(([, a], [, b]) => b - a)
                       .map(([type, count]) => (
@@ -448,7 +458,7 @@ export function EgoMetricsPanel({
                             <div
                               className="composition-fill"
                               style={{
-                                width: `${(count / alters.length) * 100}%`
+                                width: `${(count / alters.length) * 100}%`,
                               }}
                             />
                           </div>
@@ -472,11 +482,14 @@ export function EgoMetricsPanel({
                     </div>
                   ) : (
                     Object.entries(
-                      ties.reduce((acc, tie) => {
-                        const rel = tie.relationship_type || 'co_occurrence';
-                        acc[rel] = (acc[rel] || 0) + 1;
-                        return acc;
-                      }, {} as Record<string, number>)
+                      ties.reduce(
+                        (acc, tie) => {
+                          const rel = tie.relationship_type || 'co_occurrence';
+                          acc[rel] = (acc[rel] || 0) + 1;
+                          return acc;
+                        },
+                        {} as Record<string, number>
+                      )
                     )
                       .sort(([, a], [, b]) => b - a)
                       .map(([rel, count]) => (
@@ -486,7 +499,7 @@ export function EgoMetricsPanel({
                             <div
                               className="composition-fill relationship"
                               style={{
-                                width: `${(count / ties.length) * 100}%`
+                                width: `${(count / ties.length) * 100}%`,
                               }}
                             />
                           </div>

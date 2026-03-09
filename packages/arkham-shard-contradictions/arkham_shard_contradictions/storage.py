@@ -9,8 +9,8 @@ from .models import (
     Contradiction,
     ContradictionChain,
     ContradictionStatus,
-    Severity,
     ContradictionType,
+    Severity,
 )
 
 logger = logging.getLogger(__name__)
@@ -146,7 +146,7 @@ class ContradictionStore:
                 "confirmed_at": contradiction.confirmed_at.isoformat() if contradiction.confirmed_at else None,
                 "created_at": contradiction.created_at.isoformat() if contradiction.created_at else now,
                 "updated_at": now,
-            }
+            },
         )
         logger.info(f"Created contradiction: {contradiction.id}")
         return contradiction
@@ -165,8 +165,7 @@ class ContradictionStore:
             return self._contradictions.get(contradiction_id)
 
         row = await self._db.fetch_one(
-            "SELECT * FROM arkham_contradictions.contradictions WHERE id = :id",
-            {"id": contradiction_id}
+            "SELECT * FROM arkham_contradictions.contradictions WHERE id = :id", {"id": contradiction_id}
         )
 
         if not row:
@@ -238,7 +237,7 @@ class ContradictionStore:
                 "confirmed_by": contradiction.confirmed_by,
                 "confirmed_at": contradiction.confirmed_at.isoformat() if contradiction.confirmed_at else None,
                 "updated_at": contradiction.updated_at.isoformat(),
-            }
+            },
         )
         logger.info(f"Updated contradiction: {contradiction.id}")
         return contradiction
@@ -266,8 +265,7 @@ class ContradictionStore:
             return False
 
         await self._db.execute(
-            "DELETE FROM arkham_contradictions.contradictions WHERE id = :id",
-            {"id": contradiction_id}
+            "DELETE FROM arkham_contradictions.contradictions WHERE id = :id", {"id": contradiction_id}
         )
         logger.info(f"Deleted contradiction: {contradiction_id}")
         return True
@@ -331,8 +329,7 @@ class ContradictionStore:
 
         # Get total count
         count_row = await self._db.fetch_one(
-            f"SELECT COUNT(*) as cnt FROM arkham_contradictions.contradictions WHERE {where_sql}",
-            params
+            f"SELECT COUNT(*) as cnt FROM arkham_contradictions.contradictions WHERE {where_sql}", params
         )
         total = count_row["cnt"] if count_row else 0
 
@@ -348,15 +345,13 @@ class ContradictionStore:
             ORDER BY created_at DESC
             LIMIT :limit OFFSET :offset
             """,
-            params
+            params,
         )
 
         contradictions = [self._row_to_contradiction(dict(row)) for row in rows]
         return contradictions, total
 
-    async def get_by_document(
-        self, document_id: str, include_related: bool = False
-    ) -> list[Contradiction]:
+    async def get_by_document(self, document_id: str, include_related: bool = False) -> list[Contradiction]:
         """
         Get contradictions involving a specific document.
 
@@ -369,8 +364,7 @@ class ContradictionStore:
         """
         if not self._use_db():
             contradictions = [
-                c for c in self._contradictions.values()
-                if c.doc_a_id == document_id or c.doc_b_id == document_id
+                c for c in self._contradictions.values() if c.doc_a_id == document_id or c.doc_b_id == document_id
             ]
 
             if include_related:
@@ -381,18 +375,12 @@ class ContradictionStore:
                         chains.add(c.chain_id)
 
                 for chain_id in chains:
-                    chain_contradictions = [
-                        c for c in self._contradictions.values()
-                        if c.chain_id == chain_id
-                    ]
+                    chain_contradictions = [c for c in self._contradictions.values() if c.chain_id == chain_id]
                     contradictions.extend(chain_contradictions)
 
                 # Remove duplicates
                 seen = set()
-                contradictions = [
-                    c for c in contradictions
-                    if not (c.id in seen or seen.add(c.id))
-                ]
+                contradictions = [c for c in contradictions if not (c.id in seen or seen.add(c.id))]
 
             return contradictions
 
@@ -402,7 +390,7 @@ class ContradictionStore:
             WHERE doc_a_id = :doc_id OR doc_b_id = :doc_id
             ORDER BY created_at DESC
             """,
-            {"doc_id": document_id}
+            {"doc_id": document_id},
         )
 
         contradictions = [self._row_to_contradiction(dict(row)) for row in rows]
@@ -417,7 +405,7 @@ class ContradictionStore:
                     SELECT * FROM arkham_contradictions.contradictions
                     WHERE chain_id = :chain_id
                     """,
-                    {"chain_id": chain_id}
+                    {"chain_id": chain_id},
                 )
                 for row in chain_rows:
                     c = self._row_to_contradiction(dict(row))
@@ -441,7 +429,7 @@ class ContradictionStore:
 
         rows = await self._db.fetch_all(
             "SELECT * FROM arkham_contradictions.contradictions WHERE status = :status ORDER BY created_at DESC",
-            {"status": status.value}
+            {"status": status.value},
         )
         return [self._row_to_contradiction(dict(row)) for row in rows]
 
@@ -460,7 +448,7 @@ class ContradictionStore:
 
         rows = await self._db.fetch_all(
             "SELECT * FROM arkham_contradictions.contradictions WHERE severity = :severity ORDER BY created_at DESC",
-            {"severity": severity.value}
+            {"severity": severity.value},
         )
         return [self._row_to_contradiction(dict(row)) for row in rows]
 
@@ -491,17 +479,15 @@ class ContradictionStore:
             if query:
                 query_lower = query.lower()
                 contradictions = [
-                    c for c in contradictions
+                    c
+                    for c in contradictions
                     if query_lower in c.claim_a.lower()
                     or query_lower in c.claim_b.lower()
                     or query_lower in c.explanation.lower()
                 ]
 
             if document_ids:
-                contradictions = [
-                    c for c in contradictions
-                    if c.doc_a_id in document_ids or c.doc_b_id in document_ids
-                ]
+                contradictions = [c for c in contradictions if c.doc_a_id in document_ids or c.doc_b_id in document_ids]
 
             if status:
                 contradictions = [c for c in contradictions if c.status == status]
@@ -510,9 +496,7 @@ class ContradictionStore:
                 contradictions = [c for c in contradictions if c.severity == severity]
 
             if min_confidence is not None:
-                contradictions = [
-                    c for c in contradictions if c.confidence_score >= min_confidence
-                ]
+                contradictions = [c for c in contradictions if c.confidence_score >= min_confidence]
 
             return contradictions
 
@@ -546,17 +530,14 @@ class ContradictionStore:
             WHERE {where_sql}
             ORDER BY created_at DESC
             """,
-            params
+            params,
         )
 
         contradictions = [self._row_to_contradiction(dict(row)) for row in rows]
 
         # Filter by document_ids in memory (more complex SQL)
         if document_ids:
-            contradictions = [
-                c for c in contradictions
-                if c.doc_a_id in document_ids or c.doc_b_id in document_ids
-            ]
+            contradictions = [c for c in contradictions if c.doc_a_id in document_ids or c.doc_b_id in document_ids]
 
         return contradictions
 
@@ -607,9 +588,7 @@ class ContradictionStore:
             }
 
         # Database statistics
-        total_row = await self._db.fetch_one(
-            "SELECT COUNT(*) as cnt FROM arkham_contradictions.contradictions"
-        )
+        total_row = await self._db.fetch_one("SELECT COUNT(*) as cnt FROM arkham_contradictions.contradictions")
         total = total_row["cnt"] if total_row else 0
 
         # Count by status
@@ -617,7 +596,7 @@ class ContradictionStore:
         for status in ContradictionStatus:
             row = await self._db.fetch_one(
                 "SELECT COUNT(*) as cnt FROM arkham_contradictions.contradictions WHERE status = :status",
-                {"status": status.value}
+                {"status": status.value},
             )
             by_status[status.value] = row["cnt"] if row else 0
 
@@ -626,7 +605,7 @@ class ContradictionStore:
         for severity in Severity:
             row = await self._db.fetch_one(
                 "SELECT COUNT(*) as cnt FROM arkham_contradictions.contradictions WHERE severity = :severity",
-                {"severity": severity.value}
+                {"severity": severity.value},
             )
             by_severity[severity.value] = row["cnt"] if row else 0
 
@@ -635,7 +614,7 @@ class ContradictionStore:
         for ctype in ContradictionType:
             row = await self._db.fetch_one(
                 "SELECT COUNT(*) as cnt FROM arkham_contradictions.contradictions WHERE contradiction_type = :ctype",
-                {"ctype": ctype.value}
+                {"ctype": ctype.value},
             )
             by_type[ctype.value] = row["cnt"] if row else 0
 
@@ -649,7 +628,7 @@ class ContradictionStore:
         cutoff = (datetime.utcnow() - timedelta(hours=24)).isoformat()
         recent_row = await self._db.fetch_one(
             "SELECT COUNT(*) as cnt FROM arkham_contradictions.contradictions WHERE created_at >= :cutoff",
-            {"cutoff": cutoff}
+            {"cutoff": cutoff},
         )
         recent_count = recent_row["cnt"] if recent_row else 0
 
@@ -701,7 +680,7 @@ class ContradictionStore:
                 "severity": chain.severity.value,
                 "created_at": chain.created_at.isoformat() if chain.created_at else now,
                 "updated_at": now,
-            }
+            },
         )
 
         # Update contradictions with chain ID
@@ -712,7 +691,7 @@ class ContradictionStore:
                 SET chain_id = :chain_id, updated_at = :updated_at
                 WHERE id = :id
                 """,
-                {"chain_id": chain.id, "id": contradiction_id, "updated_at": now}
+                {"chain_id": chain.id, "id": contradiction_id, "updated_at": now},
             )
 
         logger.info(f"Created chain: {chain.id} with {len(chain.contradiction_ids)} contradictions")
@@ -731,10 +710,7 @@ class ContradictionStore:
         if not self._use_db():
             return self._chains.get(chain_id)
 
-        row = await self._db.fetch_one(
-            "SELECT * FROM arkham_contradictions.chains WHERE id = :id",
-            {"id": chain_id}
-        )
+        row = await self._db.fetch_one("SELECT * FROM arkham_contradictions.chains WHERE id = :id", {"id": chain_id})
 
         if not row:
             return None
@@ -752,14 +728,11 @@ class ContradictionStore:
             List of contradictions
         """
         if not self._use_db():
-            return [
-                c for c in self._contradictions.values()
-                if c.chain_id == chain_id
-            ]
+            return [c for c in self._contradictions.values() if c.chain_id == chain_id]
 
         rows = await self._db.fetch_all(
             "SELECT * FROM arkham_contradictions.contradictions WHERE chain_id = :chain_id ORDER BY created_at DESC",
-            {"chain_id": chain_id}
+            {"chain_id": chain_id},
         )
         return [self._row_to_contradiction(dict(row)) for row in rows]
 
@@ -773,16 +746,12 @@ class ContradictionStore:
         if not self._use_db():
             return list(self._chains.values())
 
-        rows = await self._db.fetch_all(
-            "SELECT * FROM arkham_contradictions.chains ORDER BY created_at DESC"
-        )
+        rows = await self._db.fetch_all("SELECT * FROM arkham_contradictions.chains ORDER BY created_at DESC")
         return [self._row_to_chain(dict(row)) for row in rows]
 
     # --- Analyst Workflow ---
 
-    async def add_note(
-        self, contradiction_id: str, note: str, analyst_id: str | None = None
-    ) -> Contradiction | None:
+    async def add_note(self, contradiction_id: str, note: str, analyst_id: str | None = None) -> Contradiction | None:
         """
         Add analyst note to contradiction.
 
@@ -820,7 +789,7 @@ class ContradictionStore:
                 "id": contradiction_id,
                 "analyst_notes": json.dumps(contradiction.analyst_notes),
                 "updated_at": contradiction.updated_at.isoformat(),
-            }
+            },
         )
 
         logger.info(f"Added note to contradiction: {contradiction_id}")
@@ -873,12 +842,10 @@ class ContradictionStore:
                 "confirmed_by": contradiction.confirmed_by,
                 "confirmed_at": contradiction.confirmed_at.isoformat() if contradiction.confirmed_at else None,
                 "updated_at": contradiction.updated_at.isoformat(),
-            }
+            },
         )
 
-        logger.info(
-            f"Updated contradiction {contradiction_id} status: {old_status.value} -> {status.value}"
-        )
+        logger.info(f"Updated contradiction {contradiction_id} status: {old_status.value} -> {status.value}")
         return contradiction
 
     # --- Bulk Operations ---
@@ -899,9 +866,7 @@ class ContradictionStore:
         logger.info(f"Bulk created {len(contradictions)} contradictions")
         return len(contradictions)
 
-    async def bulk_update_status(
-        self, contradiction_ids: list[str], status: ContradictionStatus
-    ) -> int:
+    async def bulk_update_status(self, contradiction_ids: list[str], status: ContradictionStatus) -> int:
         """
         Bulk update contradiction statuses.
 

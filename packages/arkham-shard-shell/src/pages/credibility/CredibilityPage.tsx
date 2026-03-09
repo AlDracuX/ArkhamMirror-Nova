@@ -90,9 +90,27 @@ const CREDIBILITY_LEVELS = [
 type DetailTab = 'factors' | 'deception';
 
 const SOURCE_TYPES = [
-  { id: 'document', label: 'Document', api: '/api/documents/items?status=processed&page_size=50', nameKey: 'name', icon: 'FileText' },
-  { id: 'entity', label: 'Entity', api: '/api/entities/items?page_size=50', nameKey: 'name', icon: 'User' },
-  { id: 'claim', label: 'Claim', api: '/api/claims/?page_size=50', nameKey: 'statement', icon: 'MessageSquare' },
+  {
+    id: 'document',
+    label: 'Document',
+    api: '/api/documents/items?status=processed&page_size=50',
+    nameKey: 'name',
+    icon: 'FileText',
+  },
+  {
+    id: 'entity',
+    label: 'Entity',
+    api: '/api/entities/items?page_size=50',
+    nameKey: 'name',
+    icon: 'User',
+  },
+  {
+    id: 'claim',
+    label: 'Claim',
+    api: '/api/claims/?page_size=50',
+    nameKey: 'statement',
+    icon: 'MessageSquare',
+  },
   { id: 'other', label: 'Other (Manual Entry)', api: null, nameKey: null, icon: 'Edit' },
 ];
 
@@ -119,20 +137,18 @@ export function CredibilityPage() {
   const [selectedSourceItem, setSelectedSourceItem] = useState<SourceItem | null>(null);
 
   // Source names cache for display (maps source_id to display info)
-  const [sourceNamesCache, setSourceNamesCache] = useState<Map<string, SourceDisplayInfo>>(new Map());
+  const [sourceNamesCache, setSourceNamesCache] = useState<Map<string, SourceDisplayInfo>>(
+    new Map()
+  );
 
   // Source viewer modal state
   const [sourceViewer, setSourceViewer] = useState<SourceViewerData | null>(null);
   const [loadingSourceViewer, setLoadingSourceViewer] = useState(false);
 
   // Fetch assessments with usePaginatedFetch
-  const baseUrl = selectedLevel
-    ? `/api/credibility/level/${selectedLevel}`
-    : '/api/credibility/';
+  const baseUrl = selectedLevel ? `/api/credibility/level/${selectedLevel}` : '/api/credibility/';
 
-  const { items: assessments, loading, error, refetch } = usePaginatedFetch<Assessment>(
-    baseUrl
-  );
+  const { items: assessments, loading, error, refetch } = usePaginatedFetch<Assessment>(baseUrl);
 
   // Fetch statistics
   const { data: stats } = useFetch<Statistics>('/api/credibility/stats');
@@ -214,7 +230,7 @@ export function CredibilityPage() {
   useEffect(() => {
     if (!showCreateModal) return;
 
-    const sourceType = SOURCE_TYPES.find(t => t.id === createSourceType);
+    const sourceType = SOURCE_TYPES.find((t) => t.id === createSourceType);
     if (!sourceType?.api) {
       setSourceItems([]);
       return;
@@ -237,7 +253,11 @@ export function CredibilityPage() {
 
         const mapped: SourceItem[] = items.map((item: Record<string, unknown>) => ({
           id: item.id as string,
-          name: (item[nameKey] as string) || (item.name as string) || (item.title as string) || String(item.id),
+          name:
+            (item[nameKey] as string) ||
+            (item.name as string) ||
+            (item.title as string) ||
+            String(item.id),
           type: (item.type as string) || (item.entity_type as string) || (item.status as string),
           description: (item.description as string) || (item.content as string)?.substring(0, 100),
         }));
@@ -255,142 +275,154 @@ export function CredibilityPage() {
   }, [showCreateModal, createSourceType]);
 
   const getLevelColor = (level: string): string => {
-    const levelConfig = CREDIBILITY_LEVELS.find(l => l.id === level);
+    const levelConfig = CREDIBILITY_LEVELS.find((l) => l.id === level);
     return levelConfig?.color || '#6b7280';
   };
 
   // Get display info for a source
-  const getSourceDisplayInfo = useCallback((sourceId: string, sourceType: string): SourceDisplayInfo => {
-    const cached = sourceNamesCache.get(sourceId);
-    if (cached) return cached;
-    // Return placeholder while loading
-    return {
-      name: sourceId.substring(0, 8) + '...',
-      type: sourceType.charAt(0).toUpperCase() + sourceType.slice(1),
-    };
-  }, [sourceNamesCache]);
+  const getSourceDisplayInfo = useCallback(
+    (sourceId: string, sourceType: string): SourceDisplayInfo => {
+      const cached = sourceNamesCache.get(sourceId);
+      if (cached) return cached;
+      // Return placeholder while loading
+      return {
+        name: sourceId.substring(0, 8) + '...',
+        type: sourceType.charAt(0).toUpperCase() + sourceType.slice(1),
+      };
+    },
+    [sourceNamesCache]
+  );
 
   // Get icon for source type
   const getSourceIcon = (sourceType: string): 'FileText' | 'User' | 'MessageSquare' | 'Edit' => {
     switch (sourceType.toLowerCase()) {
-      case 'document': return 'FileText';
-      case 'entity': return 'User';
-      case 'claim': return 'MessageSquare';
-      default: return 'Edit';
+      case 'document':
+        return 'FileText';
+      case 'entity':
+        return 'User';
+      case 'claim':
+        return 'MessageSquare';
+      default:
+        return 'Edit';
     }
   };
 
   // Open source viewer modal
-  const openSourceViewer = useCallback(async (sourceType: string, sourceId: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation(); // Prevent card selection when clicking name
-    }
-
-    setLoadingSourceViewer(true);
-    try {
-      let metadataEndpoint: string;
-      let contentEndpoint: string | null = null;
-      let nameKey: string;
-
-      switch (sourceType.toLowerCase()) {
-        case 'document':
-          metadataEndpoint = `/api/documents/items/${sourceId}`;
-          contentEndpoint = `/api/documents/${sourceId}/content`;
-          nameKey = 'title';
-          break;
-        case 'entity':
-          metadataEndpoint = `/api/entities/${sourceId}`;
-          nameKey = 'name';
-          break;
-        case 'claim':
-          metadataEndpoint = `/api/claims/${sourceId}`;
-          nameKey = 'statement';
-          break;
-        default:
-          toast.error('Unknown source type');
-          setLoadingSourceViewer(false);
-          return;
+  const openSourceViewer = useCallback(
+    async (sourceType: string, sourceId: string, e?: React.MouseEvent) => {
+      if (e) {
+        e.stopPropagation(); // Prevent card selection when clicking name
       }
 
-      // Fetch metadata
-      const response = await fetch(metadataEndpoint);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${sourceType}`);
-      }
-      const data = await response.json();
+      setLoadingSourceViewer(true);
+      try {
+        let metadataEndpoint: string;
+        let contentEndpoint: string | null = null;
+        let nameKey: string;
 
-      // Get content based on source type
-      let content = '';
-
-      if (sourceType.toLowerCase() === 'document') {
-        // For documents, fetch content separately
-        if (contentEndpoint) {
-          try {
-            const contentRes = await fetch(contentEndpoint);
-            if (contentRes.ok) {
-              const contentData = await contentRes.json();
-              content = contentData.content || '';
-            }
-          } catch {
-            // Content fetch failed, try chunks
-          }
+        switch (sourceType.toLowerCase()) {
+          case 'document':
+            metadataEndpoint = `/api/documents/items/${sourceId}`;
+            contentEndpoint = `/api/documents/${sourceId}/content`;
+            nameKey = 'title';
+            break;
+          case 'entity':
+            metadataEndpoint = `/api/entities/${sourceId}`;
+            nameKey = 'name';
+            break;
+          case 'claim':
+            metadataEndpoint = `/api/claims/${sourceId}`;
+            nameKey = 'statement';
+            break;
+          default:
+            toast.error('Unknown source type');
+            setLoadingSourceViewer(false);
+            return;
         }
 
-        // If no content, try to get from chunks
-        if (!content) {
-          try {
-            const chunksRes = await fetch(`/api/documents/${sourceId}/chunks?page_size=20`);
-            if (chunksRes.ok) {
-              const chunksData = await chunksRes.json();
-              const chunks = chunksData.items || chunksData.chunks || [];
-              if (Array.isArray(chunks) && chunks.length > 0) {
-                content = chunks.map((c: { content?: string; text?: string }) => c.content || c.text || '').join('\n\n---\n\n');
+        // Fetch metadata
+        const response = await fetch(metadataEndpoint);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ${sourceType}`);
+        }
+        const data = await response.json();
+
+        // Get content based on source type
+        let content = '';
+
+        if (sourceType.toLowerCase() === 'document') {
+          // For documents, fetch content separately
+          if (contentEndpoint) {
+            try {
+              const contentRes = await fetch(contentEndpoint);
+              if (contentRes.ok) {
+                const contentData = await contentRes.json();
+                content = contentData.content || '';
               }
+            } catch {
+              // Content fetch failed, try chunks
             }
-          } catch {
-            // Ignore chunk fetch errors
+          }
+
+          // If no content, try to get from chunks
+          if (!content) {
+            try {
+              const chunksRes = await fetch(`/api/documents/${sourceId}/chunks?page_size=20`);
+              if (chunksRes.ok) {
+                const chunksData = await chunksRes.json();
+                const chunks = chunksData.items || chunksData.chunks || [];
+                if (Array.isArray(chunks) && chunks.length > 0) {
+                  content = chunks
+                    .map((c: { content?: string; text?: string }) => c.content || c.text || '')
+                    .join('\n\n---\n\n');
+                }
+              }
+            } catch {
+              // Ignore chunk fetch errors
+            }
+          }
+        } else if (sourceType.toLowerCase() === 'entity') {
+          content = data.description || data.notes || 'No description available';
+        } else if (sourceType.toLowerCase() === 'claim') {
+          content = data.statement || 'No statement available';
+          if (data.evidence) {
+            content += '\n\n--- Evidence ---\n' + data.evidence;
+          }
+          if (data.source) {
+            content += '\n\n--- Source ---\n' + data.source;
           }
         }
-      } else if (sourceType.toLowerCase() === 'entity') {
-        content = data.description || data.notes || 'No description available';
-      } else if (sourceType.toLowerCase() === 'claim') {
-        content = data.statement || 'No statement available';
-        if (data.evidence) {
-          content += '\n\n--- Evidence ---\n' + data.evidence;
-        }
-        if (data.source) {
-          content += '\n\n--- Source ---\n' + data.source;
-        }
+
+        // Build metadata display
+        const metadata: Record<string, unknown> = {};
+        if (data.file_type) metadata['Type'] = data.file_type;
+        if (data.filename) metadata['File'] = data.filename;
+        if (data.entity_type) metadata['Entity Type'] = data.entity_type;
+        if (data.source_type) metadata['Source Type'] = data.source_type;
+        if (data.confidence) metadata['Confidence'] = `${(data.confidence * 100).toFixed(0)}%`;
+        if (data.created_at) metadata['Created'] = new Date(data.created_at).toLocaleString();
+        if (data.page_count) metadata['Pages'] = data.page_count;
+        if (data.chunk_count) metadata['Chunks'] = data.chunk_count;
+        if (data.file_size) metadata['Size'] = `${(data.file_size / 1024).toFixed(1)} KB`;
+        if (data.source) metadata['Source'] = data.source;
+        if (data.aliases?.length) metadata['Aliases'] = data.aliases.join(', ');
+        if (data.status) metadata['Status'] = data.status;
+
+        setSourceViewer({
+          id: sourceId,
+          type: sourceType,
+          name: data[nameKey] || data.name || data.title || sourceId,
+          content: content || 'No content available',
+          metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+        });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to load source');
+      } finally {
+        setLoadingSourceViewer(false);
       }
-
-      // Build metadata display
-      const metadata: Record<string, unknown> = {};
-      if (data.file_type) metadata['Type'] = data.file_type;
-      if (data.filename) metadata['File'] = data.filename;
-      if (data.entity_type) metadata['Entity Type'] = data.entity_type;
-      if (data.source_type) metadata['Source Type'] = data.source_type;
-      if (data.confidence) metadata['Confidence'] = `${(data.confidence * 100).toFixed(0)}%`;
-      if (data.created_at) metadata['Created'] = new Date(data.created_at).toLocaleString();
-      if (data.page_count) metadata['Pages'] = data.page_count;
-      if (data.chunk_count) metadata['Chunks'] = data.chunk_count;
-      if (data.file_size) metadata['Size'] = `${(data.file_size / 1024).toFixed(1)} KB`;
-      if (data.source) metadata['Source'] = data.source;
-      if (data.aliases?.length) metadata['Aliases'] = data.aliases.join(', ');
-      if (data.status) metadata['Status'] = data.status;
-
-      setSourceViewer({
-        id: sourceId,
-        type: sourceType,
-        name: data[nameKey] || data.name || data.title || sourceId,
-        content: content || 'No content available',
-        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
-      });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load source');
-    } finally {
-      setLoadingSourceViewer(false);
-    }
-  }, [toast]);
+    },
+    [toast]
+  );
 
   const getScoreColor = (score: number): string => {
     if (score <= 20) return '#ef4444';
@@ -441,13 +473,14 @@ export function CredibilityPage() {
   };
 
   // Filter source items by search
-  const filteredSourceItems = sourceItems.filter(item =>
-    item.name.toLowerCase().includes(sourceSearch.toLowerCase()) ||
-    item.id.toLowerCase().includes(sourceSearch.toLowerCase())
+  const filteredSourceItems = sourceItems.filter(
+    (item) =>
+      item.name.toLowerCase().includes(sourceSearch.toLowerCase()) ||
+      item.id.toLowerCase().includes(sourceSearch.toLowerCase())
   );
 
   const handleCreateAssessment = async () => {
-    const sourceTypeConfig = SOURCE_TYPES.find(t => t.id === createSourceType);
+    const sourceTypeConfig = SOURCE_TYPES.find((t) => t.id === createSourceType);
     const sourceId = sourceTypeConfig?.api ? selectedSourceItem?.id : createSourceId.trim();
 
     if (!sourceId) {
@@ -535,9 +568,7 @@ export function CredibilityPage() {
                 </span>
               </div>
             </div>
-            {factor.notes && (
-              <p className="factor-notes">{factor.notes}</p>
-            )}
+            {factor.notes && <p className="factor-notes">{factor.notes}</p>}
             <div className="factor-bar">
               <div
                 className="factor-bar-fill"
@@ -575,10 +606,7 @@ export function CredibilityPage() {
             label="AI Analysis"
             disabled={false}
           />
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowCreateModal(true)}
-          >
+          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
             <Icon name="Plus" size={16} />
             New Assessment
           </button>
@@ -626,7 +654,7 @@ export function CredibilityPage() {
               <span>All Assessments</span>
               {stats && <span className="filter-count">{stats.total_assessments}</span>}
             </button>
-            {CREDIBILITY_LEVELS.map(level => (
+            {CREDIBILITY_LEVELS.map((level) => (
               <button
                 key={level.id}
                 className={`filter-button ${selectedLevel === level.id ? 'active' : ''}`}
@@ -635,19 +663,12 @@ export function CredibilityPage() {
                   borderLeftColor: selectedLevel === level.id ? level.color : 'transparent',
                 }}
               >
-                <div
-                  className="level-indicator"
-                  style={{ backgroundColor: level.color }}
-                />
+                <div className="level-indicator" style={{ backgroundColor: level.color }} />
                 <div className="filter-content">
                   <span className="filter-label">{level.label}</span>
                   <span className="filter-range">{level.range}</span>
                 </div>
-                {stats && (
-                  <span className="filter-count">
-                    {stats.by_level[level.id] || 0}
-                  </span>
-                )}
+                {stats && <span className="filter-count">{stats.by_level[level.id] || 0}</span>}
               </button>
             ))}
           </div>
@@ -676,18 +697,12 @@ export function CredibilityPage() {
                 Create an assessment to analyze source credibility and detect potential deception
               </p>
               <div className="empty-actions">
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setShowCreateModal(true)}
-                >
+                <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
                   <Icon name="Plus" size={16} />
                   New Assessment
                 </button>
                 {selectedLevel && (
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => setSelectedLevel(null)}
-                  >
+                  <button className="btn btn-secondary" onClick={() => setSelectedLevel(null)}>
                     Clear Filter
                   </button>
                 )}
@@ -697,8 +712,11 @@ export function CredibilityPage() {
             <div className="assessments-container">
               {/* Assessment List */}
               <div className="assessments-list">
-                {assessments.map(assessment => {
-                  const sourceInfo = getSourceDisplayInfo(assessment.source_id, assessment.source_type);
+                {assessments.map((assessment) => {
+                  const sourceInfo = getSourceDisplayInfo(
+                    assessment.source_id,
+                    assessment.source_type
+                  );
                   const isSelected = selectedAssessment?.id === assessment.id;
 
                   return (
@@ -716,7 +734,9 @@ export function CredibilityPage() {
                           <div className="source-info">
                             <button
                               className="source-name-link"
-                              onClick={(e) => openSourceViewer(assessment.source_type, assessment.source_id, e)}
+                              onClick={(e) =>
+                                openSourceViewer(assessment.source_type, assessment.source_id, e)
+                              }
                               title="Click to view source content"
                             >
                               {sourceInfo.name}
@@ -753,197 +773,213 @@ export function CredibilityPage() {
                         </div>
                       </div>
 
-                      {assessment.notes && (
-                        <p className="assessment-notes">{assessment.notes}</p>
-                      )}
+                      {assessment.notes && <p className="assessment-notes">{assessment.notes}</p>}
                     </div>
                   );
                 })}
               </div>
 
               {/* Assessment Detail Panel */}
-              {selectedAssessment && (() => {
-                const detailSourceInfo = getSourceDisplayInfo(selectedAssessment.source_id, selectedAssessment.source_type);
-                return (
-                <div className="assessment-detail">
-                  <div className="detail-header">
-                    <h3>Assessment Details</h3>
-                    <button
-                      className="close-btn"
-                      onClick={handleCloseDetail}
-                      title="Close"
-                    >
-                      <Icon name="X" size={16} />
-                    </button>
-                  </div>
+              {selectedAssessment &&
+                (() => {
+                  const detailSourceInfo = getSourceDisplayInfo(
+                    selectedAssessment.source_id,
+                    selectedAssessment.source_type
+                  );
+                  return (
+                    <div className="assessment-detail">
+                      <div className="detail-header">
+                        <h3>Assessment Details</h3>
+                        <button className="close-btn" onClick={handleCloseDetail} title="Close">
+                          <Icon name="X" size={16} />
+                        </button>
+                      </div>
 
-                  {/* Source Banner - prominently shows what's being assessed */}
-                  <div className="source-banner">
-                    <Icon name={getSourceIcon(selectedAssessment.source_type)} size={24} />
-                    <div className="source-banner-info">
-                      <button
-                        className="source-banner-name-link"
-                        onClick={() => openSourceViewer(selectedAssessment.source_type, selectedAssessment.source_id)}
-                        title="Click to view source content"
-                      >
-                        {detailSourceInfo.name}
-                        <Icon name="ExternalLink" size={14} className="link-icon" />
-                      </button>
-                      <div className="source-banner-meta">
-                        <span className="source-banner-type">{detailSourceInfo.type}</span>
-                        {detailSourceInfo.detail && (
-                          <span className="source-banner-detail">{detailSourceInfo.detail}</span>
+                      {/* Source Banner - prominently shows what's being assessed */}
+                      <div className="source-banner">
+                        <Icon name={getSourceIcon(selectedAssessment.source_type)} size={24} />
+                        <div className="source-banner-info">
+                          <button
+                            className="source-banner-name-link"
+                            onClick={() =>
+                              openSourceViewer(
+                                selectedAssessment.source_type,
+                                selectedAssessment.source_id
+                              )
+                            }
+                            title="Click to view source content"
+                          >
+                            {detailSourceInfo.name}
+                            <Icon name="ExternalLink" size={14} className="link-icon" />
+                          </button>
+                          <div className="source-banner-meta">
+                            <span className="source-banner-type">{detailSourceInfo.type}</span>
+                            {detailSourceInfo.detail && (
+                              <span className="source-banner-detail">
+                                {detailSourceInfo.detail}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div
+                          className="source-banner-level"
+                          style={{ backgroundColor: getLevelColor(selectedAssessment.level) }}
+                        >
+                          {selectedAssessment.level}
+                        </div>
+                      </div>
+
+                      {/* Detail Tabs */}
+                      <div className="detail-tabs">
+                        <button
+                          className={`detail-tab ${detailTab === 'factors' ? 'active' : ''}`}
+                          onClick={() => setDetailTab('factors')}
+                        >
+                          <Icon name="BarChart3" size={16} />
+                          Factors
+                        </button>
+                        <button
+                          className={`detail-tab ${detailTab === 'deception' ? 'active' : ''}`}
+                          onClick={() => setDetailTab('deception')}
+                        >
+                          <Icon name="ShieldAlert" size={16} />
+                          Deception
+                          {deceptionRisk && deceptionRisk !== 'minimal' && (
+                            <span
+                              className="deception-risk-dot"
+                              style={{ backgroundColor: RISK_COLORS[deceptionRisk] }}
+                              title={`Deception risk: ${deceptionRisk}`}
+                            />
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="detail-content">
+                        {detailTab === 'factors' ? (
+                          <>
+                            {/* Score Section */}
+                            <div className="detail-section">
+                              <h4>Credibility Score</h4>
+                              {renderScoreGauge(selectedAssessment.score)}
+                              <div className="score-info">
+                                <div className="info-row">
+                                  <span>Level:</span>
+                                  <span
+                                    className="level-value"
+                                    style={{ color: getLevelColor(selectedAssessment.level) }}
+                                  >
+                                    {selectedAssessment.level.toUpperCase()}
+                                  </span>
+                                </div>
+                                <div className="info-row">
+                                  <span>Certainty:</span>
+                                  <span>{(selectedAssessment.confidence * 100).toFixed(1)}%</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Source Section */}
+                            <div className="detail-section">
+                              <h4>Source Information</h4>
+                              <div className="info-row">
+                                <span>Name:</span>
+                                <span>{detailSourceInfo.name}</span>
+                              </div>
+                              <div className="info-row">
+                                <span>Type:</span>
+                                <span>{detailSourceInfo.type}</span>
+                              </div>
+                              {detailSourceInfo.detail && (
+                                <div className="info-row">
+                                  <span>Format:</span>
+                                  <span>{detailSourceInfo.detail}</span>
+                                </div>
+                              )}
+                              <div className="info-row">
+                                <span>ID:</span>
+                                <span className="monospace source-id-small">
+                                  {selectedAssessment.source_id}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Factors Section */}
+                            <div className="detail-section">
+                              <div className="section-header">
+                                <h4>Credibility Factors</h4>
+                                <button
+                                  className="toggle-btn"
+                                  onClick={() => setShowFactors(!showFactors)}
+                                >
+                                  <Icon
+                                    name={showFactors ? 'ChevronUp' : 'ChevronDown'}
+                                    size={16}
+                                  />
+                                </button>
+                              </div>
+                              {showFactors && renderFactorBreakdown(selectedAssessment.factors)}
+                            </div>
+
+                            {/* Assessment Meta */}
+                            <div className="detail-section">
+                              <h4>Assessment Meta</h4>
+                              <div className="info-row">
+                                <span>Method:</span>
+                                <span>{selectedAssessment.assessed_by}</span>
+                              </div>
+                              {selectedAssessment.assessor_id && (
+                                <div className="info-row">
+                                  <span>Assessor:</span>
+                                  <span className="monospace">
+                                    {selectedAssessment.assessor_id}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="info-row">
+                                <span>Created:</span>
+                                <span>
+                                  {new Date(selectedAssessment.created_at).toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="info-row">
+                                <span>Updated:</span>
+                                <span>
+                                  {new Date(selectedAssessment.updated_at).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Notes Section */}
+                            {selectedAssessment.notes && (
+                              <div className="detail-section">
+                                <h4>Notes</h4>
+                                <p className="detail-notes">{selectedAssessment.notes}</p>
+                              </div>
+                            )}
+
+                            {/* Actions */}
+                            <div className="detail-actions">
+                              <button
+                                className="btn btn-danger"
+                                onClick={() => handleDeleteAssessment(selectedAssessment.id)}
+                              >
+                                <Icon name="Trash2" size={16} />
+                                Delete Assessment
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <DeceptionPanel
+                            sourceType={selectedAssessment.source_type}
+                            sourceId={selectedAssessment.source_id}
+                            credibilityAssessmentId={selectedAssessment.id}
+                            onRiskChange={setDeceptionRisk}
+                          />
                         )}
                       </div>
                     </div>
-                    <div
-                      className="source-banner-level"
-                      style={{ backgroundColor: getLevelColor(selectedAssessment.level) }}
-                    >
-                      {selectedAssessment.level}
-                    </div>
-                  </div>
-
-                  {/* Detail Tabs */}
-                  <div className="detail-tabs">
-                    <button
-                      className={`detail-tab ${detailTab === 'factors' ? 'active' : ''}`}
-                      onClick={() => setDetailTab('factors')}
-                    >
-                      <Icon name="BarChart3" size={16} />
-                      Factors
-                    </button>
-                    <button
-                      className={`detail-tab ${detailTab === 'deception' ? 'active' : ''}`}
-                      onClick={() => setDetailTab('deception')}
-                    >
-                      <Icon name="ShieldAlert" size={16} />
-                      Deception
-                      {deceptionRisk && deceptionRisk !== 'minimal' && (
-                        <span
-                          className="deception-risk-dot"
-                          style={{ backgroundColor: RISK_COLORS[deceptionRisk] }}
-                          title={`Deception risk: ${deceptionRisk}`}
-                        />
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="detail-content">
-                    {detailTab === 'factors' ? (
-                      <>
-                        {/* Score Section */}
-                        <div className="detail-section">
-                          <h4>Credibility Score</h4>
-                          {renderScoreGauge(selectedAssessment.score)}
-                          <div className="score-info">
-                            <div className="info-row">
-                              <span>Level:</span>
-                              <span
-                                className="level-value"
-                                style={{ color: getLevelColor(selectedAssessment.level) }}
-                              >
-                                {selectedAssessment.level.toUpperCase()}
-                              </span>
-                            </div>
-                            <div className="info-row">
-                              <span>Certainty:</span>
-                              <span>{(selectedAssessment.confidence * 100).toFixed(1)}%</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Source Section */}
-                        <div className="detail-section">
-                          <h4>Source Information</h4>
-                          <div className="info-row">
-                            <span>Name:</span>
-                            <span>{detailSourceInfo.name}</span>
-                          </div>
-                          <div className="info-row">
-                            <span>Type:</span>
-                            <span>{detailSourceInfo.type}</span>
-                          </div>
-                          {detailSourceInfo.detail && (
-                            <div className="info-row">
-                              <span>Format:</span>
-                              <span>{detailSourceInfo.detail}</span>
-                            </div>
-                          )}
-                          <div className="info-row">
-                            <span>ID:</span>
-                            <span className="monospace source-id-small">{selectedAssessment.source_id}</span>
-                          </div>
-                        </div>
-
-                        {/* Factors Section */}
-                        <div className="detail-section">
-                          <div className="section-header">
-                            <h4>Credibility Factors</h4>
-                            <button
-                              className="toggle-btn"
-                              onClick={() => setShowFactors(!showFactors)}
-                            >
-                              <Icon name={showFactors ? 'ChevronUp' : 'ChevronDown'} size={16} />
-                            </button>
-                          </div>
-                          {showFactors && renderFactorBreakdown(selectedAssessment.factors)}
-                        </div>
-
-                        {/* Assessment Meta */}
-                        <div className="detail-section">
-                          <h4>Assessment Meta</h4>
-                          <div className="info-row">
-                            <span>Method:</span>
-                            <span>{selectedAssessment.assessed_by}</span>
-                          </div>
-                          {selectedAssessment.assessor_id && (
-                            <div className="info-row">
-                              <span>Assessor:</span>
-                              <span className="monospace">{selectedAssessment.assessor_id}</span>
-                            </div>
-                          )}
-                          <div className="info-row">
-                            <span>Created:</span>
-                            <span>{new Date(selectedAssessment.created_at).toLocaleString()}</span>
-                          </div>
-                          <div className="info-row">
-                            <span>Updated:</span>
-                            <span>{new Date(selectedAssessment.updated_at).toLocaleString()}</span>
-                          </div>
-                        </div>
-
-                        {/* Notes Section */}
-                        {selectedAssessment.notes && (
-                          <div className="detail-section">
-                            <h4>Notes</h4>
-                            <p className="detail-notes">{selectedAssessment.notes}</p>
-                          </div>
-                        )}
-
-                        {/* Actions */}
-                        <div className="detail-actions">
-                          <button
-                            className="btn btn-danger"
-                            onClick={() => handleDeleteAssessment(selectedAssessment.id)}
-                          >
-                            <Icon name="Trash2" size={16} />
-                            Delete Assessment
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <DeceptionPanel
-                        sourceType={selectedAssessment.source_type}
-                        sourceId={selectedAssessment.source_id}
-                        credibilityAssessmentId={selectedAssessment.id}
-                        onRiskChange={setDeceptionRisk}
-                      />
-                    )}
-                  </div>
-                </div>
-                );
-              })()}
+                  );
+                })()}
             </div>
           )}
         </main>
@@ -952,7 +988,7 @@ export function CredibilityPage() {
       {/* Create Assessment Modal */}
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>
                 <Icon name="Plus" size={20} />
@@ -965,20 +1001,23 @@ export function CredibilityPage() {
             <div className="modal-body">
               {/* Source Type Selector */}
               <div className="source-type-tabs">
-                {SOURCE_TYPES.map(type => (
+                {SOURCE_TYPES.map((type) => (
                   <button
                     key={type.id}
                     className={`source-type-tab ${createSourceType === type.id ? 'active' : ''}`}
                     onClick={() => setCreateSourceType(type.id)}
                   >
-                    <Icon name={type.icon as 'FileText' | 'User' | 'MessageSquare' | 'Edit'} size={16} />
+                    <Icon
+                      name={type.icon as 'FileText' | 'User' | 'MessageSquare' | 'Edit'}
+                      size={16}
+                    />
                     <span>{type.label}</span>
                   </button>
                 ))}
               </div>
 
               {/* Source Browser or Manual Entry */}
-              {SOURCE_TYPES.find(t => t.id === createSourceType)?.api ? (
+              {SOURCE_TYPES.find((t) => t.id === createSourceType)?.api ? (
                 <div className="source-browser">
                   {/* Search */}
                   <div className="source-search">
@@ -987,7 +1026,7 @@ export function CredibilityPage() {
                       type="text"
                       placeholder={`Search ${createSourceType}s...`}
                       value={sourceSearch}
-                      onChange={e => setSourceSearch(e.target.value)}
+                      onChange={(e) => setSourceSearch(e.target.value)}
                     />
                   </div>
 
@@ -1025,7 +1064,7 @@ export function CredibilityPage() {
                         <span>No {createSourceType}s found</span>
                       </div>
                     ) : (
-                      filteredSourceItems.map(item => (
+                      filteredSourceItems.map((item) => (
                         <button
                           key={item.id}
                           className={`source-item ${selectedSourceItem?.id === item.id ? 'selected' : ''}`}
@@ -1051,11 +1090,9 @@ export function CredibilityPage() {
                     id="sourceId"
                     placeholder="Enter source identifier..."
                     value={createSourceId}
-                    onChange={e => setCreateSourceId(e.target.value)}
+                    onChange={(e) => setCreateSourceId(e.target.value)}
                   />
-                  <span className="form-hint">
-                    Enter a unique identifier for this source
-                  </span>
+                  <span className="form-hint">Enter a unique identifier for this source</span>
                 </div>
               )}
 
@@ -1066,7 +1103,7 @@ export function CredibilityPage() {
                   id="notes"
                   placeholder="Additional context or notes..."
                   value={createNotes}
-                  onChange={e => setCreateNotes(e.target.value)}
+                  onChange={(e) => setCreateNotes(e.target.value)}
                   rows={2}
                 />
               </div>
@@ -1082,7 +1119,12 @@ export function CredibilityPage() {
               <button
                 className="btn btn-primary"
                 onClick={handleCreateAssessment}
-                disabled={creating || (SOURCE_TYPES.find(t => t.id === createSourceType)?.api ? !selectedSourceItem : !createSourceId.trim())}
+                disabled={
+                  creating ||
+                  (SOURCE_TYPES.find((t) => t.id === createSourceType)?.api
+                    ? !selectedSourceItem
+                    : !createSourceId.trim())
+                }
               >
                 {creating ? (
                   <>
@@ -1104,21 +1146,23 @@ export function CredibilityPage() {
       {/* Source Viewer Modal */}
       {(sourceViewer || loadingSourceViewer) && (
         <div className="modal-overlay source-viewer-overlay" onClick={() => setSourceViewer(null)}>
-          <div className="source-viewer-modal" onClick={e => e.stopPropagation()}>
+          <div className="source-viewer-modal" onClick={(e) => e.stopPropagation()}>
             <div className="source-viewer-header">
               {loadingSourceViewer ? (
                 <>
                   <Icon name="Loader2" size={20} className="spin" />
                   <span>Loading source...</span>
                 </>
-              ) : sourceViewer && (
-                <>
-                  <Icon name={getSourceIcon(sourceViewer.type)} size={20} />
-                  <div className="source-viewer-title">
-                    <h3>{sourceViewer.name}</h3>
-                    <span className="source-viewer-type">{sourceViewer.type}</span>
-                  </div>
-                </>
+              ) : (
+                sourceViewer && (
+                  <>
+                    <Icon name={getSourceIcon(sourceViewer.type)} size={20} />
+                    <div className="source-viewer-title">
+                      <h3>{sourceViewer.name}</h3>
+                      <span className="source-viewer-type">{sourceViewer.type}</span>
+                    </div>
+                  </>
+                )
               )}
               <button className="close-btn" onClick={() => setSourceViewer(null)}>
                 <Icon name="X" size={18} />

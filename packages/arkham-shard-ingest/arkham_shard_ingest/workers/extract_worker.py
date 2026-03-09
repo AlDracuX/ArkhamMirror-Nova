@@ -9,7 +9,7 @@ import asyncio
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from arkham_frame.workers.base import BaseWorker
 
@@ -34,7 +34,7 @@ class ExtractWorker(BaseWorker):
     poll_interval = 1.0
     heartbeat_interval = 10.0
     idle_timeout = 300.0  # 5 minutes
-    job_timeout = 120.0   # 2 minutes for large files
+    job_timeout = 120.0  # 2 minutes for large files
     max_retries = 2
 
     def __init__(self, *args, **kwargs):
@@ -50,27 +50,27 @@ class ExtractWorker(BaseWorker):
 
         try:
             import pypdf
+
             self._has_pypdf = True
         except ImportError:
             logger.warning("pypdf not installed - PDF extraction unavailable")
 
         try:
             import docx
+
             self._has_docx = True
         except ImportError:
             logger.warning("python-docx not installed - DOCX extraction unavailable")
 
         try:
             import openpyxl
+
             self._has_openpyxl = True
         except ImportError:
             logger.warning("openpyxl not installed - XLSX extraction unavailable")
 
         if not any([self._has_pypdf, self._has_docx, self._has_openpyxl]):
-            logger.error(
-                "No extraction libraries available! "
-                "Install pypdf, python-docx, and/or openpyxl"
-            )
+            logger.error("No extraction libraries available! Install pypdf, python-docx, and/or openpyxl")
 
     def _resolve_path(self, file_path: str) -> Path:
         """
@@ -144,16 +144,13 @@ class ExtractWorker(BaseWorker):
 
         if not file_type:
             raise ValueError(
-                f"Could not determine file type. "
+                "Could not determine file type. "
                 "Provide file_type parameter or use a supported extension: "
                 "pdf, docx, xlsx, csv, txt, eml"
             )
 
         if file_type not in ["pdf", "docx", "xlsx", "csv", "txt", "eml"]:
-            raise ValueError(
-                f"Unsupported file_type: {file_type}. "
-                "Supported types: pdf, docx, xlsx, csv, txt, eml"
-            )
+            raise ValueError(f"Unsupported file_type: {file_type}. Supported types: pdf, docx, xlsx, csv, txt, eml")
 
         # Check file exists
         path = Path(file_path)
@@ -163,10 +160,7 @@ class ExtractWorker(BaseWorker):
         if not path.is_file():
             raise ValueError(f"Path is not a file: {file_path}")
 
-        logger.info(
-            f"ExtractWorker processing {file_type.upper()} file: "
-            f"{path.name} (job {job_id})"
-        )
+        logger.info(f"ExtractWorker processing {file_type.upper()} file: {path.name} (job {job_id})")
 
         # Dispatch to appropriate extractor
         try:
@@ -227,10 +221,7 @@ class ExtractWorker(BaseWorker):
             Exception: For PDF reading errors
         """
         if not self._has_pypdf:
-            raise ImportError(
-                "pypdf library not installed. "
-                "Install with: pip install pypdf"
-            )
+            raise ImportError("pypdf library not installed. Install with: pip install pypdf")
 
         from pypdf import PdfReader
 
@@ -241,10 +232,7 @@ class ExtractWorker(BaseWorker):
 
                 # Check for encryption
                 if reader.is_encrypted:
-                    raise ValueError(
-                        "PDF is password-protected. "
-                        "Encrypted PDFs are not supported."
-                    )
+                    raise ValueError("PDF is password-protected. Encrypted PDFs are not supported.")
 
                 # Extract PDF metadata (author, title, creator, etc.)
                 document_metadata = {}
@@ -266,7 +254,7 @@ class ExtractWorker(BaseWorker):
                     if meta.modification_date:
                         document_metadata["modification_date"] = str(meta.modification_date)
                     # Keywords (may be comma-separated string)
-                    if hasattr(meta, 'keywords') and meta.keywords:
+                    if hasattr(meta, "keywords") and meta.keywords:
                         document_metadata["keywords"] = str(meta.keywords)
 
                 pages = []
@@ -305,10 +293,7 @@ class ExtractWorker(BaseWorker):
             Exception: For DOCX reading errors
         """
         if not self._has_docx:
-            raise ImportError(
-                "python-docx library not installed. "
-                "Install with: pip install python-docx"
-            )
+            raise ImportError("python-docx library not installed. Install with: pip install python-docx")
 
         from docx import Document
 
@@ -393,10 +378,7 @@ class ExtractWorker(BaseWorker):
             Exception: For XLSX reading errors
         """
         if not self._has_openpyxl:
-            raise ImportError(
-                "openpyxl library not installed. "
-                "Install with: pip install openpyxl"
-            )
+            raise ImportError("openpyxl library not installed. Install with: pip install openpyxl")
 
         from openpyxl import load_workbook
 
@@ -407,7 +389,7 @@ class ExtractWorker(BaseWorker):
                 wb = load_workbook(
                     str(path),
                     read_only=False,  # Need full load for properties
-                    data_only=True  # Get computed values, not formulas
+                    data_only=True,  # Get computed values, not formulas
                 )
 
                 # Extract workbook metadata
@@ -475,6 +457,7 @@ class ExtractWorker(BaseWorker):
         Returns:
             dict with text and line count
         """
+
         def extract():
             try:
                 # Try different encodings
@@ -713,6 +696,7 @@ class ExtractWorker(BaseWorker):
                         elif content_type == "text/html":
                             # Basic HTML stripping
                             import re
+
                             html = part.get_content()
                             if isinstance(html, str):
                                 text = re.sub(r"<[^>]+>", "", html)

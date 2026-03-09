@@ -90,7 +90,9 @@ export async function findNearest(request: NearestRequest): Promise<NearestResul
   });
 }
 
-export async function embedDocument(request: DocumentEmbedRequest): Promise<DocumentEmbedJobResponse> {
+export async function embedDocument(
+  request: DocumentEmbedRequest
+): Promise<DocumentEmbedJobResponse> {
   return fetchAPI<DocumentEmbedJobResponse>(`/document/${request.doc_id}`, {
     method: 'POST',
     body: JSON.stringify({
@@ -183,21 +185,24 @@ export function useSimilarity() {
   const [error, setError] = useState<Error | null>(null);
   const [data, setData] = useState<SimilarityResult | null>(null);
 
-  const calculate = useCallback(async (text1: string, text2: string, method?: 'cosine' | 'euclidean' | 'dot') => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await calculateSimilarity({ text1, text2, method });
-      setData(result);
-      return result;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Similarity calculation failed');
-      setError(error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const calculate = useCallback(
+    async (text1: string, text2: string, method?: 'cosine' | 'euclidean' | 'dot') => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await calculateSimilarity({ text1, text2, method });
+        setData(result);
+        return result;
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Similarity calculation failed');
+        setError(error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   return { calculate, data, loading, error };
 }
@@ -210,21 +215,24 @@ export function useNearest() {
   const [error, setError] = useState<Error | null>(null);
   const [data, setData] = useState<NearestResult | null>(null);
 
-  const search = useCallback(async (query: string | number[], options?: Partial<NearestRequest>) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await findNearest({ query, ...options });
-      setData(result);
-      return result;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Nearest neighbor search failed');
-      setError(error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const search = useCallback(
+    async (query: string | number[], options?: Partial<NearestRequest>) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await findNearest({ query, ...options });
+        setData(result);
+        return result;
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Nearest neighbor search failed');
+        setError(error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   return { search, data, loading, error };
 }
@@ -314,7 +322,10 @@ export async function checkModelSwitch(model: string): Promise<ModelSwitchCheckR
   });
 }
 
-export async function switchModel(model: string, confirmWipe: boolean = false): Promise<ModelSwitchResult> {
+export async function switchModel(
+  model: string,
+  confirmWipe: boolean = false
+): Promise<ModelSwitchResult> {
   return fetchAPI<ModelSwitchResult>('/model/switch', {
     method: 'POST',
     body: JSON.stringify({ model, confirm_wipe: confirmWipe }),
@@ -430,21 +441,24 @@ export function useDocumentsForEmbedding(onlyUnembedded: boolean = false) {
   const [error, setError] = useState<Error | null>(null);
   const [data, setData] = useState<DocumentsForEmbeddingResponse | null>(null);
 
-  const fetch = useCallback(async (limit: number = 100, offset: number = 0) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await getDocumentsForEmbedding(limit, offset, onlyUnembedded);
-      setData(result);
-      return result;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to fetch documents');
-      setError(error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [onlyUnembedded]);
+  const fetch = useCallback(
+    async (limit: number = 100, offset: number = 0) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await getDocumentsForEmbedding(limit, offset, onlyUnembedded);
+        setData(result);
+        return result;
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Failed to fetch documents');
+        setError(error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [onlyUnembedded]
+  );
 
   const refetch = useCallback(() => {
     return fetch();

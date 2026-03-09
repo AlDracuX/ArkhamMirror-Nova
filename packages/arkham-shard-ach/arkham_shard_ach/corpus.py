@@ -2,15 +2,15 @@
 
 import logging
 from difflib import SequenceMatcher
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from .models import (
-    ExtractedEvidence,
-    EvidenceRelevance,
-    SearchScope,
-    CorpusSearchConfig,
-    Hypothesis,
     ACHMatrix,
+    CorpusSearchConfig,
+    EvidenceRelevance,
+    ExtractedEvidence,
+    Hypothesis,
+    SearchScope,
 )
 from .prompts import EVIDENCE_EXTRACTION_PROMPT
 
@@ -31,7 +31,7 @@ class CorpusSearchService:
     def __init__(self, vectors_service, documents_service, llm_service):
         """
         Initialize CorpusSearchService.
-        
+
         Args:
             vectors_service: VectorService instance for semantic search
             documents_service: DocumentService instance for chunk retrieval
@@ -45,11 +45,7 @@ class CorpusSearchService:
     @property
     def is_available(self) -> bool:
         """Check if corpus search is available."""
-        return (
-            self.vectors is not None
-            and self.llm is not None
-            and self.llm.is_available()
-        )
+        return self.vectors is not None and self.llm is not None and self.llm.is_available()
 
     async def search_for_evidence(
         self,
@@ -60,25 +56,25 @@ class CorpusSearchService:
     ) -> List[ExtractedEvidence]:
         """
         Search corpus for evidence relevant to a hypothesis.
-        
+
         Args:
             hypothesis_text: The hypothesis title and description
             hypothesis_id: ID of the hypothesis
             scope: Optional scope filters
             config: Optional search configuration
-            
+
         Returns:
             List of ExtractedEvidence candidates
         """
         cfg = config or self.config
-        
+
         if not self.is_available:
             logger.warning("Corpus search not available")
             return []
 
         # 1. Vector search for relevant chunks
         filter_dict = self._build_filter(scope)
-        
+
         try:
             results = await self.vectors.search_text(
                 collection=self.COLLECTION_CHUNKS,
@@ -151,7 +147,7 @@ class CorpusSearchService:
         for result in search_results:
             try:
                 # Handle both SearchResult objects and dicts
-                if hasattr(result, 'id'):
+                if hasattr(result, "id"):
                     chunk_id = result.id
                     payload = result.payload or {}
                     score = result.score or 0.0
@@ -178,31 +174,33 @@ class CorpusSearchService:
                         # Try to get chunk content from database
                         chunks = await self.documents.get_document_chunks(doc_id)
                         for chunk in chunks:
-                            if hasattr(chunk, 'id') and str(chunk.id) == stored_chunk_id:
-                                chunk_text = getattr(chunk, 'content', '') or getattr(chunk, 'text', '')
-                                page_num = getattr(chunk, 'page_number', None)
+                            if hasattr(chunk, "id") and str(chunk.id) == stored_chunk_id:
+                                chunk_text = getattr(chunk, "content", "") or getattr(chunk, "text", "")
+                                page_num = getattr(chunk, "page_number", None)
                                 break
-                            elif isinstance(chunk, dict) and str(chunk.get('id')) == stored_chunk_id:
-                                chunk_text = chunk.get('content', '') or chunk.get('text', '')
-                                page_num = chunk.get('page_number')
+                            elif isinstance(chunk, dict) and str(chunk.get("id")) == stored_chunk_id:
+                                chunk_text = chunk.get("content", "") or chunk.get("text", "")
+                                page_num = chunk.get("page_number")
                                 break
 
                         # Get document name
                         doc = await self.documents.get_document(doc_id)
                         if doc:
-                            doc_name = getattr(doc, 'filename', None) or getattr(doc, 'name', 'Unknown')
+                            doc_name = getattr(doc, "filename", None) or getattr(doc, "name", "Unknown")
                     except Exception as e:
                         logger.warning(f"Failed to fetch chunk/doc details: {e}")
 
                 if chunk_text:
-                    enriched.append({
-                        "chunk_id": stored_chunk_id or chunk_id,
-                        "text": chunk_text,
-                        "document_id": doc_id,
-                        "document_name": doc_name,
-                        "page_number": page_num,
-                        "similarity_score": score,
-                    })
+                    enriched.append(
+                        {
+                            "chunk_id": stored_chunk_id or chunk_id,
+                            "text": chunk_text,
+                            "document_id": doc_id,
+                            "document_name": doc_name,
+                            "page_number": page_num,
+                            "similarity_score": score,
+                        }
+                    )
                 else:
                     logger.warning(f"No text found for chunk {stored_chunk_id} in doc {doc_id}")
 
@@ -223,7 +221,7 @@ class CorpusSearchService:
         all_evidence = []
 
         for i in range(0, len(chunks), batch_size):
-            batch = chunks[i:i + batch_size]
+            batch = chunks[i : i + batch_size]
 
             # Format chunks for prompt
             chunks_text = self._format_chunks_for_prompt(batch)
@@ -247,9 +245,7 @@ class CorpusSearchService:
                                 source_document_name=chunk["document_name"],
                                 source_chunk_id=chunk["chunk_id"],
                                 page_number=chunk.get("page_number"),
-                                relevance=EvidenceRelevance(
-                                    item.get("classification", "neutral")
-                                ),
+                                relevance=EvidenceRelevance(item.get("classification", "neutral")),
                                 explanation=item.get("explanation", ""),
                                 hypothesis_id=hypothesis_id,
                                 similarity_score=chunk["similarity_score"],
@@ -280,7 +276,7 @@ class CorpusSearchService:
     ) -> List[ExtractedEvidence]:
         """
         Verify extracted quotes exist in source chunks.
-        
+
         Uses fuzzy matching to handle minor LLM variations.
         """
         # Build chunk lookup
@@ -312,9 +308,7 @@ class CorpusSearchService:
                 ev.verified = True
             else:
                 ev.verified = False
-                logger.warning(
-                    f"Quote not verified (ratio={ratio:.2f}): {ev.quote[:50]}..."
-                )
+                logger.warning(f"Quote not verified (ratio={ratio:.2f}): {ev.quote[:50]}...")
 
             verified.append(ev)
 
@@ -328,12 +322,12 @@ class CorpusSearchService:
     ) -> Dict[str, List[ExtractedEvidence]]:
         """
         Search corpus for evidence relevant to all hypotheses.
-        
+
         Args:
             matrix: ACHMatrix containing hypotheses
             scope: Optional scope filters
             config: Optional search configuration
-            
+
         Returns:
             Dict mapping hypothesis_id to list of ExtractedEvidence
         """
@@ -360,12 +354,12 @@ class CorpusSearchService:
     ) -> List[ExtractedEvidence]:
         """
         Check if extracted evidence duplicates existing matrix evidence.
-        
+
         Args:
             matrix: ACHMatrix with existing evidence
             evidence: List of extracted evidence to check
             threshold: Similarity threshold for duplicate detection
-            
+
         Returns:
             Evidence list with possible_duplicate field set
         """

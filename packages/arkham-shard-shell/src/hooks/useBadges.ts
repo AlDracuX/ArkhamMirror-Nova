@@ -59,11 +59,14 @@ export function useBadges(): UseBadgesResult {
     return () => clearInterval(interval);
   }, []);
 
-  const getBadge = useCallback((shardName: string, subRouteId?: string) => {
-    // Badge key format: {shardName}:{subRouteId} for sub-routes
-    const key = subRouteId ? `${shardName}:${subRouteId}` : shardName;
-    return badges[key] || null;
-  }, [badges]);
+  const getBadge = useCallback(
+    (shardName: string, subRouteId?: string) => {
+      // Badge key format: {shardName}:{subRouteId} for sub-routes
+      const key = subRouteId ? `${shardName}:${subRouteId}` : shardName;
+      return badges[key] || null;
+    },
+    [badges]
+  );
 
   return { badges, getBadge, loading, hasError, lastSuccessTime };
 }

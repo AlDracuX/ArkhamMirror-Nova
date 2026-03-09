@@ -57,13 +57,30 @@ export const WitnessesPage: React.FC = () => {
     }
   }, [search, filterParty]);
 
-  useEffect(() => { fetchWitnesses(); }, [fetchWitnesses]);
+  useEffect(() => {
+    fetchWitnesses();
+  }, [fetchWitnesses]);
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '24px',
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h1
+            style={{
+              fontSize: '24px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
             <Users size={24} /> Witnesses
           </h1>
           <p style={{ color: '#6b7280', marginTop: '4px' }}>
@@ -72,9 +89,16 @@ export const WitnessesPage: React.FC = () => {
         </div>
         <button
           style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '8px 16px', background: '#3b82f6', color: 'white',
-            border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 16px',
+            background: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: 500,
           }}
         >
           <UserPlus size={16} /> Add Witness
@@ -83,20 +107,33 @@ export const WitnessesPage: React.FC = () => {
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
         <div style={{ flex: 1, position: 'relative' }}>
-          <Search size={16} style={{ position: 'absolute', left: '10px', top: '10px', color: '#9ca3af' }} />
+          <Search
+            size={16}
+            style={{ position: 'absolute', left: '10px', top: '10px', color: '#9ca3af' }}
+          />
           <input
-            type="text" placeholder="Search witnesses..."
-            value={search} onChange={e => setSearch(e.target.value)}
+            type="text"
+            placeholder="Search witnesses..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             style={{
-              width: '100%', padding: '8px 8px 8px 32px',
-              border: '1px solid #e5e7eb', borderRadius: '6px',
+              width: '100%',
+              padding: '8px 8px 8px 32px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '6px',
               background: 'var(--bg-secondary, #f9fafb)',
             }}
           />
         </div>
         <select
-          value={filterParty} onChange={e => setFilterParty(e.target.value)}
-          style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '6px', background: 'var(--bg-secondary, #f9fafb)' }}
+          value={filterParty}
+          onChange={(e) => setFilterParty(e.target.value)}
+          style={{
+            padding: '8px 12px',
+            border: '1px solid #e5e7eb',
+            borderRadius: '6px',
+            background: 'var(--bg-secondary, #f9fafb)',
+          }}
         >
           <option value="">All Parties</option>
           <option value="claimant">Claimant</option>
@@ -106,7 +143,9 @@ export const WitnessesPage: React.FC = () => {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>Loading witnesses...</div>
+        <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>
+          Loading witnesses...
+        </div>
       ) : witnesses.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>
           <Users size={48} style={{ marginBottom: '12px', opacity: 0.3 }} />
@@ -114,20 +153,29 @@ export const WitnessesPage: React.FC = () => {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {witnesses.map(w => (
+          {witnesses.map((w) => (
             <div
               key={w.id}
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 16px', border: '1px solid #e5e7eb', borderRadius: '8px',
-                background: 'var(--bg-primary, white)', cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                background: 'var(--bg-primary, white)',
+                cursor: 'pointer',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '8px', height: '8px', borderRadius: '50%',
-                  background: STATUS_COLORS[w.status] || '#6b7280',
-                }} />
+                <div
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: STATUS_COLORS[w.status] || '#6b7280',
+                  }}
+                />
                 <div>
                   <div style={{ fontWeight: 600 }}>{w.name}</div>
                   <div style={{ fontSize: '13px', color: '#6b7280' }}>
@@ -138,18 +186,27 @@ export const WitnessesPage: React.FC = () => {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{
-                  padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 500,
-                  background: `${CREDIBILITY_COLORS[w.credibility_level] || '#6b7280'}20`,
-                  color: CREDIBILITY_COLORS[w.credibility_level] || '#6b7280',
-                }}>
+                <span
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    background: `${CREDIBILITY_COLORS[w.credibility_level] || '#6b7280'}20`,
+                    color: CREDIBILITY_COLORS[w.credibility_level] || '#6b7280',
+                  }}
+                >
                   {w.credibility_level}
                 </span>
-                <span style={{
-                  padding: '2px 8px', borderRadius: '12px', fontSize: '12px',
-                  background: w.party === 'claimant' ? '#dbeafe' : '#fde8e8',
-                  color: w.party === 'claimant' ? '#1e40af' : '#991b1b',
-                }}>
+                <span
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    background: w.party === 'claimant' ? '#dbeafe' : '#fde8e8',
+                    color: w.party === 'claimant' ? '#1e40af' : '#991b1b',
+                  }}
+                >
                   {w.party}
                 </span>
                 <ChevronRight size={16} style={{ color: '#9ca3af' }} />

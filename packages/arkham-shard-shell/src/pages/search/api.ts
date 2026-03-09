@@ -118,7 +118,9 @@ export async function getAvailableFilters(query?: string): Promise<AvailableFilt
 // Regex Search Operations
 // ============================================
 
-export async function performRegexSearch(request: RegexSearchRequest): Promise<RegexSearchResponse> {
+export async function performRegexSearch(
+  request: RegexSearchRequest
+): Promise<RegexSearchResponse> {
   return fetchAPI<RegexSearchResponse>('/regex', {
     method: 'POST',
     body: JSON.stringify(request),

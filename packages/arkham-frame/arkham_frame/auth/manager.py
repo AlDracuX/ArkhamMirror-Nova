@@ -1,5 +1,6 @@
 """User manager for FastAPI-Users."""
 
+import logging
 import os
 import uuid
 from datetime import datetime
@@ -7,7 +8,6 @@ from typing import Optional
 
 from fastapi import Request
 from fastapi_users import BaseUserManager, UUIDIDMixin
-import logging
 
 from .models import User
 

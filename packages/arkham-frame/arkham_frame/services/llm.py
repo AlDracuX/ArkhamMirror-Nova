@@ -12,14 +12,15 @@ Security features:
 - Truncated error messages to prevent credential leakage
 """
 
-from typing import List, Dict, Any, Optional, AsyncIterator, Type, TypeVar, Union
+import json
+import logging
+import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-import logging
-import json
-import re
-import os
+from typing import Any, AsyncIterator, Dict, List, Optional, Type, TypeVar, Union
+
 logger = logging.getLogger(__name__)
 
 # Maximum characters to include in error messages (security measure)
@@ -44,31 +45,37 @@ def _secure_clear_string(s: str) -> None:
     # The actual clearing happens when the caller sets the variable to None.
     pass
 
-T = TypeVar('T')
+
+T = TypeVar("T")
 
 
 class LLMError(Exception):
     """Base LLM error."""
+
     pass
 
 
 class LLMUnavailableError(LLMError):
     """LLM not available."""
+
     pass
 
 
 class LLMRequestError(LLMError):
     """LLM request failed."""
+
     pass
 
 
 class JSONExtractionError(LLMError):
     """JSON extraction failed."""
+
     pass
 
 
 class PromptNotFoundError(LLMError):
     """Prompt template not found."""
+
     def __init__(self, name: str):
         super().__init__(f"Prompt not found: {name}")
         self.name = name
@@ -77,6 +84,7 @@ class PromptNotFoundError(LLMError):
 @dataclass
 class LLMResponse:
     """Response from LLM with metadata."""
+
     text: str
     model: str
     tokens_prompt: Optional[int] = None
@@ -97,6 +105,7 @@ class LLMResponse:
 @dataclass
 class StreamChunk:
     """A chunk from streaming response."""
+
     text: str
     is_final: bool = False
     finish_reason: Optional[str] = None
@@ -105,6 +114,7 @@ class StreamChunk:
 @dataclass
 class PromptTemplate:
     """A reusable prompt template."""
+
     name: str
     template: str
     system_prompt: Optional[str] = None
@@ -133,9 +143,9 @@ class PromptTemplate:
 
 
 # JSON extraction patterns
-JSON_BLOCK_PATTERN = re.compile(r'```(?:json)?\s*([\s\S]*?)```')
-JSON_OBJECT_PATTERN = re.compile(r'\{[\s\S]*\}')
-JSON_ARRAY_PATTERN = re.compile(r'\[[\s\S]*\]')
+JSON_BLOCK_PATTERN = re.compile(r"```(?:json)?\s*([\s\S]*?)```")
+JSON_OBJECT_PATTERN = re.compile(r"\{[\s\S]*\}")
+JSON_ARRAY_PATTERN = re.compile(r"\[[\s\S]*\]")
 
 
 class LLMService:
@@ -158,19 +168,19 @@ class LLMService:
     # Use __slots__ to prevent dynamic attribute creation (security measure)
     # This prevents accidental exposure of sensitive data through dynamic attributes
     __slots__ = (
-        'config',
-        '_db',
-        '_client',
-        '_available',
-        '_model_name',
-        '_api_key',
-        '_prompts',
-        '_is_openrouter',
-        '_fallback_models',
-        '_use_fallback_routing',
-        '_total_requests',
-        '_total_tokens_prompt',
-        '_total_tokens_completion',
+        "config",
+        "_db",
+        "_client",
+        "_available",
+        "_model_name",
+        "_api_key",
+        "_prompts",
+        "_is_openrouter",
+        "_fallback_models",
+        "_use_fallback_routing",
+        "_total_requests",
+        "_total_tokens_prompt",
+        "_total_tokens_completion",
     )
 
     def __init__(self, config, db=None):
@@ -207,13 +217,13 @@ class LLMService:
         # Load API key from environment (never from config file for security)
         # Supports multiple env var names for compatibility with various providers
         self._api_key = (
-            os.environ.get("LLM_API_KEY") or
-            os.environ.get("OPENAI_API_KEY") or
-            os.environ.get("OPENROUTER_API_KEY") or
-            os.environ.get("TOGETHER_API_KEY") or
-            os.environ.get("GROQ_API_KEY") or
-            os.environ.get("ANTHROPIC_API_KEY") or
-            None
+            os.environ.get("LLM_API_KEY")
+            or os.environ.get("OPENAI_API_KEY")
+            or os.environ.get("OPENROUTER_API_KEY")
+            or os.environ.get("TOGETHER_API_KEY")
+            or os.environ.get("GROQ_API_KEY")
+            or os.environ.get("ANTHROPIC_API_KEY")
+            or None
         )
 
         # Build headers with API key if present
@@ -229,7 +239,7 @@ class LLMService:
         )
 
         # Detect OpenRouter for fallback routing support
-        self._is_openrouter = 'openrouter.ai' in endpoint.lower()
+        self._is_openrouter = "openrouter.ai" in endpoint.lower()
         if self._is_openrouter:
             logger.info("OpenRouter detected - fallback routing available")
 
@@ -368,7 +378,6 @@ class LLMService:
             # Include primary model + fallback models, limit to 3 total
             all_models = [self._model_name] + [m for m in self._fallback_models if m != self._model_name]
             payload["models"] = all_models[:3]
-
 
         try:
             response = await self._client.post("/chat/completions", json=payload)
@@ -712,56 +721,64 @@ class LLMService:
     def _load_default_prompts(self) -> None:
         """Load default prompt templates."""
         # Summarization prompt
-        self.register_prompt(PromptTemplate(
-            name="summarize",
-            template="Please summarize the following text in a concise manner:\n\n{text}",
-            system_prompt="You are a helpful assistant that creates clear, accurate summaries.",
-            variables=["text"],
-            description="Summarize text",
-            temperature=0.5,
-        ))
+        self.register_prompt(
+            PromptTemplate(
+                name="summarize",
+                template="Please summarize the following text in a concise manner:\n\n{text}",
+                system_prompt="You are a helpful assistant that creates clear, accurate summaries.",
+                variables=["text"],
+                description="Summarize text",
+                temperature=0.5,
+            )
+        )
 
         # Entity extraction prompt
-        self.register_prompt(PromptTemplate(
-            name="extract_entities",
-            template=(
-                "Extract all named entities (people, organizations, locations, dates) "
-                "from the following text. Return as a JSON array of objects with 'text', "
-                "'type', and 'confidence' fields.\n\nText:\n{text}"
-            ),
-            system_prompt="You are an NER system. Respond only with valid JSON.",
-            variables=["text"],
-            description="Extract named entities from text",
-            temperature=0.3,
-        ))
+        self.register_prompt(
+            PromptTemplate(
+                name="extract_entities",
+                template=(
+                    "Extract all named entities (people, organizations, locations, dates) "
+                    "from the following text. Return as a JSON array of objects with 'text', "
+                    "'type', and 'confidence' fields.\n\nText:\n{text}"
+                ),
+                system_prompt="You are an NER system. Respond only with valid JSON.",
+                variables=["text"],
+                description="Extract named entities from text",
+                temperature=0.3,
+            )
+        )
 
         # Question answering prompt
-        self.register_prompt(PromptTemplate(
-            name="qa",
-            template=(
-                "Based on the following context, answer the question.\n\n"
-                "Context:\n{context}\n\n"
-                "Question: {question}"
-            ),
-            system_prompt="Answer questions based only on the provided context. If the answer is not in the context, say so.",
-            variables=["context", "question"],
-            description="Answer questions from context",
-            temperature=0.5,
-        ))
+        self.register_prompt(
+            PromptTemplate(
+                name="qa",
+                template=(
+                    "Based on the following context, answer the question.\n\n"
+                    "Context:\n{context}\n\n"
+                    "Question: {question}"
+                ),
+                system_prompt="Answer questions based only on the provided context. If the answer is not in the context, say so.",
+                variables=["context", "question"],
+                description="Answer questions from context",
+                temperature=0.5,
+            )
+        )
 
         # Classification prompt
-        self.register_prompt(PromptTemplate(
-            name="classify",
-            template=(
-                "Classify the following text into one of these categories: {categories}\n\n"
-                "Text: {text}\n\n"
-                "Respond with only the category name."
-            ),
-            system_prompt="You are a text classifier. Respond with only the category name.",
-            variables=["text", "categories"],
-            description="Classify text into categories",
-            temperature=0.3,
-        ))
+        self.register_prompt(
+            PromptTemplate(
+                name="classify",
+                template=(
+                    "Classify the following text into one of these categories: {categories}\n\n"
+                    "Text: {text}\n\n"
+                    "Respond with only the category name."
+                ),
+                system_prompt="You are a text classifier. Respond with only the category name.",
+                variables=["text", "categories"],
+                description="Classify text into categories",
+                temperature=0.3,
+            )
+        )
 
     # =========================================================================
     # Statistics
@@ -800,8 +817,7 @@ class LLMService:
             # Query llm.endpoint setting
             try:
                 row = await self._db.fetch_one(
-                    "SELECT value FROM arkham_settings WHERE key = :key",
-                    {"key": "llm.endpoint"}
+                    "SELECT value FROM arkham_settings WHERE key = :key", {"key": "llm.endpoint"}
                 )
                 if row and row.get("value"):
                     value = row["value"]
@@ -820,8 +836,7 @@ class LLMService:
             # Query llm.model setting
             try:
                 row = await self._db.fetch_one(
-                    "SELECT value FROM arkham_settings WHERE key = :key",
-                    {"key": "llm.model"}
+                    "SELECT value FROM arkham_settings WHERE key = :key", {"key": "llm.model"}
                 )
                 if row and row.get("value"):
                     value = row["value"]

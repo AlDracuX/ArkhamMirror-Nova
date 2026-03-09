@@ -3,10 +3,10 @@ C2PA (Content Credentials) parsing service.
 Verifies provenance and authenticity metadata.
 """
 
-from typing import Dict, Any, Optional
-from pathlib import Path
 import json
 import os
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 import structlog
 
@@ -15,6 +15,7 @@ logger = structlog.get_logger()
 # Try to import c2pa-python
 try:
     import c2pa
+
     C2PA_AVAILABLE = True
 except ImportError:
     C2PA_AVAILABLE = False
@@ -59,10 +60,9 @@ class C2PAParser:
             try:
                 with open(anchors_path) as f:
                     anchors_content = f.read()
-                    c2pa.load_settings({
-                        "verify": {"verify_cert_anchors": True},
-                        "trust": {"trust_anchors": anchors_content}
-                    })
+                    c2pa.load_settings(
+                        {"verify": {"verify_cert_anchors": True}, "trust": {"trust_anchors": anchors_content}}
+                    )
                 self._signature_verification_available = True
                 logger.info("C2PA trust anchors loaded from local file", path=anchors_path)
             except Exception as e:
@@ -156,11 +156,13 @@ class C2PAParser:
 
                         # Ingredients (source materials)
                         for ing in manifest.get("ingredients", []):
-                            result["ingredients"].append({
-                                "title": ing.get("title"),
-                                "format": ing.get("format"),
-                                "instance_id": ing.get("instance_id"),
-                            })
+                            result["ingredients"].append(
+                                {
+                                    "title": ing.get("title"),
+                                    "format": ing.get("format"),
+                                    "instance_id": ing.get("instance_id"),
+                                }
+                            )
 
                 # All manifest IDs
                 if "manifests" in store:

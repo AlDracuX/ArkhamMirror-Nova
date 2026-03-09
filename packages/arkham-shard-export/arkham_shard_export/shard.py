@@ -92,6 +92,7 @@ class ExportShard(ArkhamShard):
     def get_routes(self):
         """Return FastAPI router for this shard."""
         from .api import router
+
         return router
 
     # === Database Schema ===
@@ -542,6 +543,7 @@ class ExportShard(ArkhamShard):
     async def _process_job(self, job: ExportJob) -> ExportResult:
         """Process an export job."""
         import time
+
         start_time = time.time()
 
         try:
@@ -775,9 +777,7 @@ class ExportShard(ArkhamShard):
         if options and options.include_relationships:
             for entity in entities:
                 try:
-                    rel_response = await client.get(
-                        f"{INTERNAL_API_BASE}/api/entities/{entity['id']}/relationships"
-                    )
+                    rel_response = await client.get(f"{INTERNAL_API_BASE}/api/entities/{entity['id']}/relationships")
                     if rel_response.status_code == 200:
                         entity["relationships"] = rel_response.json()
                 except Exception as e:
@@ -829,9 +829,7 @@ class ExportShard(ArkhamShard):
         if options and options.include_relationships:
             for claim in claims:
                 try:
-                    ev_response = await client.get(
-                        f"{INTERNAL_API_BASE}/api/claims/{claim['id']}/evidence"
-                    )
+                    ev_response = await client.get(f"{INTERNAL_API_BASE}/api/claims/{claim['id']}/evidence")
                     if ev_response.status_code == 200:
                         claim["evidence"] = ev_response.json()
                 except Exception as e:
@@ -941,6 +939,7 @@ class ExportShard(ArkhamShard):
     ) -> Dict[str, List[Dict[str, Any]]]:
         """Group timeline events by day/week/month/entity."""
         from collections import defaultdict
+
         grouped = defaultdict(list)
 
         for event in events:
@@ -1020,9 +1019,7 @@ class ExportShard(ArkhamShard):
         detailed_matrices = []
         for matrix_summary in matrices:
             try:
-                detail_response = await client.get(
-                    f"{INTERNAL_API_BASE}/api/ach/matrix/{matrix_summary['id']}"
-                )
+                detail_response = await client.get(f"{INTERNAL_API_BASE}/api/ach/matrix/{matrix_summary['id']}")
                 if detail_response.status_code == 200:
                     detailed_matrices.append(detail_response.json())
                 else:
@@ -1115,15 +1112,15 @@ class ExportShard(ArkhamShard):
         try:
             from reportlab.lib import colors
             from reportlab.lib.pagesizes import letter
-            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
             from reportlab.lib.units import inch
             from reportlab.platypus import (
-                SimpleDocTemplate,
+                PageBreak,
                 Paragraph,
+                SimpleDocTemplate,
                 Spacer,
                 Table,
                 TableStyle,
-                PageBreak,
             )
         except ImportError:
             logger.error("reportlab not installed")
@@ -1147,7 +1144,9 @@ class ExportShard(ArkhamShard):
 
         # Export info
         info_style = styles["Normal"]
-        story.append(Paragraph(f"<b>Export Date:</b> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}", info_style))
+        story.append(
+            Paragraph(f"<b>Export Date:</b> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}", info_style)
+        )
         story.append(Paragraph(f"<b>Job ID:</b> {job.id[:8]}...", info_style))
         record_count = len(data) if isinstance(data, list) else 1
         story.append(Paragraph(f"<b>Records:</b> {record_count}", info_style))
@@ -1172,8 +1171,8 @@ class ExportShard(ArkhamShard):
 
     def _add_claims_to_pdf(self, story, data, styles):
         """Add claims to PDF."""
-        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
         from reportlab.lib import colors
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 
         heading_style = styles["Heading2"]
         normal_style = styles["Normal"]
@@ -1195,18 +1194,20 @@ class ExportShard(ArkhamShard):
             story.append(Paragraph(f"<b>Confidence:</b> {claim.get('confidence', 0):.2f}", normal_style))
 
             # Evidence counts
-            story.append(Paragraph(
-                f"<b>Evidence:</b> {claim.get('evidence_count', 0)} total "
-                f"({claim.get('supporting_count', 0)} supporting, {claim.get('refuting_count', 0)} refuting)",
-                normal_style
-            ))
+            story.append(
+                Paragraph(
+                    f"<b>Evidence:</b> {claim.get('evidence_count', 0)} total "
+                    f"({claim.get('supporting_count', 0)} supporting, {claim.get('refuting_count', 0)} refuting)",
+                    normal_style,
+                )
+            )
 
             story.append(Spacer(1, 12))
 
     def _add_matrices_to_pdf(self, story, data, styles):
         """Add ACH matrices to PDF."""
-        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
         from reportlab.lib import colors
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 
         heading_style = styles["Heading2"]
         normal_style = styles["Normal"]
@@ -1248,7 +1249,9 @@ class ExportShard(ArkhamShard):
             data = [data]
 
         for i, doc in enumerate(data[:50]):  # Limit to 50 for PDF
-            story.append(Paragraph(f"Document {i + 1}: {doc.get('title', doc.get('filename', 'Untitled'))}", heading_style))
+            story.append(
+                Paragraph(f"Document {i + 1}: {doc.get('title', doc.get('filename', 'Untitled'))}", heading_style)
+            )
             story.append(Spacer(1, 6))
 
             story.append(Paragraph(f"<b>Filename:</b> {doc.get('filename', 'N/A')}", normal_style))
@@ -1291,9 +1294,9 @@ class ExportShard(ArkhamShard):
 
     def _add_timeline_to_pdf(self, story, data, styles):
         """Add timeline events to PDF with enhanced formatting."""
-        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle, PageBreak
         from reportlab.lib import colors
         from reportlab.lib.styles import ParagraphStyle
+        from reportlab.platypus import PageBreak, Paragraph, Spacer, Table, TableStyle
 
         heading_style = styles["Heading2"]
         heading3_style = ParagraphStyle(
@@ -1327,7 +1330,9 @@ class ExportShard(ArkhamShard):
         story.append(Paragraph(f"<b>Total Events:</b> {len(events)}", normal_style))
         if stats.get("date_range"):
             dr = stats["date_range"]
-            story.append(Paragraph(f"<b>Date Range:</b> {dr.get('start', 'N/A')} to {dr.get('end', 'N/A')}", normal_style))
+            story.append(
+                Paragraph(f"<b>Date Range:</b> {dr.get('start', 'N/A')} to {dr.get('end', 'N/A')}", normal_style)
+            )
         if stats.get("gap_count"):
             story.append(Paragraph(f"<b>Timeline Gaps:</b> {stats['gap_count']}", normal_style))
         if stats.get("conflict_count"):
@@ -1342,15 +1347,11 @@ class ExportShard(ArkhamShard):
                 conflict_type = conflict.get("conflict_type", "Unknown")
                 severity = conflict.get("severity", "medium")
                 desc = conflict.get("description", "")[:150]
-                story.append(Paragraph(
-                    f"<b>{i+1}. [{severity.upper()}] {conflict_type}:</b> {desc}",
-                    normal_style
-                ))
+                story.append(Paragraph(f"<b>{i + 1}. [{severity.upper()}] {conflict_type}:</b> {desc}", normal_style))
                 if conflict.get("resolution_suggestion"):
-                    story.append(Paragraph(
-                        f"   <i>Suggestion: {conflict['resolution_suggestion'][:100]}</i>",
-                        normal_style
-                    ))
+                    story.append(
+                        Paragraph(f"   <i>Suggestion: {conflict['resolution_suggestion'][:100]}</i>", normal_style)
+                    )
             story.append(Spacer(1, 12))
 
         # Gaps section (if any)
@@ -1362,10 +1363,7 @@ class ExportShard(ArkhamShard):
                 end = gap.get("gap_end", "?")
                 days = gap.get("days", 0)
                 severity = gap.get("severity", "low")
-                story.append(Paragraph(
-                    f"<b>[{severity.upper()}]</b> {start} to {end} ({days} days)",
-                    normal_style
-                ))
+                story.append(Paragraph(f"<b>[{severity.upper()}]</b> {start} to {end} ({days} days)", normal_style))
             story.append(Spacer(1, 12))
 
         # Events section
@@ -1454,7 +1452,7 @@ class ExportShard(ArkhamShard):
         """Generate XLSX export file using openpyxl."""
         try:
             from openpyxl import Workbook
-            from openpyxl.styles import Font, Alignment, PatternFill
+            from openpyxl.styles import Alignment, Font, PatternFill
         except ImportError:
             logger.error("openpyxl not installed")
             with open(file_path, "wb") as f:
@@ -1538,21 +1536,25 @@ class ExportShard(ArkhamShard):
         # Serialize options
         options_json = "{}"
         if job.options:
-            options_json = json.dumps({
-                "include_metadata": job.options.include_metadata,
-                "include_relationships": job.options.include_relationships,
-                "date_range_start": job.options.date_range_start.isoformat() if job.options.date_range_start else None,
-                "date_range_end": job.options.date_range_end.isoformat() if job.options.date_range_end else None,
-                "entity_types": job.options.entity_types,
-                "flatten": job.options.flatten,
-                "max_records": job.options.max_records,
-                "sort_by": job.options.sort_by,
-                "sort_order": job.options.sort_order,
-                # Timeline-specific options
-                "include_conflicts": job.options.include_conflicts,
-                "include_gaps": job.options.include_gaps,
-                "group_by": job.options.group_by,
-            })
+            options_json = json.dumps(
+                {
+                    "include_metadata": job.options.include_metadata,
+                    "include_relationships": job.options.include_relationships,
+                    "date_range_start": job.options.date_range_start.isoformat()
+                    if job.options.date_range_start
+                    else None,
+                    "date_range_end": job.options.date_range_end.isoformat() if job.options.date_range_end else None,
+                    "entity_types": job.options.entity_types,
+                    "flatten": job.options.flatten,
+                    "max_records": job.options.max_records,
+                    "sort_by": job.options.sort_by,
+                    "sort_order": job.options.sort_order,
+                    # Timeline-specific options
+                    "include_conflicts": job.options.include_conflicts,
+                    "include_gaps": job.options.include_gaps,
+                    "group_by": job.options.group_by,
+                }
+            )
 
         data = (
             job.id,
@@ -1579,7 +1581,8 @@ class ExportShard(ArkhamShard):
         if update:
             # For updates, also filter by tenant_id
             if tenant_id:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_export_jobs SET
                         format=?, target=?, status=?, created_at=?, started_at=?,
                         completed_at=?, file_path=?, file_size=?, download_url=?,
@@ -1587,9 +1590,12 @@ class ExportShard(ArkhamShard):
                         record_count=?, processing_time_ms=?, created_by=?, metadata=?,
                         tenant_id=?
                     WHERE id=? AND tenant_id=?
-                """, data[1:] + (job.id, str(tenant_id)))
+                """,
+                    data[1:] + (job.id, str(tenant_id)),
+                )
             else:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_export_jobs SET
                         format=?, target=?, status=?, created_at=?, started_at=?,
                         completed_at=?, file_path=?, file_size=?, download_url=?,
@@ -1597,9 +1603,12 @@ class ExportShard(ArkhamShard):
                         record_count=?, processing_time_ms=?, created_by=?, metadata=?,
                         tenant_id=?
                     WHERE id=?
-                """, data[1:] + (job.id,))
+                """,
+                    data[1:] + (job.id,),
+                )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_export_jobs (
                     id, format, target, status, created_at, started_at,
                     completed_at, file_path, file_size, download_url,
@@ -1607,7 +1616,9 @@ class ExportShard(ArkhamShard):
                     record_count, processing_time_ms, created_by, metadata,
                     tenant_id
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, data)
+            """,
+                data,
+            )
 
     def _row_to_job(self, row: Dict[str, Any]) -> ExportJob:
         """Convert database row to ExportJob object."""
@@ -1618,8 +1629,12 @@ class ExportShard(ArkhamShard):
             options = ExportOptions(
                 include_metadata=options_data.get("include_metadata", True),
                 include_relationships=options_data.get("include_relationships", True),
-                date_range_start=datetime.fromisoformat(options_data["date_range_start"]) if options_data.get("date_range_start") else None,
-                date_range_end=datetime.fromisoformat(options_data["date_range_end"]) if options_data.get("date_range_end") else None,
+                date_range_start=datetime.fromisoformat(options_data["date_range_start"])
+                if options_data.get("date_range_start")
+                else None,
+                date_range_end=datetime.fromisoformat(options_data["date_range_end"])
+                if options_data.get("date_range_end")
+                else None,
                 entity_types=options_data.get("entity_types"),
                 flatten=options_data.get("flatten", False),
                 max_records=options_data.get("max_records"),

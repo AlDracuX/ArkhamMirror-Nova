@@ -9,14 +9,14 @@ import { Icon } from '../../../components/common/Icon';
 
 // Step metadata
 const STEP_ICONS: Record<number, string> = {
-  1: 'Lightbulb',      // Identify Hypotheses
-  2: 'FileText',       // List Evidence
-  3: 'Grid3X3',        // Create Matrix
-  4: 'BarChart2',      // Analyze Diagnosticity
-  5: 'PencilLine',     // Refine the Matrix
-  6: 'Target',         // Draw Conclusions
+  1: 'Lightbulb', // Identify Hypotheses
+  2: 'FileText', // List Evidence
+  3: 'Grid3X3', // Create Matrix
+  4: 'BarChart2', // Analyze Diagnosticity
+  5: 'PencilLine', // Refine the Matrix
+  6: 'Target', // Draw Conclusions
   7: 'ShieldQuestion', // Sensitivity Analysis
-  8: 'FileOutput',     // Report & Milestones
+  8: 'FileOutput', // Report & Milestones
 };
 
 const STEP_NAMES: Record<number, string> = {
@@ -63,23 +63,17 @@ export function StepIndicator({
                 completedSteps.includes(step)
                   ? 'completed'
                   : currentStep === step
-                  ? 'current'
-                  : 'future'
+                    ? 'current'
+                    : 'future'
               }`}
               onClick={() => onStepClick(step)}
               title={STEP_NAMES[step]}
             >
-              {completedSteps.includes(step) ? (
-                <Icon name="Check" size={14} />
-              ) : (
-                step
-              )}
+              {completedSteps.includes(step) ? <Icon name="Check" size={14} /> : step}
             </button>
             {step < 8 && (
               <div
-                className={`step-connector ${
-                  completedSteps.includes(step) ? 'completed' : ''
-                }`}
+                className={`step-connector ${completedSteps.includes(step) ? 'completed' : ''}`}
               />
             )}
           </div>
@@ -122,22 +116,16 @@ export function StepIndicatorCompact({
 }: Pick<StepIndicatorProps, 'currentStep' | 'onPrevStep' | 'onNextStep'>) {
   return (
     <div className="step-indicator-compact">
-      <button
-        className="btn btn-icon btn-sm"
-        onClick={onPrevStep}
-        disabled={currentStep <= 1}
-      >
+      <button className="btn btn-icon btn-sm" onClick={onPrevStep} disabled={currentStep <= 1}>
         <Icon name="ChevronLeft" size={14} />
       </button>
       <div className="compact-step-info">
         <Icon name={STEP_ICONS[currentStep]} size={16} />
-        <span>Step {currentStep}: {STEP_NAMES[currentStep]}</span>
+        <span>
+          Step {currentStep}: {STEP_NAMES[currentStep]}
+        </span>
       </div>
-      <button
-        className="btn btn-icon btn-sm"
-        onClick={onNextStep}
-        disabled={currentStep >= 8}
-      >
+      <button className="btn btn-icon btn-sm" onClick={onNextStep} disabled={currentStep >= 8}>
         <Icon name="ChevronRight" size={14} />
       </button>
     </div>

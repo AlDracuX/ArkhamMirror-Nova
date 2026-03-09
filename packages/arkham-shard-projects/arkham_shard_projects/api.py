@@ -18,6 +18,7 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 class ProjectCreate(BaseModel):
     """Request model for creating a project."""
+
     name: str = Field(..., description="Project name")
     description: str = Field(default="", description="Project description")
     owner_id: str = Field(default="system", description="Project owner")
@@ -25,17 +26,14 @@ class ProjectCreate(BaseModel):
     settings: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, Any]] = None
     embedding_model: Optional[str] = Field(
-        default=None,
-        description="Embedding model for this project (default: all-MiniLM-L6-v2)"
+        default=None, description="Embedding model for this project (default: all-MiniLM-L6-v2)"
     )
-    create_collections: bool = Field(
-        default=True,
-        description="Whether to create vector collections for this project"
-    )
+    create_collections: bool = Field(default=True, description="Whether to create vector collections for this project")
 
 
 class ProjectUpdate(BaseModel):
     """Request model for updating a project."""
+
     name: Optional[str] = None
     description: Optional[str] = None
     status: Optional[ProjectStatus] = None
@@ -45,6 +43,7 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(BaseModel):
     """Response model for a project."""
+
     id: str
     name: str
     description: str
@@ -60,6 +59,7 @@ class ProjectResponse(BaseModel):
 
 class ProjectListResponse(BaseModel):
     """Response model for listing projects."""
+
     projects: List[ProjectResponse]
     total: int
     limit: int
@@ -68,12 +68,14 @@ class ProjectListResponse(BaseModel):
 
 class MemberAdd(BaseModel):
     """Request model for adding a member."""
+
     user_id: str
     role: ProjectRole = ProjectRole.VIEWER
 
 
 class MemberResponse(BaseModel):
     """Response model for a project member."""
+
     id: str
     project_id: str
     user_id: str
@@ -84,12 +86,14 @@ class MemberResponse(BaseModel):
 
 class DocumentAdd(BaseModel):
     """Request model for adding a document."""
+
     document_id: str
     added_by: str = "system"
 
 
 class DocumentResponse(BaseModel):
     """Response model for a project document."""
+
     id: str
     project_id: str
     document_id: str
@@ -99,6 +103,7 @@ class DocumentResponse(BaseModel):
 
 class ActivityResponse(BaseModel):
     """Response model for project activity."""
+
     id: str
     project_id: str
     action: str
@@ -111,11 +116,13 @@ class ActivityResponse(BaseModel):
 
 class CountResponse(BaseModel):
     """Response model for count endpoint."""
+
     count: int
 
 
 class HealthResponse(BaseModel):
     """Response model for health check."""
+
     status: str
     version: str
 
@@ -242,6 +249,7 @@ async def list_projects(
 
 class EmbeddingModelInfo(BaseModel):
     """Information about an embedding model."""
+
     name: str
     dimensions: int
     description: str
@@ -481,15 +489,16 @@ async def get_project_activity(
 
 class EmbeddingModelUpdate(BaseModel):
     """Request to update embedding model."""
+
     model: str
     wipe_collections: bool = Field(
-        default=False,
-        description="If True and dimensions differ, wipe and recreate collections"
+        default=False, description="If True and dimensions differ, wipe and recreate collections"
     )
 
 
 class EmbeddingModelResponse(BaseModel):
     """Response for embedding model operations."""
+
     success: bool
     message: str = ""
     current_model: Optional[str] = None
@@ -502,6 +511,7 @@ class EmbeddingModelResponse(BaseModel):
 
 class CollectionStatsResponse(BaseModel):
     """Response for collection statistics."""
+
     available: bool
     collections: Dict[str, Any]
 
@@ -515,12 +525,11 @@ async def get_project_embedding_model(request: Request, project_id: str):
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
-    from .shard import KNOWN_EMBEDDING_MODELS, DEFAULT_EMBEDDING_MODEL
+    from .shard import DEFAULT_EMBEDDING_MODEL, KNOWN_EMBEDDING_MODELS
 
     model = project.settings.get("embedding_model", DEFAULT_EMBEDDING_MODEL)
     dimensions = project.settings.get(
-        "embedding_dimensions",
-        KNOWN_EMBEDDING_MODELS.get(model, {}).get("dimensions", 384)
+        "embedding_dimensions", KNOWN_EMBEDDING_MODELS.get(model, {}).get("dimensions", 384)
     )
 
     return {
@@ -565,10 +574,7 @@ async def update_project_embedding_model(
         )
 
     if not result.get("success"):
-        raise HTTPException(
-            status_code=400,
-            detail=result.get("error", "Failed to update embedding model")
-        )
+        raise HTTPException(status_code=400, detail=result.get("error", "Failed to update embedding model"))
 
     return EmbeddingModelResponse(
         success=True,
@@ -609,6 +615,7 @@ async def create_project_collections(request: Request, project_id: str):
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
     from .shard import DEFAULT_EMBEDDING_MODEL
+
     model = project.settings.get("embedding_model", DEFAULT_EMBEDDING_MODEL)
 
     results = await shard.create_project_collections(project_id, model)

@@ -1,9 +1,10 @@
 """OCR Shard API routes."""
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
-from pydantic import BaseModel
-from typing import Optional
 import logging
+from typing import Optional
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ def init_api(shard):
 
 class OCRRequest(BaseModel):
     """Request for OCR processing."""
+
     document_id: Optional[str] = None
     image_path: Optional[str] = None
     engine: Optional[str] = None
@@ -29,6 +31,7 @@ class OCRRequest(BaseModel):
 
 class TextLine(BaseModel):
     """Single line of detected text with bounding box."""
+
     text: str
     box: Optional[list] = None
     confidence: Optional[float] = None
@@ -36,6 +39,7 @@ class TextLine(BaseModel):
 
 class OCRResponse(BaseModel):
     """Response from OCR processing."""
+
     success: bool
     text: str = ""
     pages_processed: int = 0
@@ -90,7 +94,7 @@ async def health():
         worker_service = _shard._frame.get_service("workers")
         if worker_service:
             # Check if workers are registered for each pool
-            registered = getattr(worker_service, '_registered_workers', {})
+            registered = getattr(worker_service, "_registered_workers", {})
             paddle_available = "gpu-paddle" in registered
             qwen_available = "gpu-qwen" in registered
 
@@ -170,8 +174,8 @@ async def ocr_upload(file: UploadFile = File(...), engine: str = "paddle", langu
         raise HTTPException(status_code=503, detail="OCR shard not initialized")
 
     # Save uploaded file temporarily
-    import tempfile
     import os
+    import tempfile
 
     suffix = os.path.splitext(file.filename)[1] if file.filename else ".png"
 

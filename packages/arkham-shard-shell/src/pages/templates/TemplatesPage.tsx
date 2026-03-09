@@ -76,12 +76,14 @@ export function TemplatesPage() {
   const [showVersions, setShowVersions] = useState(false);
 
   // Fetch templates list with pagination
-  const { items: templates, loading, error, refetch } = usePaginatedFetch<Template>(
-    '/api/templates/',
-    {
-      params: selectedType ? { template_type: selectedType } : {},
-    }
-  );
+  const {
+    items: templates,
+    loading,
+    error,
+    refetch,
+  } = usePaginatedFetch<Template>('/api/templates/', {
+    params: selectedType ? { template_type: selectedType } : {},
+  });
 
   const handleCreateTemplate = () => {
     setSelectedTemplate(null);
@@ -96,9 +98,7 @@ export function TemplatesPage() {
 
   const handleSaveTemplate = async (templateData: Partial<Template>) => {
     try {
-      const url = selectedTemplate
-        ? `/api/templates/${selectedTemplate.id}`
-        : '/api/templates/';
+      const url = selectedTemplate ? `/api/templates/${selectedTemplate.id}` : '/api/templates/';
 
       const method = selectedTemplate ? 'PUT' : 'POST';
 
@@ -171,7 +171,7 @@ export function TemplatesPage() {
 
     // Generate preview data from placeholders
     const sampleData: Record<string, unknown> = {};
-    template.placeholders.forEach(p => {
+    template.placeholders.forEach((p) => {
       sampleData[p.name] = p.example || p.default_value || `[${p.name}]`;
     });
     setPreviewData(sampleData);
@@ -217,10 +217,9 @@ export function TemplatesPage() {
     if (!confirm('Restore this version? This will create a new version with this content.')) return;
 
     try {
-      const response = await fetch(
-        `/api/templates/${selectedTemplate.id}/restore/${versionId}`,
-        { method: 'POST' }
-      );
+      const response = await fetch(`/api/templates/${selectedTemplate.id}/restore/${versionId}`, {
+        method: 'POST',
+      });
 
       if (!response.ok) {
         throw new Error('Failed to restore version');
@@ -306,7 +305,7 @@ export function TemplatesPage() {
             <Icon name="Layers" size={20} />
             <span>All Templates</span>
           </button>
-          {TEMPLATE_TYPES.map(type => (
+          {TEMPLATE_TYPES.map((type) => (
             <button
               key={type.value}
               className={`nav-item ${selectedType === type.value ? 'active' : ''}`}
@@ -335,7 +334,7 @@ export function TemplatesPage() {
             </div>
           ) : templates.length > 0 ? (
             <div className="templates-grid">
-              {templates.map(template => (
+              {templates.map((template) => (
                 <div
                   key={template.id}
                   className={`template-card ${!template.is_active ? 'inactive' : ''}`}
@@ -346,9 +345,7 @@ export function TemplatesPage() {
                       <div className="template-meta">
                         <span className="template-type">{template.template_type}</span>
                         <span className="template-version">v{template.version}</span>
-                        {!template.is_active && (
-                          <span className="template-status">Inactive</span>
-                        )}
+                        {!template.is_active && <span className="template-status">Inactive</span>}
                       </div>
                     </div>
                     <div className="template-actions">
@@ -392,9 +389,7 @@ export function TemplatesPage() {
                     </div>
                     <div className="stat">
                       <Icon name="Calendar" size={14} />
-                      <span>
-                        {new Date(template.updated_at).toLocaleDateString()}
-                      </span>
+                      <span>{new Date(template.updated_at).toLocaleDateString()}</span>
                     </div>
                   </div>
 
@@ -478,7 +473,7 @@ function TemplateEditor({ template, onSave, onCancel }: TemplateEditorProps) {
             id="name"
             type="text"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             placeholder="Enter template name"
             required
           />
@@ -487,8 +482,8 @@ function TemplateEditor({ template, onSave, onCancel }: TemplateEditorProps) {
         <div className="form-row">
           <div className="form-group">
             <label htmlFor="type">Type</label>
-            <select id="type" value={type} onChange={e => setType(e.target.value)}>
-              {TEMPLATE_TYPES.map(t => (
+            <select id="type" value={type} onChange={(e) => setType(e.target.value)}>
+              {TEMPLATE_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
                 </option>
@@ -501,7 +496,7 @@ function TemplateEditor({ template, onSave, onCancel }: TemplateEditorProps) {
               <input
                 type="checkbox"
                 checked={isActive}
-                onChange={e => setIsActive(e.target.checked)}
+                onChange={(e) => setIsActive(e.target.checked)}
               />
               <span>Active</span>
             </label>
@@ -513,7 +508,7 @@ function TemplateEditor({ template, onSave, onCancel }: TemplateEditorProps) {
           <textarea
             id="description"
             value={description}
-            onChange={e => setDescription(e.target.value)}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder="Brief description of the template"
             rows={2}
           />
@@ -522,14 +517,12 @@ function TemplateEditor({ template, onSave, onCancel }: TemplateEditorProps) {
         <div className="form-group">
           <label htmlFor="content">
             Template Content
-            <span className="label-hint">
-              Use {"{{ placeholder_name }}"} for variables
-            </span>
+            <span className="label-hint">Use {'{{ placeholder_name }}'} for variables</span>
           </label>
           <textarea
             id="content"
             value={content}
-            onChange={e => setContent(e.target.value)}
+            onChange={(e) => setContent(e.target.value)}
             placeholder="Enter template content using Jinja2 syntax"
             rows={15}
             className="code-editor"
@@ -582,7 +575,7 @@ function TemplatePreview({
         <div className="preview-section">
           <h3>Sample Data</h3>
           <div className="placeholders-list">
-            {template.placeholders.map(p => (
+            {template.placeholders.map((p) => (
               <div key={p.name} className="placeholder-item">
                 <strong>{p.name}</strong>
                 {p.required && <span className="required">*</span>}
@@ -628,12 +621,7 @@ interface TemplateVersionsProps {
   onClose: () => void;
 }
 
-function TemplateVersions({
-  template,
-  versions,
-  onRestore,
-  onClose,
-}: TemplateVersionsProps) {
+function TemplateVersions({ template, versions, onRestore, onClose }: TemplateVersionsProps) {
   return (
     <div className="template-versions">
       <header className="page-header">
@@ -650,7 +638,7 @@ function TemplateVersions({
       </header>
 
       <div className="versions-list">
-        {versions.map(version => (
+        {versions.map((version) => (
           <div key={version.id} className="version-item">
             <div className="version-header">
               <div className="version-info">
@@ -663,10 +651,7 @@ function TemplateVersions({
                 )}
               </div>
               {version.version_number < template.version && (
-                <button
-                  className="btn btn-sm btn-secondary"
-                  onClick={() => onRestore(version.id)}
-                >
+                <button className="btn btn-sm btn-secondary" onClick={() => onRestore(version.id)}>
                   <Icon name="RotateCcw" size={14} />
                   Restore
                 </button>

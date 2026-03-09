@@ -70,7 +70,7 @@ export function UsersPage() {
   }, [fetchUsers]);
 
   // Filter users
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = users.filter((user) => {
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -101,72 +101,81 @@ export function UsersPage() {
   };
 
   // Handlers
-  const handleCreateUser = useCallback(async (data: CreateUserData | UpdateUserData) => {
-    try {
-      await apiPost('/api/auth/tenant/users', data);
-      toast.success('User created successfully');
-      setShowModal(false);
-      fetchUsers();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create user');
-    }
-  }, [toast, fetchUsers]);
+  const handleCreateUser = useCallback(
+    async (data: CreateUserData | UpdateUserData) => {
+      try {
+        await apiPost('/api/auth/tenant/users', data);
+        toast.success('User created successfully');
+        setShowModal(false);
+        fetchUsers();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to create user');
+      }
+    },
+    [toast, fetchUsers]
+  );
 
-  const handleUpdateUser = useCallback(async (
-    userId: string,
-    data: CreateUserData | UpdateUserData
-  ) => {
-    try {
-      await apiPatch(`/api/auth/tenant/users/${userId}`, data);
-      toast.success('User updated successfully');
-      setShowModal(false);
-      setEditingUser(null);
-      fetchUsers();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update user');
-    }
-  }, [toast, fetchUsers]);
+  const handleUpdateUser = useCallback(
+    async (userId: string, data: CreateUserData | UpdateUserData) => {
+      try {
+        await apiPatch(`/api/auth/tenant/users/${userId}`, data);
+        toast.success('User updated successfully');
+        setShowModal(false);
+        setEditingUser(null);
+        fetchUsers();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to update user');
+      }
+    },
+    [toast, fetchUsers]
+  );
 
-  const handleToggleActive = useCallback(async (user: TenantUser) => {
-    const action = user.is_active ? 'deactivate' : 'reactivate';
-    const confirmed = await confirm({
-      title: `${user.is_active ? 'Deactivate' : 'Reactivate'} User`,
-      message: `Are you sure you want to ${action} ${user.email}?`,
-      confirmLabel: user.is_active ? 'Deactivate' : 'Reactivate',
-      variant: user.is_active ? 'danger' : 'default',
-    });
-
-    if (!confirmed) return;
-
-    try {
-      await apiPatch(`/api/auth/tenant/users/${user.id}`, {
-        is_active: !user.is_active,
+  const handleToggleActive = useCallback(
+    async (user: TenantUser) => {
+      const action = user.is_active ? 'deactivate' : 'reactivate';
+      const confirmed = await confirm({
+        title: `${user.is_active ? 'Deactivate' : 'Reactivate'} User`,
+        message: `Are you sure you want to ${action} ${user.email}?`,
+        confirmLabel: user.is_active ? 'Deactivate' : 'Reactivate',
+        variant: user.is_active ? 'danger' : 'default',
       });
-      toast.success(`User ${action}d successfully`);
-      fetchUsers();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : `Failed to ${action} user`);
-    }
-  }, [confirm, toast, fetchUsers]);
 
-  const handleDeleteUser = useCallback(async (user: TenantUser) => {
-    const confirmed = await confirm({
-      title: 'Delete User',
-      message: `Are you sure you want to permanently delete ${user.email}? This action cannot be undone.`,
-      confirmLabel: 'Delete',
-      variant: 'danger',
-    });
+      if (!confirmed) return;
 
-    if (!confirmed) return;
+      try {
+        await apiPatch(`/api/auth/tenant/users/${user.id}`, {
+          is_active: !user.is_active,
+        });
+        toast.success(`User ${action}d successfully`);
+        fetchUsers();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : `Failed to ${action} user`);
+      }
+    },
+    [confirm, toast, fetchUsers]
+  );
 
-    try {
-      await apiDelete(`/api/auth/tenant/users/${user.id}`);
-      toast.success('User deleted successfully');
-      fetchUsers();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete user');
-    }
-  }, [confirm, toast, fetchUsers]);
+  const handleDeleteUser = useCallback(
+    async (user: TenantUser) => {
+      const confirmed = await confirm({
+        title: 'Delete User',
+        message: `Are you sure you want to permanently delete ${user.email}? This action cannot be undone.`,
+        confirmLabel: 'Delete',
+        variant: 'danger',
+      });
+
+      if (!confirmed) return;
+
+      try {
+        await apiDelete(`/api/auth/tenant/users/${user.id}`);
+        toast.success('User deleted successfully');
+        fetchUsers();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to delete user');
+      }
+    },
+    [confirm, toast, fetchUsers]
+  );
 
   const openEditModal = (user: TenantUser) => {
     setEditingUser(user);
@@ -183,7 +192,7 @@ export function UsersPage() {
     const name = user.display_name || user.email.split('@')[0];
     return name
       .split(' ')
-      .map(n => n[0])
+      .map((n) => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2);
@@ -212,10 +221,7 @@ export function UsersPage() {
           </div>
         </div>
 
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowModal(true)}
-        >
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
           <Icon name="UserPlus" size={16} />
           Add User
         </button>
@@ -260,7 +266,8 @@ export function UsersPage() {
         <div className="user-limit-warning">
           <Icon name="AlertTriangle" size={16} />
           <span>
-            {users.length} of {tenant.max_users} users ({Math.round(users.length / tenant.max_users * 100)}% of limit)
+            {users.length} of {tenant.max_users} users (
+            {Math.round((users.length / tenant.max_users) * 100)}% of limit)
           </span>
         </div>
       )}
@@ -283,28 +290,17 @@ export function UsersPage() {
         ) : filteredUsers.length > 0 ? (
           <div className="users-list">
             {filteredUsers.map((user) => (
-              <div
-                key={user.id}
-                className={`user-card ${!user.is_active ? 'inactive' : ''}`}
-              >
-                <div className="user-avatar">
-                  {getInitials(user)}
-                </div>
+              <div key={user.id} className={`user-card ${!user.is_active ? 'inactive' : ''}`}>
+                <div className="user-avatar">{getInitials(user)}</div>
 
                 <div className="user-info">
                   <div className="user-name-row">
                     <span className="user-name">
                       {user.display_name || user.email.split('@')[0]}
                     </span>
-                    <span className={`role-badge role-${user.role}`}>
-                      {ROLE_LABELS[user.role]}
-                    </span>
-                    {!user.is_active && (
-                      <span className="status-badge inactive">Inactive</span>
-                    )}
-                    {user.id === currentUser?.id && (
-                      <span className="you-badge">You</span>
-                    )}
+                    <span className={`role-badge role-${user.role}`}>{ROLE_LABELS[user.role]}</span>
+                    {!user.is_active && <span className="status-badge inactive">Inactive</span>}
+                    {user.id === currentUser?.id && <span className="you-badge">You</span>}
                   </div>
                   <span className="user-email">{user.email}</span>
                   <div className="user-meta">
@@ -361,10 +357,7 @@ export function UsersPage() {
                 : 'Add your first team member to get started'}
             </p>
             {!searchQuery && !roleFilter && !statusFilter && (
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowModal(true)}
-              >
+              <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                 <Icon name="UserPlus" size={16} />
                 Add User
               </button>
@@ -386,10 +379,7 @@ export function UsersPage() {
         <UserModal
           user={editingUser}
           onClose={closeModal}
-          onSave={editingUser
-            ? (data) => handleUpdateUser(editingUser.id, data)
-            : handleCreateUser
-          }
+          onSave={editingUser ? (data) => handleUpdateUser(editingUser.id, data) : handleCreateUser}
         />
       )}
     </div>

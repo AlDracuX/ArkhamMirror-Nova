@@ -4,25 +4,25 @@ Claims Shard - Model Tests
 Tests for all enums, dataclasses, and data models.
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_claims.models import (
-    # Enums
-    ClaimStatus,
-    ClaimType,
-    EvidenceType,
-    EvidenceRelationship,
-    EvidenceStrength,
-    ExtractionMethod,
     # Dataclasses
     Claim,
-    Evidence,
     ClaimExtractionResult,
+    ClaimFilter,
     ClaimMatch,
     ClaimMergeResult,
     ClaimStatistics,
-    ClaimFilter,
+    # Enums
+    ClaimStatus,
+    ClaimType,
+    Evidence,
+    EvidenceRelationship,
+    EvidenceStrength,
+    EvidenceType,
+    ExtractionMethod,
 )
 
 

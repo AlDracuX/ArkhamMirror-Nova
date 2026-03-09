@@ -70,10 +70,7 @@ const TYPE_COLORS: Record<string, string> = {
 const TOOLTIP_OFFSET_X = 15;
 const TOOLTIP_OFFSET_Y = 15;
 
-export const CytoscapeTooltip: React.FC<CytoscapeTooltipProps> = ({
-  node,
-  position,
-}) => {
+export const CytoscapeTooltip: React.FC<CytoscapeTooltipProps> = ({ node, position }) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState<{ x: number; y: number } | null>(null);
 
@@ -131,10 +128,7 @@ export const CytoscapeTooltip: React.FC<CytoscapeTooltipProps> = ({
     >
       {/* Header with icon and label */}
       <div className="tooltip-header">
-        <div
-          className="tooltip-type-icon"
-          style={{ backgroundColor: typeColor }}
-        >
+        <div className="tooltip-type-icon" style={{ backgroundColor: typeColor }}>
           <Icon name={iconName as any} size={16} />
         </div>
         <span className="tooltip-label">{node.label}</span>
@@ -157,9 +151,7 @@ export const CytoscapeTooltip: React.FC<CytoscapeTooltipProps> = ({
             <Icon name="GitBranch" size={12} />
             Connections
           </span>
-          <span className="tooltip-value">
-            {node.degree ?? 0}
-          </span>
+          <span className="tooltip-value">{node.degree ?? 0}</span>
         </div>
 
         <div className="tooltip-row">
@@ -167,16 +159,12 @@ export const CytoscapeTooltip: React.FC<CytoscapeTooltipProps> = ({
             <Icon name="FileText" size={12} />
             Documents
           </span>
-          <span className="tooltip-value">
-            {node.document_count ?? 0}
-          </span>
+          <span className="tooltip-value">{node.document_count ?? 0}</span>
         </div>
       </div>
 
       {/* Click hint */}
-      <div className="tooltip-hint">
-        Click to select | Right-click for options
-      </div>
+      <div className="tooltip-hint">Click to select | Right-click for options</div>
     </div>
   );
 };

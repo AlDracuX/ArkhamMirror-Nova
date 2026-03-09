@@ -4,19 +4,18 @@ Export Shard - Shard Class Tests
 Tests for ExportShard with mocked Frame services.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from arkham_shard_export.shard import ExportShard
+import pytest
 from arkham_shard_export.models import (
+    ExportFilter,
     ExportFormat,
+    ExportOptions,
     ExportStatus,
     ExportTarget,
-    ExportOptions,
-    ExportFilter,
 )
-
+from arkham_shard_export.shard import ExportShard
 
 # === Fixtures ===
 
@@ -267,6 +266,7 @@ class TestExportJobs:
     async def test_get_download_url(self, initialized_shard, mock_frame):
         """Test getting download URL for completed job."""
         from datetime import timedelta
+
         expires_at = datetime.utcnow() + timedelta(hours=24)
 
         mock_frame.database.fetch_one.return_value = {
@@ -297,6 +297,7 @@ class TestExportJobs:
     async def test_get_download_url_expired(self, initialized_shard, mock_frame):
         """Test getting download URL for expired job."""
         from datetime import timedelta
+
         expires_at = datetime.utcnow() - timedelta(hours=1)
 
         mock_frame.database.fetch_one.return_value = {
@@ -431,10 +432,12 @@ class TestFileGeneration:
         assert file_path is not None
         assert file_path.endswith(".json")
         import os
+
         assert os.path.exists(file_path)
 
         # Verify file content
         import json
+
         with open(file_path, "r") as f:
             data = json.load(f)
         assert data["target"] == "documents"
@@ -456,6 +459,7 @@ class TestFileGeneration:
         assert file_path is not None
         assert file_path.endswith(".csv")
         import os
+
         assert os.path.exists(file_path)
 
     @pytest.mark.asyncio

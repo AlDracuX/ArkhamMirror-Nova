@@ -101,7 +101,7 @@ export function SimilarityCalculator() {
             className="similarity-textarea"
             placeholder="Enter first text to compare..."
             value={text1}
-            onChange={e => setText1(e.target.value)}
+            onChange={(e) => setText1(e.target.value)}
             rows={8}
           />
           <div className="input-meta">
@@ -135,7 +135,7 @@ export function SimilarityCalculator() {
             className="similarity-textarea"
             placeholder="Enter second text to compare..."
             value={text2}
-            onChange={e => setText2(e.target.value)}
+            onChange={(e) => setText2(e.target.value)}
             rows={8}
           />
           <div className="input-meta">
@@ -151,11 +151,7 @@ export function SimilarityCalculator() {
       </div>
 
       <div className="calculator-actions">
-        <button
-          className="button-secondary"
-          onClick={handleClear}
-          disabled={!text1 && !text2}
-        >
+        <button className="button-secondary" onClick={handleClear} disabled={!text1 && !text2}>
           <Icon name="X" size={16} />
           Clear
         </button>

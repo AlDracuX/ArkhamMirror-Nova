@@ -12,7 +12,7 @@ import { useDebouncedSlider } from '../hooks/useDebounce';
 interface LayoutControlsProps {
   settings: PhysicsSettings;
   onChange: (updates: Partial<PhysicsSettings>) => void;
-  disabled?: boolean;  // Disable when using non-force layouts
+  disabled?: boolean; // Disable when using non-force layouts
 }
 
 export function LayoutControls({ settings, onChange, disabled = false }: LayoutControlsProps) {
@@ -57,15 +57,13 @@ export function LayoutControls({ settings, onChange, disabled = false }: LayoutC
       </div>
 
       <div className="control-group">
-        <label>
-          Node Repulsion: {chargeStrength}
-        </label>
+        <label>Node Repulsion: {chargeStrength}</label>
         <input
           type="range"
           min="-1000"
           max="-30"
           value={chargeStrength}
-          onChange={e => setChargeStrength(Number(e.target.value))}
+          onChange={(e) => setChargeStrength(Number(e.target.value))}
           className="control-slider"
         />
         <div className="slider-labels">
@@ -76,15 +74,13 @@ export function LayoutControls({ settings, onChange, disabled = false }: LayoutC
       </div>
 
       <div className="control-group">
-        <label>
-          Link Distance: {linkDistance}px
-        </label>
+        <label>Link Distance: {linkDistance}px</label>
         <input
           type="range"
           min="20"
           max="200"
           value={linkDistance}
-          onChange={e => setLinkDistance(Number(e.target.value))}
+          onChange={(e) => setLinkDistance(Number(e.target.value))}
           className="control-slider"
         />
         <div className="slider-labels">
@@ -96,16 +92,14 @@ export function LayoutControls({ settings, onChange, disabled = false }: LayoutC
       </div>
 
       <div className="control-group">
-        <label>
-          Link Strength: {linkStrength.toFixed(2)}
-        </label>
+        <label>Link Strength: {linkStrength.toFixed(2)}</label>
         <input
           type="range"
           min="0.1"
           max="1"
           step="0.05"
           value={linkStrength}
-          onChange={e => setLinkStrength(Number(e.target.value))}
+          onChange={(e) => setLinkStrength(Number(e.target.value))}
           className="control-slider"
         />
         <div className="slider-labels">
@@ -116,16 +110,14 @@ export function LayoutControls({ settings, onChange, disabled = false }: LayoutC
       </div>
 
       <div className="control-group">
-        <label>
-          Center Gravity: {centerStrength.toFixed(2)}
-        </label>
+        <label>Center Gravity: {centerStrength.toFixed(2)}</label>
         <input
           type="range"
           min="0"
           max="0.3"
           step="0.01"
           value={centerStrength}
-          onChange={e => setCenterStrength(Number(e.target.value))}
+          onChange={(e) => setCenterStrength(Number(e.target.value))}
           className="control-slider"
         />
         <div className="slider-labels">
@@ -136,15 +128,13 @@ export function LayoutControls({ settings, onChange, disabled = false }: LayoutC
       </div>
 
       <div className="control-group">
-        <label>
-          Collision Padding: {collisionPadding}px
-        </label>
+        <label>Collision Padding: {collisionPadding}px</label>
         <input
           type="range"
           min="0"
           max="20"
           value={collisionPadding}
-          onChange={e => setCollisionPadding(Number(e.target.value))}
+          onChange={(e) => setCollisionPadding(Number(e.target.value))}
           className="control-slider"
         />
         <div className="slider-labels">
@@ -156,16 +146,14 @@ export function LayoutControls({ settings, onChange, disabled = false }: LayoutC
       </div>
 
       <div className="control-group">
-        <label>
-          Simulation Speed: {(alphaDecay * 1000).toFixed(0)}
-        </label>
+        <label>Simulation Speed: {(alphaDecay * 1000).toFixed(0)}</label>
         <input
           type="range"
           min="0.01"
           max="0.05"
           step="0.005"
           value={alphaDecay}
-          onChange={e => setAlphaDecay(Number(e.target.value))}
+          onChange={(e) => setAlphaDecay(Number(e.target.value))}
           className="control-slider"
         />
         <div className="slider-labels">

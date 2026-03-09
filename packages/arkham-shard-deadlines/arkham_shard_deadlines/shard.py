@@ -205,32 +205,38 @@ class DeadlinesShard(ArkhamShard):
         """Seed default rules if none exist for system tenant."""
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
 
-        row = await self._db.fetch_one("""
+        row = await self._db.fetch_one(
+            """
             SELECT COUNT(*) as cnt FROM arkham_deadlines.deadline_rules
             WHERE tenant_id = :tid
-        """, {"tid": tenant_id})
+        """,
+            {"tid": tenant_id},
+        )
 
         if row and row["cnt"] > 0:
             return
 
         for rule in DEFAULT_RULES:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_deadlines.deadline_rules
                 (id, tenant_id, name, description, case_type, deadline_type,
                  days_from_trigger, trigger_event, working_days_only)
                 VALUES (:id, :tid, :name, :desc, :ct, :dt,
                         :days, :trigger, :wd)
-            """, {
-                "id": str(uuid.uuid4()),
-                "tid": tenant_id,
-                "name": rule["name"],
-                "desc": rule["description"],
-                "ct": rule["case_type"],
-                "dt": rule["deadline_type"],
-                "days": rule["days_from_trigger"],
-                "trigger": rule["trigger_event"],
-                "wd": rule["working_days_only"],
-            })
+            """,
+                {
+                    "id": str(uuid.uuid4()),
+                    "tid": tenant_id,
+                    "name": rule["name"],
+                    "desc": rule["description"],
+                    "ct": rule["case_type"],
+                    "dt": rule["deadline_type"],
+                    "days": rule["days_from_trigger"],
+                    "trigger": rule["trigger_event"],
+                    "wd": rule["working_days_only"],
+                },
+            )
         logger.info(f"Seeded {len(DEFAULT_RULES)} default deadline rules")
 
     # === Urgency Calculation ===
@@ -284,7 +290,8 @@ class DeadlinesShard(ArkhamShard):
 
         urgency = self.calculate_urgency(dl_date)
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_deadlines.deadlines
             (id, tenant_id, title, description, deadline_date, deadline_time,
              deadline_type, status, urgency, case_type, case_reference,
@@ -296,51 +303,61 @@ class DeadlinesShard(ArkhamShard):
                     :src_doc, :src_date, :rule_ref,
                     :auto, :calc_base, :calc_days,
                     :notes, :doc_ids, :meta)
-        """, {
-            "id": dl_id,
-            "tid": tenant_id,
-            "title": data.get("title", ""),
-            "desc": data.get("description", ""),
-            "date": dl_date,
-            "time": data.get("deadline_time"),
-            "type": data.get("deadline_type", "custom"),
-            "status": data.get("status", "pending"),
-            "urgency": urgency.value,
-            "ct": data.get("case_type", "et"),
-            "ref": data.get("case_reference", ""),
-            "src_doc": data.get("source_document", ""),
-            "src_date": data.get("source_order_date"),
-            "rule_ref": data.get("rule_reference", ""),
-            "auto": data.get("auto_calculated", False),
-            "calc_base": data.get("calculation_base_date"),
-            "calc_days": data.get("calculation_days"),
-            "notes": data.get("notes", ""),
-            "doc_ids": json.dumps(data.get("linked_document_ids", [])),
-            "meta": json.dumps(data.get("metadata", {})),
-        })
+        """,
+            {
+                "id": dl_id,
+                "tid": tenant_id,
+                "title": data.get("title", ""),
+                "desc": data.get("description", ""),
+                "date": dl_date,
+                "time": data.get("deadline_time"),
+                "type": data.get("deadline_type", "custom"),
+                "status": data.get("status", "pending"),
+                "urgency": urgency.value,
+                "ct": data.get("case_type", "et"),
+                "ref": data.get("case_reference", ""),
+                "src_doc": data.get("source_document", ""),
+                "src_date": data.get("source_order_date"),
+                "rule_ref": data.get("rule_reference", ""),
+                "auto": data.get("auto_calculated", False),
+                "calc_base": data.get("calculation_base_date"),
+                "calc_days": data.get("calculation_days"),
+                "notes": data.get("notes", ""),
+                "doc_ids": json.dumps(data.get("linked_document_ids", [])),
+                "meta": json.dumps(data.get("metadata", {})),
+            },
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("deadlines.deadline.created", {
-                "deadline_id": dl_id,
-                "title": data.get("title"),
-                "deadline_date": str(dl_date),
-                "urgency": urgency.value,
-            }, source="deadlines-shard")
+            await self._event_bus.emit(
+                "deadlines.deadline.created",
+                {
+                    "deadline_id": dl_id,
+                    "title": data.get("title"),
+                    "deadline_date": str(dl_date),
+                    "urgency": urgency.value,
+                },
+                source="deadlines-shard",
+            )
 
         return await self.get_deadline(dl_id)
 
     async def get_deadline(self, dl_id: str) -> Optional[Deadline]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        row = await self._db.fetch_one("""
+        row = await self._db.fetch_one(
+            """
             SELECT * FROM arkham_deadlines.deadlines
             WHERE id = :id AND tenant_id = :tid
-        """, {"id": dl_id, "tid": tenant_id})
+        """,
+            {"id": dl_id, "tid": tenant_id},
+        )
         if not row:
             return None
         return self._row_to_deadline(row)
 
-    async def list_deadlines(self, filters: Optional[DeadlineFilter] = None,
-                              limit: int = 100, offset: int = 0) -> List[Deadline]:
+    async def list_deadlines(
+        self, filters: Optional[DeadlineFilter] = None, limit: int = 100, offset: int = 0
+    ) -> List[Deadline]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         conditions = ["tenant_id = :tid"]
         params: Dict[str, Any] = {"tid": tenant_id}
@@ -374,36 +391,45 @@ class DeadlinesShard(ArkhamShard):
         params["limit"] = limit
         params["offset"] = offset
 
-        rows = await self._db.fetch_all(f"""
+        rows = await self._db.fetch_all(
+            f"""
             SELECT * FROM arkham_deadlines.deadlines
             WHERE {where}
             ORDER BY deadline_date ASC
             LIMIT :limit OFFSET :offset
-        """, params)
+        """,
+            params,
+        )
 
         return [self._row_to_deadline(r) for r in rows]
 
     async def get_upcoming(self, days: int = 30) -> List[Deadline]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         cutoff = date.today() + timedelta(days=days)
-        rows = await self._db.fetch_all("""
+        rows = await self._db.fetch_all(
+            """
             SELECT * FROM arkham_deadlines.deadlines
             WHERE tenant_id = :tid
               AND deadline_date <= :cutoff
               AND status NOT IN ('completed', 'waived')
             ORDER BY deadline_date ASC
-        """, {"tid": tenant_id, "cutoff": cutoff})
+        """,
+            {"tid": tenant_id, "cutoff": cutoff},
+        )
         return [self._row_to_deadline(r) for r in rows]
 
     async def count_upcoming(self) -> int:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         cutoff = date.today() + timedelta(days=30)
-        row = await self._db.fetch_one("""
+        row = await self._db.fetch_one(
+            """
             SELECT COUNT(*) as cnt FROM arkham_deadlines.deadlines
             WHERE tenant_id = :tid
               AND deadline_date <= :cutoff
               AND status NOT IN ('completed', 'waived')
-        """, {"tid": tenant_id, "cutoff": cutoff})
+        """,
+            {"tid": tenant_id, "cutoff": cutoff},
+        )
         return row["cnt"] if row else 0
 
     async def update_deadline(self, dl_id: str, data: Dict[str, Any]) -> Optional[Deadline]:
@@ -412,8 +438,15 @@ class DeadlinesShard(ArkhamShard):
         params: Dict[str, Any] = {"id": dl_id, "tid": tenant_id}
 
         simple_fields = [
-            "title", "description", "deadline_type", "status", "case_type",
-            "case_reference", "source_document", "rule_reference", "notes",
+            "title",
+            "description",
+            "deadline_type",
+            "status",
+            "case_type",
+            "case_reference",
+            "source_document",
+            "rule_reference",
+            "notes",
             "completed_by",
         ]
         for f in simple_fields:
@@ -440,53 +473,72 @@ class DeadlinesShard(ArkhamShard):
             params["meta"] = json.dumps(data["metadata"])
 
         set_clause = ", ".join(sets)
-        await self._db.execute(f"""
+        await self._db.execute(
+            f"""
             UPDATE arkham_deadlines.deadlines
             SET {set_clause}
             WHERE id = :id AND tenant_id = :tid
-        """, params)
+        """,
+            params,
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("deadlines.deadline.updated", {
-                "deadline_id": dl_id,
-            }, source="deadlines-shard")
+            await self._event_bus.emit(
+                "deadlines.deadline.updated",
+                {
+                    "deadline_id": dl_id,
+                },
+                source="deadlines-shard",
+            )
 
         return await self.get_deadline(dl_id)
 
     async def complete_deadline(self, dl_id: str, completed_by: str = "") -> Optional[Deadline]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        await self._db.execute("""
+        await self._db.execute(
+            """
             UPDATE arkham_deadlines.deadlines
             SET status = 'completed', completed_at = NOW(), completed_by = :by, updated_at = NOW()
             WHERE id = :id AND tenant_id = :tid
-        """, {"id": dl_id, "tid": tenant_id, "by": completed_by})
+        """,
+            {"id": dl_id, "tid": tenant_id, "by": completed_by},
+        )
 
         if self._event_bus:
-            await self._event_bus.emit("deadlines.deadline.completed", {
-                "deadline_id": dl_id,
-            }, source="deadlines-shard")
+            await self._event_bus.emit(
+                "deadlines.deadline.completed",
+                {
+                    "deadline_id": dl_id,
+                },
+                source="deadlines-shard",
+            )
 
         return await self.get_deadline(dl_id)
 
     async def extend_deadline(self, dl_id: str, new_date: date, reason: str = "") -> Optional[Deadline]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
         urgency = self.calculate_urgency(new_date)
-        await self._db.execute("""
+        await self._db.execute(
+            """
             UPDATE arkham_deadlines.deadlines
             SET deadline_date = :new_date, urgency = :urgency,
                 status = 'extended', notes = notes || E'\n[Extended] ' || :reason,
                 updated_at = NOW()
             WHERE id = :id AND tenant_id = :tid
-        """, {"id": dl_id, "tid": tenant_id, "new_date": new_date,
-              "urgency": urgency.value, "reason": reason})
+        """,
+            {"id": dl_id, "tid": tenant_id, "new_date": new_date, "urgency": urgency.value, "reason": reason},
+        )
         return await self.get_deadline(dl_id)
 
     async def delete_deadline(self, dl_id: str) -> bool:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        await self._db.execute("""
+        await self._db.execute(
+            """
             DELETE FROM arkham_deadlines.deadlines
             WHERE id = :id AND tenant_id = :tid
-        """, {"id": dl_id, "tid": tenant_id})
+        """,
+            {"id": dl_id, "tid": tenant_id},
+        )
         return True
 
     # === Breach Detection ===
@@ -496,28 +548,38 @@ class DeadlinesShard(ArkhamShard):
         today = date.today()
 
         # Find overdue, non-completed deadlines
-        rows = await self._db.fetch_all("""
+        rows = await self._db.fetch_all(
+            """
             SELECT * FROM arkham_deadlines.deadlines
             WHERE tenant_id = :tid
               AND deadline_date < :today
               AND status IN ('pending', 'in_progress')
-        """, {"tid": tenant_id, "today": today})
+        """,
+            {"tid": tenant_id, "today": today},
+        )
 
         breached = []
         for row in rows:
             dl_id = str(row["id"])
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 UPDATE arkham_deadlines.deadlines
                 SET status = 'breached', urgency = 'overdue', updated_at = NOW()
                 WHERE id = :id AND tenant_id = :tid
-            """, {"id": dl_id, "tid": tenant_id})
+            """,
+                {"id": dl_id, "tid": tenant_id},
+            )
 
             if self._event_bus:
-                await self._event_bus.emit("deadlines.deadline.breached", {
-                    "deadline_id": dl_id,
-                    "title": row["title"],
-                    "deadline_date": str(row["deadline_date"]),
-                }, source="deadlines-shard")
+                await self._event_bus.emit(
+                    "deadlines.deadline.breached",
+                    {
+                        "deadline_id": dl_id,
+                        "title": row["title"],
+                        "deadline_date": str(row["deadline_date"]),
+                    },
+                    source="deadlines-shard",
+                )
 
             breached.append(self._row_to_deadline(row))
 
@@ -528,19 +590,25 @@ class DeadlinesShard(ArkhamShard):
     async def refresh_urgencies(self) -> int:
         """Recalculate urgency for all active deadlines."""
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        rows = await self._db.fetch_all("""
+        rows = await self._db.fetch_all(
+            """
             SELECT id, deadline_date FROM arkham_deadlines.deadlines
             WHERE tenant_id = :tid AND status IN ('pending', 'in_progress')
-        """, {"tid": tenant_id})
+        """,
+            {"tid": tenant_id},
+        )
 
         count = 0
         for row in rows:
             urgency = self.calculate_urgency(row["deadline_date"])
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 UPDATE arkham_deadlines.deadlines
                 SET urgency = :urgency, updated_at = NOW()
                 WHERE id = :id
-            """, {"id": str(row["id"]), "urgency": urgency.value})
+            """,
+                {"id": str(row["id"]), "urgency": urgency.value},
+            )
             count += 1
         return count
 
@@ -548,39 +616,49 @@ class DeadlinesShard(ArkhamShard):
 
     async def list_rules(self) -> List[DeadlineRule]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        rows = await self._db.fetch_all("""
+        rows = await self._db.fetch_all(
+            """
             SELECT * FROM arkham_deadlines.deadline_rules
             WHERE tenant_id = :tid ORDER BY case_type, name
-        """, {"tid": tenant_id})
+        """,
+            {"tid": tenant_id},
+        )
         return [self._row_to_rule(r) for r in rows]
 
     async def create_rule(self, data: Dict[str, Any]) -> DeadlineRule:
         rule_id = str(uuid.uuid4())
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_deadlines.deadline_rules
             (id, tenant_id, name, description, case_type, deadline_type,
              days_from_trigger, trigger_event, working_days_only)
             VALUES (:id, :tid, :name, :desc, :ct, :dt,
                     :days, :trigger, :wd)
-        """, {
-            "id": rule_id, "tid": tenant_id,
-            "name": data.get("name", ""),
-            "desc": data.get("description", ""),
-            "ct": data.get("case_type", "et"),
-            "dt": data.get("deadline_type", "custom"),
-            "days": data.get("days_from_trigger", 14),
-            "trigger": data.get("trigger_event", ""),
-            "wd": data.get("working_days_only", True),
-        })
+        """,
+            {
+                "id": rule_id,
+                "tid": tenant_id,
+                "name": data.get("name", ""),
+                "desc": data.get("description", ""),
+                "ct": data.get("case_type", "et"),
+                "dt": data.get("deadline_type", "custom"),
+                "days": data.get("days_from_trigger", 14),
+                "trigger": data.get("trigger_event", ""),
+                "wd": data.get("working_days_only", True),
+            },
+        )
         return DeadlineRule(id=rule_id, name=data.get("name", ""))
 
     async def calculate_from_rule(self, rule_id: str, base_date: date) -> Dict[str, Any]:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        row = await self._db.fetch_one("""
+        row = await self._db.fetch_one(
+            """
             SELECT * FROM arkham_deadlines.deadline_rules
             WHERE id = :id AND tenant_id = :tid
-        """, {"id": rule_id, "tid": tenant_id})
+        """,
+            {"id": rule_id, "tid": tenant_id},
+        )
         if not row:
             return {"error": "Rule not found"}
 
@@ -618,20 +696,22 @@ class DeadlinesShard(ArkhamShard):
 
         for dl in deadlines:
             dl_date_str = dl.deadline_date.strftime("%Y%m%d")
-            lines.extend([
-                "BEGIN:VEVENT",
-                f"UID:{dl.id}@arkham-nova",
-                f"DTSTART;VALUE=DATE:{dl_date_str}",
-                f"SUMMARY:{dl.title}",
-                f"DESCRIPTION:{dl.description or dl.notes}",
-                f"CATEGORIES:{dl.case_type},{dl.deadline_type}",
-                "BEGIN:VALARM",
-                "TRIGGER:-P1D",
-                "ACTION:DISPLAY",
-                f"DESCRIPTION:Deadline tomorrow: {dl.title}",
-                "END:VALARM",
-                "END:VEVENT",
-            ])
+            lines.extend(
+                [
+                    "BEGIN:VEVENT",
+                    f"UID:{dl.id}@arkham-nova",
+                    f"DTSTART;VALUE=DATE:{dl_date_str}",
+                    f"SUMMARY:{dl.title}",
+                    f"DESCRIPTION:{dl.description or dl.notes}",
+                    f"CATEGORIES:{dl.case_type},{dl.deadline_type}",
+                    "BEGIN:VALARM",
+                    "TRIGGER:-P1D",
+                    "ACTION:DISPLAY",
+                    f"DESCRIPTION:Deadline tomorrow: {dl.title}",
+                    "END:VALARM",
+                    "END:VEVENT",
+                ]
+            )
 
         lines.append("END:VCALENDAR")
         return "\r\n".join(lines)
@@ -640,12 +720,15 @@ class DeadlinesShard(ArkhamShard):
 
     async def get_stats(self) -> DeadlineStats:
         tenant_id = str(self.get_tenant_id_or_none() or "00000000-0000-0000-0000-000000000000")
-        rows = await self._db.fetch_all("""
+        rows = await self._db.fetch_all(
+            """
             SELECT status, urgency, case_type, COUNT(*) as cnt
             FROM arkham_deadlines.deadlines
             WHERE tenant_id = :tid
             GROUP BY status, urgency, case_type
-        """, {"tid": tenant_id})
+        """,
+            {"tid": tenant_id},
+        )
 
         stats = DeadlineStats()
         for r in rows:
@@ -660,11 +743,14 @@ class DeadlinesShard(ArkhamShard):
             stats.by_case_type[r["case_type"]] = stats.by_case_type.get(r["case_type"], 0) + r["cnt"]
 
         # Next deadline
-        next_row = await self._db.fetch_one("""
+        next_row = await self._db.fetch_one(
+            """
             SELECT * FROM arkham_deadlines.deadlines
             WHERE tenant_id = :tid AND status IN ('pending', 'in_progress')
             ORDER BY deadline_date ASC LIMIT 1
-        """, {"tid": tenant_id})
+        """,
+            {"tid": tenant_id},
+        )
         if next_row:
             stats.next_deadline = {
                 "id": str(next_row["id"]),

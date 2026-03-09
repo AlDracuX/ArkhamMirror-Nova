@@ -195,14 +195,23 @@ export function SummaryPage() {
     try {
       const requestBody = {
         source_type: formData.source_type,
-        source_ids: selectedSources.map(s => s.id),
+        source_ids: selectedSources.map((s) => s.id),
         summary_type: formData.summary_type,
         target_length: formData.target_length,
-        focus_areas: formData.focus_areas.split(',').map(s => s.trim()).filter(s => s.length > 0),
-        exclude_topics: formData.exclude_topics.split(',').map(s => s.trim()).filter(s => s.length > 0),
+        focus_areas: formData.focus_areas
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0),
+        exclude_topics: formData.exclude_topics
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0),
         include_key_points: formData.include_key_points,
         include_title: formData.include_title,
-        tags: formData.tags.split(',').map(s => s.trim()).filter(s => s.length > 0),
+        tags: formData.tags
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0),
       };
 
       const response = await fetch('/api/summary/', {
@@ -291,7 +300,7 @@ export function SummaryPage() {
         toast.success('Summary regenerated successfully');
         loadSummaries();
         refetchStats();
-        const newSummary = await fetch('/api/summary/' + result.summary_id).then(r => r.json());
+        const newSummary = await fetch('/api/summary/' + result.summary_id).then((r) => r.json());
         setSelectedSummary(newSummary);
       } else {
         toast.error(result.error_message || 'Regeneration failed');
@@ -338,15 +347,24 @@ export function SummaryPage() {
           )}
 
           <div className="view-tabs">
-            <button className={'view-tab ' + (view === 'list' ? 'active' : '')} onClick={() => setView('list')}>
+            <button
+              className={'view-tab ' + (view === 'list' ? 'active' : '')}
+              onClick={() => setView('list')}
+            >
               <Icon name="List" size={16} />
               Summaries
             </button>
-            <button className={'view-tab ' + (view === 'generate' ? 'active' : '')} onClick={() => setView('generate')}>
+            <button
+              className={'view-tab ' + (view === 'generate' ? 'active' : '')}
+              onClick={() => setView('generate')}
+            >
               <Icon name="Sparkles" size={16} />
               Generate
             </button>
-            <button className={'view-tab ' + (view === 'stats' ? 'active' : '')} onClick={() => setView('stats')}>
+            <button
+              className={'view-tab ' + (view === 'stats' ? 'active' : '')}
+              onClick={() => setView('stats')}
+            >
               <Icon name="BarChart3" size={16} />
               Stats
             </button>
@@ -360,38 +378,71 @@ export function SummaryPage() {
           <div className="filters-panel">
             <div className="filters-header">
               <h3>Filters</h3>
-              {hasFilters && <button className="btn-link" onClick={clearFilters}>Clear all</button>}
+              {hasFilters && (
+                <button className="btn-link" onClick={clearFilters}>
+                  Clear all
+                </button>
+              )}
             </div>
 
             <div className="filter-group">
               <label>Search</label>
-              <input type="text" placeholder="Search summaries..." value={searchQuery}
-                onChange={e => { setSearchQuery(e.target.value); setPage(1); }} />
+              <input
+                type="text"
+                placeholder="Search summaries..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
+              />
             </div>
 
             <div className="filter-group">
               <label>Summary Type</label>
-              <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }}>
+              <select
+                value={filterType}
+                onChange={(e) => {
+                  setFilterType(e.target.value);
+                  setPage(1);
+                }}
+              >
                 <option value="">All types</option>
-                {summaryTypesData?.types.map(type => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
+                {summaryTypesData?.types.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div className="filter-group">
               <label>Source Type</label>
-              <select value={filterSourceType} onChange={e => { setFilterSourceType(e.target.value); setPage(1); }}>
+              <select
+                value={filterSourceType}
+                onChange={(e) => {
+                  setFilterSourceType(e.target.value);
+                  setPage(1);
+                }}
+              >
                 <option value="">All sources</option>
-                {capabilities?.source_types.map(type => (
-                  <option key={type} value={type}>{SOURCE_TYPE_LABELS[type] || type}</option>
+                {capabilities?.source_types.map((type) => (
+                  <option key={type} value={type}>
+                    {SOURCE_TYPE_LABELS[type] || type}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div className="filter-group">
               <label>Status</label>
-              <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1); }}>
+              <select
+                value={filterStatus}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  setPage(1);
+                }}
+              >
                 <option value="">All statuses</option>
                 <option value="completed">Completed</option>
                 <option value="generating">Generating</option>
@@ -400,7 +451,9 @@ export function SummaryPage() {
               </select>
             </div>
 
-            <div className="filter-stats"><span>{totalSummaries} summaries found</span></div>
+            <div className="filter-stats">
+              <span>{totalSummaries} summaries found</span>
+            </div>
           </div>
 
           {/* Summary List */}
@@ -414,18 +467,28 @@ export function SummaryPage() {
               <div className="summary-error">
                 <Icon name="AlertCircle" size={24} />
                 <span>{error}</span>
-                <button className="btn btn-secondary" onClick={loadSummaries}>Retry</button>
+                <button className="btn btn-secondary" onClick={loadSummaries}>
+                  Retry
+                </button>
               </div>
             ) : summaries && summaries.length > 0 ? (
               <>
                 <div className="summary-items">
-                  {summaries.map(summary => (
-                    <button key={summary.id}
-                      className={'summary-item ' + (selectedSummary?.id === summary.id ? 'active' : '')}
-                      onClick={() => setSelectedSummary(summary)}>
+                  {summaries.map((summary) => (
+                    <button
+                      key={summary.id}
+                      className={
+                        'summary-item ' + (selectedSummary?.id === summary.id ? 'active' : '')
+                      }
+                      onClick={() => setSelectedSummary(summary)}
+                    >
                       <div className="summary-item-header">
-                        <span className="summary-title">{summary.title || (summary.summary_type + ' summary')}</span>
-                        <span className={'status-badge status-' + summary.status}>{summary.status}</span>
+                        <span className="summary-title">
+                          {summary.title || summary.summary_type + ' summary'}
+                        </span>
+                        <span className={'status-badge status-' + summary.status}>
+                          {summary.status}
+                        </span>
                       </div>
                       <div className="summary-item-meta">
                         <span className="meta-item">
@@ -447,9 +510,23 @@ export function SummaryPage() {
 
                 {totalSummaries > 20 && (
                   <div className="pagination">
-                    <button className="btn btn-secondary" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</button>
-                    <span className="page-info">Page {page} of {Math.ceil(totalSummaries / 20)}</span>
-                    <button className="btn btn-secondary" disabled={page >= Math.ceil(totalSummaries / 20)} onClick={() => setPage(p => p + 1)}>Next</button>
+                    <button
+                      className="btn btn-secondary"
+                      disabled={page === 1}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      Previous
+                    </button>
+                    <span className="page-info">
+                      Page {page} of {Math.ceil(totalSummaries / 20)}
+                    </span>
+                    <button
+                      className="btn btn-secondary"
+                      disabled={page >= Math.ceil(totalSummaries / 20)}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      Next
+                    </button>
                   </div>
                 )}
               </>
@@ -457,7 +534,11 @@ export function SummaryPage() {
               <div className="summary-empty">
                 <Icon name="FileText" size={48} />
                 <span>{hasFilters ? 'No matching summaries' : 'No summaries yet'}</span>
-                {!hasFilters && <button className="btn btn-primary" onClick={() => setView('generate')}>Generate Your First Summary</button>}
+                {!hasFilters && (
+                  <button className="btn btn-primary" onClick={() => setView('generate')}>
+                    Generate Your First Summary
+                  </button>
+                )}
               </div>
             )}
           </aside>
@@ -470,20 +551,39 @@ export function SummaryPage() {
                   <div>
                     <h2>{selectedSummary.title || 'Summary'}</h2>
                     <div className="summary-meta">
-                      <span className="meta-badge"><Icon name="Type" size={14} />{selectedSummary.summary_type}</span>
                       <span className="meta-badge">
-                        <Icon name={SOURCE_ICONS[selectedSummary.source_type] || 'File'} size={14} />
-                        {SOURCE_TYPE_LABELS[selectedSummary.source_type] || selectedSummary.source_type}
+                        <Icon name="Type" size={14} />
+                        {selectedSummary.summary_type}
                       </span>
-                      <span className="meta-badge"><Icon name="Calendar" size={14} />{formatDate(selectedSummary.created_at)}</span>
+                      <span className="meta-badge">
+                        <Icon
+                          name={SOURCE_ICONS[selectedSummary.source_type] || 'File'}
+                          size={14}
+                        />
+                        {SOURCE_TYPE_LABELS[selectedSummary.source_type] ||
+                          selectedSummary.source_type}
+                      </span>
+                      <span className="meta-badge">
+                        <Icon name="Calendar" size={14} />
+                        {formatDate(selectedSummary.created_at)}
+                      </span>
                     </div>
                   </div>
                   <div className="detail-actions">
-                    <button className="btn btn-secondary" onClick={() => handleRegenerateSummary(selectedSummary)} disabled={generating}>
-                      <Icon name="RefreshCw" size={16} />Regenerate
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => handleRegenerateSummary(selectedSummary)}
+                      disabled={generating}
+                    >
+                      <Icon name="RefreshCw" size={16} />
+                      Regenerate
                     </button>
-                    <button className="btn btn-danger" onClick={() => handleDeleteSummary(selectedSummary.id)}>
-                      <Icon name="Trash2" size={16} />Delete
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => handleDeleteSummary(selectedSummary.id)}
+                    >
+                      <Icon name="Trash2" size={16} />
+                      Delete
                     </button>
                   </div>
                 </div>
@@ -498,32 +598,71 @@ export function SummaryPage() {
                     <section className="summary-section">
                       <h3>Key Points</h3>
                       <ul className="key-points-list">
-                        {selectedSummary.key_points.map((point, idx) => <li key={idx}>{point}</li>)}
+                        {selectedSummary.key_points.map((point, idx) => (
+                          <li key={idx}>{point}</li>
+                        ))}
                       </ul>
                     </section>
                   )}
 
                   <section className="summary-section">
                     <h3>Source Information</h3>
-                    <div className="source-info"><p><strong>Source IDs:</strong> {selectedSummary.source_ids.join(', ')}</p></div>
+                    <div className="source-info">
+                      <p>
+                        <strong>Source IDs:</strong> {selectedSummary.source_ids.join(', ')}
+                      </p>
+                    </div>
                   </section>
 
                   <section className="summary-section">
                     <h3>Metadata</h3>
                     <div className="metadata-grid">
-                      <div className="metadata-item"><span className="metadata-label">Word Count</span><span className="metadata-value">{selectedSummary.word_count}</span></div>
-                      <div className="metadata-item"><span className="metadata-label">Token Count</span><span className="metadata-value">{selectedSummary.token_count}</span></div>
-                      <div className="metadata-item"><span className="metadata-label">Confidence</span><span className="metadata-value">{Math.round(selectedSummary.confidence * 100)}%</span></div>
-                      <div className="metadata-item"><span className="metadata-label">Processing Time</span><span className="metadata-value">{Math.round(selectedSummary.processing_time_ms)}ms</span></div>
-                      {selectedSummary.model_used && <div className="metadata-item"><span className="metadata-label">Model</span><span className="metadata-value">{selectedSummary.model_used}</span></div>}
-                      <div className="metadata-item"><span className="metadata-label">Target Length</span><span className="metadata-value">{LENGTH_LABELS[selectedSummary.target_length] || selectedSummary.target_length}</span></div>
+                      <div className="metadata-item">
+                        <span className="metadata-label">Word Count</span>
+                        <span className="metadata-value">{selectedSummary.word_count}</span>
+                      </div>
+                      <div className="metadata-item">
+                        <span className="metadata-label">Token Count</span>
+                        <span className="metadata-value">{selectedSummary.token_count}</span>
+                      </div>
+                      <div className="metadata-item">
+                        <span className="metadata-label">Confidence</span>
+                        <span className="metadata-value">
+                          {Math.round(selectedSummary.confidence * 100)}%
+                        </span>
+                      </div>
+                      <div className="metadata-item">
+                        <span className="metadata-label">Processing Time</span>
+                        <span className="metadata-value">
+                          {Math.round(selectedSummary.processing_time_ms)}ms
+                        </span>
+                      </div>
+                      {selectedSummary.model_used && (
+                        <div className="metadata-item">
+                          <span className="metadata-label">Model</span>
+                          <span className="metadata-value">{selectedSummary.model_used}</span>
+                        </div>
+                      )}
+                      <div className="metadata-item">
+                        <span className="metadata-label">Target Length</span>
+                        <span className="metadata-value">
+                          {LENGTH_LABELS[selectedSummary.target_length] ||
+                            selectedSummary.target_length}
+                        </span>
+                      </div>
                     </div>
                   </section>
 
                   {selectedSummary.tags.length > 0 && (
                     <section className="summary-section">
                       <h3>Tags</h3>
-                      <div className="tags-list">{selectedSummary.tags.map((tag, idx) => <span key={idx} className="tag">{tag}</span>)}</div>
+                      <div className="tags-list">
+                        {selectedSummary.tags.map((tag, idx) => (
+                          <span key={idx} className="tag">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
                     </section>
                   )}
                 </div>
@@ -546,20 +685,35 @@ export function SummaryPage() {
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="source_type">Source Type</label>
-                <select id="source_type" value={formData.source_type} required
-                  onChange={e => { setFormData({ ...formData, source_type: e.target.value }); setSelectedSources([]); }}>
-                  {capabilities?.source_types.map(type => (
-                    <option key={type} value={type}>{SOURCE_TYPE_LABELS[type] || type}</option>
+                <select
+                  id="source_type"
+                  value={formData.source_type}
+                  required
+                  onChange={(e) => {
+                    setFormData({ ...formData, source_type: e.target.value });
+                    setSelectedSources([]);
+                  }}
+                >
+                  {capabilities?.source_types.map((type) => (
+                    <option key={type} value={type}>
+                      {SOURCE_TYPE_LABELS[type] || type}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
                 <label htmlFor="summary_type">Summary Type</label>
-                <select id="summary_type" value={formData.summary_type} required
-                  onChange={e => setFormData({ ...formData, summary_type: e.target.value })}>
-                  {summaryTypesData?.types.map(type => (
-                    <option key={type.value} value={type.value} title={type.description}>{type.label}</option>
+                <select
+                  id="summary_type"
+                  value={formData.summary_type}
+                  required
+                  onChange={(e) => setFormData({ ...formData, summary_type: e.target.value })}
+                >
+                  {summaryTypesData?.types.map((type) => (
+                    <option key={type.value} value={type.value} title={type.description}>
+                      {type.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -567,16 +721,24 @@ export function SummaryPage() {
 
             {/* Source Picker */}
             <div className="form-group">
-              <label>Selected Sources<span className="label-hint">({selectedSources.length} selected)</span></label>
+              <label>
+                Selected Sources
+                <span className="label-hint">({selectedSources.length} selected)</span>
+              </label>
 
               {selectedSources.length > 0 && (
                 <div className="selected-sources">
-                  {selectedSources.map(source => (
+                  {selectedSources.map((source) => (
                     <div key={source.id} className="selected-source-chip">
                       <Icon name={SOURCE_ICONS[source.type] || 'File'} size={14} />
                       <span className="source-name">{source.name}</span>
-                      <button type="button" className="remove-source"
-                        onClick={() => setSelectedSources(prev => prev.filter(s => s.id !== source.id))}>
+                      <button
+                        type="button"
+                        className="remove-source"
+                        onClick={() =>
+                          setSelectedSources((prev) => prev.filter((s) => s.id !== source.id))
+                        }
+                      >
                         <Icon name="X" size={14} />
                       </button>
                     </div>
@@ -584,60 +746,117 @@ export function SummaryPage() {
                 </div>
               )}
 
-              <button type="button" className="btn btn-secondary source-picker-btn" onClick={() => setSourcePickerOpen(true)}>
-                <Icon name="Plus" size={16} />Browse & Select Sources
+              <button
+                type="button"
+                className="btn btn-secondary source-picker-btn"
+                onClick={() => setSourcePickerOpen(true)}
+              >
+                <Icon name="Plus" size={16} />
+                Browse & Select Sources
               </button>
             </div>
 
             <div className="form-group">
               <label htmlFor="target_length">Target Length</label>
-              <select id="target_length" value={formData.target_length}
-                onChange={e => setFormData({ ...formData, target_length: e.target.value })}>
-                {capabilities?.target_lengths.map(length => (
-                  <option key={length} value={length}>{LENGTH_LABELS[length] || length}</option>
+              <select
+                id="target_length"
+                value={formData.target_length}
+                onChange={(e) => setFormData({ ...formData, target_length: e.target.value })}
+              >
+                {capabilities?.target_lengths.map((length) => (
+                  <option key={length} value={length}>
+                    {LENGTH_LABELS[length] || length}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div className="form-group">
-              <label htmlFor="focus_areas">Focus Areas<span className="label-hint">(optional, comma-separated)</span></label>
-              <input type="text" id="focus_areas" value={formData.focus_areas}
-                onChange={e => setFormData({ ...formData, focus_areas: e.target.value })}
-                placeholder="e.g., methodology, results, conclusions" />
+              <label htmlFor="focus_areas">
+                Focus Areas<span className="label-hint">(optional, comma-separated)</span>
+              </label>
+              <input
+                type="text"
+                id="focus_areas"
+                value={formData.focus_areas}
+                onChange={(e) => setFormData({ ...formData, focus_areas: e.target.value })}
+                placeholder="e.g., methodology, results, conclusions"
+              />
             </div>
 
             <div className="form-group">
-              <label htmlFor="exclude_topics">Exclude Topics<span className="label-hint">(optional, comma-separated)</span></label>
-              <input type="text" id="exclude_topics" value={formData.exclude_topics}
-                onChange={e => setFormData({ ...formData, exclude_topics: e.target.value })}
-                placeholder="e.g., technical details, references" />
+              <label htmlFor="exclude_topics">
+                Exclude Topics<span className="label-hint">(optional, comma-separated)</span>
+              </label>
+              <input
+                type="text"
+                id="exclude_topics"
+                value={formData.exclude_topics}
+                onChange={(e) => setFormData({ ...formData, exclude_topics: e.target.value })}
+                placeholder="e.g., technical details, references"
+              />
             </div>
 
             <div className="form-group">
-              <label htmlFor="tags">Tags<span className="label-hint">(optional, comma-separated)</span></label>
-              <input type="text" id="tags" value={formData.tags}
-                onChange={e => setFormData({ ...formData, tags: e.target.value })}
-                placeholder="e.g., research, analysis, important" />
+              <label htmlFor="tags">
+                Tags<span className="label-hint">(optional, comma-separated)</span>
+              </label>
+              <input
+                type="text"
+                id="tags"
+                value={formData.tags}
+                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                placeholder="e.g., research, analysis, important"
+              />
             </div>
 
             <div className="form-options">
               <label className="checkbox-label">
-                <input type="checkbox" checked={formData.include_key_points}
-                  onChange={e => setFormData({ ...formData, include_key_points: e.target.checked })} />
+                <input
+                  type="checkbox"
+                  checked={formData.include_key_points}
+                  onChange={(e) =>
+                    setFormData({ ...formData, include_key_points: e.target.checked })
+                  }
+                />
                 <span>Include key points</span>
               </label>
 
               <label className="checkbox-label">
-                <input type="checkbox" checked={formData.include_title}
-                  onChange={e => setFormData({ ...formData, include_title: e.target.checked })} />
+                <input
+                  type="checkbox"
+                  checked={formData.include_title}
+                  onChange={(e) => setFormData({ ...formData, include_title: e.target.checked })}
+                />
                 <span>Generate title</span>
               </label>
             </div>
 
             <div className="form-actions">
-              <button type="button" className="btn btn-secondary" onClick={() => setView('list')} disabled={generating}>Cancel</button>
-              <button type="submit" className="btn btn-primary" disabled={generating || selectedSources.length === 0}>
-                {generating ? (<><Icon name="Loader2" size={16} className="spin" />Generating...</>) : (<><Icon name="Sparkles" size={16} />Generate Summary</>)}
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setView('list')}
+                disabled={generating}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={generating || selectedSources.length === 0}
+              >
+                {generating ? (
+                  <>
+                    <Icon name="Loader2" size={16} className="spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Icon name="Sparkles" size={16} />
+                    Generate Summary
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -649,14 +868,17 @@ export function SummaryPage() {
           <div className="stats-header">
             <h2>Summary Statistics</h2>
             <button className="btn btn-secondary" onClick={() => refetchStats()}>
-              <Icon name="RefreshCw" size={16} />Refresh
+              <Icon name="RefreshCw" size={16} />
+              Refresh
             </button>
           </div>
 
           {stats ? (
             <div className="stats-grid">
               <div className="stats-card stats-card-large">
-                <div className="stats-card-icon"><Icon name="FileText" size={32} /></div>
+                <div className="stats-card-icon">
+                  <Icon name="FileText" size={32} />
+                </div>
                 <div className="stats-card-content">
                   <span className="stats-card-value">{stats.total_summaries}</span>
                   <span className="stats-card-label">Total Summaries</span>
@@ -664,7 +886,9 @@ export function SummaryPage() {
               </div>
 
               <div className="stats-card">
-                <div className="stats-card-icon success"><Icon name="CheckCircle" size={24} /></div>
+                <div className="stats-card-icon success">
+                  <Icon name="CheckCircle" size={24} />
+                </div>
                 <div className="stats-card-content">
                   <span className="stats-card-value">{stats.generated_last_24h}</span>
                   <span className="stats-card-label">Generated (24h)</span>
@@ -672,7 +896,9 @@ export function SummaryPage() {
               </div>
 
               <div className="stats-card">
-                <div className="stats-card-icon error"><Icon name="XCircle" size={24} /></div>
+                <div className="stats-card-icon error">
+                  <Icon name="XCircle" size={24} />
+                </div>
                 <div className="stats-card-content">
                   <span className="stats-card-value">{stats.failed_last_24h}</span>
                   <span className="stats-card-label">Failed (24h)</span>
@@ -680,17 +906,25 @@ export function SummaryPage() {
               </div>
 
               <div className="stats-card">
-                <div className="stats-card-icon"><Icon name="Hash" size={24} /></div>
+                <div className="stats-card-icon">
+                  <Icon name="Hash" size={24} />
+                </div>
                 <div className="stats-card-content">
-                  <span className="stats-card-value">{stats.total_words_generated.toLocaleString()}</span>
+                  <span className="stats-card-value">
+                    {stats.total_words_generated.toLocaleString()}
+                  </span>
                   <span className="stats-card-label">Total Words</span>
                 </div>
               </div>
 
               <div className="stats-card">
-                <div className="stats-card-icon"><Icon name="Zap" size={24} /></div>
+                <div className="stats-card-icon">
+                  <Icon name="Zap" size={24} />
+                </div>
                 <div className="stats-card-content">
-                  <span className="stats-card-value">{stats.total_tokens_used.toLocaleString()}</span>
+                  <span className="stats-card-value">
+                    {stats.total_tokens_used.toLocaleString()}
+                  </span>
                   <span className="stats-card-label">Total Tokens</span>
                 </div>
               </div>
@@ -698,9 +932,18 @@ export function SummaryPage() {
               <div className="stats-section">
                 <h3>Averages</h3>
                 <div className="stats-row">
-                  <div className="stat-item"><span className="stat-label">Confidence</span><span className="stat-value">{Math.round(stats.avg_confidence * 100)}%</span></div>
-                  <div className="stat-item"><span className="stat-label">Word Count</span><span className="stat-value">{Math.round(stats.avg_word_count)}</span></div>
-                  <div className="stat-item"><span className="stat-label">Processing Time</span><span className="stat-value">{Math.round(stats.avg_processing_time_ms)}ms</span></div>
+                  <div className="stat-item">
+                    <span className="stat-label">Confidence</span>
+                    <span className="stat-value">{Math.round(stats.avg_confidence * 100)}%</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Word Count</span>
+                    <span className="stat-value">{Math.round(stats.avg_word_count)}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Processing Time</span>
+                    <span className="stat-value">{Math.round(stats.avg_processing_time_ms)}ms</span>
+                  </div>
                 </div>
               </div>
 
@@ -712,7 +955,12 @@ export function SummaryPage() {
                       <div key={type} className="breakdown-item">
                         <span className="breakdown-label">{type}</span>
                         <span className="breakdown-value">{count}</span>
-                        <div className="breakdown-bar"><div className="breakdown-fill" style={{ width: (count / stats.total_summaries * 100) + '%' }} /></div>
+                        <div className="breakdown-bar">
+                          <div
+                            className="breakdown-fill"
+                            style={{ width: (count / stats.total_summaries) * 100 + '%' }}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -725,9 +973,17 @@ export function SummaryPage() {
                   <div className="stats-breakdown">
                     {Object.entries(stats.by_source_type).map(([type, count]) => (
                       <div key={type} className="breakdown-item">
-                        <span className="breakdown-label"><Icon name={SOURCE_ICONS[type] || 'File'} size={14} />{SOURCE_TYPE_LABELS[type] || type}</span>
+                        <span className="breakdown-label">
+                          <Icon name={SOURCE_ICONS[type] || 'File'} size={14} />
+                          {SOURCE_TYPE_LABELS[type] || type}
+                        </span>
                         <span className="breakdown-value">{count}</span>
-                        <div className="breakdown-bar"><div className="breakdown-fill source" style={{ width: (count / stats.total_summaries * 100) + '%' }} /></div>
+                        <div className="breakdown-bar">
+                          <div
+                            className="breakdown-fill source"
+                            style={{ width: (count / stats.total_summaries) * 100 + '%' }}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -742,7 +998,12 @@ export function SummaryPage() {
                       <div key={status} className="breakdown-item">
                         <span className={'breakdown-label status-' + status}>{status}</span>
                         <span className="breakdown-value">{count}</span>
-                        <div className="breakdown-bar"><div className={'breakdown-fill status-' + status} style={{ width: (count / stats.total_summaries * 100) + '%' }} /></div>
+                        <div className="breakdown-bar">
+                          <div
+                            className={'breakdown-fill status-' + status}
+                            style={{ width: (count / stats.total_summaries) * 100 + '%' }}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -757,7 +1018,12 @@ export function SummaryPage() {
                       <div key={model} className="breakdown-item">
                         <span className="breakdown-label">{model}</span>
                         <span className="breakdown-value">{count}</span>
-                        <div className="breakdown-bar"><div className="breakdown-fill model" style={{ width: (count / stats.total_summaries * 100) + '%' }} /></div>
+                        <div className="breakdown-bar">
+                          <div
+                            className="breakdown-fill model"
+                            style={{ width: (count / stats.total_summaries) * 100 + '%' }}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -802,17 +1068,25 @@ function SourcePickerModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [localSelected, setLocalSelected] = useState<Set<string>>(new Set(selectedSources.map(s => s.id)));
+  const [localSelected, setLocalSelected] = useState<Set<string>>(
+    new Set(selectedSources.map((s) => s.id))
+  );
 
   const getEndpoint = useCallback(() => {
     switch (sourceType) {
       case 'document':
-      case 'documents': return '/api/summary/sources/documents';
-      case 'entity': return '/api/summary/sources/entities';
-      case 'project': return '/api/summary/sources/projects';
-      case 'claim_set': return '/api/summary/sources/claims';
-      case 'timeline': return '/api/summary/sources/timeline';
-      default: return '/api/summary/sources/documents';
+      case 'documents':
+        return '/api/summary/sources/documents';
+      case 'entity':
+        return '/api/summary/sources/entities';
+      case 'project':
+        return '/api/summary/sources/projects';
+      case 'claim_set':
+        return '/api/summary/sources/claims';
+      case 'timeline':
+        return '/api/summary/sources/timeline';
+      default:
+        return '/api/summary/sources/documents';
     }
   }, [sourceType]);
 
@@ -855,10 +1129,10 @@ function SourcePickerModal({
   const handleConfirm = () => {
     const allSources = [...selectedSources, ...sources];
     const uniqueSources = new Map<string, SourceItem>();
-    allSources.forEach(s => uniqueSources.set(s.id, s));
+    allSources.forEach((s) => uniqueSources.set(s.id, s));
 
     const finalSelection = Array.from(localSelected)
-      .map(id => uniqueSources.get(id))
+      .map((id) => uniqueSources.get(id))
       .filter((s): s is SourceItem => s !== undefined);
 
     onSelect(finalSelection);
@@ -867,28 +1141,48 @@ function SourcePickerModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="source-picker-modal" onClick={e => e.stopPropagation()}>
+      <div className="source-picker-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Select {SOURCE_TYPE_LABELS[sourceType] || sourceType}s</h3>
-          <button className="modal-close" onClick={onClose}><Icon name="X" size={20} /></button>
+          <button className="modal-close" onClick={onClose}>
+            <Icon name="X" size={20} />
+          </button>
         </div>
 
         <div className="modal-search">
           <Icon name="Search" size={16} />
-          <input type="text" placeholder="Search..." value={searchQuery} autoFocus
-            onChange={e => { setSearchQuery(e.target.value); setPage(1); }} />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            autoFocus
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
+          />
         </div>
 
         <div className="modal-body">
           {loading ? (
-            <div className="picker-loading"><Icon name="Loader2" size={24} className="spin" /><span>Loading...</span></div>
+            <div className="picker-loading">
+              <Icon name="Loader2" size={24} className="spin" />
+              <span>Loading...</span>
+            </div>
           ) : error ? (
-            <div className="picker-error"><Icon name="AlertCircle" size={24} /><span>{error}</span></div>
+            <div className="picker-error">
+              <Icon name="AlertCircle" size={24} />
+              <span>{error}</span>
+            </div>
           ) : sources.length > 0 ? (
             <div className="source-list">
-              {sources.map(source => (
+              {sources.map((source) => (
                 <label key={source.id} className="source-option">
-                  <input type="checkbox" checked={localSelected.has(source.id)} onChange={() => toggleSource(source)} />
+                  <input
+                    type="checkbox"
+                    checked={localSelected.has(source.id)}
+                    onChange={() => toggleSource(source)}
+                  />
                   <div className="source-option-content">
                     <Icon name={SOURCE_ICONS[source.type] || 'File'} size={16} />
                     <div className="source-option-info">
@@ -900,23 +1194,44 @@ function SourcePickerModal({
               ))}
             </div>
           ) : (
-            <div className="picker-empty"><Icon name="Inbox" size={48} /><span>No {SOURCE_TYPE_LABELS[sourceType] || 'sources'}s found</span></div>
+            <div className="picker-empty">
+              <Icon name="Inbox" size={48} />
+              <span>No {SOURCE_TYPE_LABELS[sourceType] || 'sources'}s found</span>
+            </div>
           )}
         </div>
 
         {total > 20 && (
           <div className="modal-pagination">
-            <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</button>
-            <span>Page {page} of {Math.ceil(total / 20)}</span>
-            <button className="btn btn-secondary btn-sm" disabled={page >= Math.ceil(total / 20)} onClick={() => setPage(p => p + 1)}>Next</button>
+            <button
+              className="btn btn-secondary btn-sm"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Previous
+            </button>
+            <span>
+              Page {page} of {Math.ceil(total / 20)}
+            </span>
+            <button
+              className="btn btn-secondary btn-sm"
+              disabled={page >= Math.ceil(total / 20)}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </button>
           </div>
         )}
 
         <div className="modal-footer">
           <span className="selected-count">{localSelected.size} selected</span>
           <div className="modal-actions">
-            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleConfirm}>Confirm Selection</button>
+            <button className="btn btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button className="btn btn-primary" onClick={handleConfirm}>
+              Confirm Selection
+            </button>
           </div>
         </div>
       </div>

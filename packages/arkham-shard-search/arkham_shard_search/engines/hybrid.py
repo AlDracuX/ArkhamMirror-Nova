@@ -4,8 +4,8 @@ import logging
 from typing import Any
 
 from ..models import SearchQuery, SearchResultItem
-from .semantic import SemanticSearchEngine
 from .keyword import KeywordSearchEngine
+from .semantic import SemanticSearchEngine
 
 logger = logging.getLogger(__name__)
 

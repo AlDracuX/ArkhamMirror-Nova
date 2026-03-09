@@ -95,6 +95,7 @@ class ReportsShard(ArkhamShard):
     def get_routes(self):
         """Return FastAPI router for this shard."""
         from .api import router
+
         return router
 
     # === Database Schema ===
@@ -394,9 +395,7 @@ class ReportsShard(ArkhamShard):
                     params,
                 )
             else:
-                result = await self._db.fetch_one(
-                    "SELECT COUNT(*) as count FROM arkham_reports"
-                )
+                result = await self._db.fetch_one("SELECT COUNT(*) as count FROM arkham_reports")
 
         return result["count"] if result else 0
 
@@ -671,6 +670,7 @@ class ReportsShard(ArkhamShard):
             # Try to parse as JSON first (for complex values)
             try:
                 import json
+
                 return json.loads(value)
             except json.JSONDecodeError:
                 # If it's not valid JSON, it's already the string value
@@ -681,6 +681,7 @@ class ReportsShard(ArkhamShard):
     async def _generate_report_inline(self, report: Report) -> ReportGenerationResult:
         """Generate report inline (stub implementation)."""
         import time
+
         start_time = time.time()
 
         try:
@@ -1041,15 +1042,15 @@ class ReportsShard(ArkhamShard):
         try:
             from reportlab.lib import colors
             from reportlab.lib.pagesizes import letter
-            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
             from reportlab.lib.units import inch
             from reportlab.platypus import (
-                SimpleDocTemplate,
+                PageBreak,
                 Paragraph,
+                SimpleDocTemplate,
                 Spacer,
                 Table,
                 TableStyle,
-                PageBreak,
             )
         except ImportError:
             logger.error("reportlab not installed - falling back to text")
@@ -1098,8 +1099,8 @@ class ReportsShard(ArkhamShard):
 
     def _add_summary_to_pdf(self, story, content, styles):
         """Add summary content to PDF."""
-        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
         from reportlab.lib import colors
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 
         heading_style = styles["Heading2"]
         normal_style = styles["Normal"]
@@ -1121,19 +1122,21 @@ class ReportsShard(ArkhamShard):
 
         # Claims
         claims = content.get("claims", {})
-        story.append(Paragraph(
-            f"<b>Claims:</b> {claims.get('total', 0)} total "
-            f"({claims.get('verified', 0)} verified)",
-            normal_style
-        ))
+        story.append(
+            Paragraph(
+                f"<b>Claims:</b> {claims.get('total', 0)} total ({claims.get('verified', 0)} verified)", normal_style
+            )
+        )
 
         # Contradictions
         contradictions = content.get("contradictions", {})
-        story.append(Paragraph(
-            f"<b>Contradictions:</b> {contradictions.get('total', 0)} total "
-            f"({contradictions.get('confirmed', 0)} confirmed)",
-            normal_style
-        ))
+        story.append(
+            Paragraph(
+                f"<b>Contradictions:</b> {contradictions.get('total', 0)} total "
+                f"({contradictions.get('confirmed', 0)} confirmed)",
+                normal_style,
+            )
+        )
 
         # Anomalies
         anomalies = content.get("anomalies", {})
@@ -1169,10 +1172,12 @@ class ReportsShard(ArkhamShard):
             story.append(Spacer(1, 10))
             story.append(Paragraph(f"<b>Relationships ({len(relationships)}):</b>", normal_style))
             for rel in relationships[:10]:
-                story.append(Paragraph(
-                    f"  - {rel.get('relationship_type', 'related to')} {rel.get('target_name', 'Unknown')}",
-                    normal_style
-                ))
+                story.append(
+                    Paragraph(
+                        f"  - {rel.get('relationship_type', 'related to')} {rel.get('target_name', 'Unknown')}",
+                        normal_style,
+                    )
+                )
 
         # Claims
         claims = content.get("claims", [])
@@ -1234,7 +1239,7 @@ class ReportsShard(ArkhamShard):
         if contradictions:
             story.append(Spacer(1, 10))
             for i, c in enumerate(contradictions[:20]):
-                story.append(Paragraph(f"<b>Contradiction {i+1}:</b>", normal_style))
+                story.append(Paragraph(f"<b>Contradiction {i + 1}:</b>", normal_style))
                 story.append(Paragraph(f"  Status: {c.get('status', 'N/A')}", normal_style))
                 story.append(Paragraph(f"  Severity: {c.get('severity', 'N/A')}", normal_style))
                 story.append(Paragraph(f"  Type: {c.get('contradiction_type', 'N/A')}", normal_style))
@@ -1244,8 +1249,8 @@ class ReportsShard(ArkhamShard):
 
     def _add_ach_to_pdf(self, story, content, styles):
         """Add ACH matrix content to PDF."""
-        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
         from reportlab.lib import colors
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 
         heading_style = styles["Heading2"]
         normal_style = styles["Normal"]
@@ -1340,8 +1345,8 @@ class ReportsShard(ArkhamShard):
 <body>
     <h1>{report.title}</h1>
     <div class="meta">
-        <p><strong>Report Type:</strong> {report.report_type.value.replace('_', ' ').title()}</p>
-        <p><strong>Generated:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
+        <p><strong>Report Type:</strong> {report.report_type.value.replace("_", " ").title()}</p>
+        <p><strong>Generated:</strong> {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}</p>
         <p><strong>Report ID:</strong> {report.id}</p>
     </div>
 """
@@ -1377,12 +1382,12 @@ class ReportsShard(ArkhamShard):
         return f"""
     <h2>System Overview</h2>
     <div class="section">
-        <div class="stat"><div class="stat-value">{docs.get('total', 0)}</div><div class="stat-label">Documents</div></div>
-        <div class="stat"><div class="stat-value">{entities.get('total', 0)}</div><div class="stat-label">Entities</div></div>
-        <div class="stat"><div class="stat-value">{claims.get('total', 0)}</div><div class="stat-label">Claims</div></div>
-        <div class="stat"><div class="stat-value">{contradictions.get('total', 0)}</div><div class="stat-label">Contradictions</div></div>
-        <div class="stat"><div class="stat-value">{anomalies.get('total', 0)}</div><div class="stat-label">Anomalies</div></div>
-        <div class="stat"><div class="stat-value">{timeline.get('total', 0)}</div><div class="stat-label">Timeline Events</div></div>
+        <div class="stat"><div class="stat-value">{docs.get("total", 0)}</div><div class="stat-label">Documents</div></div>
+        <div class="stat"><div class="stat-value">{entities.get("total", 0)}</div><div class="stat-label">Entities</div></div>
+        <div class="stat"><div class="stat-value">{claims.get("total", 0)}</div><div class="stat-label">Claims</div></div>
+        <div class="stat"><div class="stat-value">{contradictions.get("total", 0)}</div><div class="stat-label">Contradictions</div></div>
+        <div class="stat"><div class="stat-value">{anomalies.get("total", 0)}</div><div class="stat-label">Anomalies</div></div>
+        <div class="stat"><div class="stat-value">{timeline.get("total", 0)}</div><div class="stat-label">Timeline Events</div></div>
     </div>
 """
 
@@ -1393,10 +1398,10 @@ class ReportsShard(ArkhamShard):
         claims = content.get("claims", [])
 
         html = f"""
-    <h2>Entity: {entity.get('name', 'Unknown')}</h2>
+    <h2>Entity: {entity.get("name", "Unknown")}</h2>
     <div class="section">
-        <p><strong>Type:</strong> {entity.get('entity_type', 'N/A')}</p>
-        <p><strong>ID:</strong> {entity.get('id', 'N/A')}</p>
+        <p><strong>Type:</strong> {entity.get("entity_type", "N/A")}</p>
+        <p><strong>ID:</strong> {entity.get("id", "N/A")}</p>
     </div>
 """
 
@@ -1422,7 +1427,7 @@ class ReportsShard(ArkhamShard):
         html = f"""
     <h2>Timeline Summary</h2>
     <div class="section">
-        <p><strong>Total Events:</strong> {stats.get('total_events', 0)}</p>
+        <p><strong>Total Events:</strong> {stats.get("total_events", 0)}</p>
     </div>
     <h2>Events</h2>
     <table>
@@ -1437,12 +1442,12 @@ class ReportsShard(ArkhamShard):
     def _generate_custom_html(self, content: Dict[str, Any]) -> str:
         """Generate custom report HTML content."""
         html = ""
-        
+
         # Check if this is from a shared template
         if content.get("rendered_content"):
             template_name = content.get("template_name", "Custom Template")
             rendered = content["rendered_content"]
-            
+
             html += f"""
     <h2>Report Content</h2>
     <div class="section">
@@ -1452,7 +1457,7 @@ class ReportsShard(ArkhamShard):
         {rendered}
     </div>
 """
-            
+
             # Add system summary if available
             if content.get("system_summary"):
                 html += "<h2>System Context</h2>"
@@ -1460,7 +1465,7 @@ class ReportsShard(ArkhamShard):
         else:
             # Fallback to summary-style output
             html += self._generate_summary_html(content)
-        
+
         return html
 
     async def _generate_markdown(self, file_path: str, report: Report, data: Dict[str, Any]) -> None:
@@ -1469,8 +1474,8 @@ class ReportsShard(ArkhamShard):
 
         md = f"""# {report.title}
 
-**Report Type:** {report.report_type.value.replace('_', ' ').title()}
-**Generated:** {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
+**Report Type:** {report.report_type.value.replace("_", " ").title()}
+**Generated:** {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}
 **Report ID:** {report.id}
 
 ---
@@ -1486,12 +1491,12 @@ class ReportsShard(ArkhamShard):
 
 | Metric | Count |
 |--------|-------|
-| Documents | {docs.get('total', 0)} |
-| Entities | {entities.get('total', 0)} |
-| Claims | {claims.get('total', 0)} |
-| Contradictions | {content.get('contradictions', {}).get('total', 0)} |
-| Anomalies | {content.get('anomalies', {}).get('total', 0)} |
-| Timeline Events | {content.get('timeline_events', {}).get('total', 0)} |
+| Documents | {docs.get("total", 0)} |
+| Entities | {entities.get("total", 0)} |
+| Claims | {claims.get("total", 0)} |
+| Contradictions | {content.get("contradictions", {}).get("total", 0)} |
+| Anomalies | {content.get("anomalies", {}).get("total", 0)} |
+| Timeline Events | {content.get("timeline_events", {}).get("total", 0)} |
 
 """
         else:
@@ -1522,6 +1527,7 @@ class ReportsShard(ArkhamShard):
             return
 
         import json
+
         tenant_id = self.get_tenant_id_or_none()
         params = {
             "id": report.id,
@@ -1541,24 +1547,31 @@ class ReportsShard(ArkhamShard):
 
         if update:
             if tenant_id:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_reports SET
                         report_type=:report_type, title=:title, status=:status, created_at=:created_at,
                         completed_at=:completed_at, parameters=:parameters, output_format=:output_format,
                         file_path=:file_path, file_size=:file_size, error=:error, metadata=:metadata,
                         tenant_id=:tenant_id
                     WHERE id=:id AND tenant_id=:tenant_id
-                """, params)
+                """,
+                    params,
+                )
             else:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_reports SET
                         report_type=:report_type, title=:title, status=:status, created_at=:created_at,
                         completed_at=:completed_at, parameters=:parameters, output_format=:output_format,
                         file_path=:file_path, file_size=:file_size, error=:error, metadata=:metadata
                     WHERE id=:id
-                """, params)
+                """,
+                    params,
+                )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_reports (
                     id, report_type, title, status, created_at,
                     completed_at, parameters, output_format,
@@ -1566,7 +1579,9 @@ class ReportsShard(ArkhamShard):
                 ) VALUES (:id, :report_type, :title, :status, :created_at,
                     :completed_at, :parameters, :output_format,
                     :file_path, :file_size, :error, :metadata, :tenant_id)
-            """, params)
+            """,
+                params,
+            )
 
     async def _save_template(self, template: ReportTemplate, update: bool = False) -> None:
         """Save a template to the database."""
@@ -1574,6 +1589,7 @@ class ReportsShard(ArkhamShard):
             return
 
         import json
+
         tenant_id = self.get_tenant_id_or_none()
         params = {
             "id": template.id,
@@ -1591,23 +1607,30 @@ class ReportsShard(ArkhamShard):
 
         if update:
             if tenant_id:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_report_templates SET
                         name=:name, report_type=:report_type, description=:description,
                         parameters_schema=:parameters_schema, default_format=:default_format, template_content=:template_content,
                         created_at=:created_at, updated_at=:updated_at, metadata=:metadata, tenant_id=:tenant_id
                     WHERE id=:id AND tenant_id=:tenant_id
-                """, params)
+                """,
+                    params,
+                )
             else:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_report_templates SET
                         name=:name, report_type=:report_type, description=:description,
                         parameters_schema=:parameters_schema, default_format=:default_format, template_content=:template_content,
                         created_at=:created_at, updated_at=:updated_at, metadata=:metadata
                     WHERE id=:id
-                """, params)
+                """,
+                    params,
+                )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_report_templates (
                     id, name, report_type, description,
                     parameters_schema, default_format, template_content,
@@ -1615,7 +1638,9 @@ class ReportsShard(ArkhamShard):
                 ) VALUES (:id, :name, :report_type, :description,
                     :parameters_schema, :default_format, :template_content,
                     :created_at, :updated_at, :metadata, :tenant_id)
-            """, params)
+            """,
+                params,
+            )
 
     async def _save_schedule(self, schedule: ReportSchedule, update: bool = False) -> None:
         """Save a schedule to the database."""
@@ -1623,6 +1648,7 @@ class ReportsShard(ArkhamShard):
             return
 
         import json
+
         tenant_id = self.get_tenant_id_or_none()
         params = {
             "id": schedule.id,
@@ -1641,24 +1667,31 @@ class ReportsShard(ArkhamShard):
 
         if update:
             if tenant_id:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_report_schedules SET
                         template_id=:template_id, cron_expression=:cron_expression, enabled=:enabled,
                         last_run=:last_run, next_run=:next_run, parameters=:parameters,
                         output_format=:output_format, retention_days=:retention_days, email_recipients=:email_recipients,
                         metadata=:metadata, tenant_id=:tenant_id
                     WHERE id=:id AND tenant_id=:tenant_id
-                """, params)
+                """,
+                    params,
+                )
             else:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_report_schedules SET
                         template_id=:template_id, cron_expression=:cron_expression, enabled=:enabled,
                         last_run=:last_run, next_run=:next_run, parameters=:parameters,
                         output_format=:output_format, retention_days=:retention_days, email_recipients=:email_recipients, metadata=:metadata
                     WHERE id=:id
-                """, params)
+                """,
+                    params,
+                )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_report_schedules (
                     id, template_id, cron_expression, enabled,
                     last_run, next_run, parameters,
@@ -1666,7 +1699,9 @@ class ReportsShard(ArkhamShard):
                 ) VALUES (:id, :template_id, :cron_expression, :enabled,
                     :last_run, :next_run, :parameters,
                     :output_format, :retention_days, :email_recipients, :metadata, :tenant_id)
-            """, params)
+            """,
+                params,
+            )
 
     def _row_to_report(self, row: Dict[str, Any]) -> Report:
         """Convert database row to Report object."""

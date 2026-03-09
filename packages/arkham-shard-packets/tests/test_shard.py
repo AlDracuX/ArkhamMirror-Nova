@@ -4,18 +4,18 @@ Packets Shard - Shard Tests
 Tests for the PacketsShard implementation.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
-from arkham_shard_packets.shard import PacketsShard
+import pytest
 from arkham_shard_packets.models import (
+    ContentType,
+    ExportFormat,
     PacketStatus,
     PacketVisibility,
-    ContentType,
     SharePermission,
-    ExportFormat,
 )
+from arkham_shard_packets.shard import PacketsShard
 
 
 @pytest.fixture

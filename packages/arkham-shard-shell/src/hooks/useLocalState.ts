@@ -34,7 +34,7 @@ export function useLocalState<T>(
   }, [state, storageKey]);
 
   const setLocalState = useCallback((value: T | ((prev: T) => T)) => {
-    setState(prev => {
+    setState((prev) => {
       const next = typeof value === 'function' ? (value as (prev: T) => T)(prev) : value;
       return next;
     });

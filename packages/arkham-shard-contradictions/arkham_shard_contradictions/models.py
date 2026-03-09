@@ -4,11 +4,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any
+
 from pydantic import BaseModel
 
 
 class ContradictionStatus(Enum):
     """Status of a detected contradiction."""
+
     DETECTED = "detected"  # Initially detected by system
     CONFIRMED = "confirmed"  # Confirmed by analyst
     DISMISSED = "dismissed"  # Dismissed as false positive
@@ -17,6 +19,7 @@ class ContradictionStatus(Enum):
 
 class Severity(Enum):
     """Severity level of contradiction."""
+
     HIGH = "high"  # Direct, clear contradiction
     MEDIUM = "medium"  # Moderate contradiction with some ambiguity
     LOW = "low"  # Minor discrepancy or potential contradiction
@@ -24,6 +27,7 @@ class Severity(Enum):
 
 class ContradictionType(Enum):
     """Type of contradiction detected."""
+
     DIRECT = "direct"  # "X happened" vs "X did not happen"
     TEMPORAL = "temporal"  # Different dates/times for same event
     NUMERIC = "numeric"  # Different figures/amounts
@@ -35,6 +39,7 @@ class ContradictionType(Enum):
 @dataclass
 class Contradiction:
     """A detected contradiction between two documents."""
+
     id: str
 
     # Documents involved
@@ -80,6 +85,7 @@ class Contradiction:
 @dataclass
 class Claim:
     """An extracted claim from a document."""
+
     id: str
     document_id: str
     text: str
@@ -105,6 +111,7 @@ class Claim:
 @dataclass
 class ContradictionChain:
     """A chain of related contradictions."""
+
     id: str
     contradiction_ids: list[str]
 
@@ -122,6 +129,7 @@ class ContradictionChain:
 
 class AnalyzeRequest(BaseModel):
     """Request to analyze documents for contradictions."""
+
     doc_a_id: str
     doc_b_id: str
     threshold: float = 0.7  # Similarity threshold for claim matching
@@ -130,6 +138,7 @@ class AnalyzeRequest(BaseModel):
 
 class BatchAnalyzeRequest(BaseModel):
     """Request to analyze multiple document pairs."""
+
     document_pairs: list[tuple[str, str]]
     threshold: float = 0.7
     use_llm: bool = True
@@ -138,6 +147,7 @@ class BatchAnalyzeRequest(BaseModel):
 
 class ClaimsRequest(BaseModel):
     """Request to extract claims from text."""
+
     text: str
     document_id: str | None = None
     use_llm: bool = True
@@ -145,6 +155,7 @@ class ClaimsRequest(BaseModel):
 
 class UpdateStatusRequest(BaseModel):
     """Request to update contradiction status."""
+
     status: str  # Will be converted to ContradictionStatus
     notes: str = ""
     analyst_id: str | None = None
@@ -152,12 +163,14 @@ class UpdateStatusRequest(BaseModel):
 
 class AddNotesRequest(BaseModel):
     """Request to add analyst notes."""
+
     notes: str
     analyst_id: str | None = None
 
 
 class ContradictionResult(BaseModel):
     """Response containing contradiction details."""
+
     id: str
     doc_a_id: str
     doc_b_id: str
@@ -175,6 +188,7 @@ class ContradictionResult(BaseModel):
 
 class ContradictionList(BaseModel):
     """Response containing list of contradictions."""
+
     contradictions: list[ContradictionResult]
     total: int
     page: int = 1
@@ -183,6 +197,7 @@ class ContradictionList(BaseModel):
 
 class StatsResponse(BaseModel):
     """Contradiction statistics."""
+
     total_contradictions: int
     by_status: dict[str, int]
     by_severity: dict[str, int]
@@ -193,6 +208,7 @@ class StatsResponse(BaseModel):
 
 class ClaimExtractionResult(BaseModel):
     """Result of claim extraction."""
+
     claims: list[dict[str, Any]]
     count: int
     document_id: str | None = None

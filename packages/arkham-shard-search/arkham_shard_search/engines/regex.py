@@ -1,7 +1,7 @@
 """Regex search engine for pattern matching across documents."""
 
-import re
 import logging
+import re
 import time
 from typing import Any
 
@@ -115,9 +115,9 @@ class RegexSearchEngine:
 
         # Check for dangerous patterns (catastrophic backtracking)
         dangerous_patterns = [
-            r'(.+)+',   # Nested quantifiers
-            r'(.*)*',   # Nested stars
-            r'(a|a)+',  # Exponential alternatives
+            r"(.+)+",  # Nested quantifiers
+            r"(.*)*",  # Nested stars
+            r"(a|a)+",  # Exponential alternatives
             r'([^"]*)*',  # Nested negated character class with star
         ]
 
@@ -126,7 +126,7 @@ class RegexSearchEngine:
                 return True, None, "dangerous"
 
         # Estimate performance based on pattern complexity
-        if len(pattern) < 10 and not any(c in pattern for c in '*+?{}'):
+        if len(pattern) < 10 and not any(c in pattern for c in "*+?{}"):
             return True, None, "fast"
         elif len(pattern) < 50:
             return True, None, "moderate"
@@ -273,19 +273,21 @@ class RegexSearchEngine:
                         context = context + "..."
 
                     # Calculate line number
-                    line_number = text[:match_start].count('\n') + 1
+                    line_number = text[:match_start].count("\n") + 1
 
-                    matches.append(RegexMatch(
-                        document_id=document_id,
-                        document_title=document_title,
-                        page_number=page_number,
-                        chunk_id=chunk_id,
-                        match_text=match_text,
-                        context=context,
-                        start_offset=match_start,
-                        end_offset=match_end,
-                        line_number=line_number,
-                    ))
+                    matches.append(
+                        RegexMatch(
+                            document_id=document_id,
+                            document_title=document_title,
+                            page_number=page_number,
+                            chunk_id=chunk_id,
+                            match_text=match_text,
+                            context=context,
+                            start_offset=match_start,
+                            end_offset=match_end,
+                            line_number=line_number,
+                        )
+                    )
 
                     if len(matches) >= self._max_results:
                         break
@@ -305,7 +307,7 @@ class RegexSearchEngine:
             )
 
         # Apply pagination to results
-        paginated_matches = matches[query.offset:query.offset + query.limit]
+        paginated_matches = matches[query.offset : query.offset + query.limit]
 
         duration_ms = (time.time() - start_time) * 1000
 
@@ -356,15 +358,20 @@ class RegexSearchEngine:
                 rows = await self._db.fetch_all(query, params)
                 for row in rows:
                     import json
-                    presets.append({
-                        "id": row["id"],
-                        "name": row["name"],
-                        "pattern": row["pattern"],
-                        "description": row.get("description", ""),
-                        "category": row["category"],
-                        "flags": json.loads(row["flags"]) if isinstance(row["flags"], str) else (row["flags"] or []),
-                        "is_system": row.get("is_system", False),
-                    })
+
+                    presets.append(
+                        {
+                            "id": row["id"],
+                            "name": row["name"],
+                            "pattern": row["pattern"],
+                            "description": row.get("description", ""),
+                            "category": row["category"],
+                            "flags": json.loads(row["flags"])
+                            if isinstance(row["flags"], str)
+                            else (row["flags"] or []),
+                            "is_system": row.get("is_system", False),
+                        }
+                    )
             except Exception as e:
                 logger.warning(f"Failed to fetch custom presets: {e}")
 
@@ -397,8 +404,8 @@ class RegexSearchEngine:
         Returns:
             Created preset dictionary
         """
-        import uuid
         import json
+        import uuid
 
         preset_id = str(uuid.uuid4())[:8]
 
@@ -416,7 +423,7 @@ class RegexSearchEngine:
                 "description": description,
                 "category": category,
                 "flags": json.dumps(flags or []),
-            }
+            },
         )
 
         return {

@@ -2,7 +2,7 @@
 
 import logging
 import time
-from typing import Annotated, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -11,18 +11,18 @@ from pydantic import BaseModel
 if TYPE_CHECKING:
     from .shard import SearchShard
 
+from .filters import FilterBuilder
 from .models import (
+    SearchFilters,
     SearchMode,
     SearchQuery,
     SearchResult,
     SearchResultItem,
-    SearchFilters,
+    SimilarityRequest,
     SortBy,
     SortOrder,
     SuggestionItem,
-    SimilarityRequest,
 )
-from .filters import FilterBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +99,7 @@ class FiltersResponse(BaseModel):
 
 class SearchConfigResponse(BaseModel):
     """Current search configuration and weights."""
+
     embedding_dimensions: int | None
     semantic_weight: float
     keyword_weight: float
@@ -134,9 +135,9 @@ async def get_search_config():
     }
 
     if _hybrid_engine:
-        config["embedding_dimensions"] = getattr(_hybrid_engine, 'embedding_dimensions', None)
-        config["semantic_weight"] = getattr(_hybrid_engine, 'default_semantic_weight', 0.7)
-        config["keyword_weight"] = getattr(_hybrid_engine, 'default_keyword_weight', 0.3)
+        config["embedding_dimensions"] = getattr(_hybrid_engine, "embedding_dimensions", None)
+        config["semantic_weight"] = getattr(_hybrid_engine, "default_semantic_weight", 0.7)
+        config["keyword_weight"] = getattr(_hybrid_engine, "default_keyword_weight", 0.3)
 
     return SearchConfigResponse(**config)
 
@@ -407,7 +408,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     if not frame.ai_analyst.is_available():
         raise HTTPException(status_code=503, detail="LLM service not available. Configure LLM endpoint in settings.")
 
-    from arkham_frame.services import AnalysisRequest, AnalysisDepth
+    from arkham_frame.services import AnalysisDepth, AnalysisRequest
 
     # Map depth string to enum (only QUICK and DETAILED exist)
     depth_map = {
@@ -535,7 +536,7 @@ async def rag_chat(request: Request, body: RAGChatRequest):
 
         # 2. Format context from retrieved chunks
         # Get db pool for enrichment
-        db_pool = vectors._pool if hasattr(vectors, '_pool') else None
+        db_pool = vectors._pool if hasattr(vectors, "_pool") else None
         db_conn = None
         if db_pool:
             try:
@@ -550,12 +551,12 @@ async def rag_chat(request: Request, body: RAGChatRequest):
             for i, result in enumerate(search_results, 1):
                 # SearchResult has id, score, and payload dict
                 payload = result.payload or {}
-                chunk_id = payload.get('chunk_id') or result.id
+                chunk_id = payload.get("chunk_id") or result.id
                 score = result.score or 0.0
-                doc_id = payload.get('document_id', '') or payload.get('doc_id', '')
-                title = payload.get('document_title', '') or payload.get('title', '')
-                page_num = payload.get('page_number')
-                text = payload.get('text', '') or payload.get('content', '')
+                doc_id = payload.get("document_id", "") or payload.get("doc_id", "")
+                title = payload.get("document_title", "") or payload.get("title", "")
+                page_num = payload.get("page_number")
+                text = payload.get("text", "") or payload.get("content", "")
 
                 # Enrich from database if we have minimal payload
                 if db_conn and chunk_id and not text:
@@ -566,16 +567,16 @@ async def rag_chat(request: Request, body: RAGChatRequest):
                                FROM arkham_frame.chunks c
                                LEFT JOIN arkham_frame.documents d ON c.document_id = d.id
                                WHERE c.id = $1""",
-                            chunk_id
+                            chunk_id,
                         )
                         if row:
-                            text = row.get('text', '')
+                            text = row.get("text", "")
                             if not title:
-                                title = row.get('filename', '')
+                                title = row.get("filename", "")
                             if not page_num:
-                                page_num = row.get('page_number')
+                                page_num = row.get("page_number")
                             if not doc_id:
-                                doc_id = row.get('doc_id', '')
+                                doc_id = row.get("doc_id", "")
                     except Exception as e:
                         logger.debug(f"Could not fetch chunk {chunk_id}: {e}")
 
@@ -584,19 +585,21 @@ async def rag_chat(request: Request, body: RAGChatRequest):
 
                 context_parts.append(f"""
 [Chunk {i} - Relevance: {score:.2f}]
-From: {title}{f' (page {page_num})' if page_num else ''}
+From: {title}{f" (page {page_num})" if page_num else ""}
 ---
 {text[:1500]}
 ---
 """)
-                citations.append({
-                    "chunk_id": chunk_id,
-                    "doc_id": doc_id,
-                    "title": title,
-                    "page_number": page_num,
-                    "excerpt": text[:200] + "..." if len(text) > 200 else text,
-                    "score": round(score, 4),
-                })
+                citations.append(
+                    {
+                        "chunk_id": chunk_id,
+                        "doc_id": doc_id,
+                        "title": title,
+                        "page_number": page_num,
+                        "excerpt": text[:200] + "..." if len(text) > 200 else text,
+                        "score": round(score, 4),
+                    }
+                )
         finally:
             # Release db connection
             if db_conn and db_pool:
@@ -642,7 +645,7 @@ Format citations at the end of relevant sentences, not all at the end."""
                 max_tokens=2000,
             ):
                 # Extract text from StreamChunk - don't use str() fallback
-                text = getattr(chunk, 'text', None) or getattr(chunk, 'content', None) or ''
+                text = getattr(chunk, "text", None) or getattr(chunk, "content", None) or ""
                 if text and isinstance(text, str) and text.strip():
                     yield f"data: {json.dumps({'type': 'text', 'content': text})}\n\n"
         except Exception as e:
@@ -736,6 +739,7 @@ async def submit_ai_feedback(request: Request, body: AIFeedbackRequest):
 
 class RegexSearchRequest(BaseModel):
     """Request for regex search."""
+
     pattern: str
     flags: list[str] = []
     project_id: str | None = None
@@ -748,6 +752,7 @@ class RegexSearchRequest(BaseModel):
 
 class RegexMatchResponse(BaseModel):
     """Individual regex match."""
+
     document_id: str
     document_title: str
     page_number: int | None
@@ -761,6 +766,7 @@ class RegexMatchResponse(BaseModel):
 
 class RegexSearchResponse(BaseModel):
     """Response for regex search."""
+
     pattern: str
     matches: list[RegexMatchResponse]
     total_matches: int
@@ -772,11 +778,13 @@ class RegexSearchResponse(BaseModel):
 
 class ValidatePatternRequest(BaseModel):
     """Request to validate regex pattern."""
+
     pattern: str
 
 
 class ValidatePatternResponse(BaseModel):
     """Response for pattern validation."""
+
     valid: bool
     error: str | None = None
     estimated_performance: str
@@ -784,6 +792,7 @@ class ValidatePatternResponse(BaseModel):
 
 class RegexPresetResponse(BaseModel):
     """Regex preset."""
+
     id: str
     name: str
     pattern: str
@@ -795,6 +804,7 @@ class RegexPresetResponse(BaseModel):
 
 class CreatePresetRequest(BaseModel):
     """Request to create custom preset."""
+
     name: str
     pattern: str
     description: str = ""
@@ -820,10 +830,7 @@ async def search_regex(request: Request, body: RegexSearchRequest):
     if not valid:
         raise HTTPException(status_code=400, detail=f"Invalid regex pattern: {error}")
     if perf == "dangerous":
-        raise HTTPException(
-            status_code=400,
-            detail="Pattern may cause performance issues (catastrophic backtracking)"
-        )
+        raise HTTPException(status_code=400, detail="Pattern may cause performance issues (catastrophic backtracking)")
 
     from .models import RegexSearchQuery
 
@@ -948,7 +955,7 @@ async def create_regex_preset(request: Request, body: CreatePresetRequest):
 
     # Get tenant_id if available (following codebase pattern)
     shard = get_shard(request)
-    tenant_id = shard.get_tenant_id_or_none() if hasattr(shard, 'get_tenant_id_or_none') else None
+    tenant_id = shard.get_tenant_id_or_none() if hasattr(shard, "get_tenant_id_or_none") else None
 
     try:
         preset = await _regex_engine.save_custom_preset(
@@ -986,7 +993,7 @@ async def delete_regex_preset(request: Request, preset_id: str):
 
     # Get tenant_id if available
     shard = get_shard(request)
-    tenant_id = shard.get_tenant_id_or_none() if hasattr(shard, 'get_tenant_id_or_none') else None
+    tenant_id = shard.get_tenant_id_or_none() if hasattr(shard, "get_tenant_id_or_none") else None
 
     try:
         deleted = await _regex_engine.delete_custom_preset(
@@ -1008,6 +1015,7 @@ async def delete_regex_preset(request: Request, preset_id: str):
 
 class PatternExtractionResponse(BaseModel):
     """Individual pattern extraction."""
+
     id: str
     document_id: str
     preset_id: str
@@ -1025,6 +1033,7 @@ class PatternExtractionResponse(BaseModel):
 
 class ExtractionsListResponse(BaseModel):
     """Response for pattern extractions list."""
+
     extractions: list[PatternExtractionResponse]
     total: int
     document_id: str | None = None
@@ -1034,6 +1043,7 @@ class ExtractionsListResponse(BaseModel):
 
 class ExtractionStatsResponse(BaseModel):
     """Response for extraction statistics."""
+
     total_extractions: int
     documents_with_patterns: int
     by_category: dict[str, int]
@@ -1153,9 +1163,7 @@ async def get_extraction_stats(
 
     try:
         # Total extractions
-        total_row = await shard._db.fetch_one(
-            "SELECT COUNT(*) as total FROM arkham_search.pattern_extractions"
-        )
+        total_row = await shard._db.fetch_one("SELECT COUNT(*) as total FROM arkham_search.pattern_extractions")
         total = total_row["total"] if total_row else 0
 
         # Documents with patterns
@@ -1210,8 +1218,7 @@ async def trigger_pattern_extraction(
 
     # Check document exists
     doc_row = await shard._db.fetch_one(
-        "SELECT id FROM arkham_frame.documents WHERE id = :doc_id",
-        {"doc_id": document_id}
+        "SELECT id FROM arkham_frame.documents WHERE id = :doc_id", {"doc_id": document_id}
     )
     if not doc_row:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -1224,7 +1231,7 @@ async def trigger_pattern_extraction(
         WHERE document_id = :doc_id
         ORDER BY chunk_index
         """,
-        {"doc_id": document_id}
+        {"doc_id": document_id},
     )
 
     if not chunks:
@@ -1243,19 +1250,20 @@ async def trigger_pattern_extraction(
             """
             custom_rows = await shard._db.fetch_all(custom_query, {"ids": preset_ids})
             for row in custom_rows:
-                presets.append({
-                    "id": row["id"],
-                    "name": row["name"],
-                    "pattern": row["pattern"],
-                    "category": row["category"],
-                })
+                presets.append(
+                    {
+                        "id": row["id"],
+                        "name": row["name"],
+                        "pattern": row["pattern"],
+                        "category": row["category"],
+                    }
+                )
     else:
         presets = list(REGEX_PRESETS)
 
     # Clear existing extractions for this document (re-extract)
     await shard._db.execute(
-        "DELETE FROM arkham_search.pattern_extractions WHERE document_id = :doc_id",
-        {"doc_id": document_id}
+        "DELETE FROM arkham_search.pattern_extractions WHERE document_id = :doc_id", {"doc_id": document_id}
     )
 
     # Extract patterns
@@ -1289,22 +1297,24 @@ async def trigger_pattern_extraction(
                 if ctx_end < len(text):
                     context = context + "..."
 
-                line_number = text[:match_start].count('\n') + 1
+                line_number = text[:match_start].count("\n") + 1
 
-                extractions.append({
-                    "id": str(uuid.uuid4())[:12],
-                    "document_id": document_id,
-                    "preset_id": preset_id,
-                    "preset_name": preset_name,
-                    "category": category,
-                    "match_text": match_text,
-                    "context": context,
-                    "page_number": page_number,
-                    "chunk_id": chunk_id,
-                    "start_offset": match_start,
-                    "end_offset": match_end,
-                    "line_number": line_number,
-                })
+                extractions.append(
+                    {
+                        "id": str(uuid.uuid4())[:12],
+                        "document_id": document_id,
+                        "preset_id": preset_id,
+                        "preset_name": preset_name,
+                        "category": category,
+                        "match_text": match_text,
+                        "context": context,
+                        "page_number": page_number,
+                        "chunk_id": chunk_id,
+                        "start_offset": match_start,
+                        "end_offset": match_end,
+                        "line_number": line_number,
+                    }
+                )
 
     # Store extractions
     for ext in extractions:
@@ -1317,7 +1327,7 @@ async def trigger_pattern_extraction(
                     :context, :page_number, :chunk_id, :start_offset, :end_offset, :line_number)
             ON CONFLICT (id) DO NOTHING
             """,
-            ext
+            ext,
         )
 
     # Emit event

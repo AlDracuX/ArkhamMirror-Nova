@@ -2,20 +2,20 @@
 Tests for Templates Shard Models
 """
 
-import pytest
 from datetime import datetime
-from pydantic import ValidationError
 
+import pytest
 from arkham_shard_templates.models import (
+    OutputFormat,
+    PlaceholderDataType,
     Template,
     TemplateCreate,
-    TemplateType,
     TemplatePlaceholder,
-    PlaceholderDataType,
     TemplateRenderRequest,
-    OutputFormat,
     TemplateStatistics,
+    TemplateType,
 )
+from pydantic import ValidationError
 
 
 class TestTemplatePlaceholder:
@@ -68,9 +68,7 @@ class TestTemplate:
             template_type=TemplateType.LETTER,
             description="A test template",
             content="Dear {{ name }},\n\nHello!",
-            placeholders=[
-                TemplatePlaceholder(name="name", required=True)
-            ],
+            placeholders=[TemplatePlaceholder(name="name", required=True)],
         )
         assert template.id == "tpl_abc123"
         assert template.name == "Test Template"

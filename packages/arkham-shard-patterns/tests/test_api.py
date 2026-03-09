@@ -2,26 +2,25 @@
 Tests for Patterns Shard API Routes
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from fastapi.testclient import TestClient
-from fastapi import FastAPI
-
+import pytest
 from arkham_shard_patterns.api import router
 from arkham_shard_patterns.models import (
+    CorrelationResult,
+    DetectionMethod,
     Pattern,
+    PatternAnalysisResult,
+    PatternCriteria,
     PatternMatch,
     PatternStatistics,
-    PatternAnalysisResult,
-    CorrelationResult,
-    PatternType,
     PatternStatus,
-    DetectionMethod,
+    PatternType,
     SourceType,
-    PatternCriteria,
 )
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -97,12 +96,14 @@ class TestHealthEndpoints:
     def test_get_statistics(self, client):
         """Test statistics endpoint."""
         test_client, mock_shard = client
-        mock_shard.get_statistics = AsyncMock(return_value=PatternStatistics(
-            total_patterns=50,
-            by_type={"recurring_theme": 30, "behavioral": 20},
-            by_status={"confirmed": 25, "detected": 25},
-            total_matches=150,
-        ))
+        mock_shard.get_statistics = AsyncMock(
+            return_value=PatternStatistics(
+                total_patterns=50,
+                by_type={"recurring_theme": 30, "behavioral": 20},
+                by_status={"confirmed": 25, "detected": 25},
+                total_matches=150,
+            )
+        )
 
         with patch("arkham_shard_patterns.api.get_shard", return_value=mock_shard):
             response = test_client.get("/api/patterns/stats")

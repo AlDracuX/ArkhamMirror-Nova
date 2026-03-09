@@ -4,147 +4,155 @@ ArkhamMirror Shattered Frame - Services
 Core services that Frame provides to shards.
 """
 
-from .config import ConfigService
-from .database import (
-    DatabaseService,
-    DatabaseError,
-    SchemaNotFoundError,
-    SchemaExistsError,
-    QueryExecutionError,
+from .ai_analyst import (
+    AIJuniorAnalystService,
+    AnalysisDepth,
+    AnalysisRequest,
+    AnalysisResponse,
 )
-from .documents import (
-    DocumentService,
-    DocumentNotFoundError,
-    DocumentError,
-    DocumentStatus,
-    Document,
-    Chunk,
-    Page,
-    SearchResult,
-    BatchResult,
-)
-from .entities import (
-    EntityService,
-    EntityNotFoundError,
-    CanonicalNotFoundError,
-    RelationshipNotFoundError,
-    EntityError,
-    Entity,
-    CanonicalEntity,
-    EntityRelationship,
-    CoOccurrence,
-    EntityType,
-    RelationshipType,
-)
-from .projects import (
-    ProjectService,
-    ProjectNotFoundError,
-    ProjectExistsError,
-    ProjectError,
-    Project,
-    ProjectStats,
-)
-from .vectors import (
-    VectorService,
-    VectorServiceError,
-    VectorStoreUnavailableError,
-    CollectionNotFoundError,
-    CollectionExistsError,
-    EmbeddingError,
-    VectorDimensionError,
-    VectorPoint,
-    CollectionInfo,
-    SearchResult as VectorSearchResult,
-    DistanceMetric,
-    EMBEDDING_DIMENSIONS,
-)
-from .llm import (
-    LLMService,
-    LLMError,
-    LLMUnavailableError,
-    LLMRequestError,
-    JSONExtractionError,
-    PromptNotFoundError,
-    LLMResponse,
-    StreamChunk,
-    PromptTemplate,
+from .ai_analyst import (
+    Message as AnalystMessage,
 )
 from .chunks import (
+    ChunkConfig,
     ChunkService,
     ChunkServiceError,
-    TokenizerError,
-    TextChunk,
-    ChunkConfig,
     ChunkStrategy,
+    TextChunk,
+    TokenizerError,
 )
-from .events import EventBus, EventValidationError, EventDeliveryError
-from .workers import WorkerService, WorkerError, WorkerNotFoundError, QueueUnavailableError
-from .resources import (
-    ResourceService,
-    ResourceError,
-    GPUMemoryError,
-    CPUAllocationError,
-    ResourceTier,
-    SystemResources,
-    PoolConfig,
+from .config import ConfigService
+from .database import (
+    DatabaseError,
+    DatabaseService,
+    QueryExecutionError,
+    SchemaExistsError,
+    SchemaNotFoundError,
 )
-from .storage import (
-    StorageService,
-    StorageError,
-    FileNotFoundError as StorageFileNotFoundError,
-    StorageFullError,
-    InvalidPathError,
-    FileInfo,
-    StorageStats,
+from .documents import (
+    BatchResult,
+    Chunk,
+    Document,
+    DocumentError,
+    DocumentNotFoundError,
+    DocumentService,
+    DocumentStatus,
+    Page,
+    SearchResult,
+)
+from .entities import (
+    CanonicalEntity,
+    CanonicalNotFoundError,
+    CoOccurrence,
+    Entity,
+    EntityError,
+    EntityNotFoundError,
+    EntityRelationship,
+    EntityService,
+    EntityType,
+    RelationshipNotFoundError,
+    RelationshipType,
+)
+from .events import EventBus, EventDeliveryError, EventValidationError
+from .export import (
+    ExportError,
+    ExportFormat,
+    ExportFormatError,
+    ExportOptions,
+    ExportRenderError,
+    ExportResult,
+    ExportService,
 )
 from .export import (
-    ExportService,
-    ExportError,
-    ExportFormatError,
-    ExportRenderError,
     TemplateNotFoundError as ExportTemplateNotFoundError,
-    ExportFormat,
-    ExportOptions,
-    ExportResult,
+)
+from .llm import (
+    JSONExtractionError,
+    LLMError,
+    LLMRequestError,
+    LLMResponse,
+    LLMService,
+    LLMUnavailableError,
+    PromptNotFoundError,
+    PromptTemplate,
+    StreamChunk,
+)
+from .notifications import (
+    ChannelNotFoundError,
+    ChannelType,
+    ConfigurationError,
+    DeliveryError,
+    DeliveryStatus,
+    Notification,
+    NotificationError,
+    NotificationService,
+    NotificationType,
+)
+from .projects import (
+    Project,
+    ProjectError,
+    ProjectExistsError,
+    ProjectNotFoundError,
+    ProjectService,
+    ProjectStats,
+)
+from .resources import (
+    CPUAllocationError,
+    GPUMemoryError,
+    PoolConfig,
+    ResourceError,
+    ResourceService,
+    ResourceTier,
+    SystemResources,
+)
+from .scheduler import (
+    InvalidScheduleError,
+    JobExecutionError,
+    JobNotFoundError,
+    JobResult,
+    JobStatus,
+    ScheduledJob,
+    SchedulerError,
+    SchedulerService,
+    TriggerType,
+)
+from .storage import (
+    FileInfo,
+    InvalidPathError,
+    StorageError,
+    StorageFullError,
+    StorageService,
+    StorageStats,
+)
+from .storage import (
+    FileNotFoundError as StorageFileNotFoundError,
 )
 from .templates import (
-    TemplateService,
+    RenderResult,
+    Template,
     TemplateError,
     TemplateNotFoundError,
     TemplateRenderError,
+    TemplateService,
     TemplateSyntaxError,
-    Template,
-    RenderResult,
 )
-from .notifications import (
-    NotificationService,
-    NotificationError,
-    DeliveryError,
-    ConfigurationError,
-    ChannelNotFoundError,
-    NotificationType,
-    ChannelType,
-    DeliveryStatus,
-    Notification,
+from .vectors import (
+    EMBEDDING_DIMENSIONS,
+    CollectionExistsError,
+    CollectionInfo,
+    CollectionNotFoundError,
+    DistanceMetric,
+    EmbeddingError,
+    VectorDimensionError,
+    VectorPoint,
+    VectorService,
+    VectorServiceError,
+    VectorStoreUnavailableError,
 )
-from .scheduler import (
-    SchedulerService,
-    SchedulerError,
-    JobNotFoundError,
-    JobExecutionError,
-    InvalidScheduleError,
-    JobStatus,
-    TriggerType,
-    ScheduledJob,
-    JobResult,
+from .vectors import (
+    SearchResult as VectorSearchResult,
 )
-from .ai_analyst import (
-    AIJuniorAnalystService,
-    AnalysisRequest,
-    AnalysisResponse,
-    AnalysisDepth,
-    Message as AnalystMessage,
-)
+from .workers import QueueUnavailableError, WorkerError, WorkerNotFoundError, WorkerService
 
 __all__ = [
     # Services

@@ -2,8 +2,9 @@
 Entity API endpoints.
 """
 
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException, Query
-from typing import Dict, Any, List, Optional
 
 router = APIRouter()
 

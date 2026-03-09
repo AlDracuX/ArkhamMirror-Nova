@@ -4,7 +4,7 @@ Letters Shard - FastAPI Routes
 REST API endpoints for letter generation and management.
 """
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -26,6 +26,7 @@ router = APIRouter(prefix="/api/letters", tags=["letters"])
 
 class LetterCreate(BaseModel):
     """Request model for creating a letter."""
+
     title: str = Field(..., description="Letter title")
     letter_type: LetterType = Field(..., description="Type of letter")
     content: str = Field(default="", description="Letter content")
@@ -38,6 +39,7 @@ class LetterCreate(BaseModel):
 
 class LetterUpdate(BaseModel):
     """Request model for updating a letter."""
+
     title: Optional[str] = None
     content: Optional[str] = None
     status: Optional[LetterStatus] = None
@@ -49,6 +51,7 @@ class LetterUpdate(BaseModel):
 
 class LetterResponse(BaseModel):
     """Response model for a letter."""
+
     id: str
     title: str
     letter_type: str
@@ -76,6 +79,7 @@ class LetterResponse(BaseModel):
 
 class LetterListResponse(BaseModel):
     """Response model for listing letters."""
+
     items: List[LetterResponse]
     total: int
     limit: int
@@ -84,6 +88,7 @@ class LetterListResponse(BaseModel):
 
 class TemplateCreate(BaseModel):
     """Request model for creating a template."""
+
     name: str = Field(..., description="Template name")
     letter_type: LetterType
     description: str = Field(..., description="Template description")
@@ -96,6 +101,7 @@ class TemplateCreate(BaseModel):
 
 class TemplateUpdate(BaseModel):
     """Request model for updating a template."""
+
     name: Optional[str] = None
     description: Optional[str] = None
     content_template: Optional[str] = None
@@ -104,6 +110,7 @@ class TemplateUpdate(BaseModel):
 
 class TemplateResponse(BaseModel):
     """Response model for a template."""
+
     id: str
     name: str
     letter_type: str
@@ -122,6 +129,7 @@ class TemplateResponse(BaseModel):
 
 class PlaceholderValueModel(BaseModel):
     """Placeholder value for template rendering."""
+
     key: str
     value: str
     required: bool = False
@@ -129,6 +137,7 @@ class PlaceholderValueModel(BaseModel):
 
 class ApplyTemplateRequest(BaseModel):
     """Request model for applying a template."""
+
     template_id: str = Field(..., description="Template to apply")
     title: str = Field(..., description="Letter title")
     placeholder_values: List[PlaceholderValueModel] = Field(default_factory=list)
@@ -138,11 +147,13 @@ class ApplyTemplateRequest(BaseModel):
 
 class ExportRequest(BaseModel):
     """Request model for exporting a letter."""
+
     export_format: ExportFormat = Field(..., description="Export format")
 
 
 class ExportResponse(BaseModel):
     """Response model for letter export."""
+
     letter_id: str
     success: bool
     export_format: str
@@ -155,6 +166,7 @@ class ExportResponse(BaseModel):
 
 class StatisticsResponse(BaseModel):
     """Response model for statistics."""
+
     total_letters: int
     by_status: Dict[str, int]
     by_type: Dict[str, int]
@@ -169,11 +181,13 @@ class StatisticsResponse(BaseModel):
 
 class CountResponse(BaseModel):
     """Response model for count endpoint."""
+
     count: int
 
 
 class HealthResponse(BaseModel):
     """Response model for health check."""
+
     status: str
     version: str
     services: Dict[str, bool]
@@ -440,6 +454,7 @@ INTERNAL_API_BASE = "http://127.0.0.1:8100"
 
 class SharedTemplateInfo(BaseModel):
     """Info about a template from the Templates shard."""
+
     id: str
     name: str
     description: str
@@ -452,6 +467,7 @@ class SharedTemplateInfo(BaseModel):
 
 class SharedTemplatesResponse(BaseModel):
     """Response for shared templates."""
+
     templates: List[SharedTemplateInfo]
     count: int
     source: str = "templates-shard"
@@ -459,6 +475,7 @@ class SharedTemplatesResponse(BaseModel):
 
 class ApplySharedTemplateRequest(BaseModel):
     """Request to apply a shared template."""
+
     template_id: str = Field(..., description="Template ID from Templates shard")
     title: str = Field(..., description="Letter title")
     placeholder_values: Dict[str, Any] = Field(default_factory=dict, description="Values for placeholders")
@@ -474,7 +491,7 @@ async def get_shared_templates(
 ):
     """
     Get letter templates from the Templates shard.
-    
+
     This endpoint fetches templates of type LETTER from the centralized
     Templates shard, enabling reuse of templates across the system.
     """
@@ -482,29 +499,31 @@ async def get_shared_templates(
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             response = await client.get(
                 f"{INTERNAL_API_BASE}/api/templates",
-                params={"template_type": "LETTER", "limit": limit, "is_active": True}
+                params={"template_type": "LETTER", "limit": limit, "is_active": True},
             )
-            
+
             if response.status_code != 200:
                 # Return empty list if templates shard unavailable
                 return SharedTemplatesResponse(templates=[], count=0)
-            
+
             data = response.json()
             templates_data = data.get("items", [])
-            
+
             templates = []
             for t in templates_data:
-                templates.append(SharedTemplateInfo(
-                    id=t.get("id", ""),
-                    name=t.get("name", ""),
-                    description=t.get("description", ""),
-                    template_type=t.get("template_type", "LETTER"),
-                    content=t.get("content", ""),
-                    placeholders=t.get("placeholders", []),
-                    created_at=t.get("created_at", ""),
-                    updated_at=t.get("updated_at", ""),
-                ))
-            
+                templates.append(
+                    SharedTemplateInfo(
+                        id=t.get("id", ""),
+                        name=t.get("name", ""),
+                        description=t.get("description", ""),
+                        template_type=t.get("template_type", "LETTER"),
+                        content=t.get("content", ""),
+                        placeholders=t.get("placeholders", []),
+                        created_at=t.get("created_at", ""),
+                        updated_at=t.get("updated_at", ""),
+                    )
+                )
+
             return SharedTemplatesResponse(
                 templates=templates,
                 count=len(templates),
@@ -521,42 +540,36 @@ async def create_letter_from_shared_template(
 ):
     """
     Create a letter using a template from the Templates shard.
-    
+
     Fetches the template from the Templates shard, renders it with
     the provided placeholder values, and creates a new letter.
     """
     from .models import LetterType
-    
+
     shard = get_shard(request)
-    
+
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             # Fetch the template
-            response = await client.get(
-                f"{INTERNAL_API_BASE}/api/templates/{body.template_id}"
-            )
-            
+            response = await client.get(f"{INTERNAL_API_BASE}/api/templates/{body.template_id}")
+
             if response.status_code != 200:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Template {body.template_id} not found in Templates shard"
-                )
-            
+                raise HTTPException(status_code=404, detail=f"Template {body.template_id} not found in Templates shard")
+
             template_data = response.json()
-            
+
             # Render the template with provided values
             render_response = await client.post(
-                f"{INTERNAL_API_BASE}/api/templates/{body.template_id}/render",
-                json={"data": body.placeholder_values}
+                f"{INTERNAL_API_BASE}/api/templates/{body.template_id}/render", json={"data": body.placeholder_values}
             )
-            
+
             if render_response.status_code != 200:
                 # Fall back to raw content if render fails
                 rendered_content = template_data.get("content", "")
             else:
                 render_result = render_response.json()
                 rendered_content = render_result.get("rendered_content", template_data.get("content", ""))
-            
+
             # Create the letter
             letter = await shard.create_letter(
                 title=body.title,
@@ -570,16 +583,13 @@ async def create_letter_from_shared_template(
                     "shared_template_id": body.template_id,
                     "shared_template_name": template_data.get("name", ""),
                     "placeholder_values": body.placeholder_values,
-                }
+                },
             )
-            
+
             return _letter_to_response(letter)
-            
+
     except httpx.RequestError as e:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Templates shard unavailable: {str(e)}"
-        )
+        raise HTTPException(status_code=503, detail=f"Templates shard unavailable: {str(e)}")
 
 
 @router.get("/templates/shared/{template_id}")
@@ -590,15 +600,13 @@ async def get_shared_template_detail(
     """Get details of a specific shared template."""
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-            response = await client.get(
-                f"{INTERNAL_API_BASE}/api/templates/{template_id}"
-            )
-            
+            response = await client.get(f"{INTERNAL_API_BASE}/api/templates/{template_id}")
+
             if response.status_code != 200:
                 raise HTTPException(status_code=404, detail="Template not found")
-            
+
             return response.json()
-            
+
     except httpx.RequestError as e:
         raise HTTPException(status_code=503, detail=f"Templates shard unavailable: {str(e)}")
 
@@ -675,8 +683,7 @@ async def apply_template(body: ApplyTemplateRequest, request: Request):
 
     # Convert request placeholders to domain models
     placeholders = [
-        PlaceholderValue(key=pv.key, value=pv.value, required=pv.required)
-        for pv in body.placeholder_values
+        PlaceholderValue(key=pv.key, value=pv.value, required=pv.required) for pv in body.placeholder_values
     ]
 
     try:

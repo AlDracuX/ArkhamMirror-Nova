@@ -1,8 +1,9 @@
 """Core embedding logic for the Embed Shard."""
 
 import logging
-from typing import Any
 from functools import lru_cache
+from typing import Any
+
 import numpy as np
 
 from .models import EmbedConfig, ModelInfo
@@ -52,6 +53,7 @@ class EmbeddingManager:
 
         try:
             import torch
+
             if torch.cuda.is_available():
                 logger.info("CUDA GPU detected")
                 return "cuda"
@@ -86,10 +88,7 @@ class EmbeddingManager:
         try:
             from sentence_transformers import SentenceTransformer
         except ImportError:
-            raise ImportError(
-                "sentence-transformers not installed. "
-                "Install with: pip install sentence-transformers"
-            )
+            raise ImportError("sentence-transformers not installed. Install with: pip install sentence-transformers")
 
         # Check for offline mode
         offline_mode = os.environ.get("ARKHAM_OFFLINE_MODE", "").lower() in ("true", "1", "yes")
@@ -113,10 +112,7 @@ class EmbeddingManager:
             # Get dimensions from model
             self._dimensions = self._model.get_sentence_embedding_dimension()
 
-            logger.info(
-                f"Loaded model {self._model_name} "
-                f"({self._dimensions} dimensions) on {self._device}"
-            )
+            logger.info(f"Loaded model {self._model_name} ({self._dimensions} dimensions) on {self._device}")
         except Exception as e:
             if offline_mode:
                 logger.error(
@@ -142,7 +138,7 @@ class EmbeddingManager:
                 max_length=self.config.max_length,
                 size_mb=0.0,
                 loaded=False,
-                description="Model not loaded yet"
+                description="Model not loaded yet",
             )
 
         return ModelInfo(
@@ -152,7 +148,7 @@ class EmbeddingManager:
             size_mb=0.0,  # TODO: Calculate model size
             loaded=True,
             device=self._device,
-            description=f"Loaded on {self._device}"
+            description=f"Loaded on {self._device}",
         )
 
     def _embed_single(self, text: str) -> list[float]:
@@ -224,12 +220,7 @@ class EmbeddingManager:
         # Convert numpy arrays to lists for JSON serialization
         return [emb.tolist() for emb in embeddings]
 
-    def calculate_similarity(
-        self,
-        embedding1: list[float],
-        embedding2: list[float],
-        method: str = "cosine"
-    ) -> float:
+    def calculate_similarity(self, embedding1: list[float], embedding2: list[float], method: str = "cosine") -> float:
         """
         Calculate similarity between two embeddings.
 
@@ -266,12 +257,7 @@ class EmbeddingManager:
         else:
             raise ValueError(f"Unsupported similarity method: {method}")
 
-    def chunk_text(
-        self,
-        text: str,
-        chunk_size: int = 512,
-        chunk_overlap: int = 50
-    ) -> list[str]:
+    def chunk_text(self, text: str, chunk_size: int = 512, chunk_overlap: int = 50) -> list[str]:
         """
         Split text into overlapping chunks for embedding.
 
@@ -296,13 +282,9 @@ class EmbeddingManager:
             # Try to break at sentence boundary
             if end < len(text):
                 # Look for last period, question mark, or exclamation point
-                last_sentence = max(
-                    chunk.rfind(". "),
-                    chunk.rfind("? "),
-                    chunk.rfind("! ")
-                )
+                last_sentence = max(chunk.rfind(". "), chunk.rfind("? "), chunk.rfind("! "))
                 if last_sentence > chunk_size // 2:
-                    chunk = chunk[:last_sentence + 1]
+                    chunk = chunk[: last_sentence + 1]
                     end = start + last_sentence + 1
 
             chunks.append(chunk.strip())

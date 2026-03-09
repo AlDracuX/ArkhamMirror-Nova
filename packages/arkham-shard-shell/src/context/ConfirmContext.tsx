@@ -4,7 +4,15 @@
  * Provides confirm() function that returns Promise<boolean>
  */
 
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+  useEffect,
+  useRef,
+} from 'react';
 import type { ConfirmOptions } from '../types';
 
 interface ConfirmContextValue {
@@ -20,7 +28,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   } | null>(null);
 
   const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setState({ options, resolve });
     });
   }, []);
@@ -39,11 +47,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     <ConfirmContext.Provider value={{ confirm }}>
       {children}
       {state && (
-        <ConfirmDialog
-          {...state.options}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
-        />
+        <ConfirmDialog {...state.options} onConfirm={handleConfirm} onCancel={handleCancel} />
       )}
     </ConfirmContext.Provider>
   );
@@ -70,7 +74,7 @@ function ConfirmDialog({
   cancelLabel = 'Cancel',
   variant = 'default',
   onConfirm,
-  onCancel
+  onCancel,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
 

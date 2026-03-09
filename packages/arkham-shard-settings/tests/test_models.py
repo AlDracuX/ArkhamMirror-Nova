@@ -1,19 +1,20 @@
 """Tests for settings shard data models."""
 
-import pytest
 from datetime import datetime
+
+import pytest
 from arkham_shard_settings.models import (
-    SettingCategory,
-    SettingType,
-    ValidationRule,
     Setting,
-    SettingValue,
-    SettingsProfile,
-    SettingsBackup,
-    ShardSettings,
+    SettingCategory,
     SettingChange,
-    SettingsValidationResult,
+    SettingsBackup,
     SettingsExport,
+    SettingsProfile,
+    SettingsValidationResult,
+    SettingType,
+    SettingValue,
+    ShardSettings,
+    ValidationRule,
 )
 
 

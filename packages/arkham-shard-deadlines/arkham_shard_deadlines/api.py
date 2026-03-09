@@ -2,7 +2,7 @@
 
 import logging
 from datetime import date
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
@@ -33,6 +33,7 @@ def get_shard(request: Request) -> "DeadlinesShard":
 
 
 # === Request Models ===
+
 
 class DeadlineCreate(BaseModel):
     title: str
@@ -90,6 +91,7 @@ class RuleCreate(BaseModel):
 
 # === Endpoints ===
 
+
 @router.get("/")
 async def list_deadlines(
     request: Request,
@@ -105,7 +107,7 @@ async def list_deadlines(
     offset: int = Query(default=0, ge=0),
 ):
     shard = get_shard(request)
-    from .models import DeadlineFilter, DeadlineStatus, DeadlineType, CaseType, UrgencyLevel
+    from .models import CaseType, DeadlineFilter, DeadlineStatus, DeadlineType, UrgencyLevel
 
     filters = DeadlineFilter(
         status=DeadlineStatus(status) if status else None,
@@ -147,9 +149,12 @@ async def get_stats(request: Request):
     shard = get_shard(request)
     stats = await shard.get_stats()
     return {
-        "total": stats.total, "pending": stats.pending,
-        "breached": stats.breached, "completed": stats.completed,
-        "by_urgency": stats.by_urgency, "by_case_type": stats.by_case_type,
+        "total": stats.total,
+        "pending": stats.pending,
+        "breached": stats.breached,
+        "completed": stats.completed,
+        "by_urgency": stats.by_urgency,
+        "by_case_type": stats.by_case_type,
         "next_deadline": stats.next_deadline,
     }
 
@@ -159,8 +164,9 @@ async def export_ics(request: Request, ids: Optional[str] = None):
     shard = get_shard(request)
     deadline_ids = ids.split(",") if ids else None
     ics = await shard.export_ics(deadline_ids)
-    return PlainTextResponse(ics, media_type="text/calendar",
-                             headers={"Content-Disposition": "attachment; filename=deadlines.ics"})
+    return PlainTextResponse(
+        ics, media_type="text/calendar", headers={"Content-Disposition": "attachment; filename=deadlines.ics"}
+    )
 
 
 @router.get("/rules")
@@ -238,31 +244,42 @@ async def extend_deadline(request: Request, deadline_id: str, body: DeadlineExte
 
 # === Serializers ===
 
+
 def _dl_to_dict(d) -> dict:
     days_remaining = (d.deadline_date - date.today()).days if d.deadline_date else None
     return {
-        "id": d.id, "title": d.title,
-        "deadline_date": str(d.deadline_date), "deadline_time": str(d.deadline_time) if d.deadline_time else None,
-        "deadline_type": d.deadline_type, "status": d.status, "urgency": d.urgency,
+        "id": d.id,
+        "title": d.title,
+        "deadline_date": str(d.deadline_date),
+        "deadline_time": str(d.deadline_time) if d.deadline_time else None,
+        "deadline_type": d.deadline_type,
+        "status": d.status,
+        "urgency": d.urgency,
         "days_remaining": days_remaining,
-        "case_type": d.case_type, "case_reference": d.case_reference,
+        "case_type": d.case_type,
+        "case_reference": d.case_reference,
         "source_document": d.source_document,
         "source_order_date": str(d.source_order_date) if d.source_order_date else None,
         "rule_reference": d.rule_reference,
         "auto_calculated": d.auto_calculated,
-        "description": d.description, "notes": d.notes,
+        "description": d.description,
+        "notes": d.notes,
         "completed_at": str(d.completed_at) if d.completed_at else None,
         "completed_by": d.completed_by,
         "linked_document_ids": d.linked_document_ids,
-        "created_at": str(d.created_at), "updated_at": str(d.updated_at),
+        "created_at": str(d.created_at),
+        "updated_at": str(d.updated_at),
         "metadata": d.metadata,
     }
 
 
 def _rule_to_dict(r) -> dict:
     return {
-        "id": r.id, "name": r.name, "description": r.description,
-        "case_type": r.case_type, "deadline_type": r.deadline_type,
+        "id": r.id,
+        "name": r.name,
+        "description": r.description,
+        "case_type": r.case_type,
+        "deadline_type": r.deadline_type,
         "days_from_trigger": r.days_from_trigger,
         "trigger_event": r.trigger_event,
         "working_days_only": r.working_days_only,

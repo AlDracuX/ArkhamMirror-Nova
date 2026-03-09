@@ -7,9 +7,9 @@ from typing import Any
 
 from arkham_frame.shard_interface import ArkhamShard
 
+from .algorithms import GraphAlgorithms
 from .api import init_api, router
 from .builder import GraphBuilder
-from .algorithms import GraphAlgorithms
 from .exporter import GraphExporter
 from .storage import GraphStorage
 
@@ -300,9 +300,7 @@ class GraphShard(ArkhamShard):
         if not source_entity_id or not target_entity_id or not project_id:
             return
 
-        logger.info(
-            f"Entities merged: {source_entity_id} -> {target_entity_id} in project {project_id}"
-        )
+        logger.info(f"Entities merged: {source_entity_id} -> {target_entity_id} in project {project_id}")
 
         # Invalidate cached graph (rebuild will merge automatically)
         if self.storage and project_id in self.storage._cache:

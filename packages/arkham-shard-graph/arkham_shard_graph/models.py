@@ -4,11 +4,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any
+
 from pydantic import BaseModel
 
 
 class RelationshipType(Enum):
     """Types of entity relationships."""
+
     # Basic relationships
     WORKS_FOR = "works_for"
     AFFILIATED_WITH = "affiliated_with"
@@ -67,6 +69,7 @@ class RelationshipType(Enum):
 
 class CentralityMetric(Enum):
     """Centrality calculation metrics."""
+
     DEGREE = "degree"
     BETWEENNESS = "betweenness"
     PAGERANK = "pagerank"
@@ -78,6 +81,7 @@ class CentralityMetric(Enum):
 
 class ExportFormat(Enum):
     """Graph export formats."""
+
     JSON = "json"
     GRAPHML = "graphml"
     GEXF = "gexf"
@@ -85,6 +89,7 @@ class ExportFormat(Enum):
 
 class CommunityAlgorithm(Enum):
     """Community detection algorithms."""
+
     LOUVAIN = "louvain"
     LABEL_PROPAGATION = "label_propagation"
     CONNECTED_COMPONENTS = "connected_components"
@@ -93,6 +98,7 @@ class CommunityAlgorithm(Enum):
 @dataclass
 class GraphNode:
     """A node in the entity graph."""
+
     id: str
     entity_id: str
     label: str
@@ -125,6 +131,7 @@ class GraphNode:
 @dataclass
 class GraphEdge:
     """An edge in the entity graph."""
+
     source: str
     target: str
     relationship_type: str
@@ -157,6 +164,7 @@ class GraphEdge:
 @dataclass
 class Graph:
     """Entity relationship graph."""
+
     project_id: str
     nodes: list[GraphNode] = field(default_factory=list)
     edges: list[GraphEdge] = field(default_factory=list)
@@ -178,13 +186,14 @@ class Graph:
                 "updated_at": self.updated_at.isoformat() if self.updated_at else None,
                 "entity_count": len(self.nodes),
                 "relationship_count": len(self.edges),
-            }
+            },
         }
 
 
 @dataclass
 class GraphPath:
     """A path through the graph."""
+
     source_entity_id: str
     target_entity_id: str
     path: list[str]
@@ -207,6 +216,7 @@ class GraphPath:
 @dataclass
 class CentralityResult:
     """Result of centrality calculation."""
+
     entity_id: str
     label: str
     score: float
@@ -239,6 +249,7 @@ class CentralityResult:
 @dataclass
 class Community:
     """A detected community in the graph."""
+
     id: str
     entity_ids: list[str]
     size: int
@@ -270,6 +281,7 @@ class Community:
 @dataclass
 class GraphStatistics:
     """Graph statistics and metrics."""
+
     project_id: str
     node_count: int
     edge_count: int
@@ -304,15 +316,16 @@ class GraphStatistics:
 
 class BuildGraphRequest(BaseModel):
     """Request to build entity graph."""
+
     project_id: str
     document_ids: list[str] | None = None
     entity_types: list[str] | None = None
     min_co_occurrence: int = 1
     # Primary data sources (base graph)
     include_document_entities: bool = True  # Include entities from documents
-    include_cooccurrences: bool = True      # Include co-occurrence edges
+    include_cooccurrences: bool = True  # Include co-occurrence edges
     # Cross-shard node sources
-    include_temporal: bool = False          # Timeline events
+    include_temporal: bool = False  # Timeline events
     include_claims: bool = False
     include_ach_evidence: bool = False
     include_ach_hypotheses: bool = False
@@ -326,6 +339,7 @@ class BuildGraphRequest(BaseModel):
 
 class PathRequest(BaseModel):
     """Request to find path between entities."""
+
     project_id: str
     source_entity_id: str
     target_entity_id: str
@@ -334,6 +348,7 @@ class PathRequest(BaseModel):
 
 class PathResponse(BaseModel):
     """Response for path query."""
+
     path_found: bool
     path_length: int
     path: list[str]
@@ -343,6 +358,7 @@ class PathResponse(BaseModel):
 
 class CentralityRequest(BaseModel):
     """Request to calculate centrality."""
+
     project_id: str
     metric: str = "all"
     limit: int = 50
@@ -350,6 +366,7 @@ class CentralityRequest(BaseModel):
 
 class CentralityResponse(BaseModel):
     """Response for centrality calculation."""
+
     project_id: str
     metric: str
     results: list[dict[str, Any]]
@@ -358,6 +375,7 @@ class CentralityResponse(BaseModel):
 
 class CommunityRequest(BaseModel):
     """Request for community detection."""
+
     project_id: str
     algorithm: str = "louvain"
     min_community_size: int = 3
@@ -366,6 +384,7 @@ class CommunityRequest(BaseModel):
 
 class CommunityResponse(BaseModel):
     """Response for community detection."""
+
     project_id: str
     community_count: int
     communities: list[dict[str, Any]]
@@ -374,6 +393,7 @@ class CommunityResponse(BaseModel):
 
 class NeighborsRequest(BaseModel):
     """Request for entity neighbors."""
+
     entity_id: str
     project_id: str
     depth: int = 1
@@ -383,6 +403,7 @@ class NeighborsRequest(BaseModel):
 
 class ExportRequest(BaseModel):
     """Request to export graph."""
+
     project_id: str
     format: str = "json"
     include_metadata: bool = True
@@ -391,6 +412,7 @@ class ExportRequest(BaseModel):
 
 class ExportResponse(BaseModel):
     """Response for graph export."""
+
     format: str
     data: str
     node_count: int
@@ -400,6 +422,7 @@ class ExportResponse(BaseModel):
 
 class FilterRequest(BaseModel):
     """Request to filter graph."""
+
     project_id: str
     entity_types: list[str] | None = None
     min_degree: int | None = None
@@ -410,6 +433,7 @@ class FilterRequest(BaseModel):
 
 class GraphResponse(BaseModel):
     """Response containing graph data."""
+
     project_id: str
     nodes: list[dict[str, Any]]
     edges: list[dict[str, Any]]
@@ -421,6 +445,7 @@ class GraphResponse(BaseModel):
 
 class ScoreConfigRequest(BaseModel):
     """Request for composite scoring configuration."""
+
     project_id: str
     centrality_type: str = "pagerank"  # pagerank, betweenness, eigenvector, hits, closeness, degree
     centrality_weight: float = 0.25
@@ -435,6 +460,7 @@ class ScoreConfigRequest(BaseModel):
 
 class EntityScoreResponse(BaseModel):
     """Individual entity score."""
+
     entity_id: str
     label: str
     entity_type: str
@@ -452,6 +478,7 @@ class EntityScoreResponse(BaseModel):
 
 class ScoreResponse(BaseModel):
     """Response for composite scoring."""
+
     project_id: str
     scores: list[EntityScoreResponse]
     config: dict[str, Any]

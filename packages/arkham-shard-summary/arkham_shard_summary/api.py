@@ -5,21 +5,22 @@ FastAPI endpoints for summary generation and management.
 """
 
 from typing import List, Optional
+
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from .models import (
-    Summary,
-    SummaryType,
-    SummaryStatus,
+    BatchSummaryRequest,
+    BatchSummaryResult,
     SourceType,
+    Summary,
+    SummaryFilter,
     SummaryLength,
     SummaryRequest,
     SummaryResult,
-    SummaryFilter,
     SummaryStatistics,
-    BatchSummaryRequest,
-    BatchSummaryResult,
+    SummaryStatus,
+    SummaryType,
 )
 
 router = APIRouter(prefix="/api/summary", tags=["summary"])
@@ -35,8 +36,10 @@ def get_shard(request: Request):
 
 # === Pydantic API Models ===
 
+
 class SummaryCreate(BaseModel):
     """Request to create a new summary."""
+
     source_type: SourceType
     source_ids: List[str] = Field(..., min_items=1, description="IDs of sources to summarize")
     summary_type: SummaryType = SummaryType.DETAILED
@@ -50,6 +53,7 @@ class SummaryCreate(BaseModel):
 
 class SummaryResponse(BaseModel):
     """Summary response model."""
+
     id: str
     summary_type: str
     status: str
@@ -70,6 +74,7 @@ class SummaryResponse(BaseModel):
 
 class SummaryListResponse(BaseModel):
     """Paginated summary list response."""
+
     items: List[SummaryResponse]
     total: int
     page: int
@@ -78,11 +83,13 @@ class SummaryListResponse(BaseModel):
 
 class CountResponse(BaseModel):
     """Count response for badge."""
+
     count: int
 
 
 class HealthResponse(BaseModel):
     """Health check response."""
+
     status: str
     shard: str
     llm_available: bool
@@ -90,6 +97,7 @@ class HealthResponse(BaseModel):
 
 class CapabilitiesResponse(BaseModel):
     """Capabilities response."""
+
     llm_available: bool
     workers_available: bool
     summary_types: List[str]
@@ -99,11 +107,13 @@ class CapabilitiesResponse(BaseModel):
 
 class SummaryTypesResponse(BaseModel):
     """Available summary types."""
+
     types: List[dict]
 
 
 class BatchCreate(BaseModel):
     """Batch summary creation request."""
+
     requests: List[SummaryCreate]
     parallel: bool = False
     stop_on_error: bool = False
@@ -112,6 +122,7 @@ class BatchCreate(BaseModel):
 
 class BatchResponse(BaseModel):
     """Batch operation response."""
+
     total: int
     successful: int
     failed: int
@@ -121,6 +132,7 @@ class BatchResponse(BaseModel):
 
 
 # === API Endpoints ===
+
 
 @router.get("/health", response_model=HealthResponse)
 async def health(request: Request):
@@ -568,6 +580,7 @@ async def get_or_generate_document_summary(
 
 class SourceItem(BaseModel):
     """Source item for picker."""
+
     id: str
     name: str
     type: str
@@ -578,6 +591,7 @@ class SourceItem(BaseModel):
 
 class SourceListResponse(BaseModel):
     """Source list response."""
+
     items: List[SourceItem]
     total: int
     page: int
@@ -637,17 +651,19 @@ async def browse_documents(
         rows = await db.fetch_all(query, params)
 
         for row in rows:
-            items.append(SourceItem(
-                id=row["id"],
-                name=row.get("filename", "Untitled"),
-                type=row.get("mime_type", "document"),
-                preview=f"Size: {row.get('file_size', 0)} bytes | Status: {row.get('status', 'unknown')}",
-                created_at=row["created_at"].isoformat() if row.get("created_at") else None,
-                metadata={
-                    "file_size": row.get("file_size", 0),
-                    "status": row.get("status", "unknown"),
-                }
-            ))
+            items.append(
+                SourceItem(
+                    id=row["id"],
+                    name=row.get("filename", "Untitled"),
+                    type=row.get("mime_type", "document"),
+                    preview=f"Size: {row.get('file_size', 0)} bytes | Status: {row.get('status', 'unknown')}",
+                    created_at=row["created_at"].isoformat() if row.get("created_at") else None,
+                    metadata={
+                        "file_size": row.get("file_size", 0),
+                        "status": row.get("status", "unknown"),
+                    },
+                )
+            )
 
     except Exception as e:
         # Try arkham_frame.documents as fallback
@@ -672,16 +688,18 @@ async def browse_documents(
             rows = await db.fetch_all(query, params)
 
             for row in rows:
-                items.append(SourceItem(
-                    id=row["id"],
-                    name=row.get("file_name", "Untitled"),
-                    type=row.get("file_type", "document"),
-                    preview=f"Size: {row.get('file_size', 0)} bytes",
-                    created_at=row["created_at"].isoformat() if row.get("created_at") else None,
-                    metadata={
-                        "file_size": row.get("file_size", 0),
-                    }
-                ))
+                items.append(
+                    SourceItem(
+                        id=row["id"],
+                        name=row.get("file_name", "Untitled"),
+                        type=row.get("file_type", "document"),
+                        preview=f"Size: {row.get('file_size', 0)} bytes",
+                        created_at=row["created_at"].isoformat() if row.get("created_at") else None,
+                        metadata={
+                            "file_size": row.get("file_size", 0),
+                        },
+                    )
+                )
         except Exception:
             pass
 
@@ -735,17 +753,19 @@ async def browse_entities(
         rows = await db.fetch_all(query, params)
 
         for row in rows:
-            items.append(SourceItem(
-                id=row["id"],
-                name=row.get("name", "Unknown"),
-                type=row.get("entity_type", "entity"),
-                preview=f"Mentions: {row.get('mention_count', 0)}",
-                created_at=row["created_at"].isoformat() if row.get("created_at") else None,
-                metadata={
-                    "entity_type": row.get("entity_type"),
-                    "mention_count": row.get("mention_count", 0),
-                }
-            ))
+            items.append(
+                SourceItem(
+                    id=row["id"],
+                    name=row.get("name", "Unknown"),
+                    type=row.get("entity_type", "entity"),
+                    preview=f"Mentions: {row.get('mention_count', 0)}",
+                    created_at=row["created_at"].isoformat() if row.get("created_at") else None,
+                    metadata={
+                        "entity_type": row.get("entity_type"),
+                        "mention_count": row.get("mention_count", 0),
+                    },
+                )
+            )
     except Exception:
         pass
 
@@ -795,17 +815,19 @@ async def browse_projects(
         for row in rows:
             desc = row.get("description", "")
             preview = desc[:100] + "..." if len(desc) > 100 else desc
-            items.append(SourceItem(
-                id=row["id"],
-                name=row.get("name", "Untitled"),
-                type="project",
-                preview=preview or f"Documents: {row.get('document_count', 0)}",
-                created_at=row["created_at"] if row.get("created_at") else None,
-                metadata={
-                    "status": row.get("status"),
-                    "document_count": row.get("document_count", 0),
-                }
-            ))
+            items.append(
+                SourceItem(
+                    id=row["id"],
+                    name=row.get("name", "Untitled"),
+                    type="project",
+                    preview=preview or f"Documents: {row.get('document_count', 0)}",
+                    created_at=row["created_at"] if row.get("created_at") else None,
+                    metadata={
+                        "status": row.get("status"),
+                        "document_count": row.get("document_count", 0),
+                    },
+                )
+            )
     except Exception:
         pass
 
@@ -861,18 +883,20 @@ async def browse_claims(
         for row in rows:
             text = row.get("text", "")
             preview = text[:100] + "..." if len(text) > 100 else text
-            items.append(SourceItem(
-                id=row["id"],
-                name=preview,
-                type=row.get("claim_type", "claim"),
-                preview=f"Status: {row.get('status', 'unknown')} | Confidence: {row.get('confidence', 1.0) * 100:.0f}%",
-                created_at=row["created_at"] if row.get("created_at") else None,
-                metadata={
-                    "claim_type": row.get("claim_type"),
-                    "status": row.get("status"),
-                    "confidence": row.get("confidence", 1.0),
-                }
-            ))
+            items.append(
+                SourceItem(
+                    id=row["id"],
+                    name=preview,
+                    type=row.get("claim_type", "claim"),
+                    preview=f"Status: {row.get('status', 'unknown')} | Confidence: {row.get('confidence', 1.0) * 100:.0f}%",
+                    created_at=row["created_at"] if row.get("created_at") else None,
+                    metadata={
+                        "claim_type": row.get("claim_type"),
+                        "status": row.get("status"),
+                        "confidence": row.get("confidence", 1.0),
+                    },
+                )
+            )
     except Exception:
         pass
 
@@ -929,18 +953,20 @@ async def browse_timeline_events(
             text = row.get("text", "")
             preview = text[:80] + "..." if len(text) > 80 else text
             date_str = str(row.get("date_start", "Unknown date"))
-            items.append(SourceItem(
-                id=row["id"],
-                name=preview,
-                type=row.get("event_type", "event"),
-                preview=f"Date: {date_str}",
-                created_at=row["created_at"].isoformat() if row.get("created_at") else None,
-                metadata={
-                    "event_type": row.get("event_type"),
-                    "date_start": date_str,
-                    "confidence": row.get("confidence", 1.0),
-                }
-            ))
+            items.append(
+                SourceItem(
+                    id=row["id"],
+                    name=preview,
+                    type=row.get("event_type", "event"),
+                    preview=f"Date: {date_str}",
+                    created_at=row["created_at"].isoformat() if row.get("created_at") else None,
+                    metadata={
+                        "event_type": row.get("event_type"),
+                        "date_start": date_str,
+                        "confidence": row.get("confidence", 1.0),
+                    },
+                )
+            )
     except Exception:
         pass
 

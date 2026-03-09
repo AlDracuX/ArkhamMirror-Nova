@@ -5,11 +5,11 @@ Tests for the AnomaliesShard class including initialization,
 lifecycle, and public API.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+from arkham_shard_anomalies.models import AnomalyType, DetectionConfig
 from arkham_shard_anomalies.shard import AnomaliesShard
-from arkham_shard_anomalies.models import DetectionConfig, AnomalyType
 
 
 class TestShardMetadata:
@@ -80,9 +80,7 @@ class TestShardInitialization:
         assert shard.store is not None
 
     @pytest.mark.asyncio
-    async def test_initialize_gets_vector_service(
-        self, mock_frame, mock_vector_service
-    ):
+    async def test_initialize_gets_vector_service(self, mock_frame, mock_vector_service):
         """Test initialization gets vector service."""
         mock_frame.get_service.side_effect = lambda name: {
             "vectors": mock_vector_service,
@@ -94,9 +92,7 @@ class TestShardInitialization:
         assert shard._vector_service == mock_vector_service
 
     @pytest.mark.asyncio
-    async def test_initialize_gets_db_service(
-        self, mock_frame, mock_db_service
-    ):
+    async def test_initialize_gets_db_service(self, mock_frame, mock_db_service):
         """Test initialization gets database service."""
         mock_frame.get_service.side_effect = lambda name: {
             "database": mock_db_service,
@@ -108,9 +104,7 @@ class TestShardInitialization:
         assert shard._db_service == mock_db_service
 
     @pytest.mark.asyncio
-    async def test_initialize_tries_db_fallback(
-        self, mock_frame, mock_db_service
-    ):
+    async def test_initialize_tries_db_fallback(self, mock_frame, mock_db_service):
         """Test initialization tries 'db' if 'database' returns None."""
         mock_frame.get_service.side_effect = lambda name: {
             "db": mock_db_service,
@@ -122,9 +116,7 @@ class TestShardInitialization:
         assert shard._db_service == mock_db_service
 
     @pytest.mark.asyncio
-    async def test_initialize_subscribes_to_events(
-        self, mock_frame, mock_event_bus
-    ):
+    async def test_initialize_subscribes_to_events(self, mock_frame, mock_event_bus):
         """Test that initialization subscribes to events."""
         mock_frame.get_service.side_effect = lambda name: {
             "events": mock_event_bus,
@@ -268,9 +260,7 @@ class TestPublicDetectAPI:
     @pytest.mark.asyncio
     async def test_detect_anomalies_with_doc_ids(self, initialized_shard):
         """Test detect_anomalies with specific documents."""
-        result = await initialized_shard.detect_anomalies(
-            doc_ids=["doc-1", "doc-2", "doc-3"]
-        )
+        result = await initialized_shard.detect_anomalies(doc_ids=["doc-1", "doc-2", "doc-3"])
         assert result == []
 
     @pytest.mark.asyncio
@@ -410,17 +400,19 @@ class TestPublicStatisticsAPI:
         shard._frame = MagicMock()
         shard.detector = MagicMock()
         shard.store = MagicMock()
-        shard.store.get_stats = AsyncMock(return_value=AnomalyStats(
-            total_anomalies=50,
-            by_type={"content": 20, "red_flag": 30},
-            by_status={"detected": 40, "confirmed": 10},
-            by_severity={"high": 15, "medium": 35},
-            detected_last_24h=5,
-            confirmed_last_24h=2,
-            dismissed_last_24h=1,
-            false_positive_rate=0.1,
-            avg_confidence=0.85,
-        ))
+        shard.store.get_stats = AsyncMock(
+            return_value=AnomalyStats(
+                total_anomalies=50,
+                by_type={"content": 20, "red_flag": 30},
+                by_status={"detected": 40, "confirmed": 10},
+                by_severity={"high": 15, "medium": 35},
+                detected_last_24h=5,
+                confirmed_last_24h=2,
+                dismissed_last_24h=1,
+                false_positive_rate=0.1,
+                avg_confidence=0.85,
+            )
+        )
         return shard
 
     @pytest.mark.asyncio

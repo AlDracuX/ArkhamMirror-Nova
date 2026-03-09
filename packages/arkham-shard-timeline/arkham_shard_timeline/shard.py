@@ -7,17 +7,17 @@ from typing import Optional
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .conflicts import ConflictDetector
 from .extraction import DateExtractor
 from .merging import TimelineMerger
-from .conflicts import ConflictDetector
 from .models import (
-    TimelineEvent,
+    ConflictType,
+    DateRange,
+    EntityTimeline,
     ExtractionContext,
     MergeStrategy,
-    ConflictType,
+    TimelineEvent,
     TimelineQuery,
-    EntityTimeline,
-    DateRange,
 )
 
 logger = logging.getLogger(__name__)
@@ -283,7 +283,7 @@ class TimelineShard(ArkhamShard):
                     await event_bus.emit(
                         "timeline.timeline.extracted",
                         {"document_id": doc_id, "event_count": len(events)},
-                        source="timeline-shard"
+                        source="timeline-shard",
                     )
         except Exception as e:
             logger.error(f"Failed to extract timeline for {doc_id}: {e}")
@@ -305,8 +305,7 @@ class TimelineShard(ArkhamShard):
             try:
                 # Delete timeline events for this document
                 await self.database_service.execute(
-                    "DELETE FROM arkham_timeline_events WHERE document_id = :doc_id",
-                    {"doc_id": doc_id}
+                    "DELETE FROM arkham_timeline_events WHERE document_id = :doc_id", {"doc_id": doc_id}
                 )
                 logger.info(f"Cleaned up timeline events for {doc_id}")
             except Exception as e:
@@ -327,9 +326,7 @@ class TimelineShard(ArkhamShard):
     # --- Public API for other shards ---
 
     async def extract_timeline(
-        self,
-        document_id: str,
-        context: Optional[ExtractionContext] = None
+        self, document_id: str, context: Optional[ExtractionContext] = None
     ) -> list[TimelineEvent]:
         """
         Public method to extract timeline from a document.
@@ -358,7 +355,7 @@ class TimelineShard(ArkhamShard):
                 WHERE document_id = :document_id
                 ORDER BY chunk_index
                 """,
-                {"document_id": document_id}
+                {"document_id": document_id},
             )
             if rows:
                 doc_text = " ".join(row["text"] for row in rows if row.get("text"))
@@ -556,10 +553,7 @@ class TimelineShard(ArkhamShard):
             related_entities=related_entities,
         )
 
-    async def _link_entities_to_events(
-        self,
-        events: list[TimelineEvent]
-    ) -> list[TimelineEvent]:
+    async def _link_entities_to_events(self, events: list[TimelineEvent]) -> list[TimelineEvent]:
         """
         Link entities to timeline events by matching entity names in event text.
 
@@ -591,6 +585,7 @@ class TimelineShard(ArkhamShard):
 
             # Build entity lookup: name/alias -> entity_id
             import json
+
             entity_lookup: dict[str, str] = {}
             entity_names: list[tuple[str, str]] = []  # (name, entity_id)
 
@@ -627,6 +622,7 @@ class TimelineShard(ArkhamShard):
 
             # Link entities to events
             import re
+
             linked_count = 0
 
             for event in events:
@@ -645,7 +641,7 @@ class TimelineShard(ArkhamShard):
                     # Use word boundary matching for better precision
                     # Escape special regex characters in name
                     escaped_name = re.escape(name_lower)
-                    pattern = rf'\b{escaped_name}\b'
+                    pattern = rf"\b{escaped_name}\b"
 
                     if re.search(pattern, text_lower):
                         matched_entities.add(entity_id)
@@ -710,7 +706,7 @@ class TimelineShard(ArkhamShard):
                     metadata = EXCLUDED.metadata,
                     tenant_id = EXCLUDED.tenant_id
                 """,
-                params
+                params,
             )
 
         logger.debug(f"Stored {len(events)} timeline events")
@@ -755,7 +751,7 @@ class TimelineShard(ArkhamShard):
                     metadata = EXCLUDED.metadata,
                     tenant_id = EXCLUDED.tenant_id
                 """,
-                params
+                params,
             )
 
         logger.debug(f"Stored {len(conflicts)} conflicts")
@@ -813,6 +809,7 @@ class TimelineShard(ArkhamShard):
         - String that needs parsing (raw JSON)
         """
         import json
+
         if value is None:
             return default
         if isinstance(value, (dict, list, bool, int, float)):
@@ -830,7 +827,7 @@ class TimelineShard(ArkhamShard):
 
     def _row_to_event(self, row) -> TimelineEvent:
         """Convert database row to TimelineEvent."""
-        from .models import EventType, DatePrecision
+        from .models import DatePrecision, EventType
 
         entities = self._parse_jsonb(row.get("entities"), [])
         metadata = self._parse_jsonb(row.get("metadata"), {})

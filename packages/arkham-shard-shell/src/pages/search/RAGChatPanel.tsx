@@ -107,11 +107,11 @@ export function RAGChatPanel({ isOpen, onClose, initialQuestion, projectId }: RA
       content: question,
       timestamp: new Date(),
     };
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
 
     // Create empty assistant message to stream into
     const assistantId = crypto.randomUUID();
-    setMessages(prev => [
+    setMessages((prev) => [
       ...prev,
       {
         id: assistantId,
@@ -132,7 +132,7 @@ export function RAGChatPanel({ isOpen, onClose, initialQuestion, projectId }: RA
           k_chunks: 10,
           similarity_threshold: 0.5,
           project_id: selectedProject || null,
-          conversation_history: messages.map(m => ({
+          conversation_history: messages.map((m) => ({
             role: m.role,
             content: m.content,
           })),
@@ -174,21 +174,15 @@ export function RAGChatPanel({ isOpen, onClose, initialQuestion, projectId }: RA
 
               case 'citations':
                 citations = event.citations || [];
-                setMessages(prev =>
-                  prev.map(m =>
-                    m.id === assistantId ? { ...m, citations } : m
-                  )
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === assistantId ? { ...m, citations } : m))
                 );
                 break;
 
               case 'text':
                 assistantContent += event.content || '';
-                setMessages(prev =>
-                  prev.map(m =>
-                    m.id === assistantId
-                      ? { ...m, content: assistantContent }
-                      : m
-                  )
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === assistantId ? { ...m, content: assistantContent } : m))
                 );
                 break;
 
@@ -207,7 +201,7 @@ export function RAGChatPanel({ isOpen, onClose, initialQuestion, projectId }: RA
       const errorMessage = err instanceof Error ? err.message : 'Chat failed';
       setError(errorMessage);
       // Remove the empty assistant message on error
-      setMessages(prev => prev.filter(m => m.id !== assistantId));
+      setMessages((prev) => prev.filter((m) => m.id !== assistantId));
     } finally {
       setIsStreaming(false);
     }
@@ -248,11 +242,7 @@ export function RAGChatPanel({ isOpen, onClose, initialQuestion, projectId }: RA
       });
 
       // Update message with feedback
-      setMessages(prev =>
-        prev.map(m =>
-          m.id === messageId ? { ...m, feedback: rating } : m
-        )
-      );
+      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, feedback: rating } : m)));
     } catch (err) {
       console.error('Failed to submit feedback:', err);
     }
@@ -281,11 +271,7 @@ export function RAGChatPanel({ isOpen, onClose, initialQuestion, projectId }: RA
   if (!isOpen) return null;
 
   return (
-    <div
-      className="rag-chat-panel"
-      ref={panelRef}
-      style={{ width: panelWidth }}
-    >
+    <div className="rag-chat-panel" ref={panelRef} style={{ width: panelWidth }}>
       {/* Resize handle */}
       <div className="rag-chat-resize-handle" onMouseDown={startResize} />
 
@@ -304,11 +290,7 @@ export function RAGChatPanel({ isOpen, onClose, initialQuestion, projectId }: RA
           >
             <Icon name="RotateCcw" size={16} />
           </button>
-          <button
-            className="rag-chat-btn-icon"
-            onClick={onClose}
-            title="Close panel"
-          >
+          <button className="rag-chat-btn-icon" onClick={onClose} title="Close panel">
             <Icon name="X" size={16} />
           </button>
         </div>
@@ -339,7 +321,9 @@ export function RAGChatPanel({ isOpen, onClose, initialQuestion, projectId }: RA
           <div className="rag-chat-empty">
             <Icon name="MessageSquare" size={32} />
             <h3>Ask about your documents</h3>
-            <p>Ask questions and get answers grounded in your document corpus with source citations.</p>
+            <p>
+              Ask questions and get answers grounded in your document corpus with source citations.
+            </p>
             <div className="rag-chat-suggestions">
               <button onClick={() => setInput('What are the main topics in my documents?')}>
                 What are the main topics?
@@ -354,7 +338,7 @@ export function RAGChatPanel({ isOpen, onClose, initialQuestion, projectId }: RA
           </div>
         )}
 
-        {messages.map(msg => (
+        {messages.map((msg) => (
           <div key={msg.id} className={`rag-chat-message ${msg.role}`}>
             <div className="rag-chat-message-header">
               <Icon name={msg.role === 'user' ? 'User' : 'Bot'} size={14} />
@@ -384,9 +368,7 @@ export function RAGChatPanel({ isOpen, onClose, initialQuestion, projectId }: RA
                       {citation.page_number && (
                         <span className="citation-page">p.{citation.page_number}</span>
                       )}
-                      <span className="citation-score">
-                        {Math.round(citation.score * 100)}%
-                      </span>
+                      <span className="citation-score">{Math.round(citation.score * 100)}%</span>
                     </button>
                   ))}
                 </div>
@@ -413,9 +395,7 @@ export function RAGChatPanel({ isOpen, onClose, initialQuestion, projectId }: RA
                 >
                   <Icon name="ThumbsDown" size={14} />
                 </button>
-                {msg.feedback && (
-                  <span className="feedback-thanks">Thanks for your feedback!</span>
-                )}
+                {msg.feedback && <span className="feedback-thanks">Thanks for your feedback!</span>}
               </div>
             )}
           </div>
@@ -447,7 +427,7 @@ export function RAGChatPanel({ isOpen, onClose, initialQuestion, projectId }: RA
           type="text"
           placeholder="Ask a question about your documents..."
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
           disabled={isStreaming}
         />

@@ -18,7 +18,12 @@ export function TopBar() {
       return { icon: 'Loader2', className: 'loading', title: 'Connecting to Frame...', spin: true };
     }
     if (error) {
-      return { icon: 'WifiOff', className: 'disconnected', title: `Disconnected: ${error.message}`, spin: false };
+      return {
+        icon: 'WifiOff',
+        className: 'disconnected',
+        title: `Disconnected: ${error.message}`,
+        spin: false,
+      };
     }
     if (connected) {
       return { icon: 'Wifi', className: 'connected', title: 'Connected to Frame', spin: false };
@@ -39,9 +44,7 @@ export function TopBar() {
         )}
       </div>
 
-      <div className="topbar-center">
-        {/* Placeholder for future command palette trigger */}
-      </div>
+      <div className="topbar-center">{/* Placeholder for future command palette trigger */}</div>
 
       <div className="topbar-right">
         {/* Project selector */}
@@ -55,11 +58,7 @@ export function TopBar() {
             onClick={!connected ? refetchShards : undefined}
             disabled={loading}
           >
-            <Icon
-              name={status.icon}
-              size={16}
-              className={status.spin ? 'spin' : undefined}
-            />
+            <Icon name={status.icon} size={16} className={status.spin ? 'spin' : undefined} />
             {error && <span className="status-text">Retry</span>}
           </button>
         </div>

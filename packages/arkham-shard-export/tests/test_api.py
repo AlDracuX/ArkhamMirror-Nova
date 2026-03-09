@@ -4,24 +4,23 @@ Export Shard - API Tests
 Tests for FastAPI endpoints using TestClient.
 """
 
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi.testclient import TestClient
-from fastapi import FastAPI
 
+import pytest
 from arkham_shard_export.api import router
 from arkham_shard_export.models import (
-    ExportJob,
     ExportFormat,
-    ExportStatus,
-    ExportTarget,
+    ExportJob,
     ExportOptions,
     ExportStatistics,
+    ExportStatus,
+    ExportTarget,
     FormatInfo,
     TargetInfo,
 )
-
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 # === Test Setup ===
 
@@ -154,9 +153,7 @@ class TestListJobsEndpoint:
         mock_shard.get_count.return_value = 0
 
         with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get(
-                "/api/export/jobs?status=completed&format=json&target=documents"
-            )
+            response = client.get("/api/export/jobs?status=completed&format=json&target=documents")
 
         assert response.status_code == 200
         mock_shard.list_jobs.assert_called_once()
@@ -298,8 +295,8 @@ class TestDownloadJobEndpoint:
 
     def test_download_job_success(self, client, mock_shard, sample_job):
         """Test downloading a completed export."""
-        import tempfile
         import os
+        import tempfile
 
         # Create a temporary file
         with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:

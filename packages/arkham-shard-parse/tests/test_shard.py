@@ -5,12 +5,12 @@ Tests for the ParseShard class including initialization,
 lifecycle, and public API.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from arkham_shard_parse.shard import ParseShard
+import pytest
 from arkham_shard_parse.models import EntityMention, EntityType
+from arkham_shard_parse.shard import ParseShard
 
 
 class TestShardMetadata:
@@ -66,7 +66,9 @@ class TestShardInitialization:
         return mock
 
     @pytest.mark.asyncio
-    async def test_initialize_creates_extractors(self, mock_frame, mock_db_service, mock_worker_service, mock_event_bus):
+    async def test_initialize_creates_extractors(
+        self, mock_frame, mock_db_service, mock_worker_service, mock_event_bus
+    ):
         """Test that initialization creates all extractors."""
         mock_frame.get_service.side_effect = lambda name: {
             "database": mock_db_service,
@@ -125,7 +127,9 @@ class TestShardInitialization:
         mock_worker_service.register_worker.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_initialize_subscribes_to_events(self, mock_frame, mock_db_service, mock_worker_service, mock_event_bus):
+    async def test_initialize_subscribes_to_events(
+        self, mock_frame, mock_db_service, mock_worker_service, mock_event_bus
+    ):
         """Test that initialization subscribes to events."""
         mock_frame.get_service.side_effect = lambda name: {
             "database": mock_db_service,

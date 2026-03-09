@@ -23,7 +23,7 @@ export function ConnectionLost({ lastConnectedTime }: ConnectionLostProps) {
           window.location.reload();
         }
       } catch {
-        setRetryCount(c => c + 1);
+        setRetryCount((c) => c + 1);
       } finally {
         setRetrying(false);
       }
@@ -43,9 +43,7 @@ export function ConnectionLost({ lastConnectedTime }: ConnectionLostProps) {
         <h1>Connection Lost</h1>
         <p>Unable to connect to the server. Retrying automatically...</p>
         {lastConnectedTime && (
-          <p className="last-connected">
-            Last connected: {formatTime(lastConnectedTime)}
-          </p>
+          <p className="last-connected">Last connected: {formatTime(lastConnectedTime)}</p>
         )}
         <div className="retry-status">
           {retrying ? (

@@ -20,9 +20,7 @@ export function BadgeStatusIndicator() {
 
   if (!hasError) return null;
 
-  const timeAgo = lastSuccessTime
-    ? formatTimeAgo(lastSuccessTime)
-    : 'unknown';
+  const timeAgo = lastSuccessTime ? formatTimeAgo(lastSuccessTime) : 'unknown';
 
   return (
     <div

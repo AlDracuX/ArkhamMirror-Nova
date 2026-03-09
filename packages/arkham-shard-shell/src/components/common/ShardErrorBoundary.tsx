@@ -15,7 +15,11 @@ interface ShardErrorBoundaryProps {
   shardName: string;
 }
 
-function ShardErrorFallback({ error, resetErrorBoundary, shardName }: FallbackProps & { shardName: string }) {
+function ShardErrorFallback({
+  error,
+  resetErrorBoundary,
+  shardName,
+}: FallbackProps & { shardName: string }) {
   const { toast } = useToast();
 
   useEffect(() => {
@@ -33,7 +37,7 @@ function ShardErrorFallback({ error, resetErrorBoundary, shardName }: FallbackPr
             <Icon name="RefreshCw" size={16} />
             Try Again
           </button>
-          <button className="btn btn-secondary" onClick={() => window.location.href = '/'}>
+          <button className="btn btn-secondary" onClick={() => (window.location.href = '/')}>
             <Icon name="Home" size={16} />
             Go to Dashboard
           </button>

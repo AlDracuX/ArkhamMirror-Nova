@@ -16,6 +16,6 @@ export {
   useTimezone,
   useDateFormatPattern,
   useDateFormat,
-  clearSettingsCache
+  clearSettingsCache,
 } from './useSettings';
 export { usePaginatedFetch } from './usePaginatedFetch';

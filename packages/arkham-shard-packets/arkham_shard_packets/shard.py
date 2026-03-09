@@ -25,6 +25,7 @@ INTERNAL_API_BASE = "http://127.0.0.1:8100"
 
 from .models import (
     ContentType,
+    ExportFormat,
     Packet,
     PacketContent,
     PacketExportResult,
@@ -36,7 +37,6 @@ from .models import (
     PacketVersion,
     PacketVisibility,
     SharePermission,
-    ExportFormat,
 )
 
 logger = logging.getLogger(__name__)
@@ -104,6 +104,7 @@ class PacketsShard(ArkhamShard):
     def get_routes(self):
         """Return FastAPI router for this shard."""
         from .api import router
+
         return router
 
     # === Database Schema ===
@@ -428,23 +429,29 @@ class PacketsShard(ArkhamShard):
         hasher = hashlib.sha256()
 
         # Hash packet metadata
-        packet_data = json.dumps({
-            "id": packet.id,
-            "name": packet.name,
-            "description": packet.description,
-            "version": packet.version,
-            "created_at": packet.created_at.isoformat(),
-        }, sort_keys=True).encode('utf-8')
+        packet_data = json.dumps(
+            {
+                "id": packet.id,
+                "name": packet.name,
+                "description": packet.description,
+                "version": packet.version,
+                "created_at": packet.created_at.isoformat(),
+            },
+            sort_keys=True,
+        ).encode("utf-8")
         hasher.update(packet_data)
 
         # Hash contents
         for content in sorted(contents, key=lambda c: c.content_id):
-            content_data = json.dumps({
-                "content_type": content.content_type.value,
-                "content_id": content.content_id,
-                "content_title": content.content_title,
-                "order": content.order,
-            }, sort_keys=True).encode('utf-8')
+            content_data = json.dumps(
+                {
+                    "content_type": content.content_type.value,
+                    "content_id": content.content_id,
+                    "content_title": content.content_title,
+                    "order": content.order,
+                },
+                sort_keys=True,
+            ).encode("utf-8")
             hasher.update(content_data)
 
         return hasher.hexdigest()
@@ -665,18 +672,12 @@ class PacketsShard(ArkhamShard):
         file_path = os.path.join(self._packets_dir, filename)
 
         if format == ExportFormat.ZIP:
-            file_size, contents_exported = await self._export_to_zip(
-                packet, contents, file_path, errors
-            )
+            file_size, contents_exported = await self._export_to_zip(packet, contents, file_path, errors)
         elif format == ExportFormat.JSON:
-            file_size, contents_exported = await self._export_to_json(
-                packet, contents, file_path, errors
-            )
+            file_size, contents_exported = await self._export_to_json(packet, contents, file_path, errors)
         else:
             # Fallback to ZIP
-            file_size, contents_exported = await self._export_to_zip(
-                packet, contents, file_path, errors
-            )
+            file_size, contents_exported = await self._export_to_zip(packet, contents, file_path, errors)
 
         result = PacketExportResult(
             packet_id=packet_id,
@@ -713,7 +714,7 @@ class PacketsShard(ArkhamShard):
         """Export packet to ZIP file with manifest and content data."""
         contents_exported = 0
 
-        with zipfile.ZipFile(file_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(file_path, "w", zipfile.ZIP_DEFLATED) as zf:
             # Create manifest
             manifest = {
                 "packet": {
@@ -737,9 +738,7 @@ class PacketsShard(ArkhamShard):
             # Fetch and bundle each content item
             async with httpx.AsyncClient(timeout=60.0) as client:
                 for content in contents:
-                    content_data = await self._fetch_content_data(
-                        client, content.content_type, content.content_id
-                    )
+                    content_data = await self._fetch_content_data(client, content.content_type, content.content_id)
 
                     if content_data:
                         # Add to manifest
@@ -801,9 +800,7 @@ class PacketsShard(ArkhamShard):
         # Fetch each content item
         async with httpx.AsyncClient(timeout=60.0) as client:
             for content in contents:
-                content_data = await self._fetch_content_data(
-                    client, content.content_type, content.content_id
-                )
+                content_data = await self._fetch_content_data(client, content.content_type, content.content_id)
 
                 content_entry = {
                     "id": content.id,
@@ -822,7 +819,7 @@ class PacketsShard(ArkhamShard):
                 else:
                     errors.append(f"Failed to fetch {content.content_type.value}:{content.content_id}")
 
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(export_data, f, indent=2, default=str)
 
         file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
@@ -875,14 +872,10 @@ class PacketsShard(ArkhamShard):
         packet_id = None
 
         # Determine format from file extension
-        if file_path.endswith('.zip'):
-            packet_id, contents_imported = await self._import_from_zip(
-                file_path, merge_mode, errors
-            )
-        elif file_path.endswith('.json'):
-            packet_id, contents_imported = await self._import_from_json(
-                file_path, merge_mode, errors
-            )
+        if file_path.endswith(".zip"):
+            packet_id, contents_imported = await self._import_from_zip(file_path, merge_mode, errors)
+        elif file_path.endswith(".json"):
+            packet_id, contents_imported = await self._import_from_json(file_path, merge_mode, errors)
         else:
             errors.append(f"Unsupported file format: {file_path}")
             packet_id = str(uuid4())
@@ -920,13 +913,13 @@ class PacketsShard(ArkhamShard):
         contents_imported = 0
 
         try:
-            with zipfile.ZipFile(file_path, 'r') as zf:
+            with zipfile.ZipFile(file_path, "r") as zf:
                 # Read manifest
-                if 'manifest.json' not in zf.namelist():
+                if "manifest.json" not in zf.namelist():
                     errors.append("Missing manifest.json in ZIP file")
                     return None, 0
 
-                manifest_data = zf.read('manifest.json')
+                manifest_data = zf.read("manifest.json")
                 manifest = json.loads(manifest_data)
 
                 packet_data = manifest.get("packet", {})
@@ -983,7 +976,7 @@ class PacketsShard(ArkhamShard):
         contents_imported = 0
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 export_data = json.load(f)
 
             packet_data = export_data.get("packet", {})
@@ -1142,9 +1135,7 @@ class PacketsShard(ArkhamShard):
                     {"tenant_id": str(tenant_id)},
                 )
             else:
-                result = await self._db.fetch_one(
-                    "SELECT COUNT(*) as count FROM arkham_packets"
-                )
+                result = await self._db.fetch_one("SELECT COUNT(*) as count FROM arkham_packets")
 
         return result["count"] if result else 0
 
@@ -1156,6 +1147,7 @@ class PacketsShard(ArkhamShard):
             return
 
         import json
+
         # Include tenant_id for multi-tenancy
         tenant_id = self.get_tenant_id_or_none()
         params = {
@@ -1177,25 +1169,32 @@ class PacketsShard(ArkhamShard):
 
         if update:
             if tenant_id:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_packets SET
                         name=:name, description=:description, status=:status, visibility=:visibility,
                         created_by=:created_by, created_at=:created_at, updated_at=:updated_at,
                         version=:version, contents_count=:contents_count, size_bytes=:size_bytes,
                         checksum=:checksum, metadata=:metadata, tenant_id=:tenant_id
                     WHERE id=:id AND tenant_id=:tenant_id
-                """, params)
+                """,
+                    params,
+                )
             else:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_packets SET
                         name=:name, description=:description, status=:status, visibility=:visibility,
                         created_by=:created_by, created_at=:created_at, updated_at=:updated_at,
                         version=:version, contents_count=:contents_count, size_bytes=:size_bytes,
                         checksum=:checksum, metadata=:metadata
                     WHERE id=:id
-                """, params)
+                """,
+                    params,
+                )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_packets (
                     id, name, description, status, visibility,
                     created_by, created_at, updated_at,
@@ -1203,7 +1202,9 @@ class PacketsShard(ArkhamShard):
                 ) VALUES (:id, :name, :description, :status, :visibility,
                     :created_by, :created_at, :updated_at,
                     :version, :contents_count, :size_bytes, :checksum, :metadata, :tenant_id)
-            """, params)
+            """,
+                params,
+            )
 
     async def _save_content(self, content: PacketContent) -> None:
         """Save packet content to the database."""
@@ -1212,23 +1213,26 @@ class PacketsShard(ArkhamShard):
 
         # Include tenant_id for multi-tenancy
         tenant_id = self.get_tenant_id_or_none()
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_packet_contents (
                 id, packet_id, content_type, content_id, content_title,
                 added_at, added_by, order_num, tenant_id
             ) VALUES (:id, :packet_id, :content_type, :content_id, :content_title,
                 :added_at, :added_by, :order_num, :tenant_id)
-        """, {
-            "id": content.id,
-            "packet_id": content.packet_id,
-            "content_type": content.content_type.value,
-            "content_id": content.content_id,
-            "content_title": content.content_title,
-            "added_at": content.added_at.isoformat(),
-            "added_by": content.added_by,
-            "order_num": content.order,
-            "tenant_id": str(tenant_id) if tenant_id else None,
-        })
+        """,
+            {
+                "id": content.id,
+                "packet_id": content.packet_id,
+                "content_type": content.content_type.value,
+                "content_id": content.content_id,
+                "content_title": content.content_title,
+                "added_at": content.added_at.isoformat(),
+                "added_by": content.added_by,
+                "order_num": content.order,
+                "tenant_id": str(tenant_id) if tenant_id else None,
+            },
+        )
 
     async def _save_share(self, share: PacketShare) -> None:
         """Save packet share to the database."""
@@ -1237,22 +1241,25 @@ class PacketsShard(ArkhamShard):
 
         # Include tenant_id for multi-tenancy
         tenant_id = self.get_tenant_id_or_none()
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_packet_shares (
                 id, packet_id, shared_with, permissions,
                 shared_at, expires_at, access_token, tenant_id
             ) VALUES (:id, :packet_id, :shared_with, :permissions,
                 :shared_at, :expires_at, :access_token, :tenant_id)
-        """, {
-            "id": share.id,
-            "packet_id": share.packet_id,
-            "shared_with": share.shared_with,
-            "permissions": share.permissions.value,
-            "shared_at": share.shared_at.isoformat(),
-            "expires_at": share.expires_at.isoformat() if share.expires_at else None,
-            "access_token": share.access_token,
-            "tenant_id": str(tenant_id) if tenant_id else None,
-        })
+        """,
+            {
+                "id": share.id,
+                "packet_id": share.packet_id,
+                "shared_with": share.shared_with,
+                "permissions": share.permissions.value,
+                "shared_at": share.shared_at.isoformat(),
+                "expires_at": share.expires_at.isoformat() if share.expires_at else None,
+                "access_token": share.access_token,
+                "tenant_id": str(tenant_id) if tenant_id else None,
+            },
+        )
 
     async def _save_version(self, version: PacketVersion) -> None:
         """Save packet version to the database."""
@@ -1261,21 +1268,24 @@ class PacketsShard(ArkhamShard):
 
         # Include tenant_id for multi-tenancy
         tenant_id = self.get_tenant_id_or_none()
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_packet_versions (
                 id, packet_id, version_number, created_at,
                 changes_summary, snapshot_path, tenant_id
             ) VALUES (:id, :packet_id, :version_number, :created_at,
                 :changes_summary, :snapshot_path, :tenant_id)
-        """, {
-            "id": version.id,
-            "packet_id": version.packet_id,
-            "version_number": version.version_number,
-            "created_at": version.created_at.isoformat(),
-            "changes_summary": version.changes_summary,
-            "snapshot_path": version.snapshot_path,
-            "tenant_id": str(tenant_id) if tenant_id else None,
-        })
+        """,
+            {
+                "id": version.id,
+                "packet_id": version.packet_id,
+                "version_number": version.version_number,
+                "created_at": version.created_at.isoformat(),
+                "changes_summary": version.changes_summary,
+                "snapshot_path": version.snapshot_path,
+                "tenant_id": str(tenant_id) if tenant_id else None,
+            },
+        )
 
     async def _update_packet_counts(self, packet_id: str) -> None:
         """Update content counts on a packet."""
@@ -1297,19 +1307,30 @@ class PacketsShard(ArkhamShard):
         count = count_row["count"] if count_row else 0
 
         if tenant_id:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 UPDATE arkham_packets SET
                     contents_count = :contents_count,
                     updated_at = :updated_at
                 WHERE id = :id AND tenant_id = :tenant_id
-            """, {"contents_count": count, "updated_at": datetime.utcnow().isoformat(), "id": packet_id, "tenant_id": str(tenant_id)})
+            """,
+                {
+                    "contents_count": count,
+                    "updated_at": datetime.utcnow().isoformat(),
+                    "id": packet_id,
+                    "tenant_id": str(tenant_id),
+                },
+            )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 UPDATE arkham_packets SET
                     contents_count = :contents_count,
                     updated_at = :updated_at
                 WHERE id = :id
-            """, {"contents_count": count, "updated_at": datetime.utcnow().isoformat(), "id": packet_id})
+            """,
+                {"contents_count": count, "updated_at": datetime.utcnow().isoformat(), "id": packet_id},
+            )
 
     async def _create_version_snapshot(
         self,
@@ -1351,6 +1372,7 @@ class PacketsShard(ArkhamShard):
     def _row_to_packet(self, row: Dict[str, Any]) -> Packet:
         """Convert database row to Packet object."""
         import json
+
         return Packet(
             id=row["id"],
             name=row["name"],

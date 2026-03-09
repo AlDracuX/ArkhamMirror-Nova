@@ -4,18 +4,18 @@ Search Shard - Engine Tests
 Tests for SemanticSearchEngine, KeywordSearchEngine, and HybridSearchEngine.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from arkham_shard_search.engines.semantic import SemanticSearchEngine
-from arkham_shard_search.engines.keyword import KeywordSearchEngine
+import pytest
 from arkham_shard_search.engines.hybrid import HybridSearchEngine
+from arkham_shard_search.engines.keyword import KeywordSearchEngine
+from arkham_shard_search.engines.semantic import SemanticSearchEngine
 from arkham_shard_search.models import (
-    SearchQuery,
-    SearchMode,
-    SearchFilters,
     DateRangeFilter,
+    SearchFilters,
+    SearchMode,
+    SearchQuery,
     SearchResultItem,
 )
 
@@ -487,11 +487,11 @@ class TestHybridSearchEngineSearch:
         """Test search applies offset and limit."""
         # Create many results
         mock_semantic.search.return_value = [
-            SearchResultItem(doc_id=f"sem-{i}", chunk_id=None, title=f"Sem {i}", excerpt="...", score=0.9-i*0.1)
+            SearchResultItem(doc_id=f"sem-{i}", chunk_id=None, title=f"Sem {i}", excerpt="...", score=0.9 - i * 0.1)
             for i in range(5)
         ]
         mock_keyword.search.return_value = [
-            SearchResultItem(doc_id=f"kw-{i}", chunk_id=None, title=f"KW {i}", excerpt="...", score=0.8-i*0.1)
+            SearchResultItem(doc_id=f"kw-{i}", chunk_id=None, title=f"KW {i}", excerpt="...", score=0.8 - i * 0.1)
             for i in range(5)
         ]
 

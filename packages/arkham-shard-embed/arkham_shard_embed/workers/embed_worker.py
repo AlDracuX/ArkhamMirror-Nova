@@ -5,11 +5,11 @@ Pool: gpu-embed
 Purpose: Generate vector embeddings for semantic search and similarity matching.
 """
 
-from typing import Dict, Any, List
+import json
 import logging
 import os
-import json
 import uuid as uuid_mod
+from typing import Any, Dict, List
 
 from arkham_frame.workers.base import BaseWorker
 
@@ -62,8 +62,7 @@ class EmbedWorker(BaseWorker):
                 from sentence_transformers import SentenceTransformer
             except ImportError:
                 raise ImportError(
-                    "sentence-transformers not installed. "
-                    "Install with: pip install sentence-transformers"
+                    "sentence-transformers not installed. Install with: pip install sentence-transformers"
                 )
 
             try:
@@ -74,19 +73,14 @@ class EmbedWorker(BaseWorker):
                 cls._dimensions = cls._model.get_sentence_embedding_dimension()
                 logger.info(f"Loaded model {cls._model_name} ({cls._dimensions} dimensions)")
             except Exception as e:
-                logger.warning(
-                    f"Failed to load {cls.DEFAULT_MODEL}: {e}. "
-                    f"Falling back to {cls.FALLBACK_MODEL}"
-                )
+                logger.warning(f"Failed to load {cls.DEFAULT_MODEL}: {e}. Falling back to {cls.FALLBACK_MODEL}")
                 try:
                     cls._model = SentenceTransformer(cls.FALLBACK_MODEL)
                     cls._model_name = cls.FALLBACK_MODEL
                     cls._dimensions = cls._model.get_sentence_embedding_dimension()
                     logger.info(f"Loaded fallback model {cls._model_name} ({cls._dimensions} dimensions)")
                 except Exception as fallback_error:
-                    raise RuntimeError(
-                        f"Failed to load both models: {e}, {fallback_error}"
-                    )
+                    raise RuntimeError(f"Failed to load both models: {e}, {fallback_error}")
 
         return cls._model, cls._model_name, cls._dimensions
 
@@ -164,10 +158,7 @@ class EmbedWorker(BaseWorker):
             doc_id = payload.get("doc_id", "unknown")
             chunk_id = payload.get("chunk_id", "unknown")
 
-            logger.info(
-                f"Job {job_id}: Embedding text for doc={doc_id}, chunk={chunk_id} "
-                f"({len(text)} chars)"
-            )
+            logger.info(f"Job {job_id}: Embedding text for doc={doc_id}, chunk={chunk_id} ({len(text)} chars)")
 
             # Generate embedding
             embedding = model.encode(text, convert_to_numpy=True)
@@ -229,21 +220,26 @@ class EmbedWorker(BaseWorker):
             async with self._db_pool.acquire() as conn:
                 # Ensure collection exists in collections table
                 exists = await conn.fetchval(
-                    "SELECT 1 FROM arkham_vectors.collections WHERE name = $1",
-                    collection_name
+                    "SELECT 1 FROM arkham_vectors.collections WHERE name = $1", collection_name
                 )
                 if not exists:
                     # Create collection with proper dimensions
                     # Calculate optimal lists for IVFFlat (sqrt of expected rows)
-                    lists = max(100, min(1000, int((100000 ** 0.5))))
+                    lists = max(100, min(1000, int((100000**0.5))))
                     probes = max(1, lists // 10)
 
-                    await conn.execute("""
+                    await conn.execute(
+                        """
                         INSERT INTO arkham_vectors.collections
                             (name, vector_size, distance_metric, index_type, lists, probes)
                         VALUES ($1, $2, 'cosine', 'ivfflat', $3, $4)
                         ON CONFLICT (name) DO NOTHING
-                    """, collection_name, dimensions, lists, probes)
+                    """,
+                        collection_name,
+                        dimensions,
+                        lists,
+                        probes,
+                    )
 
                     logger.info(f"Created collection {collection_name} with {dimensions} dimensions")
 
@@ -266,7 +262,8 @@ class EmbedWorker(BaseWorker):
                     vector_ids.append(vector_id)
 
                 # Batch insert all embeddings
-                await conn.executemany("""
+                await conn.executemany(
+                    """
                     INSERT INTO arkham_vectors.embeddings
                     (id, collection, embedding, payload)
                     VALUES ($1, $2, $3::vector, $4::jsonb)
@@ -274,16 +271,21 @@ class EmbedWorker(BaseWorker):
                         embedding = EXCLUDED.embedding,
                         payload = EXCLUDED.payload,
                         updated_at = CURRENT_TIMESTAMP
-                """, values)
+                """,
+                    values,
+                )
 
                 # Update chunk vector_id references in batch
                 chunk_updates = [(vid, cid) for vid, cid in zip(vector_ids, chunk_ids) if cid]
                 if chunk_updates:
-                    await conn.executemany("""
+                    await conn.executemany(
+                        """
                         UPDATE arkham_frame.chunks
                         SET vector_id = $1
                         WHERE id = $2
-                    """, chunk_updates)
+                    """,
+                        chunk_updates,
+                    )
 
                 logger.info(f"Stored {len(vector_ids)} embeddings for doc {doc_id} in {collection_name}")
 
@@ -305,6 +307,7 @@ def run_embed_worker(database_url: str = None, worker_id: str = None):
         python -m arkham_shard_embed.workers.embed_worker
     """
     import asyncio
+
     worker = EmbedWorker(database_url=database_url, worker_id=worker_id)
     asyncio.run(worker.run())
 

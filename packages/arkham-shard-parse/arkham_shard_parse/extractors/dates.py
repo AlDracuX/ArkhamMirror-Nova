@@ -18,6 +18,7 @@ class DateExtractor:
         self.dateparser_available = False
         try:
             import dateparser
+
             self.dateparser = dateparser
             self.dateparser_available = True
             logger.info("dateparser library available")
@@ -62,10 +63,10 @@ class DateExtractor:
 
         # Common date patterns to look for
         patterns = [
-            r'\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b',  # MM/DD/YYYY
-            r'\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b',    # YYYY-MM-DD
-            r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\b',
-            r'\b\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{4}\b',
+            r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b",  # MM/DD/YYYY
+            r"\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b",  # YYYY-MM-DD
+            r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\b",
+            r"\b\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{4}\b",
         ]
 
         for pattern in patterns:
@@ -101,7 +102,7 @@ class DateExtractor:
         mentions = []
 
         # ISO date format YYYY-MM-DD
-        pattern = r'\b(\d{4})-(\d{2})-(\d{2})\b'
+        pattern = r"\b(\d{4})-(\d{2})-(\d{2})\b"
 
         for match in re.finditer(pattern, text):
             date_text = match.group()
@@ -140,9 +141,9 @@ class DateExtractor:
 
         # Patterns for relative dates
         relative_patterns = [
-            r'\b(yesterday|today|tomorrow)\b',
-            r'\b(last|next) (week|month|year)\b',
-            r'\b(\d+) (days?|weeks?|months?|years?) ago\b',
+            r"\b(yesterday|today|tomorrow)\b",
+            r"\b(last|next) (week|month|year)\b",
+            r"\b(\d+) (days?|weeks?|months?|years?) ago\b",
         ]
 
         for pattern in relative_patterns:

@@ -4,7 +4,7 @@ Patterns Shard - API Routes
 FastAPI routes for pattern detection and analysis.
 """
 
-from typing import Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from .models import (
     CorrelationRequest,
     CorrelationResult,
+    DetectionMethod,
     Pattern,
     PatternAnalysisRequest,
     PatternAnalysisResult,
@@ -26,7 +27,6 @@ from .models import (
     PatternStatus,
     PatternType,
     PatternUpdate,
-    DetectionMethod,
 )
 
 if TYPE_CHECKING:
@@ -44,6 +44,7 @@ def get_shard(request: Request) -> "PatternsShard":
 
 
 # === Health & Status ===
+
 
 @router.get("/health")
 async def health(request: Request):
@@ -86,6 +87,7 @@ async def get_capabilities(request: Request):
 
 
 # === Patterns CRUD ===
+
 
 @router.get("/", response_model=PatternListResponse)
 async def list_patterns(
@@ -209,6 +211,7 @@ async def dismiss_pattern(pattern_id: str, request: Request, notes: Optional[str
 
 # === Pattern Matches ===
 
+
 @router.get("/{pattern_id}/matches", response_model=PatternMatchListResponse)
 async def get_pattern_matches(
     pattern_id: str,
@@ -264,6 +267,7 @@ async def remove_match(pattern_id: str, match_id: str, request: Request):
 
 # === Analysis ===
 
+
 @router.post("/analyze", response_model=PatternAnalysisResult)
 async def analyze_for_patterns(body: PatternAnalysisRequest, request: Request):
     """Analyze documents or text for patterns."""
@@ -303,6 +307,7 @@ async def find_correlations(body: CorrelationRequest, request: Request):
 
 # === Batch Operations ===
 
+
 @router.post("/batch/confirm")
 async def batch_confirm(pattern_ids: list[str], request: Request):
     """Confirm multiple patterns."""
@@ -310,10 +315,12 @@ async def batch_confirm(pattern_ids: list[str], request: Request):
     results = []
     for pattern_id in pattern_ids:
         pattern = await shard.confirm_pattern(pattern_id)
-        results.append({
-            "pattern_id": pattern_id,
-            "success": pattern is not None,
-        })
+        results.append(
+            {
+                "pattern_id": pattern_id,
+                "success": pattern is not None,
+            }
+        )
     return {
         "processed": len(pattern_ids),
         "results": results,
@@ -327,10 +334,12 @@ async def batch_dismiss(pattern_ids: list[str], request: Request):
     results = []
     for pattern_id in pattern_ids:
         pattern = await shard.dismiss_pattern(pattern_id)
-        results.append({
-            "pattern_id": pattern_id,
-            "success": pattern is not None,
-        })
+        results.append(
+            {
+                "pattern_id": pattern_id,
+                "success": pattern is not None,
+            }
+        )
     return {
         "processed": len(pattern_ids),
         "results": results,
@@ -342,6 +351,7 @@ async def batch_dismiss(pattern_ids: list[str], request: Request):
 
 class AIJuniorAnalystRequest(BaseModel):
     """Request for AI Junior Analyst analysis."""
+
     target_id: str
     context: dict[str, Any] = {}
     depth: str = "quick"
@@ -366,13 +376,10 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     frame = shard.frame
 
     if not frame or not getattr(frame, "ai_analyst", None):
-        raise HTTPException(
-            status_code=503,
-            detail="AI Analyst service not available"
-        )
+        raise HTTPException(status_code=503, detail="AI Analyst service not available")
 
     # Build context from request
-    from arkham_frame.services import AnalysisRequest, AnalysisDepth, AnalystMessage
+    from arkham_frame.services import AnalysisDepth, AnalysisRequest, AnalystMessage
 
     # Parse depth
     try:
@@ -383,10 +390,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     # Build conversation history
     history = None
     if body.conversation_history:
-        history = [
-            AnalystMessage(role=msg["role"], content=msg["content"])
-            for msg in body.conversation_history
-        ]
+        history = [AnalystMessage(role=msg["role"], content=msg["content"]) for msg in body.conversation_history]
 
     analysis_request = AnalysisRequest(
         shard="patterns",

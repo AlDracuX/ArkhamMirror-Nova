@@ -4,9 +4,10 @@ Health check endpoints.
 
 import os
 from pathlib import Path
+from typing import Any, Dict
+
 from fastapi import APIRouter
 from fastapi.responses import FileResponse, JSONResponse
-from typing import Dict, Any
 
 router = APIRouter()
 

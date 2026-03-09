@@ -25,11 +25,41 @@ interface TabInfo {
 }
 
 const TABS: TabInfo[] = [
-  { id: 'overview', label: 'Overview', icon: 'LayoutDashboard', description: 'Service health and queue status', route: '/dashboard' },
-  { id: 'llm', label: 'LLM Config', icon: 'Brain', description: 'Configure LLM connection', route: '/dashboard/llm' },
-  { id: 'database', label: 'Database', icon: 'Database', description: 'Database operations', route: '/dashboard/database' },
-  { id: 'workers', label: 'Workers', icon: 'Cpu', description: 'Queue management', route: '/dashboard/workers' },
-  { id: 'events', label: 'Events', icon: 'ScrollText', description: 'System event log', route: '/dashboard/events' },
+  {
+    id: 'overview',
+    label: 'Overview',
+    icon: 'LayoutDashboard',
+    description: 'Service health and queue status',
+    route: '/dashboard',
+  },
+  {
+    id: 'llm',
+    label: 'LLM Config',
+    icon: 'Brain',
+    description: 'Configure LLM connection',
+    route: '/dashboard/llm',
+  },
+  {
+    id: 'database',
+    label: 'Database',
+    icon: 'Database',
+    description: 'Database operations',
+    route: '/dashboard/database',
+  },
+  {
+    id: 'workers',
+    label: 'Workers',
+    icon: 'Cpu',
+    description: 'Queue management',
+    route: '/dashboard/workers',
+  },
+  {
+    id: 'events',
+    label: 'Events',
+    icon: 'ScrollText',
+    description: 'System event log',
+    route: '/dashboard/events',
+  },
 ];
 
 // Map URL paths to tab IDs
@@ -95,9 +125,7 @@ export function DashboardPage() {
         </nav>
 
         {/* Tab Content */}
-        <main className="dashboard-content">
-          {renderTab()}
-        </main>
+        <main className="dashboard-content">{renderTab()}</main>
       </div>
     </div>
   );

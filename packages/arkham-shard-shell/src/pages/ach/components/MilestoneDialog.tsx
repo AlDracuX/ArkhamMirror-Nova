@@ -23,15 +23,12 @@ interface MilestoneDialogProps {
   onClose: () => void;
 }
 
-export function MilestoneDialog({
-  milestone,
-  hypotheses,
-  onSave,
-  onClose,
-}: MilestoneDialogProps) {
+export function MilestoneDialog({ milestone, hypotheses, onSave, onClose }: MilestoneDialogProps) {
   const isEdit = !!milestone;
   const [description, setDescription] = useState(milestone?.description || '');
-  const [hypothesisId, setHypothesisId] = useState(milestone?.hypothesis_id || (hypotheses[0]?.id || ''));
+  const [hypothesisId, setHypothesisId] = useState(
+    milestone?.hypothesis_id || hypotheses[0]?.id || ''
+  );
   const [expectedBy, setExpectedBy] = useState(milestone?.expected_by?.split('T')[0] || '');
   const [observationNotes, setObservationNotes] = useState(milestone?.observation_notes || '');
   const [status, setStatus] = useState<-1 | 0 | 1>(milestone?.observed ?? 0);
@@ -50,7 +47,7 @@ export function MilestoneDialog({
     e.preventDefault();
     if (!description.trim()) return;
 
-    const hypTitle = hypotheses.find(h => h.id === hypothesisId)?.title || 'General';
+    const hypTitle = hypotheses.find((h) => h.id === hypothesisId)?.title || 'General';
     onSave({
       id: milestone?.id || `milestone-${Date.now()}`,
       description: description.trim(),
@@ -159,11 +156,7 @@ export function MilestoneDialog({
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={!description.trim()}
-            >
+            <button type="submit" className="btn btn-primary" disabled={!description.trim()}>
               {isEdit ? 'Save Changes' : 'Add Milestone'}
             </button>
           </div>

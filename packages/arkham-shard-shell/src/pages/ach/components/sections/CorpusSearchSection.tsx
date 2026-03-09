@@ -15,10 +15,7 @@ interface CorpusSearchSectionProps {
   onEvidenceAdded: () => void;
 }
 
-export function CorpusSearchSection({
-  matrix,
-  onEvidenceAdded,
-}: CorpusSearchSectionProps) {
+export function CorpusSearchSection({ matrix, onEvidenceAdded }: CorpusSearchSectionProps) {
   const matrixId = matrix.id;
   const hypotheses = matrix.hypotheses;
   const { toast } = useToast();
@@ -127,8 +124,8 @@ export function CorpusSearchSection({
         </div>
 
         <p className="section-description">
-          Search the document corpus for evidence relevant to each hypothesis.
-          Requires vectors and LLM services to be available.
+          Search the document corpus for evidence relevant to each hypothesis. Requires vectors and
+          LLM services to be available.
         </p>
 
         <div className="service-status">
@@ -260,7 +257,7 @@ export function CorpusSearchSection({
         <CorpusSearchDialog
           results={searchResults}
           totalResults={totalResults}
-          hypotheses={hypotheses.map(h => ({ id: h.id, title: h.title }))}
+          hypotheses={hypotheses.map((h) => ({ id: h.id, title: h.title }))}
           onAccept={handleAcceptEvidence}
           onClose={handleCloseDialog}
         />

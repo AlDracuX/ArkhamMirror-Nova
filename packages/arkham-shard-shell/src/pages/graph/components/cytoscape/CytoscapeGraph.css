@@ -88,7 +88,7 @@
   color: var(--text-primary, #1a202c);
 }
 
-.cytoscape-controls .checkbox-label input[type="checkbox"] {
+.cytoscape-controls .checkbox-label input[type='checkbox'] {
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -224,7 +224,7 @@
   color: var(--text-primary, #1a202c);
 }
 
-.checkbox-option input[type="checkbox"] {
+.checkbox-option input[type='checkbox'] {
   width: 14px;
   height: 14px;
   cursor: pointer;
@@ -289,7 +289,7 @@
 
 .slider::before {
   position: absolute;
-  content: "";
+  content: '';
   height: 16px;
   width: 16px;
   left: 2px;
@@ -640,7 +640,8 @@ input:checked + .slider::before {
 
 /* Pulse animation for expandable nodes indicator */
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {

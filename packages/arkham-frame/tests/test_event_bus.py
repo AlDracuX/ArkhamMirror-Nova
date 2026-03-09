@@ -10,22 +10,23 @@ Run with:
 """
 
 import asyncio
+from datetime import datetime
+from typing import Any, Dict, List
+
 import pytest
 import pytest_asyncio
-from datetime import datetime
-from typing import Dict, Any, List
 
 from arkham_frame.services.events import (
-    EventBus,
     Event,
-    EventValidationError,
+    EventBus,
     EventDeliveryError,
+    EventValidationError,
 )
-
 
 # =============================================================================
 # Test 1: Subscription Management
 # =============================================================================
+
 
 class TestSubscriptionManagement:
     """Test event subscription and unsubscription."""
@@ -164,6 +165,7 @@ class TestSubscriptionManagement:
 # Test 2: Event Publishing
 # =============================================================================
 
+
 class TestEventPublishing:
     """Test event publishing and delivery."""
 
@@ -268,6 +270,7 @@ class TestEventPublishing:
 # =============================================================================
 # Test 3: Async Handler Execution
 # =============================================================================
+
 
 class TestAsyncHandlerExecution:
     """Test async and sync handler execution."""
@@ -384,6 +387,7 @@ class TestAsyncHandlerExecution:
 # Test 4: Event History
 # =============================================================================
 
+
 class TestEventHistory:
     """Test event history logging and retrieval."""
 
@@ -490,6 +494,7 @@ class TestEventHistory:
 # Test 5: Integration Scenarios
 # =============================================================================
 
+
 class TestIntegrationScenarios:
     """Test real-world usage scenarios."""
 
@@ -510,25 +515,19 @@ class TestIntegrationScenarios:
             doc_id = event["payload"]["document_id"]
             pipeline_state["ingested"].append(doc_id)
             # Trigger next stage
-            asyncio.create_task(
-                bus.emit("document.parsed", {"document_id": doc_id}, source="parser")
-            )
+            asyncio.create_task(bus.emit("document.parsed", {"document_id": doc_id}, source="parser"))
 
         def on_document_parsed(event):
             doc_id = event["payload"]["document_id"]
             pipeline_state["parsed"].append(doc_id)
             # Trigger next stage
-            asyncio.create_task(
-                bus.emit("document.embedded", {"document_id": doc_id}, source="embedder")
-            )
+            asyncio.create_task(bus.emit("document.embedded", {"document_id": doc_id}, source="embedder"))
 
         def on_document_embedded(event):
             doc_id = event["payload"]["document_id"]
             pipeline_state["embedded"].append(doc_id)
             # Trigger final stage
-            asyncio.create_task(
-                bus.emit("document.indexed", {"document_id": doc_id}, source="indexer")
-            )
+            asyncio.create_task(bus.emit("document.indexed", {"document_id": doc_id}, source="indexer"))
 
         def on_document_indexed(event):
             doc_id = event["payload"]["document_id"]
@@ -616,6 +615,7 @@ class TestIntegrationScenarios:
 # =============================================================================
 # Smoke Test (can run directly)
 # =============================================================================
+
 
 async def smoke_test():
     """Quick smoke test for EventBus."""

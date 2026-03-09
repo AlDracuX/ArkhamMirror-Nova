@@ -3,8 +3,9 @@ ConfigService - Configuration management.
 """
 
 import os
-from typing import Any, Optional
 from pathlib import Path
+from typing import Any, Optional
+
 import yaml
 
 
@@ -52,13 +53,11 @@ class ConfigService:
         """Load configuration from environment variables."""
         # PostgreSQL database (includes pgvector for vectors and job queue)
         self._config["database_url"] = os.environ.get(
-            "DATABASE_URL",
-            "postgresql://arkham:arkhampass@localhost:5432/arkhamdb"
+            "DATABASE_URL", "postgresql://arkham:arkhampass@localhost:5432/arkhamdb"
         )
         # LLM endpoint (LM Studio, Ollama, OpenAI-compatible)
         self._config["llm_endpoint"] = os.environ.get(
-            "LLM_ENDPOINT",
-            os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1")
+            "LLM_ENDPOINT", os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1")
         )
         # VLM endpoint for vision tasks (OCR)
         self._config["vlm_endpoint"] = os.environ.get("VLM_ENDPOINT", "")
@@ -66,15 +65,10 @@ class ConfigService:
         self._config["embed_model"] = os.environ.get("EMBED_MODEL", "")
 
         # Air-gap / offline mode - prevents auto-downloading ML models
-        self._config["offline_mode"] = os.environ.get(
-            "ARKHAM_OFFLINE_MODE", ""
-        ).lower() in ("true", "1", "yes")
+        self._config["offline_mode"] = os.environ.get("ARKHAM_OFFLINE_MODE", "").lower() in ("true", "1", "yes")
 
         # Model cache path (for pre-cached models in air-gap deployments)
-        self._config["model_cache_path"] = os.environ.get(
-            "ARKHAM_MODEL_CACHE",
-            os.environ.get("HF_HOME", "")
-        )
+        self._config["model_cache_path"] = os.environ.get("ARKHAM_MODEL_CACHE", os.environ.get("HF_HOME", ""))
 
     def _load_yaml(self, path: str):
         """Load configuration from YAML file."""

@@ -47,25 +47,33 @@ export function Relationships({ onRelationshipCreated }: RelationshipsProps) {
   const [entityCache, setEntityCache] = useState<Record<string, Entity>>({});
 
   // Fetch relationship types
-  const { data: typesData } = useFetch<{ types: RelationshipType[] }>('/api/entities/relationships/types');
+  const { data: typesData } = useFetch<{ types: RelationshipType[] }>(
+    '/api/entities/relationships/types'
+  );
 
   // Fetch relationship stats
-  const { data: stats, refetch: refetchStats } = useFetch<{ total: number; by_type: Record<string, number> }>(
-    '/api/entities/relationships/stats'
-  );
+  const { data: stats, refetch: refetchStats } = useFetch<{
+    total: number;
+    by_type: Record<string, number>;
+  }>('/api/entities/relationships/stats');
 
   // Build URL with params
   const relationshipsUrl = `/api/entities/relationships?page_size=100${typeFilter ? `&relationship_type=${typeFilter}` : ''}`;
 
   // Fetch relationships
-  const { data: relationships, loading, error, refetch } = useFetch<Relationship[]>(relationshipsUrl);
+  const {
+    data: relationships,
+    loading,
+    error,
+    refetch,
+  } = useFetch<Relationship[]>(relationshipsUrl);
 
   // Fetch entity names for relationships
   useEffect(() => {
     if (!relationships || relationships.length === 0) return;
 
     const entityIds = new Set<string>();
-    relationships.forEach(rel => {
+    relationships.forEach((rel) => {
       entityIds.add(rel.source_id);
       entityIds.add(rel.target_id);
     });
@@ -78,7 +86,7 @@ export function Relationships({ onRelationshipCreated }: RelationshipsProps) {
         const response = await fetch(`/api/entities/items/${id}`);
         if (response.ok) {
           const entity = await response.json();
-          setEntityCache(prev => ({ ...prev, [id]: entity }));
+          setEntityCache((prev) => ({ ...prev, [id]: entity }));
         }
       } catch {
         // Entity not found - use ID as fallback
@@ -134,7 +142,7 @@ export function Relationships({ onRelationshipCreated }: RelationshipsProps) {
   };
 
   const getTypeLabel = (relType: string) => {
-    const type = typesData?.types.find(t => t.value === relType);
+    const type = typesData?.types.find((t) => t.value === relType);
     return type?.label || relType;
   };
 
@@ -160,16 +168,9 @@ export function Relationships({ onRelationshipCreated }: RelationshipsProps) {
       <div className="relationships-header">
         <div className="header-info">
           <h3>Entity Relationships</h3>
-          {stats && (
-            <span className="relationships-count">
-              {stats.total} total relationships
-            </span>
-          )}
+          {stats && <span className="relationships-count">{stats.total} total relationships</span>}
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowCreateModal(true)}
-        >
+        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
           <Icon name="Plus" size={16} />
           New Relationship
         </button>
@@ -185,7 +186,7 @@ export function Relationships({ onRelationshipCreated }: RelationshipsProps) {
             className="type-select"
           >
             <option value="">All Types</option>
-            {typesData?.types.map(type => (
+            {typesData?.types.map((type) => (
               <option key={type.value} value={type.value}>
                 {type.label}
               </option>
@@ -193,11 +194,7 @@ export function Relationships({ onRelationshipCreated }: RelationshipsProps) {
           </select>
         </div>
 
-        <button
-          className="btn btn-secondary"
-          onClick={() => refetch()}
-          disabled={loading}
-        >
+        <button className="btn btn-secondary" onClick={() => refetch()} disabled={loading}>
           <Icon name="RefreshCw" size={16} className={loading ? 'spin' : ''} />
           Refresh
         </button>
@@ -290,10 +287,7 @@ export function Relationships({ onRelationshipCreated }: RelationshipsProps) {
               <Icon name="Link" size={48} />
               <span>No relationships found</span>
               <p>Create relationships to connect entities.</p>
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowCreateModal(true)}
-              >
+              <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
                 <Icon name="Plus" size={16} />
                 Create First Relationship
               </button>
@@ -417,7 +411,11 @@ interface CreateRelationshipModalProps {
   onSuccess: () => void;
 }
 
-function CreateRelationshipModal({ relationshipTypes, onClose, onSuccess }: CreateRelationshipModalProps) {
+function CreateRelationshipModal({
+  relationshipTypes,
+  onClose,
+  onSuccess,
+}: CreateRelationshipModalProps) {
   const { toast } = useToast();
   const [sourceSearch, setSourceSearch] = useState('');
   const [targetSearch, setTargetSearch] = useState('');
@@ -429,11 +427,15 @@ function CreateRelationshipModal({ relationshipTypes, onClose, onSuccess }: Crea
 
   // Search for entities
   const { data: sourceResults } = useFetch<{ items: Entity[] }>(
-    sourceSearch.length >= 2 ? `/api/entities/items?q=${encodeURIComponent(sourceSearch)}&page_size=5` : null
+    sourceSearch.length >= 2
+      ? `/api/entities/items?q=${encodeURIComponent(sourceSearch)}&page_size=5`
+      : null
   );
 
   const { data: targetResults } = useFetch<{ items: Entity[] }>(
-    targetSearch.length >= 2 ? `/api/entities/items?q=${encodeURIComponent(targetSearch)}&page_size=5` : null
+    targetSearch.length >= 2
+      ? `/api/entities/items?q=${encodeURIComponent(targetSearch)}&page_size=5`
+      : null
   );
 
   const handleCreate = async () => {
@@ -507,7 +509,7 @@ function CreateRelationshipModal({ relationshipTypes, onClose, onSuccess }: Crea
                 />
                 {sourceResults && sourceResults.items.length > 0 && (
                   <div className="search-results">
-                    {sourceResults.items.map(entity => (
+                    {sourceResults.items.map((entity) => (
                       <button
                         key={entity.id}
                         className="search-result"
@@ -529,11 +531,8 @@ function CreateRelationshipModal({ relationshipTypes, onClose, onSuccess }: Crea
           {/* Relationship Type */}
           <div className="form-group">
             <label>Relationship Type</label>
-            <select
-              value={relationshipType}
-              onChange={(e) => setRelationshipType(e.target.value)}
-            >
-              {relationshipTypes.map(type => (
+            <select value={relationshipType} onChange={(e) => setRelationshipType(e.target.value)}>
+              {relationshipTypes.map((type) => (
                 <option key={type.value} value={type.value}>
                   {type.label} - {type.description}
                 </option>
@@ -562,7 +561,7 @@ function CreateRelationshipModal({ relationshipTypes, onClose, onSuccess }: Crea
                 />
                 {targetResults && targetResults.items.length > 0 && (
                   <div className="search-results">
-                    {targetResults.items.map(entity => (
+                    {targetResults.items.map((entity) => (
                       <button
                         key={entity.id}
                         className="search-result"
@@ -600,7 +599,10 @@ function CreateRelationshipModal({ relationshipTypes, onClose, onSuccess }: Crea
               <div className="preview-entity">{sourceEntity.name}</div>
               <div className="preview-arrow">
                 <Icon name="ArrowRight" size={20} />
-                <span>{relationshipTypes.find(t => t.value === relationshipType)?.label || relationshipType}</span>
+                <span>
+                  {relationshipTypes.find((t) => t.value === relationshipType)?.label ||
+                    relationshipType}
+                </span>
               </div>
               <div className="preview-entity">{targetEntity.name}</div>
             </div>

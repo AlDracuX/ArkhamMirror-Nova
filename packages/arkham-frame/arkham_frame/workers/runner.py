@@ -4,9 +4,6 @@ WorkerRunner - Process manager for spawning and managing workers.
 Handles worker lifecycle: spawn, monitor, scale, kill.
 """
 
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Dict, List, Optional, Type, Any
 import asyncio
 import logging
 import multiprocessing
@@ -14,10 +11,13 @@ import os
 import signal
 import sys
 import time
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Type
 
-from .base import BaseWorker, run_worker
-from .registry import WorkerRegistry, WorkerInfo
 from ..services.workers import WORKER_POOLS
+from .base import BaseWorker, run_worker
+from .registry import WorkerInfo, WorkerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class WorkerProcess:
     """Tracks a worker subprocess."""
+
     worker_id: str
     pool: str
     process: multiprocessing.Process
@@ -223,10 +224,7 @@ class WorkerRunner:
         Returns:
             Number of workers killed
         """
-        workers_to_kill = [
-            wid for wid, wp in self._processes.items()
-            if wp.pool == pool
-        ]
+        workers_to_kill = [wid for wid, wp in self._processes.items() if wp.pool == pool]
 
         count = 0
         for worker_id in workers_to_kill:
@@ -259,10 +257,7 @@ class WorkerRunner:
         if target_count < 0:
             target_count = 0
 
-        current_workers = [
-            (wid, wp) for wid, wp in self._processes.items()
-            if wp.pool == pool and wp.is_alive
-        ]
+        current_workers = [(wid, wp) for wid, wp in self._processes.items() if wp.pool == pool and wp.is_alive]
         current_count = len(current_workers)
 
         result = {"pool": pool, "target": target_count, "current": current_count}
@@ -303,10 +298,7 @@ class WorkerRunner:
             return {"error": f"Unknown pool: {pool}"}
 
         pool_config = WORKER_POOLS[pool]
-        workers = [
-            wp for wp in self._processes.values()
-            if wp.pool == pool
-        ]
+        workers = [wp for wp in self._processes.values() if wp.pool == pool]
 
         alive = [w for w in workers if w.is_alive]
         dead = [w for w in workers if not w.is_alive]
@@ -339,10 +331,7 @@ class WorkerRunner:
         Returns:
             Number of processes cleaned up
         """
-        dead = [
-            wid for wid, wp in self._processes.items()
-            if not wp.is_alive
-        ]
+        dead = [wid for wid, wp in self._processes.items() if not wp.is_alive]
 
         for worker_id in dead:
             del self._processes[worker_id]

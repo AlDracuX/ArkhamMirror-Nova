@@ -87,10 +87,7 @@ class PaddleWorker(BaseWorker):
             try:
                 from paddleocr import PaddleOCR
             except ImportError:
-                raise ImportError(
-                    "paddleocr not installed. "
-                    "Install with: pip install paddleocr paddlepaddle"
-                )
+                raise ImportError("paddleocr not installed. Install with: pip install paddleocr paddlepaddle")
 
             # Check for offline mode
             offline_mode = os.environ.get("ARKHAM_OFFLINE_MODE", "").lower() in ("true", "1", "yes")
@@ -150,9 +147,7 @@ class PaddleWorker(BaseWorker):
             results = []
             for i, img_data in enumerate(images):
                 try:
-                    result = await self._process_single_image(
-                        ocr_engine, img_data, det_only, job_id, i
-                    )
+                    result = await self._process_single_image(ocr_engine, img_data, det_only, job_id, i)
                     results.append(result)
                 except Exception as e:
                     logger.error(f"Failed to process image {i}: {e}")
@@ -166,9 +161,7 @@ class PaddleWorker(BaseWorker):
 
         else:
             # Single image
-            return await self._process_single_image(
-                ocr_engine, payload, det_only, job_id
-            )
+            return await self._process_single_image(ocr_engine, payload, det_only, job_id)
 
     async def _process_single_image(
         self,
@@ -241,11 +234,13 @@ class PaddleWorker(BaseWorker):
                 for box, text, score in zip(boxes, texts, scores):
                     box_list = box.tolist() if hasattr(box, "tolist") else list(box)
                     text_lines.append(text)
-                    lines.append({
-                        "box": box_list,
-                        "text": text,
-                        "confidence": float(score),
-                    })
+                    lines.append(
+                        {
+                            "box": box_list,
+                            "text": text,
+                            "confidence": float(score),
+                        }
+                    )
 
             # Handle old list-of-lists structure
             elif isinstance(ocr_res, list):
@@ -265,11 +260,13 @@ class PaddleWorker(BaseWorker):
                             box = box.tolist()
 
                         text_lines.append(text)
-                        lines.append({
-                            "box": box,
-                            "text": text,
-                            "confidence": float(conf),
-                        })
+                        lines.append(
+                            {
+                                "box": box,
+                                "text": text,
+                                "confidence": float(conf),
+                            }
+                        )
 
             full_text = "\n".join(text_lines)
 
@@ -305,6 +302,7 @@ def run_paddle_worker(database_url: str = None, worker_id: str = None):
         python -m arkham_shard_ocr.workers.paddle_worker
     """
     import asyncio
+
     worker = PaddleWorker(database_url=database_url, worker_id=worker_id)
     asyncio.run(worker.run())
 

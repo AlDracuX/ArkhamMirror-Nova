@@ -34,7 +34,7 @@
   - Event handlers (stubs)
   - Public API methods for other shards
   - Database schema creation (stub)
-  
+
 - **arkham_shard_entities/models.py**: Data models (139 lines)
   - EntityType enum (10 types)
   - RelationshipType enum (6 types)

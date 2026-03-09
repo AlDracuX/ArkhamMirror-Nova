@@ -4,21 +4,21 @@ Ingest Shard - Model Tests
 Tests for all enums, dataclasses, and data models.
 """
 
-import pytest
 from datetime import datetime
 from pathlib import Path
 
+import pytest
 from arkham_shard_ingest.models import (
     # Enums
     FileCategory,
-    ImageQuality,
-    JobPriority,
-    JobStatus,
     # Dataclasses
     FileInfo,
+    ImageQuality,
     ImageQualityScore,
-    IngestJob,
     IngestBatch,
+    IngestJob,
+    JobPriority,
+    JobStatus,
 )
 
 
@@ -427,10 +427,7 @@ class TestIngestBatchDataclass:
             category=FileCategory.DOCUMENT,
             extension=".pdf",
         )
-        return [
-            IngestJob(id=f"job-{i}", file_info=file_info, priority=JobPriority.BATCH)
-            for i in range(5)
-        ]
+        return [IngestJob(id=f"job-{i}", file_info=file_info, priority=JobPriority.BATCH) for i in range(5)]
 
     def test_minimal_creation(self):
         """Test creating a batch with minimal fields."""

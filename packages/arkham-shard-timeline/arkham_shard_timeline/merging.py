@@ -5,10 +5,10 @@ from datetime import datetime
 from typing import Optional
 
 from .models import (
-    TimelineEvent,
-    MergeStrategy,
-    MergeResult,
     DateRange,
+    MergeResult,
+    MergeStrategy,
+    TimelineEvent,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class TimelineMerger:
         self,
         events: list[TimelineEvent],
         strategy: Optional[MergeStrategy] = None,
-        priority_docs: Optional[list[str]] = None
+        priority_docs: Optional[list[str]] = None,
     ) -> MergeResult:
         """
         Merge timeline events.
@@ -97,10 +97,7 @@ class TimelineMerger:
             duplicates_removed=duplicates_removed,
         )
 
-    def _merge_chronological(
-        self,
-        events: list[TimelineEvent]
-    ) -> list[TimelineEvent]:
+    def _merge_chronological(self, events: list[TimelineEvent]) -> list[TimelineEvent]:
         """
         Simple chronological merge - just sort by date.
 
@@ -112,10 +109,7 @@ class TimelineMerger:
         """
         return sorted(events, key=lambda e: e.date_start)
 
-    def _merge_deduplicated(
-        self,
-        events: list[TimelineEvent]
-    ) -> tuple[list[TimelineEvent], int]:
+    def _merge_deduplicated(self, events: list[TimelineEvent]) -> tuple[list[TimelineEvent], int]:
         """
         Merge with deduplication - remove duplicate events.
 
@@ -153,10 +147,7 @@ class TimelineMerger:
 
         return deduplicated, removed_count
 
-    def _merge_consolidated(
-        self,
-        events: list[TimelineEvent]
-    ) -> tuple[list[TimelineEvent], int]:
+    def _merge_consolidated(self, events: list[TimelineEvent]) -> tuple[list[TimelineEvent], int]:
         """
         Merge with consolidation - merge similar events into composite events.
 
@@ -199,11 +190,7 @@ class TimelineMerger:
 
         return sorted(consolidated, key=lambda e: e.date_start), merged_count
 
-    def _merge_source_priority(
-        self,
-        events: list[TimelineEvent],
-        priority_docs: list[str]
-    ) -> list[TimelineEvent]:
+    def _merge_source_priority(self, events: list[TimelineEvent], priority_docs: list[str]) -> list[TimelineEvent]:
         """
         Merge with source prioritization - prefer events from certain documents.
 
@@ -225,10 +212,7 @@ class TimelineMerger:
             events_with_priority.append((priority, event))
 
         # Sort by date, then by priority (higher priority first)
-        sorted_events = sorted(
-            events_with_priority,
-            key=lambda x: (x[1].date_start, -x[0])
-        )
+        sorted_events = sorted(events_with_priority, key=lambda x: (x[1].date_start, -x[0]))
 
         # Remove duplicates, keeping higher priority versions
         deduplicated = []
@@ -250,11 +234,7 @@ class TimelineMerger:
         # Extract just the events
         return [event for priority, event in deduplicated]
 
-    def _are_duplicates(
-        self,
-        event1: TimelineEvent,
-        event2: TimelineEvent
-    ) -> bool:
+    def _are_duplicates(self, event1: TimelineEvent, event2: TimelineEvent) -> bool:
         """
         Check if two events are duplicates.
 
@@ -289,11 +269,7 @@ class TimelineMerger:
 
         return similarity > 0.7
 
-    def _are_similar(
-        self,
-        event1: TimelineEvent,
-        event2: TimelineEvent
-    ) -> bool:
+    def _are_similar(self, event1: TimelineEvent, event2: TimelineEvent) -> bool:
         """
         Check if two events are similar enough to consolidate.
 
@@ -328,10 +304,7 @@ class TimelineMerger:
 
         return similarity > 0.3
 
-    def _consolidate_group(
-        self,
-        group: list[TimelineEvent]
-    ) -> TimelineEvent:
+    def _consolidate_group(self, group: list[TimelineEvent]) -> TimelineEvent:
         """
         Consolidate a group of similar events into one composite event.
 
@@ -383,15 +356,12 @@ class TimelineMerger:
                 "source_count": len(group),
                 "source_documents": all_docs,
                 "original_events": [e.id for e in group],
-            }
+            },
         )
 
         return consolidated
 
-    def _calculate_date_range(
-        self,
-        events: list[TimelineEvent]
-    ) -> DateRange:
+    def _calculate_date_range(self, events: list[TimelineEvent]) -> DateRange:
         """
         Calculate the date range covered by events.
 

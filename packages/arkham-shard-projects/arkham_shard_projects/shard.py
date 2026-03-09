@@ -134,6 +134,7 @@ class ProjectsShard(ArkhamShard):
     def get_routes(self):
         """Return FastAPI router for this shard."""
         from .api import router
+
         return router
 
     # === Database Schema ===
@@ -894,6 +895,7 @@ class ProjectsShard(ArkhamShard):
             return
 
         import json
+
         data = (
             project.id,
             project.name,
@@ -909,56 +911,68 @@ class ProjectsShard(ArkhamShard):
         )
 
         if update:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 UPDATE arkham_projects SET
                     name=?, description=?, status=?, owner_id=?,
                     created_at=?, updated_at=?, settings=?, metadata=?,
                     member_count=?, document_count=?
                 WHERE id=?
-            """, data[1:] + (project.id,))
+            """,
+                data[1:] + (project.id,),
+            )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_projects (
                     id, name, description, status, owner_id,
                     created_at, updated_at, settings, metadata,
                     member_count, document_count
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, data)
+            """,
+                data,
+            )
 
     async def _save_project_member(self, member: ProjectMember) -> None:
         """Save a project member to the database."""
         if not self._db:
             return
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_project_members (
                 id, project_id, user_id, role, added_at, added_by
             ) VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            member.id,
-            member.project_id,
-            member.user_id,
-            member.role.value,
-            member.added_at.isoformat(),
-            member.added_by,
-        ))
+        """,
+            (
+                member.id,
+                member.project_id,
+                member.user_id,
+                member.role.value,
+                member.added_at.isoformat(),
+                member.added_by,
+            ),
+        )
 
     async def _save_project_document(self, doc: ProjectDocument) -> None:
         """Save a project document to the database."""
         if not self._db:
             return
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_project_documents (
                 id, project_id, document_id, added_at, added_by
             ) VALUES (?, ?, ?, ?, ?)
-        """, (
-            doc.id,
-            doc.project_id,
-            doc.document_id,
-            doc.added_at.isoformat(),
-            doc.added_by,
-        ))
+        """,
+            (
+                doc.id,
+                doc.project_id,
+                doc.document_id,
+                doc.added_at.isoformat(),
+                doc.added_by,
+            ),
+        )
 
     async def _log_activity(
         self,
@@ -974,22 +988,26 @@ class ProjectsShard(ArkhamShard):
             return
 
         import json
+
         activity_id = str(uuid4())
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_project_activity (
                 id, project_id, action, actor_id, target_type, target_id, timestamp, details
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            activity_id,
-            project_id,
-            action,
-            actor_id,
-            target_type,
-            target_id,
-            datetime.utcnow().isoformat(),
-            json.dumps(details or {}),
-        ))
+        """,
+            (
+                activity_id,
+                project_id,
+                action,
+                actor_id,
+                target_type,
+                target_id,
+                datetime.utcnow().isoformat(),
+                json.dumps(details or {}),
+            ),
+        )
 
     async def _update_project_counts(self, project_id: str) -> None:
         """Update member and document counts for a project."""
@@ -1006,22 +1024,26 @@ class ProjectsShard(ArkhamShard):
             [project_id],
         )
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             UPDATE arkham_projects SET
                 member_count = ?,
                 document_count = ?,
                 updated_at = ?
             WHERE id = ?
-        """, [
-            member_count["count"] if member_count else 0,
-            doc_count["count"] if doc_count else 0,
-            datetime.utcnow().isoformat(),
-            project_id,
-        ])
+        """,
+            [
+                member_count["count"] if member_count else 0,
+                doc_count["count"] if doc_count else 0,
+                datetime.utcnow().isoformat(),
+                project_id,
+            ],
+        )
 
     def _row_to_project(self, row: Dict[str, Any]) -> Project:
         """Convert database row to Project object."""
         import json
+
         return Project(
             id=row["id"],
             name=row["name"],
@@ -1039,6 +1061,7 @@ class ProjectsShard(ArkhamShard):
     def _row_to_activity(self, row: Dict[str, Any]) -> ProjectActivity:
         """Convert database row to ProjectActivity object."""
         import json
+
         return ProjectActivity(
             id=row["id"],
             project_id=row["project_id"],

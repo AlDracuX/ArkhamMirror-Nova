@@ -256,9 +256,7 @@ export function AuditPage() {
           <Icon name="Shield" size={28} />
           <div>
             <h1>Audit Log</h1>
-            <p className="page-description">
-              Security events and activity history
-            </p>
+            <p className="page-description">Security events and activity history</p>
           </div>
         </div>
 
@@ -270,17 +268,11 @@ export function AuditPage() {
           >
             <Icon name="BarChart3" size={16} />
           </button>
-          <button
-            className="btn btn-secondary"
-            onClick={() => handleExport('csv')}
-          >
+          <button className="btn btn-secondary" onClick={() => handleExport('csv')}>
             <Icon name="Download" size={16} />
             Export CSV
           </button>
-          <button
-            className="btn btn-secondary"
-            onClick={() => handleExport('json')}
-          >
+          <button className="btn btn-secondary" onClick={() => handleExport('json')}>
             <Icon name="FileJson" size={16} />
             Export JSON
           </button>
@@ -409,9 +401,7 @@ export function AuditPage() {
                     </div>
 
                     <div className="col-user">
-                      {event.user_email || (
-                        <span className="text-muted">Anonymous</span>
-                      )}
+                      {event.user_email || <span className="text-muted">Anonymous</span>}
                     </div>
 
                     <div className="col-target">
@@ -446,15 +436,11 @@ export function AuditPage() {
                         </div>
                         <div className="detail-item">
                           <span className="detail-label">User ID</span>
-                          <span className="detail-value mono">
-                            {event.user_id || 'N/A'}
-                          </span>
+                          <span className="detail-value mono">{event.user_id || 'N/A'}</span>
                         </div>
                         <div className="detail-item">
                           <span className="detail-label">User Agent</span>
-                          <span className="detail-value">
-                            {event.user_agent || 'N/A'}
-                          </span>
+                          <span className="detail-value">{event.user_agent || 'N/A'}</span>
                         </div>
                         <div className="detail-item full-width">
                           <span className="detail-label">Details</span>
@@ -472,11 +458,7 @@ export function AuditPage() {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="pagination">
-                <button
-                  className="btn btn-icon"
-                  disabled={page === 0}
-                  onClick={() => setPage(0)}
-                >
+                <button className="btn btn-icon" disabled={page === 0} onClick={() => setPage(0)}>
                   <Icon name="ChevronsLeft" size={16} />
                 </button>
                 <button

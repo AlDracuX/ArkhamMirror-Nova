@@ -170,7 +170,7 @@
   color: var(--arkham-text-secondary);
 }
 
-.select-all-checkbox input[type="checkbox"] {
+.select-all-checkbox input[type='checkbox'] {
   width: 18px;
   height: 18px;
   cursor: pointer;
@@ -222,7 +222,7 @@
   cursor: pointer;
 }
 
-.contradiction-checkbox input[type="checkbox"] {
+.contradiction-checkbox input[type='checkbox'] {
   width: 18px;
   height: 18px;
   cursor: pointer;
@@ -654,7 +654,7 @@
   font-size: 0.875rem;
 }
 
-.form-field input[type="range"] {
+.form-field input[type='range'] {
   width: 100%;
   height: 6px;
   -webkit-appearance: none;
@@ -664,7 +664,7 @@
   cursor: pointer;
 }
 
-.form-field input[type="range"]::-webkit-slider-thumb {
+.form-field input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
@@ -694,7 +694,7 @@
   cursor: pointer;
 }
 
-.checkbox-group input[type="checkbox"] {
+.checkbox-group input[type='checkbox'] {
   width: 18px;
   height: 18px;
   margin-top: 0.125rem;
@@ -1048,7 +1048,7 @@
   background: rgba(233, 69, 96, 0.08);
 }
 
-.document-checkbox input[type="checkbox"] {
+.document-checkbox input[type='checkbox'] {
   flex-shrink: 0;
   width: 18px;
   height: 18px;

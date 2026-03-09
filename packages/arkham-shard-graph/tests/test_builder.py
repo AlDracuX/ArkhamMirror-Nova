@@ -1,11 +1,11 @@
 """Tests for the graph builder."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 import pytest_asyncio
-from unittest.mock import MagicMock, AsyncMock
-
 from arkham_shard_graph.builder import GraphBuilder
-from arkham_shard_graph.models import Graph, GraphNode, GraphEdge, RelationshipType
+from arkham_shard_graph.models import Graph, GraphEdge, GraphNode, RelationshipType
 
 
 class TestGraphBuilderCreation:
@@ -386,10 +386,7 @@ class TestExtractSubgraph:
         """Test extracting 1-hop subgraph."""
         builder = GraphBuilder()
 
-        nodes = [
-            GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person")
-            for i in range(5)
-        ]
+        nodes = [GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person") for i in range(5)]
 
         edges = [
             GraphEdge(source="n0", target="n1", relationship_type="works_for", weight=0.8),
@@ -413,10 +410,7 @@ class TestExtractSubgraph:
         """Test extracting 2-hop subgraph."""
         builder = GraphBuilder()
 
-        nodes = [
-            GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person")
-            for i in range(5)
-        ]
+        nodes = [GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person") for i in range(5)]
 
         edges = [
             GraphEdge(source="n0", target="n1", relationship_type="works_for", weight=0.8),
@@ -440,14 +434,10 @@ class TestExtractSubgraph:
         """Test extracting subgraph with max node limit."""
         builder = GraphBuilder()
 
-        nodes = [
-            GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person")
-            for i in range(10)
-        ]
+        nodes = [GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person") for i in range(10)]
 
         edges = [
-            GraphEdge(source=f"n{i}", target=f"n{i+1}", relationship_type="works_for", weight=0.8)
-            for i in range(9)
+            GraphEdge(source=f"n{i}", target=f"n{i + 1}", relationship_type="works_for", weight=0.8) for i in range(9)
         ]
 
         graph = Graph(project_id="proj1", nodes=nodes, edges=edges)
@@ -461,10 +451,7 @@ class TestExtractSubgraph:
         """Test extracting subgraph with minimum weight filter."""
         builder = GraphBuilder()
 
-        nodes = [
-            GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person")
-            for i in range(4)
-        ]
+        nodes = [GraphNode(id=f"n{i}", entity_id=f"e{i}", label=f"E{i}", entity_type="person") for i in range(4)]
 
         edges = [
             GraphEdge(source="n0", target="n1", relationship_type="works_for", weight=0.9),

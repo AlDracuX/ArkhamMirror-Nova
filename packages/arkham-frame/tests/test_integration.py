@@ -35,6 +35,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@lo
 async def get_db_pool():
     """Get async PostgreSQL connection pool."""
     import asyncpg
+
     try:
         pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=5)
         async with pool.acquire() as conn:
@@ -49,10 +50,7 @@ async def get_db_pool():
 async def cleanup_test_jobs(pool, prefix="integration-test"):
     """Clean up test jobs from database."""
     async with pool.acquire() as conn:
-        await conn.execute(
-            "DELETE FROM arkham_jobs.jobs WHERE id LIKE $1",
-            f"{prefix}-%"
-        )
+        await conn.execute("DELETE FROM arkham_jobs.jobs WHERE id LIKE $1", f"{prefix}-%")
 
 
 async def wait_for_job_completion(pool, job_id: str, timeout: float = 30.0) -> dict:
@@ -62,10 +60,7 @@ async def wait_for_job_completion(pool, job_id: str, timeout: float = 30.0) -> d
 
     while elapsed < timeout:
         async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT status, result, error FROM arkham_jobs.jobs WHERE id = $1",
-                job_id
-            )
+            row = await conn.fetchrow("SELECT status, result, error FROM arkham_jobs.jobs WHERE id = $1", job_id)
             if row and row["status"] in ["completed", "failed"]:
                 return {
                     "status": row["status"],
@@ -81,14 +76,20 @@ async def wait_for_job_completion(pool, job_id: str, timeout: float = 30.0) -> d
 async def enqueue_job(pool, pool_name: str, job_id: str, payload: dict, priority: int = 1):
     """Enqueue a job to a worker pool."""
     async with pool.acquire() as conn:
-        await conn.execute("""
+        await conn.execute(
+            """
             INSERT INTO arkham_jobs.jobs (id, pool, payload, priority, status)
             VALUES ($1, $2, $3, $4, 'pending')
             ON CONFLICT (id) DO UPDATE SET
                 status = 'pending',
                 payload = EXCLUDED.payload,
                 priority = EXCLUDED.priority
-        """, job_id, pool_name, json.dumps(payload), priority)
+        """,
+            job_id,
+            pool_name,
+            json.dumps(payload),
+            priority,
+        )
 
     print(f"  Enqueued job {job_id} to {pool_name}")
 
@@ -97,6 +98,7 @@ async def enqueue_job(pool, pool_name: str, job_id: str, payload: dict, priority
 # Test: LightWorker
 # =============================================================================
 
+
 async def test_light_worker(pool) -> bool:
     """Test LightWorker text processing."""
     print("\n--- Testing LightWorker (cpu-light) ---")
@@ -104,10 +106,15 @@ async def test_light_worker(pool) -> bool:
     job_id = "integration-test-light-1"
 
     # Test 'process' task (all-in-one) which returns normalized_text
-    await enqueue_job(pool, "cpu-light", job_id, {
-        "task": "process",
-        "text": "  Hello   World!  This\thas\tweird   spacing.  ",
-    })
+    await enqueue_job(
+        pool,
+        "cpu-light",
+        job_id,
+        {
+            "task": "process",
+            "text": "  Hello   World!  This\thas\tweird   spacing.  ",
+        },
+    )
 
     result = await wait_for_job_completion(pool, job_id, timeout=10)
 
@@ -117,7 +124,7 @@ async def test_light_worker(pool) -> bool:
         language = result_data.get("language", "unknown")
         quality = result_data.get("quality_score", 0)
 
-        print(f"  Input:  '  Hello   World!  This\\thas\\tweird   spacing.  '")
+        print("  Input:  '  Hello   World!  This\\thas\\tweird   spacing.  '")
         print(f"  Output: '{normalized}'")
         print(f"  Language: {language}, Quality: {quality}")
 
@@ -125,7 +132,7 @@ async def test_light_worker(pool) -> bool:
             print("  PASS: Text normalized correctly")
             return True
         else:
-            print(f"  FAIL: Unexpected normalized output")
+            print("  FAIL: Unexpected normalized output")
             return False
     else:
         print(f"  FAIL: Job status = {result.get('status')}")
@@ -138,6 +145,7 @@ async def test_light_worker(pool) -> bool:
 # Test: NERWorker
 # =============================================================================
 
+
 async def test_ner_worker(pool) -> bool:
     """Test NERWorker entity extraction."""
     print("\n--- Testing NERWorker (cpu-ner) ---")
@@ -146,10 +154,15 @@ async def test_ner_worker(pool) -> bool:
 
     test_text = "John Smith met with Apple CEO Tim Cook in New York on January 15, 2024."
 
-    await enqueue_job(pool, "cpu-ner", job_id, {
-        "text": test_text,
-        "doc_id": "test-doc-1",
-    })
+    await enqueue_job(
+        pool,
+        "cpu-ner",
+        job_id,
+        {
+            "text": test_text,
+            "doc_id": "test-doc-1",
+        },
+    )
 
     result = await wait_for_job_completion(pool, job_id, timeout=30)
 
@@ -186,15 +199,21 @@ async def test_ner_worker(pool) -> bool:
 # Test: EmbedWorker
 # =============================================================================
 
+
 async def test_embed_worker(pool) -> bool:
     """Test EmbedWorker embedding generation."""
     print("\n--- Testing EmbedWorker (gpu-embed) ---")
 
     job_id = "integration-test-embed-1"
 
-    await enqueue_job(pool, "gpu-embed", job_id, {
-        "text": "This is a test sentence for embedding generation.",
-    })
+    await enqueue_job(
+        pool,
+        "gpu-embed",
+        job_id,
+        {
+            "text": "This is a test sentence for embedding generation.",
+        },
+    )
 
     result = await wait_for_job_completion(pool, job_id, timeout=60)
 
@@ -212,7 +231,7 @@ async def test_embed_worker(pool) -> bool:
             print(f"  PASS: Generated {dimensions}-dim embedding")
             return True
         else:
-            print(f"  FAIL: Invalid embedding dimensions")
+            print("  FAIL: Invalid embedding dimensions")
             return False
     else:
         print(f"  FAIL: Job status = {result.get('status')}")
@@ -225,12 +244,13 @@ async def test_embed_worker(pool) -> bool:
 # Test: ExtractWorker
 # =============================================================================
 
+
 async def test_extract_worker(pool) -> bool:
     """Test ExtractWorker text extraction."""
     print("\n--- Testing ExtractWorker (cpu-extract) ---")
 
     # Create a simple test text file
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
         f.write("This is a test document.\n")
         f.write("It has multiple lines.\n")
         f.write("The ExtractWorker should read this text.")
@@ -239,9 +259,14 @@ async def test_extract_worker(pool) -> bool:
     try:
         job_id = "integration-test-extract-1"
 
-        await enqueue_job(pool, "cpu-extract", job_id, {
-            "file_path": test_file,
-        })
+        await enqueue_job(
+            pool,
+            "cpu-extract",
+            job_id,
+            {
+                "file_path": test_file,
+            },
+        )
 
         result = await wait_for_job_completion(pool, job_id, timeout=30)
 
@@ -274,6 +299,7 @@ async def test_extract_worker(pool) -> bool:
 # Main
 # =============================================================================
 
+
 async def run_tests(workers: list[str] = None, with_workers: bool = False):
     """Run integration tests."""
     print("=" * 60)
@@ -293,9 +319,7 @@ async def run_tests(workers: list[str] = None, with_workers: bool = False):
     worker_tasks = []
     if with_workers:
         print("\nSpawning workers...")
-        from arkham_frame.workers import (
-            LightWorker, NERWorker, EmbedWorker, ExtractWorker
-        )
+        from arkham_frame.workers import EmbedWorker, ExtractWorker, LightWorker, NERWorker
 
         worker_classes = {
             "light": LightWorker,

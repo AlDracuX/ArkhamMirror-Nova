@@ -4,15 +4,15 @@ ArkhamFrame FastAPI Application.
 The main entry point for the Frame REST API.
 """
 
-from contextlib import asynccontextmanager
-import os
-from pathlib import Path
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 import logging
+import os
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 # Load .env file before anything else accesses environment variables
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 # Look for .env in project root (3 levels up from this file)
 _env_path = Path(__file__).parent.parent.parent.parent / ".env"
@@ -73,6 +73,7 @@ async def load_shards(frame: ArkhamFrame, app: FastAPI) -> None:
         except Exception as e:
             logger.warning(f"Failed to load shard {shard_name}: {e}")
             import traceback
+
             traceback.print_exc()
 
 
@@ -88,8 +89,9 @@ async def lifespan(app: FastAPI):
 
     # Initialize auth database tables
     from .auth import create_db_and_tables
-    from .auth.dependencies import async_session_maker
     from .auth.audit import ensure_audit_schema
+    from .auth.dependencies import async_session_maker
+
     await create_db_and_tables()
     # Create audit tables
     async with async_session_maker() as session:
@@ -105,6 +107,7 @@ async def lifespan(app: FastAPI):
     # Set up SPA static serving AFTER shards are loaded
     # This ensures shard routes have priority over the catch-all
     import os
+
     if os.environ.get("ARKHAM_SERVE_SHELL", "false").lower() == "true":
         setup_static_serving()
 
@@ -147,8 +150,9 @@ app = FastAPI(
 )
 
 # Security middleware
-from .middleware import SecurityHeadersMiddleware, limiter, rate_limit_handler, TenantContextMiddleware
 from slowapi.errors import RateLimitExceeded
+
+from .middleware import SecurityHeadersMiddleware, TenantContextMiddleware, limiter, rate_limit_handler
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(TenantContextMiddleware)
@@ -168,12 +172,13 @@ app.add_middleware(
 
 
 # Include API routes
-from .api import health, projects, shards, events, frame as frame_api
-from .api import export, notifications, scheduler
-# NOTE: templates import removed - templates shard handles /api/templates routes
+from .api import events, export, health, notifications, projects, scheduler, shards
+from .api import frame as frame_api
 
+# NOTE: templates import removed - templates shard handles /api/templates routes
 # Authentication routes (must be before other protected routes)
 from .auth import auth_router
+
 app.include_router(auth_router)
 
 app.include_router(health.router, tags=["Health"])
@@ -197,8 +202,9 @@ def setup_static_serving():
     """Set up static file serving for the Shell UI."""
     import os
     from pathlib import Path
-    from fastapi.staticfiles import StaticFiles
+
     from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
 
     # Look for Shell dist directory
     # Try multiple paths for different deployment scenarios

@@ -109,14 +109,17 @@ export function SankeyDiagram({
   const [_hoveredNode, setHoveredNode] = useState<string | null>(null);
 
   // Get node color
-  const getNodeColor = useCallback((node: FlowNode) => {
-    if (colorByType) {
-      return TYPE_COLORS[node.entity_type?.toLowerCase()] || TYPE_COLORS.default;
-    }
-    // Color by layer
-    const layerColors = ['#4299e1', '#48bb78', '#ed8936', '#9f7aea'];
-    return layerColors[node.layer % layerColors.length];
-  }, [colorByType]);
+  const getNodeColor = useCallback(
+    (node: FlowNode) => {
+      if (colorByType) {
+        return TYPE_COLORS[node.entity_type?.toLowerCase()] || TYPE_COLORS.default;
+      }
+      // Color by layer
+      const layerColors = ['#4299e1', '#48bb78', '#ed8936', '#9f7aea'];
+      return layerColors[node.layer % layerColors.length];
+    },
+    [colorByType]
+  );
 
   // Get link color
   const getLinkColor = useCallback((link: FlowLink) => {
@@ -131,11 +134,11 @@ export function SankeyDiagram({
     }
 
     // Create node maps
-    const nodeById = new Map(flowData.nodes.map(n => [n.id, n]));
-    const nodeIds = new Set(flowData.nodes.map(n => n.id));
+    const nodeById = new Map(flowData.nodes.map((n) => [n.id, n]));
+    const nodeIds = new Set(flowData.nodes.map((n) => n.id));
 
     // Filter valid links (no self-loops, valid nodes)
-    let validLinks = flowData.links.filter(link => {
+    let validLinks = flowData.links.filter((link) => {
       const hasSource = nodeIds.has(link.source);
       const hasTarget = nodeIds.has(link.target);
       const notSelfLoop = link.source !== link.target;
@@ -143,11 +146,11 @@ export function SankeyDiagram({
     });
 
     // Check if nodes have layer info - use it to enforce directionality
-    const hasLayers = flowData.nodes.some(n => n.layer !== undefined && n.layer >= 0);
+    const hasLayers = flowData.nodes.some((n) => n.layer !== undefined && n.layer >= 0);
 
     if (hasLayers) {
       // Only keep links that go from lower layer to higher layer (forward flow)
-      validLinks = validLinks.filter(link => {
+      validLinks = validLinks.filter((link) => {
         const sourceNode = nodeById.get(link.source);
         const targetNode = nodeById.get(link.target);
         if (!sourceNode || !targetNode) return false;
@@ -159,12 +162,12 @@ export function SankeyDiagram({
       const outEdges = new Map<string, Set<string>>();
       const inDegree = new Map<string, number>();
 
-      nodeIds.forEach(id => {
+      nodeIds.forEach((id) => {
         outEdges.set(id, new Set());
         inDegree.set(id, 0);
       });
 
-      validLinks.forEach(link => {
+      validLinks.forEach((link) => {
         outEdges.get(link.source)!.add(link.target);
         inDegree.set(link.target, (inDegree.get(link.target) || 0) + 1);
       });
@@ -174,7 +177,7 @@ export function SankeyDiagram({
       const queue: string[] = [];
 
       // Start with nodes that have no incoming edges
-      nodeIds.forEach(id => {
+      nodeIds.forEach((id) => {
         if (inDegree.get(id) === 0) {
           queue.push(id);
           layers.set(id, 0);
@@ -185,7 +188,7 @@ export function SankeyDiagram({
         const node = queue.shift()!;
         const nodeLayer = layers.get(node) || 0;
 
-        outEdges.get(node)?.forEach(target => {
+        outEdges.get(node)?.forEach((target) => {
           const newDegree = (inDegree.get(target) || 1) - 1;
           inDegree.set(target, newDegree);
 
@@ -200,21 +203,21 @@ export function SankeyDiagram({
       }
 
       // Nodes not in layers have cycles - assign them a default layer
-      nodeIds.forEach(id => {
+      nodeIds.forEach((id) => {
         if (!layers.has(id)) {
           layers.set(id, 0);
         }
       });
 
       // Filter to only forward edges (source layer < target layer)
-      validLinks = validLinks.filter(link => {
+      validLinks = validLinks.filter((link) => {
         const sourceLayer = layers.get(link.source) ?? 0;
         const targetLayer = layers.get(link.target) ?? 0;
         return sourceLayer < targetLayer;
       });
 
       // Update node layers
-      flowData.nodes.forEach(n => {
+      flowData.nodes.forEach((n) => {
         n.layer = layers.get(n.id) ?? 0;
       });
     }
@@ -224,7 +227,7 @@ export function SankeyDiagram({
     }
 
     // Map to processed links
-    const links = validLinks.map(link => ({
+    const links = validLinks.map((link) => ({
       source: link.source,
       target: link.target,
       value: link.value,
@@ -233,7 +236,7 @@ export function SankeyDiagram({
     }));
 
     return {
-      nodes: flowData.nodes.map(n => ({ ...n })),
+      nodes: flowData.nodes.map((n) => ({ ...n })),
       links,
     };
   }, [flowData]);
@@ -254,24 +257,25 @@ export function SankeyDiagram({
       .nodeId((d: any) => d.id)
       .nodeWidth(nodeWidth)
       .nodePadding(nodePadding)
-      .extent([[0, 0], [innerWidth, innerHeight]]);
+      .extent([
+        [0, 0],
+        [innerWidth, innerHeight],
+      ]);
 
     // Generate layout
     const { nodes, links } = sankeyGenerator({
-      nodes: sankeyData.nodes.map(d => ({ ...d })),
-      links: sankeyData.links.map(d => ({ ...d })),
+      nodes: sankeyData.nodes.map((d) => ({ ...d })),
+      links: sankeyData.links.map((d) => ({ ...d })),
     });
 
     // Create main group
-    const g = svg.append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`);
+    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
     // Draw links
-    const linkGroup = g.append('g')
-      .attr('class', 'sankey-links')
-      .attr('fill', 'none');
+    const linkGroup = g.append('g').attr('class', 'sankey-links').attr('fill', 'none');
 
-    linkGroup.selectAll('path')
+    linkGroup
+      .selectAll('path')
       .data(links)
       .enter()
       .append('path')
@@ -281,9 +285,8 @@ export function SankeyDiagram({
       .attr('stroke-width', (d: any) => Math.max(1, d.width || 1))
       .attr('stroke-opacity', 0.5)
       .style('cursor', 'pointer')
-      .on('mouseover', function(event, d: any) {
-        d3.select(this)
-          .attr('stroke-opacity', 0.8);
+      .on('mouseover', function (event, d: any) {
+        d3.select(this).attr('stroke-opacity', 0.8);
 
         const sourceNode = d.source as SankeyNodeExtended;
         const targetNode = d.target as SankeyNodeExtended;
@@ -295,10 +298,9 @@ export function SankeyDiagram({
           content: `${sourceNode.label} → ${targetNode.label}: ${d.value.toFixed(2)}`,
         });
       })
-      .on('mouseout', function() {
-        d3.select(this)
-          .attr('stroke-opacity', 0.5);
-        setTooltip(prev => ({ ...prev, visible: false }));
+      .on('mouseout', function () {
+        d3.select(this).attr('stroke-opacity', 0.5);
+        setTooltip((prev) => ({ ...prev, visible: false }));
       })
       .on('click', (_, d: any) => {
         const sourceNode = d.source as SankeyNodeExtended;
@@ -307,16 +309,16 @@ export function SankeyDiagram({
       });
 
     // Draw nodes
-    const nodeGroup = g.append('g')
-      .attr('class', 'sankey-nodes');
+    const nodeGroup = g.append('g').attr('class', 'sankey-nodes');
 
-    const nodeRects = nodeGroup.selectAll('g')
+    const nodeRects = nodeGroup
+      .selectAll('g')
       .data(nodes)
       .enter()
       .append('g')
       .attr('class', 'sankey-node')
       .style('cursor', 'pointer')
-      .on('mouseover', function(event, d: any) {
+      .on('mouseover', function (event, d: any) {
         setHoveredNode(d.id);
         setTooltip({
           visible: true,
@@ -326,25 +328,24 @@ export function SankeyDiagram({
         });
 
         // Highlight connected links
-        linkGroup.selectAll('path')
-          .attr('stroke-opacity', (link: any) => {
-            const sourceNode = link.source as SankeyNodeExtended;
-            const targetNode = link.target as SankeyNodeExtended;
-            return sourceNode.id === d.id || targetNode.id === d.id ? 0.8 : 0.2;
-          });
+        linkGroup.selectAll('path').attr('stroke-opacity', (link: any) => {
+          const sourceNode = link.source as SankeyNodeExtended;
+          const targetNode = link.target as SankeyNodeExtended;
+          return sourceNode.id === d.id || targetNode.id === d.id ? 0.8 : 0.2;
+        });
       })
-      .on('mouseout', function() {
+      .on('mouseout', function () {
         setHoveredNode(null);
-        setTooltip(prev => ({ ...prev, visible: false }));
-        linkGroup.selectAll('path')
-          .attr('stroke-opacity', 0.5);
+        setTooltip((prev) => ({ ...prev, visible: false }));
+        linkGroup.selectAll('path').attr('stroke-opacity', 0.5);
       })
       .on('click', (_, d: any) => {
         onNodeClick?.(d.id);
       });
 
     // Node rectangles
-    nodeRects.append('rect')
+    nodeRects
+      .append('rect')
       .attr('x', (d: any) => d.x0)
       .attr('y', (d: any) => d.y0)
       .attr('width', (d: any) => d.x1 - d.x0)
@@ -354,21 +355,32 @@ export function SankeyDiagram({
         if (highlightedNodes?.has(d.id)) return '#f59e0b';
         return d3.color(getNodeColor(d))?.darker(0.5)?.toString() || '#000';
       })
-      .attr('stroke-width', (d: any) => highlightedNodes?.has(d.id) ? 2 : 1)
+      .attr('stroke-width', (d: any) => (highlightedNodes?.has(d.id) ? 2 : 1))
       .attr('rx', 3);
 
     // Node labels
-    nodeRects.append('text')
-      .attr('x', (d: any) => d.x0 < innerWidth / 2 ? d.x1 + 6 : d.x0 - 6)
+    nodeRects
+      .append('text')
+      .attr('x', (d: any) => (d.x0 < innerWidth / 2 ? d.x1 + 6 : d.x0 - 6))
       .attr('y', (d: any) => (d.y0 + d.y1) / 2)
       .attr('dy', '0.35em')
-      .attr('text-anchor', (d: any) => d.x0 < innerWidth / 2 ? 'start' : 'end')
+      .attr('text-anchor', (d: any) => (d.x0 < innerWidth / 2 ? 'start' : 'end'))
       .attr('fill', 'var(--text-primary)')
       .attr('font-size', '11px')
-      .attr('font-weight', (d: any) => highlightedNodes?.has(d.id) ? '600' : '400')
-      .text((d: any) => d.label.length > 20 ? d.label.slice(0, 18) + '...' : d.label);
-
-  }, [sankeyData, width, height, nodeWidth, nodePadding, getNodeColor, getLinkColor, highlightedNodes, onNodeClick, onLinkClick]);
+      .attr('font-weight', (d: any) => (highlightedNodes?.has(d.id) ? '600' : '400'))
+      .text((d: any) => (d.label.length > 20 ? d.label.slice(0, 18) + '...' : d.label));
+  }, [
+    sankeyData,
+    width,
+    height,
+    nodeWidth,
+    nodePadding,
+    getNodeColor,
+    getLinkColor,
+    highlightedNodes,
+    onNodeClick,
+    onLinkClick,
+  ]);
 
   // Loading state
   if (isLoading) {
@@ -403,12 +415,7 @@ export function SankeyDiagram({
 
   return (
     <div className="sankey-diagram">
-      <svg
-        ref={svgRef}
-        width={width}
-        height={height}
-        className="sankey-svg"
-      />
+      <svg ref={svgRef} width={width} height={height} className="sankey-svg" />
 
       {/* Tooltip */}
       {tooltip.visible && (
@@ -482,7 +489,7 @@ export function SankeyControls({
   // Handle multi-select for entity types
   const toggleType = (types: string[], setTypes: (t: string[]) => void, type: string) => {
     if (types.includes(type)) {
-      setTypes(types.filter(t => t !== type));
+      setTypes(types.filter((t) => t !== type));
     } else {
       setTypes([...types, type]);
     }
@@ -506,7 +513,7 @@ export function SankeyControls({
           <div className="control-group">
             <label>Source Types (Left)</label>
             <div className="type-checkboxes">
-              {entityTypes.map(type => (
+              {entityTypes.map((type) => (
                 <label key={type} className="checkbox-label small">
                   <input
                     type="checkbox"
@@ -522,7 +529,7 @@ export function SankeyControls({
           <div className="control-group">
             <label>Target Types (Right)</label>
             <div className="type-checkboxes">
-              {entityTypes.map(type => (
+              {entityTypes.map((type) => (
                 <label key={type} className="checkbox-label small">
                   <input
                     type="checkbox"
@@ -538,7 +545,7 @@ export function SankeyControls({
           <div className="control-group">
             <label>Intermediate Types (Middle)</label>
             <div className="type-checkboxes">
-              {entityTypes.map(type => (
+              {entityTypes.map((type) => (
                 <label key={type} className="checkbox-label small">
                   <input
                     type="checkbox"

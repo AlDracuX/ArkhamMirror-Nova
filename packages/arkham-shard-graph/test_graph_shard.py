@@ -14,6 +14,7 @@ import asyncio
 import sys
 from datetime import datetime
 
+
 # Mock Frame and services
 class MockEventBus:
     def __init__(self):
@@ -48,10 +49,7 @@ async def test_graph_shard():
 
     # Import shard components
     from arkham_shard_graph import GraphShard
-    from arkham_shard_graph.models import (
-        Graph, GraphNode, GraphEdge, RelationshipType,
-        ExportFormat
-    )
+    from arkham_shard_graph.models import ExportFormat, Graph, GraphEdge, GraphNode, RelationshipType
 
     # Create shard
     print("\n1. Initializing Graph Shard...")
@@ -77,7 +75,7 @@ async def test_graph_shard():
     print("\n3. Testing Graph Statistics...")
     try:
         stats = await shard.calculate_statistics("test-project")
-        print(f"   SUCCESS: Calculated statistics")
+        print("   SUCCESS: Calculated statistics")
         print(f"   - Nodes: {stats.node_count}")
         print(f"   - Edges: {stats.edge_count}")
         print(f"   - Density: {stats.density:.4f}")
@@ -97,7 +95,7 @@ async def test_graph_shard():
             metric="degree",
             limit=5,
         )
-        print(f"   SUCCESS: Degree centrality (top 5)")
+        print("   SUCCESS: Degree centrality (top 5)")
         for i, result in enumerate(degree_results[:3], 1):
             print(f"   {i}. {result.label} (score: {result.score:.4f})")
     except Exception as e:
@@ -111,7 +109,7 @@ async def test_graph_shard():
             metric="pagerank",
             limit=5,
         )
-        print(f"   SUCCESS: PageRank centrality (top 5)")
+        print("   SUCCESS: PageRank centrality (top 5)")
         for i, result in enumerate(pagerank_results[:3], 1):
             print(f"   {i}. {result.label} (score: {result.score:.6f})")
     except Exception as e:
@@ -138,7 +136,7 @@ async def test_graph_shard():
                 print(f"   - Total weight: {path.total_weight:.4f}")
                 print(f"   - Path: {' -> '.join(path.path[:4])}...")
             else:
-                print(f"   INFO: No path found (disconnected graph)")
+                print("   INFO: No path found (disconnected graph)")
         except Exception as e:
             print(f"   ERROR: {e}")
             return False
@@ -173,7 +171,7 @@ async def test_graph_shard():
                 limit=5,
             )
             print(f"   SUCCESS: Found {neighbors['neighbor_count']} neighbors for {entity_id}")
-            for neighbor in neighbors['neighbors'][:3]:
+            for neighbor in neighbors["neighbors"][:3]:
                 print(f"   - {neighbor['label']} (weight: {neighbor['weight']:.4f})")
         except Exception as e:
             print(f"   ERROR: {e}")

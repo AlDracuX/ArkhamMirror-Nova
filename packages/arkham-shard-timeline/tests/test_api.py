@@ -4,26 +4,25 @@ Timeline Shard - API Tests
 Tests for the Timeline Shard API endpoints.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from fastapi.testclient import TestClient
-from fastapi import FastAPI
-
-from arkham_shard_timeline.api import router, init_api
+import pytest
+from arkham_shard_timeline.api import init_api, router
 from arkham_shard_timeline.models import (
-    TimelineEvent,
-    DatePrecision,
-    EventType,
-    MergeStrategy,
-    MergeResult,
-    DateRange,
-    TemporalConflict,
-    ConflictType,
     ConflictSeverity,
+    ConflictType,
+    DatePrecision,
+    DateRange,
+    EventType,
+    MergeResult,
+    MergeStrategy,
     NormalizedDate,
+    TemporalConflict,
+    TimelineEvent,
 )
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -44,22 +43,26 @@ def client(app):
 def mock_extractor():
     """Create mock date extractor."""
     mock = MagicMock()
-    mock.extract_events = MagicMock(return_value=[
-        TimelineEvent(
-            id="event-1",
-            document_id="doc-1",
-            text="January 15, 2024",
-            date_start=datetime(2024, 1, 15),
+    mock.extract_events = MagicMock(
+        return_value=[
+            TimelineEvent(
+                id="event-1",
+                document_id="doc-1",
+                text="January 15, 2024",
+                date_start=datetime(2024, 1, 15),
+                precision=DatePrecision.DAY,
+                confidence=0.95,
+            )
+        ]
+    )
+    mock.normalize_date = MagicMock(
+        return_value=NormalizedDate(
+            original="Jan 15, 2024",
+            normalized=datetime(2024, 1, 15),
             precision=DatePrecision.DAY,
             confidence=0.95,
         )
-    ])
-    mock.normalize_date = MagicMock(return_value=NormalizedDate(
-        original="Jan 15, 2024",
-        normalized=datetime(2024, 1, 15),
-        precision=DatePrecision.DAY,
-        confidence=0.95,
-    ))
+    )
     return mock
 
 
@@ -67,13 +70,15 @@ def mock_extractor():
 def mock_merger():
     """Create mock timeline merger."""
     mock = MagicMock()
-    mock.merge = MagicMock(return_value=MergeResult(
-        events=[],
-        count=0,
-        sources={},
-        date_range=DateRange(),
-        duplicates_removed=0,
-    ))
+    mock.merge = MagicMock(
+        return_value=MergeResult(
+            events=[],
+            count=0,
+            sources={},
+            date_range=DateRange(),
+            duplicates_removed=0,
+        )
+    )
     return mock
 
 
@@ -144,10 +149,7 @@ class TestExtractEndpoint:
 
     def test_extract_from_text(self, client, initialized_api, mock_extractor):
         """Test extracting from text."""
-        response = client.post(
-            "/api/timeline/extract",
-            json={"text": "Meeting on January 15, 2024."}
-        )
+        response = client.post("/api/timeline/extract", json={"text": "Meeting on January 15, 2024."})
 
         assert response.status_code == 200
         data = response.json()
@@ -193,7 +195,7 @@ class TestDocumentTimelineEndpoint:
                 "end_date": "2024-12-31",
                 "event_type": "occurrence",
                 "min_confidence": 0.8,
-            }
+            },
         )
 
         assert response.status_code == 200
@@ -206,10 +208,7 @@ class TestMergeEndpoint:
         """Test merge fails when not initialized."""
         init_api(None, None, None, None, None, None, None)
 
-        response = client.post(
-            "/api/timeline/merge",
-            json={"document_ids": ["doc-1", "doc-2"]}
-        )
+        response = client.post("/api/timeline/merge", json={"document_ids": ["doc-1", "doc-2"]})
 
         assert response.status_code == 503
 
@@ -231,7 +230,7 @@ class TestMergeEndpoint:
             json={
                 "document_ids": ["doc-1", "doc-2"],
                 "merge_strategy": "chronological",
-            }
+            },
         )
 
         assert response.status_code == 200
@@ -247,7 +246,7 @@ class TestMergeEndpoint:
             json={
                 "document_ids": ["doc-1"],
                 "merge_strategy": "invalid_strategy",
-            }
+            },
         )
 
         assert response.status_code == 400
@@ -269,7 +268,7 @@ class TestMergeEndpoint:
                 "document_ids": ["doc-1", "doc-2"],
                 "merge_strategy": "source_priority",
                 "priority_docs": ["doc-1"],
-            }
+            },
         )
 
         assert response.status_code == 200
@@ -287,7 +286,7 @@ class TestRangeEndpoint:
             params={
                 "start_date": "2024-01-01",
                 "end_date": "2024-12-31",
-            }
+            },
         )
 
         assert response.status_code == 503
@@ -299,7 +298,7 @@ class TestRangeEndpoint:
             params={
                 "start_date": "2024-01-01",
                 "end_date": "2024-12-31",
-            }
+            },
         )
 
         assert response.status_code == 200
@@ -320,7 +319,7 @@ class TestRangeEndpoint:
                 "event_types": "occurrence,deadline",
                 "limit": 50,
                 "offset": 10,
-            }
+            },
         )
 
         assert response.status_code == 200
@@ -333,19 +332,13 @@ class TestConflictsEndpoint:
         """Test conflicts fails when not initialized."""
         init_api(None, None, None, None, None, None, None)
 
-        response = client.post(
-            "/api/timeline/conflicts",
-            json={"document_ids": ["doc-1", "doc-2"]}
-        )
+        response = client.post("/api/timeline/conflicts", json={"document_ids": ["doc-1", "doc-2"]})
 
         assert response.status_code == 503
 
     def test_conflicts_basic(self, client, initialized_api, mock_conflict_detector):
         """Test basic conflict detection."""
-        response = client.post(
-            "/api/timeline/conflicts",
-            json={"document_ids": ["doc-1", "doc-2"]}
-        )
+        response = client.post("/api/timeline/conflicts", json={"document_ids": ["doc-1", "doc-2"]})
 
         assert response.status_code == 200
         data = response.json()
@@ -360,7 +353,7 @@ class TestConflictsEndpoint:
             json={
                 "document_ids": ["doc-1", "doc-2"],
                 "conflict_types": ["contradiction", "gap"],
-            }
+            },
         )
 
         assert response.status_code == 200
@@ -372,7 +365,7 @@ class TestConflictsEndpoint:
             json={
                 "document_ids": ["doc-1"],
                 "conflict_types": ["invalid_type"],
-            }
+            },
         )
 
         assert response.status_code == 400
@@ -384,7 +377,7 @@ class TestConflictsEndpoint:
             json={
                 "document_ids": ["doc-1", "doc-2"],
                 "tolerance_days": 5,
-            }
+            },
         )
 
         assert response.status_code == 200
@@ -419,7 +412,7 @@ class TestEntityTimelineEndpoint:
                 "start_date": "2024-01-01",
                 "end_date": "2024-12-31",
                 "include_related": True,
-            }
+            },
         )
 
         assert response.status_code == 200
@@ -432,19 +425,13 @@ class TestNormalizeEndpoint:
         """Test normalize fails when not initialized."""
         init_api(None, None, None, None, None, None, None)
 
-        response = client.post(
-            "/api/timeline/normalize",
-            json={"dates": ["Jan 15, 2024"]}
-        )
+        response = client.post("/api/timeline/normalize", json={"dates": ["Jan 15, 2024"]})
 
         assert response.status_code == 503
 
     def test_normalize_dates(self, client, initialized_api, mock_extractor):
         """Test normalizing dates."""
-        response = client.post(
-            "/api/timeline/normalize",
-            json={"dates": ["Jan 15, 2024", "2024-06-15"]}
-        )
+        response = client.post("/api/timeline/normalize", json={"dates": ["Jan 15, 2024", "2024-06-15"]})
 
         assert response.status_code == 200
         data = response.json()
@@ -458,7 +445,7 @@ class TestNormalizeEndpoint:
             json={
                 "dates": ["yesterday", "tomorrow"],
                 "reference_date": "2024-06-15T00:00:00",
-            }
+            },
         )
 
         assert response.status_code == 200
@@ -470,7 +457,7 @@ class TestNormalizeEndpoint:
             json={
                 "dates": ["Jan 15, 2024"],
                 "reference_date": "not-a-date",
-            }
+            },
         )
 
         assert response.status_code == 400
@@ -508,7 +495,7 @@ class TestStatsEndpoint:
                 "document_ids": "doc-1,doc-2,doc-3",
                 "start_date": "2024-01-01",
                 "end_date": "2024-12-31",
-            }
+            },
         )
 
         assert response.status_code == 200

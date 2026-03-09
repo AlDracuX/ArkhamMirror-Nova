@@ -6,35 +6,35 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 from fastapi_users.password import PasswordHelper
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from .dependencies import (
-    fastapi_users,
-    auth_backend,
-    current_active_user,
-    require_admin,
-    get_async_session,
-)
-from .models import User, Tenant
-from .schemas import (
-    UserRead,
-    UserCreate,
-    UserUpdate,
-    TenantRead,
-    TenantCreate,
-    SetupRequest,
-    SetupResponse,
-)
 from .audit import (
-    log_audit_event,
-    get_audit_events,
-    get_audit_stats,
-    export_audit_events,
-    ensure_audit_schema,
     AuditListResponse,
     AuditStats,
+    ensure_audit_schema,
+    export_audit_events,
+    get_audit_events,
+    get_audit_stats,
+    log_audit_event,
+)
+from .dependencies import (
+    auth_backend,
+    current_active_user,
+    fastapi_users,
+    get_async_session,
+    require_admin,
+)
+from .models import Tenant, User
+from .schemas import (
+    SetupRequest,
+    SetupResponse,
+    TenantCreate,
+    TenantRead,
+    UserCreate,
+    UserRead,
+    UserUpdate,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,6 +55,7 @@ router.include_router(
 
 
 # --- Current User Endpoints ---
+
 
 @router.get("/me", response_model=UserRead)
 async def get_current_user(user: User = Depends(current_active_user)):
@@ -92,6 +93,7 @@ async def update_current_user(
 
 # --- Setup Endpoints ---
 
+
 @router.get("/setup-required")
 async def check_setup_required(session: AsyncSession = Depends(get_async_session)):
     """Check if initial setup is needed (no tenants exist)."""
@@ -114,20 +116,12 @@ async def initial_setup(
     # Check if setup already completed
     result = await session.execute(select(func.count(Tenant.id)))
     if result.scalar() > 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Setup already completed"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Setup already completed")
 
     # Check if slug is valid
-    existing_slug = await session.execute(
-        select(Tenant).where(Tenant.slug == request.tenant_slug)
-    )
+    existing_slug = await session.execute(select(Tenant).where(Tenant.slug == request.tenant_slug))
     if existing_slug.scalar():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Tenant slug already exists"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant slug already exists")
 
     # Create tenant
     tenant = Tenant(
@@ -179,6 +173,7 @@ async def initial_setup(
 
 # --- Tenant Management (Admin only) ---
 
+
 @router.get("/tenants", response_model=List[TenantRead])
 async def list_tenants(
     user: User = Depends(require_admin),
@@ -203,9 +198,7 @@ async def create_tenant(
         raise HTTPException(status_code=403, detail="Superuser required")
 
     # Check slug uniqueness
-    existing = await session.execute(
-        select(Tenant).where(Tenant.slug == data.slug)
-    )
+    existing = await session.execute(select(Tenant).where(Tenant.slug == data.slug))
     if existing.scalar():
         raise HTTPException(status_code=400, detail="Tenant slug already exists")
 
@@ -219,15 +212,14 @@ async def create_tenant(
 
 # --- User Management within Tenant ---
 
+
 @router.get("/tenant/users", response_model=List[UserRead])
 async def list_tenant_users(
     user: User = Depends(require_admin),
     session: AsyncSession = Depends(get_async_session),
 ):
     """List users in current tenant."""
-    result = await session.execute(
-        select(User).where(User.tenant_id == user.tenant_id)
-    )
+    result = await session.execute(select(User).where(User.tenant_id == user.tenant_id))
     return result.scalars().all()
 
 
@@ -240,16 +232,12 @@ async def create_tenant_user(
 ):
     """Create a new user in current tenant."""
     # Check email uniqueness
-    existing = await session.execute(
-        select(User).where(User.email == data.email)
-    )
+    existing = await session.execute(select(User).where(User.email == data.email))
     if existing.scalar():
         raise HTTPException(status_code=400, detail="Email already registered")
 
     # Check tenant user limit
-    count_result = await session.execute(
-        select(func.count(User.id)).where(User.tenant_id == user.tenant_id)
-    )
+    count_result = await session.execute(select(func.count(User.id)).where(User.tenant_id == user.tenant_id))
     current_count = count_result.scalar()
     tenant_result = await session.execute(select(Tenant).where(Tenant.id == user.tenant_id))
     tenant = tenant_result.scalar_one()
@@ -306,9 +294,7 @@ async def update_tenant_user(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid user ID")
 
-    result = await session.execute(
-        select(User).where(User.id == target_id, User.tenant_id == user.tenant_id)
-    )
+    result = await session.execute(select(User).where(User.id == target_id, User.tenant_id == user.tenant_id))
     target_user = result.scalar()
 
     if not target_user:
@@ -401,9 +387,7 @@ async def delete_tenant_user(
     if target_id == user.id:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
 
-    result = await session.execute(
-        select(User).where(User.id == target_id, User.tenant_id == user.tenant_id)
-    )
+    result = await session.execute(select(User).where(User.id == target_id, User.tenant_id == user.tenant_id))
     target_user = result.scalar()
 
     if not target_user:
@@ -436,6 +420,7 @@ async def delete_tenant_user(
 
 
 # --- Audit Logging Endpoints ---
+
 
 @router.get("/audit", response_model=AuditListResponse)
 async def list_audit_events(
@@ -518,13 +503,11 @@ async def export_audit(
         return Response(
             content=content,
             media_type="application/json",
-            headers={"Content-Disposition": "attachment; filename=audit_events.json"}
+            headers={"Content-Disposition": "attachment; filename=audit_events.json"},
         )
 
     return Response(
-        content=content,
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=audit_events.csv"}
+        content=content, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=audit_events.csv"}
     )
 
 
@@ -543,7 +526,7 @@ async def list_event_types(
             WHERE tenant_id = :tid
             ORDER BY event_type
         """),
-        {"tid": str(user.tenant_id)}
+        {"tid": str(user.tenant_id)},
     )
 
     return {"event_types": [row[0] for row in result.fetchall()]}

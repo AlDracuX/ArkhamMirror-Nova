@@ -72,7 +72,13 @@ export function SunPositionPanel({ analysis }: SunPositionPanelProps) {
             <Icon name="Edit3" size={16} />
             <h4>Manual Coordinates</h4>
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
+          <p
+            style={{
+              fontSize: '0.8rem',
+              color: 'var(--color-text-secondary)',
+              marginBottom: '1rem',
+            }}
+          >
             Enter coordinates manually to verify sun position for a claimed location and time.
           </p>
           <div className="override-inputs">
@@ -83,9 +89,7 @@ export function SunPositionPanel({ analysis }: SunPositionPanelProps) {
                 step="0.000001"
                 placeholder="e.g., 40.7128"
                 value={overrideLocation.lat}
-                onChange={(e) =>
-                  setOverrideLocation({ ...overrideLocation, lat: e.target.value })
-                }
+                onChange={(e) => setOverrideLocation({ ...overrideLocation, lat: e.target.value })}
               />
             </div>
             <div className="override-input-group">
@@ -95,9 +99,7 @@ export function SunPositionPanel({ analysis }: SunPositionPanelProps) {
                 step="0.000001"
                 placeholder="e.g., -74.0060"
                 value={overrideLocation.lon}
-                onChange={(e) =>
-                  setOverrideLocation({ ...overrideLocation, lon: e.target.value })
-                }
+                onChange={(e) => setOverrideLocation({ ...overrideLocation, lon: e.target.value })}
               />
             </div>
             <div className="override-input-group full-width">
@@ -175,9 +177,7 @@ export function SunPositionPanel({ analysis }: SunPositionPanelProps) {
         <Icon name={sunResult.is_consistent ? 'CheckCircle' : 'AlertTriangle'} size={24} />
         <div>
           <div className="consistency-title">
-            {sunResult.is_consistent
-              ? 'Sun Position Consistent'
-              : 'Sun Position Inconsistent'}
+            {sunResult.is_consistent ? 'Sun Position Consistent' : 'Sun Position Inconsistent'}
           </div>
           <div className="consistency-confidence">
             Confidence: {(sunResult.confidence * 100).toFixed(0)}%
@@ -330,9 +330,7 @@ export function SunPositionPanel({ analysis }: SunPositionPanelProps) {
               step="0.000001"
               placeholder="Leave empty to use EXIF"
               value={overrideLocation.lat}
-              onChange={(e) =>
-                setOverrideLocation({ ...overrideLocation, lat: e.target.value })
-              }
+              onChange={(e) => setOverrideLocation({ ...overrideLocation, lat: e.target.value })}
             />
           </div>
           <div className="override-input-group">
@@ -342,9 +340,7 @@ export function SunPositionPanel({ analysis }: SunPositionPanelProps) {
               step="0.000001"
               placeholder="Leave empty to use EXIF"
               value={overrideLocation.lon}
-              onChange={(e) =>
-                setOverrideLocation({ ...overrideLocation, lon: e.target.value })
-              }
+              onChange={(e) => setOverrideLocation({ ...overrideLocation, lon: e.target.value })}
             />
           </div>
           <div className="override-input-group full-width">

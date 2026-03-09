@@ -12,14 +12,15 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class MaintenanceStatus(str, Enum):
     """Status of a maintenance operation."""
+
     IDLE = "idle"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -29,6 +30,7 @@ class MaintenanceStatus(str, Enum):
 @dataclass
 class ReindexResult:
     """Result of a reindex operation."""
+
     collection: str
     started_at: datetime
     completed_at: Optional[datetime] = None
@@ -43,6 +45,7 @@ class ReindexResult:
 @dataclass
 class HealthCheckResult:
     """Result of a health check."""
+
     timestamp: datetime
     collections: List[Dict[str, Any]] = field(default_factory=list)
     total_vectors: int = 0
@@ -130,14 +133,8 @@ class VectorMaintenanceService:
 
         # Register maintenance functions with scheduler
         if self._scheduler:
-            self._scheduler.register_job(
-                "vector_weekly_reindex",
-                self._scheduled_reindex
-            )
-            self._scheduler.register_job(
-                "vector_nightly_check",
-                self._scheduled_health_check
-            )
+            self._scheduler.register_job("vector_weekly_reindex", self._scheduled_reindex)
+            self._scheduler.register_job("vector_nightly_check", self._scheduled_health_check)
 
             # Schedule weekly reindex
             self._scheduler.schedule_cron(
@@ -181,15 +178,16 @@ class VectorMaintenanceService:
                     SELECT value FROM arkham_frame.maintenance_settings
                     WHERE key = 'vector_reindex'
                 """)
-                if row and row['value']:
+                if row and row["value"]:
                     import json
-                    config = row['value'] if isinstance(row['value'], dict) else json.loads(row['value'])
-                    if 'day_of_week' in config:
-                        self._config['reindex_day_of_week'] = config['day_of_week']
-                    if 'hour' in config:
-                        self._config['reindex_hour'] = config['hour']
-                    if config.get('last_run'):
-                        self._last_reindex = datetime.fromisoformat(config['last_run'])
+
+                    config = row["value"] if isinstance(row["value"], dict) else json.loads(row["value"])
+                    if "day_of_week" in config:
+                        self._config["reindex_day_of_week"] = config["day_of_week"]
+                    if "hour" in config:
+                        self._config["reindex_hour"] = config["hour"]
+                    if config.get("last_run"):
+                        self._last_reindex = datetime.fromisoformat(config["last_run"])
         except Exception as e:
             logger.warning(f"Failed to load maintenance config: {e}")
 
@@ -200,12 +198,15 @@ class VectorMaintenanceService:
 
         try:
             async with self._db_pool.acquire() as conn:
-                await conn.execute("""
+                await conn.execute(
+                    """
                     UPDATE arkham_frame.maintenance_settings
                     SET value = jsonb_set(value, '{last_run}', to_jsonb(NOW()::text)),
                         updated_at = NOW()
                     WHERE key = $1
-                """, operation)
+                """,
+                    operation,
+                )
         except Exception as e:
             logger.warning(f"Failed to save last run time: {e}")
 
@@ -221,7 +222,7 @@ class VectorMaintenanceService:
             await self._event_bus.emit(
                 "vector.maintenance.reindex.started",
                 {"scheduled": True, "timestamp": datetime.utcnow().isoformat()},
-                source="vector-maintenance"
+                source="vector-maintenance",
             )
 
         result = await self.reindex_all()
@@ -234,7 +235,7 @@ class VectorMaintenanceService:
                     "success": result.get("success", False),
                     "collections": result.get("collections_reindexed", 0),
                 },
-                source="vector-maintenance"
+                source="vector-maintenance",
             )
 
         await self._save_last_run("vector_reindex")
@@ -254,7 +255,7 @@ class VectorMaintenanceService:
                     "warnings": result.warnings,
                     "timestamp": result.timestamp.isoformat(),
                 },
-                source="vector-maintenance"
+                source="vector-maintenance",
             )
 
         return {
@@ -297,7 +298,7 @@ class VectorMaintenanceService:
             collections = await self._vectors.list_collections()
 
             for coll in collections:
-                coll_name = coll.name if hasattr(coll, 'name') else coll.get('name', str(coll))
+                coll_name = coll.name if hasattr(coll, "name") else coll.get("name", str(coll))
 
                 result = ReindexResult(
                     collection=coll_name,
@@ -307,15 +308,15 @@ class VectorMaintenanceService:
                 try:
                     # Get current state
                     info = await self._vectors.get_collection_info(coll_name)
-                    result.old_lists = info.lists if hasattr(info, 'lists') else 0
-                    result.vector_count = info.vector_count if hasattr(info, 'vector_count') else 0
+                    result.old_lists = info.lists if hasattr(info, "lists") else 0
+                    result.vector_count = info.vector_count if hasattr(info, "vector_count") else 0
 
                     # Perform reindex
                     reindex_result = await self._vectors.reindex_collection(coll_name)
 
                     result.completed_at = datetime.utcnow()
                     result.duration_seconds = (result.completed_at - result.started_at).total_seconds()
-                    result.new_lists = reindex_result.get('new_lists', result.old_lists)
+                    result.new_lists = reindex_result.get("new_lists", result.old_lists)
                     result.status = MaintenanceStatus.COMPLETED
 
                     logger.info(
@@ -338,7 +339,7 @@ class VectorMaintenanceService:
             # Update history
             self._reindex_history.extend(results)
             if len(self._reindex_history) > self._config["max_history"]:
-                self._reindex_history = self._reindex_history[-self._config["max_history"]:]
+                self._reindex_history = self._reindex_history[-self._config["max_history"] :]
 
             self._last_reindex = datetime.utcnow()
 
@@ -387,15 +388,15 @@ class VectorMaintenanceService:
         try:
             # Get current state
             info = await self._vectors.get_collection_info(collection)
-            result.old_lists = info.lists if hasattr(info, 'lists') else 0
-            result.vector_count = info.vector_count if hasattr(info, 'vector_count') else 0
+            result.old_lists = info.lists if hasattr(info, "lists") else 0
+            result.vector_count = info.vector_count if hasattr(info, "vector_count") else 0
 
             # Perform reindex
             reindex_result = await self._vectors.reindex_collection(collection)
 
             result.completed_at = datetime.utcnow()
             result.duration_seconds = (result.completed_at - result.started_at).total_seconds()
-            result.new_lists = reindex_result.get('new_lists', result.old_lists)
+            result.new_lists = reindex_result.get("new_lists", result.old_lists)
             result.status = MaintenanceStatus.COMPLETED
 
             # Add to history
@@ -457,19 +458,21 @@ class VectorMaintenanceService:
             result.total_collections = len(collections)
 
             for coll in collections:
-                coll_name = coll.name if hasattr(coll, 'name') else coll.get('name', str(coll))
+                coll_name = coll.name if hasattr(coll, "name") else coll.get("name", str(coll))
 
                 try:
                     info = await self._vectors.get_collection_info(coll_name)
 
                     coll_data = {
                         "name": coll_name,
-                        "vector_count": info.vector_count if hasattr(info, 'vector_count') else 0,
-                        "vector_size": info.vector_size if hasattr(info, 'vector_size') else 0,
-                        "index_type": info.index_type if hasattr(info, 'index_type') else "unknown",
-                        "lists": info.lists if hasattr(info, 'lists') else 0,
-                        "probes": info.probes if hasattr(info, 'probes') else 0,
-                        "last_reindex": info.last_reindex.isoformat() if hasattr(info, 'last_reindex') and info.last_reindex else None,
+                        "vector_count": info.vector_count if hasattr(info, "vector_count") else 0,
+                        "vector_size": info.vector_size if hasattr(info, "vector_size") else 0,
+                        "index_type": info.index_type if hasattr(info, "index_type") else "unknown",
+                        "lists": info.lists if hasattr(info, "lists") else 0,
+                        "probes": info.probes if hasattr(info, "probes") else 0,
+                        "last_reindex": info.last_reindex.isoformat()
+                        if hasattr(info, "last_reindex") and info.last_reindex
+                        else None,
                     }
 
                     result.collections.append(coll_data)
@@ -492,9 +495,7 @@ class VectorMaintenanceService:
                             last_reindex = datetime.fromisoformat(coll_data["last_reindex"])
                             days_since = (datetime.utcnow() - last_reindex).days
                             if days_since > 14:
-                                result.warnings.append(
-                                    f"{coll_name}: last reindex was {days_since} days ago"
-                                )
+                                result.warnings.append(f"{coll_name}: last reindex was {days_since} days ago")
 
                 except Exception as e:
                     result.warnings.append(f"{coll_name}: failed to get info - {e}")
@@ -525,6 +526,7 @@ class VectorMaintenanceService:
             return max(10, vector_count // 1000)
         else:
             import math
+
             return max(100, int(math.sqrt(vector_count)))
 
     # =========================================
@@ -608,17 +610,24 @@ class VectorMaintenanceService:
         if self._db_pool:
             try:
                 import json
+
                 async with self._db_pool.acquire() as conn:
-                    await conn.execute("""
+                    await conn.execute(
+                        """
                         UPDATE arkham_frame.maintenance_settings
                         SET value = $2, updated_at = NOW()
                         WHERE key = 'vector_reindex'
-                    """, 'vector_reindex', json.dumps({
-                        "schedule": "weekly",
-                        "day_of_week": self._config["reindex_day_of_week"],
-                        "hour": self._config["reindex_hour"],
-                        "last_run": self._last_reindex.isoformat() if self._last_reindex else None,
-                    }))
+                    """,
+                        "vector_reindex",
+                        json.dumps(
+                            {
+                                "schedule": "weekly",
+                                "day_of_week": self._config["reindex_day_of_week"],
+                                "hour": self._config["reindex_hour"],
+                                "last_run": self._last_reindex.isoformat() if self._last_reindex else None,
+                            }
+                        ),
+                    )
             except Exception as e:
                 logger.warning(f"Failed to save config to database: {e}")
 

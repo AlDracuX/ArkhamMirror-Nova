@@ -4,18 +4,19 @@ DocumentService - Full document management service.
 Provides CRUD operations, content access, search, and batch operations for documents.
 """
 
-from typing import Optional, List, Dict, Any, Tuple
+import logging
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-import logging
-import uuid
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class DocumentNotFoundError(Exception):
     """Document not found."""
+
     def __init__(self, doc_id: str):
         self.doc_id = doc_id
         super().__init__(f"Document not found: {doc_id}")
@@ -23,11 +24,13 @@ class DocumentNotFoundError(Exception):
 
 class DocumentError(Exception):
     """General document operation error."""
+
     pass
 
 
 class DocumentStatus(str, Enum):
     """Document processing status."""
+
     PENDING = "pending"
     UPLOADED = "uploaded"  # Initial upload state
     PROCESSING = "processing"
@@ -43,6 +46,7 @@ class DocumentStatus(str, Enum):
 @dataclass
 class Document:
     """Document data model."""
+
     id: str
     filename: str
     storage_id: str
@@ -61,6 +65,7 @@ class Document:
 @dataclass
 class Chunk:
     """Text chunk from a document."""
+
     id: str
     document_id: str
     page_number: Optional[int]
@@ -76,6 +81,7 @@ class Chunk:
 @dataclass
 class Page:
     """Page from a document."""
+
     id: str
     document_id: str
     page_number: int
@@ -90,6 +96,7 @@ class Page:
 @dataclass
 class SearchResult:
     """Search result with relevance score."""
+
     document: Document
     chunk: Optional[Chunk]
     score: float
@@ -99,6 +106,7 @@ class SearchResult:
 @dataclass
 class BatchResult:
     """Result of a batch operation."""
+
     total: int
     successful: int
     failed: int
@@ -159,7 +167,8 @@ class DocumentService:
                 conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {self.SCHEMA}"))
 
                 # Documents table
-                conn.execute(text(f"""
+                conn.execute(
+                    text(f"""
                     CREATE TABLE IF NOT EXISTS {self.SCHEMA}.documents (
                         id VARCHAR(36) PRIMARY KEY,
                         filename VARCHAR(500) NOT NULL,
@@ -176,10 +185,12 @@ class DocumentService:
                         metadata JSONB DEFAULT '{{}}',
                         error TEXT
                     )
-                """))
+                """)
+                )
 
                 # Add chunk_count if missing (migration for existing tables)
-                conn.execute(text(f"""
+                conn.execute(
+                    text(f"""
                     DO $$
                     BEGIN
                         IF NOT EXISTS (
@@ -192,10 +203,12 @@ class DocumentService:
                         END IF;
                     END
                     $$;
-                """))
+                """)
+                )
 
                 # Chunks table
-                conn.execute(text(f"""
+                conn.execute(
+                    text(f"""
                     CREATE TABLE IF NOT EXISTS {self.SCHEMA}.chunks (
                         id VARCHAR(36) PRIMARY KEY,
                         document_id VARCHAR(36) REFERENCES {self.SCHEMA}.documents(id) ON DELETE CASCADE,
@@ -208,10 +221,12 @@ class DocumentService:
                         vector_id VARCHAR(36),
                         metadata JSONB DEFAULT '{{}}'
                     )
-                """))
+                """)
+                )
 
                 # Pages table
-                conn.execute(text(f"""
+                conn.execute(
+                    text(f"""
                     CREATE TABLE IF NOT EXISTS {self.SCHEMA}.pages (
                         id VARCHAR(36) PRIMARY KEY,
                         document_id VARCHAR(36) REFERENCES {self.SCHEMA}.documents(id) ON DELETE CASCADE,
@@ -223,21 +238,30 @@ class DocumentService:
                         word_count INTEGER DEFAULT 0,
                         metadata JSONB DEFAULT '{{}}'
                     )
-                """))
+                """)
+                )
 
                 # Indexes
-                conn.execute(text(f"""
+                conn.execute(
+                    text(f"""
                     CREATE INDEX IF NOT EXISTS idx_documents_project ON {self.SCHEMA}.documents(project_id)
-                """))
-                conn.execute(text(f"""
+                """)
+                )
+                conn.execute(
+                    text(f"""
                     CREATE INDEX IF NOT EXISTS idx_documents_status ON {self.SCHEMA}.documents(status)
-                """))
-                conn.execute(text(f"""
+                """)
+                )
+                conn.execute(
+                    text(f"""
                     CREATE INDEX IF NOT EXISTS idx_chunks_document ON {self.SCHEMA}.chunks(document_id)
-                """))
-                conn.execute(text(f"""
+                """)
+                )
+                conn.execute(
+                    text(f"""
                     CREATE INDEX IF NOT EXISTS idx_pages_document ON {self.SCHEMA}.pages(document_id)
-                """))
+                """)
+                )
 
                 conn.commit()
                 logger.debug("Document tables created/verified")
@@ -279,17 +303,17 @@ class DocumentService:
         storage_id = None
         if self.storage:
             storage_path = f"{now.year}/{now.month:02d}/{doc_id}/{filename}"
-            storage_id = await self.storage.store(
-                storage_path, content, metadata={"document_id": doc_id}
-            )
+            storage_id = await self.storage.store(storage_path, content, metadata={"document_id": doc_id})
 
         # Detect mime type
         import mimetypes
+
         mime_type, _ = mimetypes.guess_type(filename)
 
-        from sqlalchemy import text
         import json
+
         from psycopg2.extras import Json
+        from sqlalchemy import text
 
         try:
             with self.db._engine.connect() as conn:
@@ -436,9 +460,7 @@ class DocumentService:
                     params,
                 )
 
-                documents = [
-                    self._row_to_document(row._mapping) for row in result.fetchall()
-                ]
+                documents = [self._row_to_document(row._mapping) for row in result.fetchall()]
 
                 return documents, total
 
@@ -684,8 +706,8 @@ class DocumentService:
         page_id = str(uuid.uuid4())
         word_count = len(text.split()) if text else 0
 
-        from sqlalchemy import text as sql_text
         from psycopg2.extras import Json
+        from sqlalchemy import text as sql_text
 
         try:
             with self.db._engine.connect() as conn:
@@ -772,8 +794,8 @@ class DocumentService:
 
         chunk_id = str(uuid.uuid4())
 
-        from sqlalchemy import text as sql_text
         from psycopg2.extras import Json
+        from sqlalchemy import text as sql_text
 
         try:
             with self.db._engine.connect() as conn:
@@ -799,7 +821,6 @@ class DocumentService:
                     },
                 )
                 conn.commit()
-
 
             return Chunk(
                 id=chunk_id,
@@ -910,13 +931,17 @@ class DocumentService:
             search_results = []
             for result in results:
                 # SearchResult is a dataclass with .payload attribute
-                payload = result.payload if hasattr(result, 'payload') else result
+                payload = result.payload if hasattr(result, "payload") else result
                 doc_id = payload.get("document_id") if isinstance(payload, dict) else None
                 if doc_id:
                     doc = await self.get_document(doc_id)
                     if doc:
                         # Extract score from SearchResult dataclass
-                        score = result.score if hasattr(result, 'score') else (payload.get("score", 0.0) if isinstance(payload, dict) else 0.0)
+                        score = (
+                            result.score
+                            if hasattr(result, "score")
+                            else (payload.get("score", 0.0) if isinstance(payload, dict) else 0.0)
+                        )
                         highlights = payload.get("highlights", []) if isinstance(payload, dict) else []
                         search_results.append(
                             SearchResult(
@@ -962,9 +987,7 @@ class DocumentService:
 
         return result
 
-    async def batch_update_status(
-        self, doc_ids: List[str], status: str
-    ) -> BatchResult:
+    async def batch_update_status(self, doc_ids: List[str], status: str) -> BatchResult:
         """
         Update status for multiple documents.
 

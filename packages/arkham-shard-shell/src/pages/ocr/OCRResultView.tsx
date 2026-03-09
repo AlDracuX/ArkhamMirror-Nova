@@ -63,7 +63,8 @@ export function OCRResultView({ result, fileName }: OCRResultViewProps) {
     );
   }
 
-  const wordCount = result.word_count ?? (result.text.trim() ? result.text.trim().split(/\s+/).length : 0);
+  const wordCount =
+    result.word_count ?? (result.text.trim() ? result.text.trim().split(/\s+/).length : 0);
   const charCount = result.char_count ?? result.text.length;
 
   return (

@@ -9,10 +9,10 @@ import asyncio
 import logging
 import os
 from datetime import datetime
-from typing import Callable, Optional
 from functools import wraps
+from typing import Callable, Optional
 
-from fastapi import Request, HTTPException
+from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
@@ -72,11 +72,16 @@ async def check_rate_limit(
 
     try:
         async with _db_pool.acquire() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 SELECT * FROM arkham_frame.check_rate_limit($1, $2, $3)
-            """, key, limit, window_seconds)
+            """,
+                key,
+                limit,
+                window_seconds,
+            )
 
-            return row['allowed'], row['current_count'], row['reset_at']
+            return row["allowed"], row["current_count"], row["reset_at"]
 
     except Exception as e:
         logger.error(f"Rate limit check failed: {e}")
@@ -149,6 +154,7 @@ def rate_limit(
         async def get_data():
             return {"data": "value"}
     """
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -159,7 +165,7 @@ def rate_limit(
                     request = arg
                     break
             if not request:
-                request = kwargs.get('request')
+                request = kwargs.get("request")
 
             if request:
                 key = key_func(request) if key_func else get_rate_limit_key(request)
@@ -184,7 +190,9 @@ def rate_limit(
                     )
 
             return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -277,7 +285,7 @@ async def rate_limit_handler(request: Request, exc) -> JSONResponse:
         status_code=429,
         content={
             "error": "rate_limit_exceeded",
-            "detail": str(exc.detail) if hasattr(exc, 'detail') else "Rate limit exceeded",
+            "detail": str(exc.detail) if hasattr(exc, "detail") else "Rate limit exceeded",
             "retry_after": 60,
         },
         headers={"Retry-After": "60"},

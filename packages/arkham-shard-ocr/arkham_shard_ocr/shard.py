@@ -5,8 +5,10 @@ import hashlib
 import logging
 import time
 from pathlib import Path
+
 from arkham_frame.shard_interface import ArkhamShard
-from .api import router, init_api
+
+from .api import init_api, router
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,7 @@ class OCRShard(ArkhamShard):
         worker_service = frame.get_service("workers")
         if worker_service:
             from .workers import PaddleWorker, QwenWorker
+
             worker_service.register_worker(PaddleWorker)
             worker_service.register_worker(QwenWorker)
             logger.info("Registered OCR workers (paddle, qwen)")
@@ -80,6 +83,7 @@ class OCRShard(ArkhamShard):
             worker_service = self._frame.get_service("workers")
             if worker_service:
                 from .workers import PaddleWorker, QwenWorker
+
                 worker_service.unregister_worker(PaddleWorker)
                 worker_service.unregister_worker(QwenWorker)
 
@@ -374,8 +378,7 @@ class OCRShard(ArkhamShard):
         mime_type = (file_info.mime_type or "").lower()
         is_pdf = mime_type == "application/pdf" or str(file_path).lower().endswith(".pdf")
         is_image = mime_type.startswith("image/") or any(
-            str(file_path).lower().endswith(ext)
-            for ext in [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif"]
+            str(file_path).lower().endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif"]
         )
 
         if is_image:
@@ -481,6 +484,7 @@ class OCRShard(ArkhamShard):
                 temp_dir.mkdir(parents=True, exist_ok=True)
             else:
                 import tempfile
+
                 temp_dir = Path(tempfile.mkdtemp(prefix="ocr_pdf_"))
 
             logger.info(f"Converting PDF {pdf_path} to images in {temp_dir}")
@@ -548,10 +552,7 @@ class OCRShard(ArkhamShard):
                         }
 
             # OCR all pages in parallel
-            tasks = [
-                ocr_page_image(i + 1, img)
-                for i, img in enumerate(images)
-            ]
+            tasks = [ocr_page_image(i + 1, img) for i, img in enumerate(images)]
             page_results = await asyncio.gather(*tasks)
 
             # Sort by page number
@@ -576,6 +577,7 @@ class OCRShard(ArkhamShard):
             if temp_dir and temp_dir.exists():
                 try:
                     import shutil
+
                     await asyncio.to_thread(shutil.rmtree, str(temp_dir))
                     logger.debug(f"Cleaned up temp directory: {temp_dir}")
                 except Exception as e:

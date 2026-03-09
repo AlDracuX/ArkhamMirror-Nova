@@ -16,9 +16,9 @@ import json
 import logging
 import os
 import re
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Dict, Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from .base import BaseWorker
@@ -50,19 +50,17 @@ class DBWorker(BaseWorker):
     _pool_lock = asyncio.Lock()
 
     # Table name validation pattern (alphanumeric + underscore only)
-    _TABLE_NAME_PATTERN = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+    _TABLE_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._database_url = os.environ.get(
-            "DATABASE_URL",
-            "postgresql://localhost:5432/arkham"
-        )
+        self._database_url = os.environ.get("DATABASE_URL", "postgresql://localhost:5432/arkham")
         self._asyncpg_available = False
 
         # Try to import asyncpg
         try:
             import asyncpg
+
             self._asyncpg_available = True
             logger.info("asyncpg available for async database I/O")
         except ImportError:
@@ -76,6 +74,7 @@ class DBWorker(BaseWorker):
                 # Double-check after acquiring lock
                 if DBWorker._db_pool is None:
                     import asyncpg
+
                     try:
                         DBWorker._db_pool = await asyncpg.create_pool(
                             self._database_url,

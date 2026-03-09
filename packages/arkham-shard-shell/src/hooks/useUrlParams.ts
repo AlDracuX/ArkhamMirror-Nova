@@ -44,38 +44,50 @@ export function useUrlParams<T extends Record<string, ParamValue>>(
     return result;
   }, [searchParams, defaults]);
 
-  const setParams = useCallback((updates: Partial<T>) => {
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
+  const setParams = useCallback(
+    (updates: Partial<T>) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
 
-      for (const [key, value] of Object.entries(updates)) {
-        const defaultValue = defaults[key as keyof T];
+          for (const [key, value] of Object.entries(updates)) {
+            const defaultValue = defaults[key as keyof T];
 
-        if (value === null || value === undefined) {
-          next.delete(key);
-        } else if (typeof value === 'boolean') {
-          // v5.1: Booleans are ALWAYS explicit (true/false), never omitted
-          // This supports filters with default: true
-          next.set(key, String(value));
-        } else if (value === defaultValue) {
-          // Non-boolean defaults are omitted to keep URLs clean
-          next.delete(key);
-        } else {
-          next.set(key, String(value));
-        }
-      }
+            if (value === null || value === undefined) {
+              next.delete(key);
+            } else if (typeof value === 'boolean') {
+              // v5.1: Booleans are ALWAYS explicit (true/false), never omitted
+              // This supports filters with default: true
+              next.set(key, String(value));
+            } else if (value === defaultValue) {
+              // Non-boolean defaults are omitted to keep URLs clean
+              next.delete(key);
+            } else {
+              next.set(key, String(value));
+            }
+          }
 
-      return next;
-    }, { replace: true });
-  }, [defaults, setSearchParams]);
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [defaults, setSearchParams]
+  );
 
-  const clearParam = useCallback((key: keyof T) => {
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      next.delete(key as string);
-      return next;
-    }, { replace: true });
-  }, [setSearchParams]);
+  const clearParam = useCallback(
+    (key: keyof T) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete(key as string);
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
 
   return [params, setParams, clearParam];
 }

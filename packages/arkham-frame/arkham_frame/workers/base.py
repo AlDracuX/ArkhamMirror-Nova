@@ -4,11 +4,6 @@ BaseWorker - Abstract base class for all ArkhamFrame workers.
 Workers poll a PostgreSQL job queue using SKIP LOCKED, process jobs, and report results.
 """
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from enum import Enum
-from typing import Dict, Any, Optional
 import asyncio
 import json
 import logging
@@ -17,12 +12,18 @@ import signal
 import socket
 import time
 import uuid
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class WorkerState(Enum):
     """Worker lifecycle states."""
+
     STARTING = "starting"
     IDLE = "idle"
     PROCESSING = "processing"
@@ -34,6 +35,7 @@ class WorkerState(Enum):
 @dataclass
 class WorkerMetrics:
     """Worker performance metrics."""
+
     jobs_completed: int = 0
     jobs_failed: int = 0
     total_processing_time: float = 0.0
@@ -134,18 +136,8 @@ class BaseWorker(ABC):
             # JSON codec setup for asyncpg (JSONB is returned as string by default)
             async def init_connection(conn):
                 """Initialize connection with JSON codecs."""
-                await conn.set_type_codec(
-                    'jsonb',
-                    encoder=json.dumps,
-                    decoder=json.loads,
-                    schema='pg_catalog'
-                )
-                await conn.set_type_codec(
-                    'json',
-                    encoder=json.dumps,
-                    decoder=json.loads,
-                    schema='pg_catalog'
-                )
+                await conn.set_type_codec("jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
+                await conn.set_type_codec("json", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
 
             self._db_pool = await asyncpg.create_pool(
                 self.database_url,
@@ -171,7 +163,8 @@ class BaseWorker(ABC):
             return
 
         async with self._db_pool.acquire() as conn:
-            await conn.execute("""
+            await conn.execute(
+                """
                 INSERT INTO arkham_jobs.workers
                 (id, pool, name, hostname, pid, state, started_at, last_heartbeat)
                 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
@@ -179,8 +172,14 @@ class BaseWorker(ABC):
                     state = EXCLUDED.state,
                     started_at = NOW(),
                     last_heartbeat = NOW()
-            """, self.worker_id, self.pool, self.name, socket.gethostname(),
-                os.getpid(), self._state.value)
+            """,
+                self.worker_id,
+                self.pool,
+                self.name,
+                socket.gethostname(),
+                os.getpid(),
+                self._state.value,
+            )
 
     async def deregister(self):
         """Remove worker from database registry."""
@@ -188,10 +187,13 @@ class BaseWorker(ABC):
             return
 
         async with self._db_pool.acquire() as conn:
-            await conn.execute("""
+            await conn.execute(
+                """
                 DELETE FROM arkham_jobs.workers
                 WHERE id = $1
-            """, self.worker_id)
+            """,
+                self.worker_id,
+            )
 
     async def heartbeat(self):
         """Send heartbeat to database."""
@@ -201,7 +203,8 @@ class BaseWorker(ABC):
         self._metrics.last_heartbeat = datetime.utcnow()
 
         async with self._db_pool.acquire() as conn:
-            await conn.execute("""
+            await conn.execute(
+                """
                 UPDATE arkham_jobs.workers
                 SET state = $2,
                     last_heartbeat = NOW(),
@@ -209,8 +212,13 @@ class BaseWorker(ABC):
                     jobs_failed = $4,
                     current_job = $5
                 WHERE id = $1
-            """, self.worker_id, self._state.value, self._metrics.jobs_completed,
-                self._metrics.jobs_failed, self._current_job)
+            """,
+                self.worker_id,
+                self._state.value,
+                self._metrics.jobs_completed,
+                self._metrics.jobs_failed,
+                self._current_job,
+            )
 
     async def dequeue_job(self) -> Optional[Dict[str, Any]]:
         """
@@ -235,7 +243,8 @@ class BaseWorker(ABC):
             """)
 
             # SKIP LOCKED is the magic - it skips rows locked by other workers
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 UPDATE arkham_jobs.jobs
                 SET status = 'processing',
                     started_at = NOW(),
@@ -250,23 +259,26 @@ class BaseWorker(ABC):
                 )
                 RETURNING id, pool, job_type, payload, priority, created_at,
                           retry_count, max_retries
-            """, self.pool, self.worker_id)
+            """,
+                self.pool,
+                self.worker_id,
+            )
 
             if not row:
                 return None
 
-            payload = row['payload']
+            payload = row["payload"]
             if isinstance(payload, str):
                 payload = json.loads(payload)
 
             return {
-                "id": row['id'],
-                "pool": row['pool'],
-                "job_type": row['job_type'],
+                "id": row["id"],
+                "pool": row["pool"],
+                "job_type": row["job_type"],
                 "payload": payload,
-                "priority": row['priority'],
-                "retry_count": row['retry_count'],
-                "max_retries": row['max_retries'],
+                "priority": row["priority"],
+                "retry_count": row["retry_count"],
+                "max_retries": row["max_retries"],
             }
 
     async def complete_job(self, job_id: str, result: Dict[str, Any] = None):
@@ -276,21 +288,28 @@ class BaseWorker(ABC):
 
         async with self._db_pool.acquire() as conn:
             # Pass dict directly - asyncpg JSON codec handles serialization
-            await conn.execute("""
+            await conn.execute(
+                """
                 UPDATE arkham_jobs.jobs
                 SET status = 'completed',
                     completed_at = NOW(),
                     result = $2
                 WHERE id = $1
-            """, job_id, result or {})
+            """,
+                job_id,
+                result or {},
+            )
 
             # Update worker stats
-            await conn.execute("""
+            await conn.execute(
+                """
                 UPDATE arkham_jobs.workers
                 SET jobs_completed = jobs_completed + 1,
                     current_job = NULL
                 WHERE id = $1
-            """, self.worker_id)
+            """,
+                self.worker_id,
+            )
 
     async def fail_job(self, job_id: str, error: str, requeue: bool = False):
         """Mark job as failed."""
@@ -299,20 +318,24 @@ class BaseWorker(ABC):
 
         async with self._db_pool.acquire() as conn:
             # Get current job state
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 SELECT retry_count, max_retries, pool, job_type, payload, created_at
                 FROM arkham_jobs.jobs WHERE id = $1
-            """, job_id)
+            """,
+                job_id,
+            )
 
             if not row:
                 return
 
-            retry_count = row['retry_count']
-            max_retries = row['max_retries']
+            retry_count = row["retry_count"]
+            max_retries = row["max_retries"]
 
             if requeue and retry_count < max_retries:
                 # Requeue with incremented retry count
-                await conn.execute("""
+                await conn.execute(
+                    """
                     UPDATE arkham_jobs.jobs
                     SET status = 'pending',
                         started_at = NULL,
@@ -320,34 +343,52 @@ class BaseWorker(ABC):
                         retry_count = retry_count + 1,
                         last_error = $2
                     WHERE id = $1
-                """, job_id, error)
+                """,
+                    job_id,
+                    error,
+                )
                 logger.info(f"Requeued job {job_id} (retry {retry_count + 1}/{max_retries})")
             else:
                 # Move to dead letter queue
-                await conn.execute("""
+                await conn.execute(
+                    """
                     INSERT INTO arkham_jobs.dead_letters
                     (job_id, pool, job_type, payload, error, retry_count, original_created_at)
                     VALUES ($1, $2, $3, $4, $5, $6, $7)
-                """, job_id, row['pool'], row['job_type'], row['payload'],
-                    error, row['retry_count'], row['created_at'])
+                """,
+                    job_id,
+                    row["pool"],
+                    row["job_type"],
+                    row["payload"],
+                    error,
+                    row["retry_count"],
+                    row["created_at"],
+                )
 
                 # Mark as dead
-                await conn.execute("""
+                await conn.execute(
+                    """
                     UPDATE arkham_jobs.jobs
                     SET status = 'dead',
                         completed_at = NOW(),
                         last_error = $2
                     WHERE id = $1
-                """, job_id, error)
+                """,
+                    job_id,
+                    error,
+                )
                 logger.warning(f"Job {job_id} moved to dead letter queue: {error}")
 
             # Update worker stats
-            await conn.execute("""
+            await conn.execute(
+                """
                 UPDATE arkham_jobs.workers
                 SET jobs_failed = jobs_failed + 1,
                     current_job = NULL
                 WHERE id = $1
-            """, self.worker_id)
+            """,
+                self.worker_id,
+            )
 
     @abstractmethod
     async def process_job(self, job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -433,25 +474,22 @@ class BaseWorker(ABC):
                         self._metrics.total_processing_time += elapsed
                         self._metrics.last_job_time = datetime.utcnow()
 
-                        logger.info(
-                            f"Worker {self.worker_id} completed job {job['id']} "
-                            f"in {elapsed:.2f}s"
-                        )
+                        logger.info(f"Worker {self.worker_id} completed job {job['id']} in {elapsed:.2f}s")
 
                     except Exception as e:
                         error_msg = str(e)
-                        logger.error(
-                            f"Worker {self.worker_id} job {job['id']} failed: {error_msg}"
-                        )
+                        logger.error(f"Worker {self.worker_id} job {job['id']} failed: {error_msg}")
 
                         await self.fail_job(job["id"], error_msg, requeue=True)
 
                         self._metrics.jobs_failed += 1
-                        self._metrics.errors.append({
-                            "job_id": job["id"],
-                            "error": error_msg,
-                            "time": datetime.utcnow().isoformat(),
-                        })
+                        self._metrics.errors.append(
+                            {
+                                "job_id": job["id"],
+                                "error": error_msg,
+                                "time": datetime.utcnow().isoformat(),
+                            }
+                        )
 
                     finally:
                         self._current_job = None
@@ -462,10 +500,7 @@ class BaseWorker(ABC):
                     # No job available, check idle timeout
                     idle_time = time.time() - idle_start
                     if idle_time >= self.idle_timeout:
-                        logger.info(
-                            f"Worker {self.worker_id} idle for {idle_time:.0f}s, "
-                            "shutting down"
-                        )
+                        logger.info(f"Worker {self.worker_id} idle for {idle_time:.0f}s, shutting down")
                         break
 
                     # Wait before next poll
@@ -493,10 +528,7 @@ class BaseWorker(ABC):
 
         # If we have a current job, try to requeue it
         if self._current_job:
-            logger.warning(
-                f"Worker {self.worker_id} has incomplete job {self._current_job}, "
-                "requeuing"
-            )
+            logger.warning(f"Worker {self.worker_id} has incomplete job {self._current_job}, requeuing")
             await self.fail_job(
                 self._current_job,
                 "Worker shutdown while processing",
@@ -521,8 +553,7 @@ class BaseWorker(ABC):
             "state": self._state.value,
             "current_job": self._current_job,
             "current_job_duration": (
-                (datetime.utcnow() - self._current_job_start).total_seconds()
-                if self._current_job_start else None
+                (datetime.utcnow() - self._current_job_start).total_seconds() if self._current_job_start else None
             ),
             "metrics": self._metrics.to_dict(),
             "pid": os.getpid(),

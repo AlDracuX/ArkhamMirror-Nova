@@ -5,9 +5,9 @@ Provides export capabilities for documents, reports, and data
 in various formats: PDF, HTML, Markdown, JSON, CSV.
 """
 
-import json
 import csv
 import io
+import json
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -23,23 +23,28 @@ logger = logging.getLogger(__name__)
 # Exceptions
 # ============================================
 
+
 class ExportError(Exception):
     """Base exception for export errors."""
+
     pass
 
 
 class ExportFormatError(ExportError):
     """Invalid or unsupported export format."""
+
     pass
 
 
 class ExportRenderError(ExportError):
     """Error during export rendering."""
+
     pass
 
 
 class TemplateNotFoundError(ExportError):
     """Export template not found."""
+
     pass
 
 
@@ -47,8 +52,10 @@ class TemplateNotFoundError(ExportError):
 # Enums and Types
 # ============================================
 
+
 class ExportFormat(str, Enum):
     """Supported export formats."""
+
     JSON = "json"
     CSV = "csv"
     MARKDOWN = "markdown"
@@ -60,6 +67,7 @@ class ExportFormat(str, Enum):
 @dataclass
 class ExportOptions:
     """Options for export operation."""
+
     format: ExportFormat = ExportFormat.JSON
     template: Optional[str] = None
     include_metadata: bool = True
@@ -76,6 +84,7 @@ class ExportOptions:
 @dataclass
 class ExportResult:
     """Result of an export operation."""
+
     format: ExportFormat
     content: Union[str, bytes]
     filename: str
@@ -88,6 +97,7 @@ class ExportResult:
 # ============================================
 # Format Exporters
 # ============================================
+
 
 class BaseExporter(ABC):
     """Abstract base class for format exporters."""
@@ -143,7 +153,7 @@ class JSONExporter(BaseExporter):
                     "title": options.title,
                     "author": options.author,
                     **options.custom_headers,
-                }
+                },
             }
 
         indent = 2 if options.pretty_print else None
@@ -156,7 +166,7 @@ class JSONExporter(BaseExporter):
             content=content,
             filename=filename,
             content_type=self.content_type,
-            size_bytes=len(content.encode('utf-8')),
+            size_bytes=len(content.encode("utf-8")),
         )
 
 
@@ -205,7 +215,7 @@ class CSVExporter(BaseExporter):
             content=content,
             filename=filename,
             content_type=self.content_type,
-            size_bytes=len(content.encode('utf-8')),
+            size_bytes=len(content.encode("utf-8")),
         )
 
 
@@ -262,7 +272,7 @@ class MarkdownExporter(BaseExporter):
             content=content,
             filename=filename,
             content_type=self.content_type,
-            size_bytes=len(content.encode('utf-8')),
+            size_bytes=len(content.encode("utf-8")),
         )
 
     def _dict_to_md(self, data: Dict, level: int = 2) -> List[str]:
@@ -368,7 +378,7 @@ class HTMLExporter(BaseExporter):
             content=content,
             filename=filename,
             content_type=self.content_type,
-            size_bytes=len(content.encode('utf-8')),
+            size_bytes=len(content.encode("utf-8")),
         )
 
     def _table_to_html(self, data: List[Dict]) -> List[str]:
@@ -463,13 +473,14 @@ class TextExporter(BaseExporter):
             content=content,
             filename=filename,
             content_type=self.content_type,
-            size_bytes=len(content.encode('utf-8')),
+            size_bytes=len(content.encode("utf-8")),
         )
 
 
 # ============================================
 # Export Service
 # ============================================
+
 
 class ExportService:
     """
@@ -561,12 +572,14 @@ class ExportService:
             result = exporter.export(data, options)
 
             # Track in history
-            self._history.append({
-                "format": format.value,
-                "filename": result.filename,
-                "size_bytes": result.size_bytes,
-                "exported_at": result.exported_at.isoformat(),
-            })
+            self._history.append(
+                {
+                    "format": format.value,
+                    "filename": result.filename,
+                    "size_bytes": result.size_bytes,
+                    "exported_at": result.exported_at.isoformat(),
+                }
+            )
 
             logger.info(f"Exported data to {format.value}: {result.filename}")
             return result

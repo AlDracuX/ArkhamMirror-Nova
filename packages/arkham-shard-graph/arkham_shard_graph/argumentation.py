@@ -5,18 +5,19 @@ Converts ACH matrices (hypotheses, evidence, ratings) into graph format
 suitable for visualization as an argumentation framework.
 """
 
-from dataclasses import dataclass, field
-from typing import Any
-from enum import Enum
 import logging
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any
 
-from .models import Graph, GraphNode, GraphEdge
+from .models import Graph, GraphEdge, GraphNode
 
 logger = logging.getLogger(__name__)
 
 
 class ArgumentNodeType(str, Enum):
     """Types of nodes in an argumentation graph."""
+
     HYPOTHESIS = "hypothesis"
     EVIDENCE = "evidence"
     CLAIM = "claim"
@@ -25,6 +26,7 @@ class ArgumentNodeType(str, Enum):
 
 class ArgumentEdgeType(str, Enum):
     """Types of edges in an argumentation graph."""
+
     SUPPORTS = "supports"
     ATTACKS = "attacks"
     NEUTRAL = "neutral"
@@ -33,6 +35,7 @@ class ArgumentEdgeType(str, Enum):
 @dataclass
 class ArgumentNode:
     """Node in an argumentation graph."""
+
     id: str
     node_type: ArgumentNodeType
     label: str
@@ -51,6 +54,7 @@ class ArgumentNode:
 @dataclass
 class ArgumentEdge:
     """Edge in an argumentation graph."""
+
     source: str
     target: str
     edge_type: ArgumentEdgeType
@@ -63,6 +67,7 @@ class ArgumentEdge:
 @dataclass
 class ArgumentStatus:
     """Status of an argument based on Dung semantics."""
+
     node_id: str
     status: str  # "accepted", "rejected", "undecided"
     support_count: int = 0
@@ -73,6 +78,7 @@ class ArgumentStatus:
 @dataclass
 class ArgumentationGraph:
     """An argumentation graph derived from ACH data."""
+
     matrix_id: str
     matrix_title: str
     nodes: list[ArgumentNode] = field(default_factory=list)
@@ -138,29 +144,33 @@ class ArgumentationBuilder:
             hyp_id = hyp.get("id", "")
             score_data = score_lookup.get(hyp_id, {})
 
-            nodes.append(ArgumentNode(
-                id=f"hyp_{hyp_id}",
-                node_type=ArgumentNodeType.HYPOTHESIS,
-                label=hyp.get("title", "Untitled"),
-                description=hyp.get("description", ""),
-                confidence=score_data.get("normalized_score"),
-                consistency_score=score_data.get("consistency_score"),
-                rank=score_data.get("rank"),
-                is_lead=(hyp_id == leading_hypothesis_id),
-            ))
+            nodes.append(
+                ArgumentNode(
+                    id=f"hyp_{hyp_id}",
+                    node_type=ArgumentNodeType.HYPOTHESIS,
+                    label=hyp.get("title", "Untitled"),
+                    description=hyp.get("description", ""),
+                    confidence=score_data.get("normalized_score"),
+                    consistency_score=score_data.get("consistency_score"),
+                    rank=score_data.get("rank"),
+                    is_lead=(hyp_id == leading_hypothesis_id),
+                )
+            )
 
         # Create evidence nodes
         for ev in evidence_list:
             ev_id = ev.get("id", "")
-            nodes.append(ArgumentNode(
-                id=f"ev_{ev_id}",
-                node_type=ArgumentNodeType.EVIDENCE,
-                label=ev.get("description", "")[:100] + ("..." if len(ev.get("description", "")) > 100 else ""),
-                description=ev.get("description", ""),
-                credibility=ev.get("credibility", 1.0),
-                evidence_type=ev.get("evidence_type"),
-                source=ev.get("source"),
-            ))
+            nodes.append(
+                ArgumentNode(
+                    id=f"ev_{ev_id}",
+                    node_type=ArgumentNodeType.EVIDENCE,
+                    label=ev.get("description", "")[:100] + ("..." if len(ev.get("description", "")) > 100 else ""),
+                    description=ev.get("description", ""),
+                    credibility=ev.get("credibility", 1.0),
+                    evidence_type=ev.get("evidence_type"),
+                    source=ev.get("source"),
+                )
+            )
 
         # Create edges from ratings
         for rating in ratings:
@@ -185,15 +195,17 @@ class ArgumentationBuilder:
             else:
                 edge_type = ArgumentEdgeType.NEUTRAL
 
-            edges.append(ArgumentEdge(
-                source=f"ev_{evidence_id}",
-                target=f"hyp_{hypothesis_id}",
-                edge_type=edge_type,
-                strength=strength,
-                rating_value=rating_value,
-                reasoning=reasoning,
-                confidence=confidence,
-            ))
+            edges.append(
+                ArgumentEdge(
+                    source=f"ev_{evidence_id}",
+                    target=f"hyp_{hypothesis_id}",
+                    edge_type=edge_type,
+                    strength=strength,
+                    rating_value=rating_value,
+                    reasoning=reasoning,
+                    confidence=confidence,
+                )
+            )
 
         # Calculate argument statuses
         statuses = self._calculate_argument_status(nodes, edges)
@@ -251,13 +263,15 @@ class ArgumentationBuilder:
             else:
                 status = "undecided"
 
-            statuses.append(ArgumentStatus(
-                node_id=node.id,
-                status=status,
-                support_count=support_count,
-                attack_count=attack_count,
-                net_score=net_score,
-            ))
+            statuses.append(
+                ArgumentStatus(
+                    node_id=node.id,
+                    status=status,
+                    support_count=support_count,
+                    attack_count=attack_count,
+                    net_score=net_score,
+                )
+            )
 
         return statuses
 
@@ -286,41 +300,45 @@ class ArgumentationBuilder:
                     status = s.status
                     break
 
-            nodes.append(GraphNode(
-                id=arg_node.id,
-                label=arg_node.label,
-                type=arg_node.node_type.value,
-                entity_type=arg_node.node_type.value,
-                weight=1.0,
-                properties={
-                    "description": arg_node.description,
-                    "confidence": arg_node.confidence,
-                    "consistency_score": arg_node.consistency_score,
-                    "rank": arg_node.rank,
-                    "is_lead": arg_node.is_lead,
-                    "credibility": arg_node.credibility,
-                    "evidence_type": arg_node.evidence_type,
-                    "source": arg_node.source,
-                    "layer": layer,
-                    "status": status,
-                },
-            ))
+            nodes.append(
+                GraphNode(
+                    id=arg_node.id,
+                    label=arg_node.label,
+                    type=arg_node.node_type.value,
+                    entity_type=arg_node.node_type.value,
+                    weight=1.0,
+                    properties={
+                        "description": arg_node.description,
+                        "confidence": arg_node.confidence,
+                        "consistency_score": arg_node.consistency_score,
+                        "rank": arg_node.rank,
+                        "is_lead": arg_node.is_lead,
+                        "credibility": arg_node.credibility,
+                        "evidence_type": arg_node.evidence_type,
+                        "source": arg_node.source,
+                        "layer": layer,
+                        "status": status,
+                    },
+                )
+            )
 
         # Convert argument edges to graph edges
         for arg_edge in arg_graph.edges:
-            edges.append(GraphEdge(
-                source=arg_edge.source,
-                target=arg_edge.target,
-                weight=abs(arg_edge.strength),
-                type=arg_edge.edge_type.value,
-                relationship_type=arg_edge.edge_type.value,
-                properties={
-                    "strength": arg_edge.strength,
-                    "rating_value": arg_edge.rating_value,
-                    "reasoning": arg_edge.reasoning,
-                    "confidence": arg_edge.confidence,
-                },
-            ))
+            edges.append(
+                GraphEdge(
+                    source=arg_edge.source,
+                    target=arg_edge.target,
+                    weight=abs(arg_edge.strength),
+                    type=arg_edge.edge_type.value,
+                    relationship_type=arg_edge.edge_type.value,
+                    properties={
+                        "strength": arg_edge.strength,
+                        "rating_value": arg_edge.rating_value,
+                        "reasoning": arg_edge.reasoning,
+                        "confidence": arg_edge.confidence,
+                    },
+                )
+            )
 
         return Graph(
             id=f"arg_{arg_graph.matrix_id}",

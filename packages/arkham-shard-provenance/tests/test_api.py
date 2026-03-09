@@ -1,9 +1,9 @@
 """Tests for Provenance Shard API endpoints."""
 
 import pytest
-from fastapi.testclient import TestClient
+from arkham_shard_provenance.api import init_api, router
 from fastapi import FastAPI
-from arkham_shard_provenance.api import router, init_api
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -260,9 +260,7 @@ class TestAuditEndpoints:
 
     def test_list_audit_records_with_filters(self, client):
         """Test listing audit records with filters."""
-        response = client.get(
-            "/api/provenance/audit?chain_id=chain-1&event_type=chain_created"
-        )
+        response = client.get("/api/provenance/audit?chain_id=chain-1&event_type=chain_created")
         assert response.status_code == 200
 
     def test_list_audit_records_with_event_source(self, client):

@@ -2,17 +2,17 @@
 Tests for credibility shard models.
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_credibility.models import (
+    STANDARD_FACTORS,
     AssessmentMethod,
     CredibilityAssessment,
     CredibilityFactor,
     CredibilityLevel,
     FactorType,
     SourceType,
-    STANDARD_FACTORS,
 )
 
 
@@ -45,10 +45,7 @@ def test_credibility_level_enum():
 def test_credibility_factor():
     """Test CredibilityFactor dataclass."""
     factor = CredibilityFactor(
-        factor_type=FactorType.SOURCE_RELIABILITY.value,
-        weight=0.25,
-        score=80,
-        notes="Strong track record"
+        factor_type=FactorType.SOURCE_RELIABILITY.value, weight=0.25, score=80, notes="Strong track record"
     )
 
     assert factor.factor_type == "source_reliability"

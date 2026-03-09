@@ -79,34 +79,37 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   } = useFetch<ProjectsListResponse>('/api/projects/?page_size=100');
 
   // Set active project
-  const setActiveProject = useCallback(async (projectId: string | null): Promise<boolean> => {
-    setSettingProject(true);
-    setSetError(null);
+  const setActiveProject = useCallback(
+    async (projectId: string | null): Promise<boolean> => {
+      setSettingProject(true);
+      setSetError(null);
 
-    try {
-      const response = await fetch('/api/projects/active', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project_id: projectId }),
-      });
+      try {
+        const response = await fetch('/api/projects/active', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: projectId }),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Failed to set active project: ${response.status}`);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `Failed to set active project: ${response.status}`);
+        }
+
+        // Refresh active project state
+        refreshActiveProject();
+        return true;
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Unknown error');
+        setSetError(error);
+        console.error('Failed to set active project:', error);
+        return false;
+      } finally {
+        setSettingProject(false);
       }
-
-      // Refresh active project state
-      refreshActiveProject();
-      return true;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error');
-      setSetError(error);
-      console.error('Failed to set active project:', error);
-      return false;
-    } finally {
-      setSettingProject(false);
-    }
-  }, [refreshActiveProject]);
+    },
+    [refreshActiveProject]
+  );
 
   return (
     <ProjectContext.Provider

@@ -5,13 +5,11 @@ Session-based persistence for debugging.
 Truncated on Frame startup.
 """
 
-from datetime import datetime
 import uuid
+from datetime import datetime
 
-from sqlalchemy import (
-    Column, Integer, String, DateTime, Boolean, Text
-)
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from arkham_frame.models.base import Base
 
@@ -23,6 +21,7 @@ class Event(Base):
     Stored for debugging during session.
     Truncated on Frame startup.
     """
+
     __tablename__ = "events"
     __table_args__ = {"schema": "arkham_frame"}
 
@@ -41,6 +40,7 @@ class ShardRegistry(Base):
     """
     Registry of installed shards.
     """
+
     __tablename__ = "shard_registry"
     __table_args__ = {"schema": "arkham_frame"}
 
@@ -58,6 +58,7 @@ class IngestionError(Base):
     """
     Error tracking for document processing pipeline.
     """
+
     __tablename__ = "ingestion_errors"
     __table_args__ = {"schema": "arkham_frame"}
 
@@ -77,6 +78,7 @@ class SchemaVersion(Base):
     """
     Schema versioning for migrations.
     """
+
     __tablename__ = "schema_version"
     __table_args__ = {"schema": "arkham_frame"}
 

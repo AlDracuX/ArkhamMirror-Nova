@@ -6,16 +6,15 @@ IMPORTANT: ELA has high false positive rates and should be used
 as a visualization tool, NOT as definitive evidence of manipulation.
 """
 
-from typing import Dict, Any
-from pathlib import Path
-import io
 import base64
+import io
 import uuid
+from pathlib import Path
+from typing import Any, Dict
 
-from PIL import Image
 import numpy as np
-
 import structlog
+from PIL import Image
 
 logger = structlog.get_logger()
 
@@ -130,7 +129,7 @@ class ELAAnalyzer:
         block_means = []
         for y in range(0, h - block_size, block_size):
             for x in range(0, w - block_size, block_size):
-                block = ela_array[y:y + block_size, x:x + block_size]
+                block = ela_array[y : y + block_size, x : x + block_size]
                 block_means.append(np.mean(block))
 
         block_std = np.std(block_means) if block_means else 0
@@ -162,8 +161,7 @@ class ELAAnalyzer:
         else:
             interpretation["assessment"] = "Error levels appear typical"
             interpretation["details"].append(
-                "No obvious anomalies in error level distribution. "
-                "This does NOT prove the image is authentic."
+                "No obvious anomalies in error level distribution. This does NOT prove the image is authentic."
             )
 
         return interpretation

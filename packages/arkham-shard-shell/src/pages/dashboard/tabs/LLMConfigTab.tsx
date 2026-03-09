@@ -41,7 +41,16 @@ const LLM_PROVIDERS: LLMProvider[] = [
     description: 'Run LLMs locally with easy model management',
     endpoint: 'http://localhost:11434/v1',
     defaultModel: 'llama3.2',
-    models: ['llama3.2', 'llama3.1', 'mistral', 'mixtral', 'phi3', 'gemma2', 'qwen2.5', 'codellama'],
+    models: [
+      'llama3.2',
+      'llama3.1',
+      'mistral',
+      'mixtral',
+      'phi3',
+      'gemma2',
+      'qwen2.5',
+      'codellama',
+    ],
     requiresApiKey: false,
     apiKeyEnvVar: '',
     icon: 'Box',
@@ -85,7 +94,11 @@ const LLM_PROVIDERS: LLMProvider[] = [
     description: 'Fast inference for open-source models',
     endpoint: 'https://api.together.xyz/v1',
     defaultModel: 'meta-llama/Llama-3.2-70B-Instruct-Turbo',
-    models: ['meta-llama/Llama-3.2-70B-Instruct-Turbo', 'mistralai/Mixtral-8x7B-Instruct-v0.1', 'Qwen/Qwen2.5-72B-Instruct-Turbo'],
+    models: [
+      'meta-llama/Llama-3.2-70B-Instruct-Turbo',
+      'mistralai/Mixtral-8x7B-Instruct-v0.1',
+      'Qwen/Qwen2.5-72B-Instruct-Turbo',
+    ],
     requiresApiKey: true,
     apiKeyEnvVar: 'TOGETHER_API_KEY',
     icon: 'Users',
@@ -97,7 +110,12 @@ const LLM_PROVIDERS: LLMProvider[] = [
     description: 'Ultra-fast LLM inference',
     endpoint: 'https://api.groq.com/openai/v1',
     defaultModel: 'llama-3.3-70b-versatile',
-    models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'],
+    models: [
+      'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant',
+      'mixtral-8x7b-32768',
+      'gemma2-9b-it',
+    ],
     requiresApiKey: true,
     apiKeyEnvVar: 'GROQ_API_KEY',
     icon: 'Zap',
@@ -133,11 +151,12 @@ function getResponseText(response: TestResult['response']): string {
 export function LLMConfigTab() {
   const { toast } = useToast();
   const confirm = useConfirm();
-  const { config, loading, error, updateConfig, testConnection, resetConfig, setFallbackModels } = useLLMConfig();
+  const { config, loading, error, updateConfig, testConnection, resetConfig, setFallbackModels } =
+    useLLMConfig();
 
   // Build providers with Docker-aware endpoints from backend config
   const providers = useMemo(() => {
-    return LLM_PROVIDERS.map(p => {
+    return LLM_PROVIDERS.map((p) => {
       if (p.id === 'lm-studio' && config?.default_lm_studio_endpoint) {
         return { ...p, endpoint: config.default_lm_studio_endpoint };
       }
@@ -152,15 +171,17 @@ export function LLMConfigTab() {
   const detectProvider = (endpoint: string): LLMProvider | null => {
     if (!endpoint) return null;
     const normalizedEndpoint = endpoint.replace('host.docker.internal', 'localhost');
-    return providers.find(p => {
-      if (p.id === 'custom' || !p.endpoint) return false;
-      const normalizedProviderEndpoint = p.endpoint.replace('host.docker.internal', 'localhost');
-      try {
-        return normalizedEndpoint.includes(new URL(normalizedProviderEndpoint).host);
-      } catch {
-        return false;
-      }
-    }) || null;
+    return (
+      providers.find((p) => {
+        if (p.id === 'custom' || !p.endpoint) return false;
+        const normalizedProviderEndpoint = p.endpoint.replace('host.docker.internal', 'localhost');
+        try {
+          return normalizedEndpoint.includes(new URL(normalizedProviderEndpoint).host);
+        } catch {
+          return false;
+        }
+      }) || null
+    );
   };
 
   // Provider selection state
@@ -180,7 +201,7 @@ export function LLMConfigTab() {
   const [fallbackEnabled, setFallbackEnabled] = useState(false);
   const [savingFallback, setSavingFallback] = useState(false);
 
-  const selectedProvider = providers.find(p => p.id === selectedProviderId);
+  const selectedProvider = providers.find((p) => p.id === selectedProviderId);
   const currentProvider = config?.endpoint ? detectProvider(config.endpoint) : null;
 
   // Sync fallback state from config
@@ -203,7 +224,7 @@ export function LLMConfigTab() {
   };
 
   const handleRemoveFallbackModel = (model: string) => {
-    setFallbackModelsState(fallbackModels.filter(m => m !== model));
+    setFallbackModelsState(fallbackModels.filter((m) => m !== model));
   };
 
   const handleMoveFallbackModel = (index: number, direction: 'up' | 'down') => {
@@ -231,7 +252,7 @@ export function LLMConfigTab() {
   };
 
   const handleProviderSelect = (providerId: string) => {
-    const provider = providers.find(p => p.id === providerId);
+    const provider = providers.find((p) => p.id === providerId);
     setSelectedProviderId(providerId);
     if (provider) {
       setSelectedModel(provider.defaultModel);
@@ -346,7 +367,9 @@ export function LLMConfigTab() {
       {config?.is_docker && (
         <div className="docker-mode-banner">
           <Icon name="Box" size={16} />
-          <span>Running in Docker - local endpoints use <code>host.docker.internal</code></span>
+          <span>
+            Running in Docker - local endpoints use <code>host.docker.internal</code>
+          </span>
         </div>
       )}
 
@@ -387,20 +410,14 @@ export function LLMConfigTab() {
             <div className="config-row">
               <span className="config-label">API Key:</span>
               {config?.api_key_configured ? (
-                <span className="status-badge success">
-                  Configured ({config.api_key_source})
-                </span>
+                <span className="status-badge success">Configured ({config.api_key_source})</span>
               ) : (
                 <span className="status-badge warning">Not Set</span>
               )}
             </div>
           </div>
           <div className="config-actions">
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={handleTest}
-              disabled={testing}
-            >
+            <button className="btn btn-secondary btn-sm" onClick={handleTest} disabled={testing}>
               {testing ? (
                 <>
                   <Icon name="Loader2" size={14} className="spin" />
@@ -413,11 +430,7 @@ export function LLMConfigTab() {
                 </>
               )}
             </button>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={handleReset}
-              disabled={resetting}
-            >
+            <button className="btn btn-secondary btn-sm" onClick={handleReset} disabled={resetting}>
               {resetting ? (
                 <>
                   <Icon name="Loader2" size={14} className="spin" />
@@ -447,7 +460,9 @@ export function LLMConfigTab() {
             </div>
             <div className="result-content">
               {testResult.success ? (
-                <p>LLM responded: <em>"{getResponseText(testResult.response)}"</em></p>
+                <p>
+                  LLM responded: <em>"{getResponseText(testResult.response)}"</em>
+                </p>
               ) : (
                 <p className="error-text">{testResult.error}</p>
               )}
@@ -478,12 +493,8 @@ export function LLMConfigTab() {
                 <span className="provider-desc">{provider.description}</span>
               </div>
               <div className="provider-badges">
-                {provider.local && (
-                  <span className="provider-badge local">Local</span>
-                )}
-                {provider.requiresApiKey && (
-                  <span className="provider-badge api-key">API Key</span>
-                )}
+                {provider.local && <span className="provider-badge local">Local</span>}
+                {provider.requiresApiKey && <span className="provider-badge api-key">API Key</span>}
                 {currentProvider?.id === provider.id && (
                   <span className="provider-badge active">Active</span>
                 )}
@@ -504,13 +515,15 @@ export function LLMConfigTab() {
                 <div className="warning-content">
                   <strong>API Key Required</strong>
                   <p>
-                    {selectedProvider.name} requires an API key. Set it as an environment variable before switching:
+                    {selectedProvider.name} requires an API key. Set it as an environment variable
+                    before switching:
                   </p>
                   <div className="env-var-box">
                     <code>{selectedProvider.apiKeyEnvVar}=your-api-key-here</code>
                   </div>
                   <p className="hint">
-                    Add this to your <code>.env</code> file or set it in your terminal, then restart the server.
+                    Add this to your <code>.env</code> file or set it in your terminal, then restart
+                    the server.
                   </p>
                 </div>
               </div>
@@ -520,7 +533,9 @@ export function LLMConfigTab() {
             {selectedProvider.requiresApiKey && config?.api_key_configured && (
               <div className="api-key-confirmed">
                 <Icon name="CheckCircle" size={20} />
-                <span>API key detected from <code>{config.api_key_source}</code></span>
+                <span>
+                  API key detected from <code>{config.api_key_source}</code>
+                </span>
               </div>
             )}
 
@@ -554,7 +569,9 @@ export function LLMConfigTab() {
                     onChange={(e) => setSelectedModel(e.target.value)}
                   >
                     {selectedProvider.models.map((model) => (
-                      <option key={model} value={model}>{model}</option>
+                      <option key={model} value={model}>
+                        {model}
+                      </option>
                     ))}
                   </select>
                 )}
@@ -569,13 +586,17 @@ export function LLMConfigTab() {
                   <input
                     type="text"
                     className="form-input"
-                    placeholder={config?.is_docker ? "http://host.docker.internal:8080/v1" : "http://localhost:8080/v1"}
+                    placeholder={
+                      config?.is_docker
+                        ? 'http://host.docker.internal:8080/v1'
+                        : 'http://localhost:8080/v1'
+                    }
                     value={customEndpoint}
                     onChange={(e) => setCustomEndpoint(e.target.value)}
                   />
                   <span className="form-hint">
                     OpenAI-compatible API endpoint
-                    {config?.is_docker && " (use host.docker.internal for host services)"}
+                    {config?.is_docker && ' (use host.docker.internal for host services)'}
                   </span>
                 </div>
                 <div className="form-group">
@@ -619,10 +640,7 @@ export function LLMConfigTab() {
                   </>
                 )}
               </button>
-              <button
-                className="btn btn-secondary"
-                onClick={() => setSelectedProviderId('')}
-              >
+              <button className="btn btn-secondary" onClick={() => setSelectedProviderId('')}>
                 Cancel
               </button>
             </div>
@@ -638,8 +656,8 @@ export function LLMConfigTab() {
             Fallback Routing
           </h3>
           <p className="section-description">
-            Configure fallback models for automatic failover when your primary model
-            is unavailable (quota exceeded, rate limited, etc).
+            Configure fallback models for automatic failover when your primary model is unavailable
+            (quota exceeded, rate limited, etc).
           </p>
 
           <div className="fallback-config">

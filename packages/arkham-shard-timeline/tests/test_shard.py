@@ -4,18 +4,18 @@ Timeline Shard - Shard Tests
 Tests for the TimelineShard class.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock
 
-from arkham_shard_timeline.shard import TimelineShard
+import pytest
 from arkham_shard_timeline.models import (
-    MergeStrategy,
-    DateRange,
     ConflictType,
+    DateRange,
     EntityTimeline,
     ExtractionContext,
+    MergeStrategy,
 )
+from arkham_shard_timeline.shard import TimelineShard
 
 
 class TestShardMetadata:

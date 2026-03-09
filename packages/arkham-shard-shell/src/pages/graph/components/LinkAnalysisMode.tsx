@@ -75,7 +75,7 @@ export function LinkAnalysisMode({
 
   // Close context menu
   const closeContextMenu = useCallback(() => {
-    setContextMenu(prev => ({ ...prev, visible: false }));
+    setContextMenu((prev) => ({ ...prev, visible: false }));
   }, []);
 
   // Handle context menu actions
@@ -89,10 +89,13 @@ export function LinkAnalysisMode({
     closeContextMenu();
   }, [contextMenu, onAddLabel, closeContextMenu]);
 
-  const handleHighlight = useCallback((color: string) => {
-    onHighlight?.(contextMenu.nodeId, color);
-    closeContextMenu();
-  }, [contextMenu, onHighlight, closeContextMenu]);
+  const handleHighlight = useCallback(
+    (color: string) => {
+      onHighlight?.(contextMenu.nodeId, color);
+      closeContextMenu();
+    },
+    [contextMenu, onHighlight, closeContextMenu]
+  );
 
   return (
     <div className="link-analysis-mode">
@@ -203,9 +206,7 @@ export function LinkAnalysisMode({
       {/* Annotation Section */}
       <div className="annotation-section">
         <h4>Quick Actions</h4>
-        <p className="annotation-hint">
-          Right-click on nodes or edges to add annotations.
-        </p>
+        <p className="annotation-hint">Right-click on nodes or edges to add annotations.</p>
         <div className="quick-actions">
           <button
             className="btn btn-sm btn-secondary"
@@ -305,7 +306,7 @@ export function useLinkAnalysisMode(projectId: string) {
 
   // Update position for a node
   const updatePosition = useCallback((nodeId: string, position: Position) => {
-    setPositions(prev => {
+    setPositions((prev) => {
       const next = new Map(prev);
       next.set(nodeId, position);
       return next;

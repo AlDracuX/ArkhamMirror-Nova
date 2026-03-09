@@ -22,7 +22,7 @@ export interface CausalNode {
   observed_state: string | null;
   prior_probability: number | null;
   is_intervention: boolean;
-  node_type: string;  // variable, treatment, outcome, confounder
+  node_type: string; // variable, treatment, outcome, confounder
 }
 
 export interface CausalEdge {
@@ -167,8 +167,9 @@ export function CausalGraphView({
 
     if (useGridLayout) {
       // Grid layout for large graphs - better visibility
-      const nodeMap = new Map(data.nodes.map(n => [n.id, n]));
-      const ordering = data.causal_ordering.length > 0 ? data.causal_ordering : data.nodes.map(n => n.id);
+      const nodeMap = new Map(data.nodes.map((n) => [n.id, n]));
+      const ordering =
+        data.causal_ordering.length > 0 ? data.causal_ordering : data.nodes.map((n) => n.id);
 
       ordering.forEach((nodeId, i) => {
         const node = nodeMap.get(nodeId);
@@ -185,8 +186,9 @@ export function CausalGraphView({
       });
     } else {
       // Layered layout for smaller graphs with meaningful ordering
-      const layerSpacing = (canvasHeight - margin.top - margin.bottom) / Math.max(data.causal_ordering.length - 1, 1);
-      const nodeMap = new Map(data.nodes.map(n => [n.id, n]));
+      const layerSpacing =
+        (canvasHeight - margin.top - margin.bottom) / Math.max(data.causal_ordering.length - 1, 1);
+      const nodeMap = new Map(data.nodes.map((n) => [n.id, n]));
 
       // Group nodes by their position in ordering
       const layers: Map<number, CausalNode[]> = new Map();
@@ -199,7 +201,8 @@ export function CausalGraphView({
       });
 
       layers.forEach((layerNodes, layerIndex) => {
-        const nodeSpacingH = (canvasWidth - margin.left - margin.right) / Math.max(layerNodes.length, 1);
+        const nodeSpacingH =
+          (canvasWidth - margin.left - margin.right) / Math.max(layerNodes.length, 1);
         layerNodes.forEach((node, nodeIndex) => {
           positions.push({
             id: node.id,
@@ -257,7 +260,7 @@ export function CausalGraphView({
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
-    const positionMap = new Map(positions.map(p => [p.id, p]));
+    const positionMap = new Map(positions.map((p) => [p.id, p]));
 
     // Calculate required canvas size
     const nodeCount = data.nodes.length;
@@ -271,7 +274,8 @@ export function CausalGraphView({
     const container = svg.append('g').attr('class', 'container');
 
     // Add zoom behavior
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
+    const zoom = d3
+      .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
       .on('zoom', (event) => {
         container.attr('transform', event.transform);
@@ -283,14 +287,14 @@ export function CausalGraphView({
     if (nodeCount > 30) {
       const scale = Math.min(width / canvasWidth, height / canvasHeight) * 0.9;
       const initialTransform = d3.zoomIdentity
-        .translate(width / 2 - canvasWidth * scale / 2, 20)
+        .translate(width / 2 - (canvasWidth * scale) / 2, 20)
         .scale(scale);
       svg.call(zoom.transform, initialTransform);
     }
 
     // Check if edge is on highlighted path
     const isEdgeHighlighted = (cause: string, effect: string): boolean => {
-      return highlightedPaths.some(path => {
+      return highlightedPaths.some((path) => {
         for (let i = 0; i < path.length - 1; i++) {
           if (path[i] === cause && path[i + 1] === effect) return true;
         }
@@ -300,7 +304,8 @@ export function CausalGraphView({
 
     // Create arrow marker
     const defs = container.append('defs');
-    defs.append('marker')
+    defs
+      .append('marker')
       .attr('id', 'arrow-causal')
       .attr('viewBox', '0 -5 10 10')
       .attr('refX', 20)
@@ -312,7 +317,8 @@ export function CausalGraphView({
       .attr('d', 'M0,-5L10,0L0,5')
       .attr('fill', '#64748b');
 
-    defs.append('marker')
+    defs
+      .append('marker')
       .attr('id', 'arrow-causal-highlight')
       .attr('viewBox', '0 -5 10 10')
       .attr('refX', 20)
@@ -327,7 +333,7 @@ export function CausalGraphView({
     // Draw edges
     const edgeGroup = container.append('g').attr('class', 'edges');
 
-    data.edges.forEach(edge => {
+    data.edges.forEach((edge) => {
       const sourcePos = positionMap.get(edge.cause);
       const targetPos = positionMap.get(edge.effect);
 
@@ -336,7 +342,8 @@ export function CausalGraphView({
       const highlighted = isEdgeHighlighted(edge.cause, edge.effect);
       const strokeWidth = Math.max(1.5, Math.min(4, edge.strength * 3));
 
-      edgeGroup.append('line')
+      edgeGroup
+        .append('line')
         .attr('x1', sourcePos.x)
         .attr('y1', sourcePos.y)
         .attr('x2', targetPos.x)
@@ -354,22 +361,26 @@ export function CausalGraphView({
             y: event.clientY + 10,
             content: (
               <div>
-                <div style={{ fontWeight: 600 }}>{edge.cause} → {edge.effect}</div>
+                <div style={{ fontWeight: 600 }}>
+                  {edge.cause} → {edge.effect}
+                </div>
                 <div>Strength: {(edge.strength * 100).toFixed(0)}%</div>
                 <div>Confidence: {(edge.confidence * 100).toFixed(0)}%</div>
-                {edge.mechanism && <div style={{ fontSize: '0.7rem', marginTop: 4 }}>{edge.mechanism}</div>}
+                {edge.mechanism && (
+                  <div style={{ fontSize: '0.7rem', marginTop: 4 }}>{edge.mechanism}</div>
+                )}
               </div>
             ),
           });
         })
-        .on('mouseleave', () => setTooltip(prev => ({ ...prev, visible: false })));
+        .on('mouseleave', () => setTooltip((prev) => ({ ...prev, visible: false })));
     });
 
     // Draw nodes
     const nodeGroup = container.append('g').attr('class', 'nodes');
 
-    positions.forEach(pos => {
-      const isConfounder = confounders.some(c => c.id === pos.node.id);
+    positions.forEach((pos) => {
+      const isConfounder = confounders.some((c) => c.id === pos.node.id);
       const isTreatment = pos.node.id === selectedTreatment;
       const isOutcome = pos.node.id === selectedOutcome;
       const isIntervention = pos.node.is_intervention;
@@ -382,7 +393,8 @@ export function CausalGraphView({
       else if (isIntervention) fillColor = '#8b5cf6';
 
       const nodeSize = 16;
-      const g = nodeGroup.append('g')
+      const g = nodeGroup
+        .append('g')
         .attr('transform', `translate(${pos.x}, ${pos.y})`)
         .attr('cursor', 'pointer')
         .on('click', () => {
@@ -409,12 +421,8 @@ export function CausalGraphView({
               <div>
                 <div style={{ fontWeight: 600 }}>{pos.node.label}</div>
                 <div style={{ fontSize: '0.7rem', color: '#888' }}>{pos.node.node_type}</div>
-                {pos.node.states.length > 0 && (
-                  <div>States: {pos.node.states.join(', ')}</div>
-                )}
-                {pos.node.observed_state && (
-                  <div>Observed: {pos.node.observed_state}</div>
-                )}
+                {pos.node.states.length > 0 && <div>States: {pos.node.states.join(', ')}</div>}
+                {pos.node.observed_state && <div>Observed: {pos.node.observed_state}</div>}
                 {pos.node.description && (
                   <div style={{ marginTop: 4, fontSize: '0.7rem' }}>{pos.node.description}</div>
                 )}
@@ -422,7 +430,7 @@ export function CausalGraphView({
             ),
           });
         })
-        .on('mouseleave', () => setTooltip(prev => ({ ...prev, visible: false })));
+        .on('mouseleave', () => setTooltip((prev) => ({ ...prev, visible: false })));
 
       // Node shape (circle for variables)
       g.append('circle')
@@ -452,7 +460,8 @@ export function CausalGraphView({
 
     // DAG validation warning
     if (!data.is_valid_dag && data.cycles.length > 0) {
-      svg.append('text')
+      svg
+        .append('text')
         .attr('x', width / 2)
         .attr('y', 20)
         .attr('text-anchor', 'middle')
@@ -461,8 +470,18 @@ export function CausalGraphView({
         .attr('font-weight', 600)
         .text('⚠ Graph contains cycles - not a valid DAG');
     }
-
-  }, [data, positions, width, height, highlightedPaths, confounders, selectedTreatment, selectedOutcome, onNodeClick, onEdgeClick]);
+  }, [
+    data,
+    positions,
+    width,
+    height,
+    highlightedPaths,
+    confounders,
+    selectedTreatment,
+    selectedOutcome,
+    onNodeClick,
+    onEdgeClick,
+  ]);
 
   // Run intervention when both nodes selected
   useEffect(() => {
@@ -501,16 +520,12 @@ export function CausalGraphView({
 
         <div className="causal-selection">
           {selectedTreatment ? (
-            <span className="selection-badge treatment">
-              Treatment: {selectedTreatment}
-            </span>
+            <span className="selection-badge treatment">Treatment: {selectedTreatment}</span>
           ) : (
             <span className="selection-hint">Click node to set treatment</span>
           )}
           {selectedOutcome && (
-            <span className="selection-badge outcome">
-              Outcome: {selectedOutcome}
-            </span>
+            <span className="selection-badge outcome">Outcome: {selectedOutcome}</span>
           )}
           {(selectedTreatment || selectedOutcome) && (
             <button
@@ -575,8 +590,10 @@ export function CausalGraphView({
               {confounders.length > 0 && (
                 <div className="confounders-list">
                   <span className="label">Confounders:</span>
-                  {confounders.map(c => (
-                    <span key={c.id} className="confounder-badge">{c.label}</span>
+                  {confounders.map((c) => (
+                    <span key={c.id} className="confounder-badge">
+                      {c.label}
+                    </span>
                   ))}
                 </div>
               )}
@@ -672,7 +689,9 @@ export function CausalGraphControls({
       <div className="control-info">
         <Icon name="Info" size={14} />
         <div>
-          <p><strong>To analyze causation:</strong></p>
+          <p>
+            <strong>To analyze causation:</strong>
+          </p>
           <p>1. Click a node to set as Treatment</p>
           <p>2. Click another to set as Outcome</p>
           <p>3. View intervention effect estimate</p>

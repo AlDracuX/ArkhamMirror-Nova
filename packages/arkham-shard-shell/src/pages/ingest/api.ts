@@ -146,7 +146,7 @@ export async function uploadBatch(
   ocrMode: OcrMode = 'auto'
 ): Promise<BatchUploadResponse> {
   const formData = new FormData();
-  files.forEach(file => formData.append('files', file));
+  files.forEach((file) => formData.append('files', file));
   formData.append('priority', priority);
   formData.append('ocr_mode', ocrMode);
 

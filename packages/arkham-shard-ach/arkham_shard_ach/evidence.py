@@ -101,16 +101,12 @@ class EvidenceAnalyzer:
 
         # Check hypothesis coverage
         for hypothesis in matrix.hypotheses:
-            ratings = [
-                r for r in matrix.ratings if r.hypothesis_id == hypothesis.id
-            ]
+            ratings = [r for r in matrix.ratings if r.hypothesis_id == hypothesis.id]
 
             # Filter out N/A ratings
             from .models import ConsistencyRating
 
-            substantive_ratings = [
-                r for r in ratings if r.rating != ConsistencyRating.NOT_APPLICABLE
-            ]
+            substantive_ratings = [r for r in ratings if r.rating != ConsistencyRating.NOT_APPLICABLE]
 
             if len(substantive_ratings) < 3:
                 gaps.append(
@@ -154,9 +150,7 @@ class EvidenceAnalyzer:
                 )
 
         # Check for low-quality evidence concentration
-        low_quality_count = sum(
-            1 for e in matrix.evidence if e.credibility < 0.5 or e.relevance < 0.5
-        )
+        low_quality_count = sum(1 for e in matrix.evidence if e.credibility < 0.5 or e.relevance < 0.5)
 
         if low_quality_count > len(matrix.evidence) * 0.3:
             gaps.append(
@@ -224,12 +218,8 @@ class EvidenceAnalyzer:
 
         # Check if hypothesis has conflicting evidence
         ratings = [r for r in matrix.ratings if r.hypothesis_id == hypothesis_id]
-        has_positive = any(
-            r.rating.value in ("++", "+") for r in ratings
-        )
-        has_negative = any(
-            r.rating.value in ("--", "-") for r in ratings
-        )
+        has_positive = any(r.rating.value in ("++", "+") for r in ratings)
+        has_negative = any(r.rating.value in ("--", "-") for r in ratings)
 
         if has_positive and has_negative:
             suggestions.append(
@@ -238,9 +228,7 @@ class EvidenceAnalyzer:
 
         # If hypothesis has very little evidence
         if len(ratings) < 3:
-            suggestions.append(
-                f"Limited evidence for '{hypothesis.title}' - conduct broader information gathering"
-            )
+            suggestions.append(f"Limited evidence for '{hypothesis.title}' - conduct broader information gathering")
 
         return suggestions[:max_suggestions]
 
@@ -268,16 +256,8 @@ class EvidenceAnalyzer:
             return None
 
         # Get ratings for both
-        ratings1 = {
-            r.hypothesis_id: r.rating.value
-            for r in matrix.ratings
-            if r.evidence_id == evidence1_id
-        }
-        ratings2 = {
-            r.hypothesis_id: r.rating.value
-            for r in matrix.ratings
-            if r.evidence_id == evidence2_id
-        }
+        ratings1 = {r.hypothesis_id: r.rating.value for r in matrix.ratings if r.evidence_id == evidence1_id}
+        ratings2 = {r.hypothesis_id: r.rating.value for r in matrix.ratings if r.evidence_id == evidence2_id}
 
         # Find agreements and disagreements
         agreements = []

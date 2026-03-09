@@ -8,6 +8,7 @@ from typing import Any
 
 class EntityType(Enum):
     """Entity types recognized by NER."""
+
     PERSON = "PERSON"
     ORGANIZATION = "ORG"
     LOCATION = "GPE"
@@ -30,9 +31,10 @@ class EntityType(Enum):
 
 class EntityConfidence(Enum):
     """Confidence level for entity extraction."""
-    HIGH = "high"      # 0.8+
+
+    HIGH = "high"  # 0.8+
     MEDIUM = "medium"  # 0.5 - 0.8
-    LOW = "low"        # < 0.5
+    LOW = "low"  # < 0.5
 
 
 @dataclass
@@ -42,6 +44,7 @@ class EntityMention:
 
     Example: "Apple" in "Apple announced new products"
     """
+
     text: str
     entity_type: EntityType
     start_char: int
@@ -71,6 +74,7 @@ class Entity:
 
     Example: "Apple Inc." with mentions "Apple", "AAPL", "the company"
     """
+
     id: str
     canonical_name: str
     entity_type: EntityType
@@ -93,6 +97,7 @@ class Entity:
 @dataclass
 class EntityRelationship:
     """Relationship between two entities."""
+
     source_entity_id: str
     target_entity_id: str
     relation_type: str
@@ -109,6 +114,7 @@ class EntityRelationship:
 @dataclass
 class DateMention:
     """A date or time reference extracted from text."""
+
     text: str
     normalized_date: datetime | None
     date_type: str  # absolute | relative | range
@@ -127,6 +133,7 @@ class DateMention:
 @dataclass
 class LocationMention:
     """A geographic location mention."""
+
     text: str
     location_type: str  # city | state | country | address
 
@@ -148,6 +155,7 @@ class LocationMention:
 @dataclass
 class TextChunk:
     """A chunk of text ready for embedding."""
+
     id: str
     text: str
     chunk_index: int
@@ -174,6 +182,7 @@ class TextChunk:
 @dataclass
 class ParseResult:
     """Result of parsing a document."""
+
     document_id: str
 
     # Extracted data
@@ -199,6 +208,7 @@ class ParseResult:
 @dataclass
 class EntityLinkingResult:
     """Result of linking entity mentions to canonical entities."""
+
     mention: EntityMention
     canonical_entity_id: str | None
     confidence: float

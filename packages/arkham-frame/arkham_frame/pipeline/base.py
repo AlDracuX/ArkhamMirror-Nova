@@ -3,19 +3,21 @@ Pipeline base classes.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, Optional
 
 
 class PipelineError(Exception):
     """Base pipeline error."""
+
     pass
 
 
 class StageStatus(Enum):
     """Status of a pipeline stage execution."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -26,6 +28,7 @@ class StageStatus(Enum):
 @dataclass
 class StageResult:
     """Result of a pipeline stage execution."""
+
     stage_name: str
     status: StageStatus
     output: Dict[str, Any] = field(default_factory=dict)

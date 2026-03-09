@@ -1,7 +1,7 @@
 """Witnesses Shard API endpoints."""
 
 import logging
-from typing import Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
@@ -31,6 +31,7 @@ def get_shard(request: Request) -> "WitnessesShard":
 
 
 # === Request Models ===
+
 
 class WitnessCreate(BaseModel):
     name: str
@@ -98,6 +99,7 @@ class EntityLink(BaseModel):
 
 # === Endpoints ===
 
+
 @router.get("/")
 async def list_witnesses(
     request: Request,
@@ -110,7 +112,7 @@ async def list_witnesses(
     offset: int = Query(default=0, ge=0),
 ):
     shard = get_shard(request)
-    from .models import WitnessFilter, WitnessRole, WitnessStatus, Party, CredibilityLevel
+    from .models import CredibilityLevel, Party, WitnessFilter, WitnessRole, WitnessStatus
 
     filters = WitnessFilter(
         role=WitnessRole(role) if role else None,
@@ -233,33 +235,54 @@ async def link_entity(request: Request, witness_id: str, body: EntityLink):
 
 # === Serializers ===
 
+
 def _witness_to_dict(w) -> dict:
     return {
-        "id": w.id, "name": w.name, "role": w.role, "status": w.status,
-        "party": w.party, "organization": w.organization, "position": w.position,
-        "contact_info": w.contact_info, "notes": w.notes,
-        "credibility_level": w.credibility_level, "credibility_notes": w.credibility_notes,
-        "linked_entity_id": w.linked_entity_id, "linked_document_ids": w.linked_document_ids,
-        "created_at": str(w.created_at), "updated_at": str(w.updated_at),
+        "id": w.id,
+        "name": w.name,
+        "role": w.role,
+        "status": w.status,
+        "party": w.party,
+        "organization": w.organization,
+        "position": w.position,
+        "contact_info": w.contact_info,
+        "notes": w.notes,
+        "credibility_level": w.credibility_level,
+        "credibility_notes": w.credibility_notes,
+        "linked_entity_id": w.linked_entity_id,
+        "linked_document_ids": w.linked_document_ids,
+        "created_at": str(w.created_at),
+        "updated_at": str(w.updated_at),
         "metadata": w.metadata,
     }
 
 
 def _stmt_to_dict(s) -> dict:
     return {
-        "id": s.id, "witness_id": s.witness_id, "version": s.version,
-        "title": s.title, "content": s.content, "status": s.status,
-        "key_points": s.key_points, "contradictions_found": s.contradictions_found,
+        "id": s.id,
+        "witness_id": s.witness_id,
+        "version": s.version,
+        "title": s.title,
+        "content": s.content,
+        "status": s.status,
+        "key_points": s.key_points,
+        "contradictions_found": s.contradictions_found,
         "filed_date": str(s.filed_date) if s.filed_date else None,
-        "created_at": str(s.created_at), "updated_at": str(s.updated_at),
+        "created_at": str(s.created_at),
+        "updated_at": str(s.updated_at),
     }
 
 
 def _note_to_dict(n) -> dict:
     return {
-        "id": n.id, "witness_id": n.witness_id, "statement_id": n.statement_id,
-        "topic": n.topic, "question": n.question,
-        "expected_answer": n.expected_answer, "actual_answer": n.actual_answer,
-        "effectiveness": n.effectiveness, "notes": n.notes,
+        "id": n.id,
+        "witness_id": n.witness_id,
+        "statement_id": n.statement_id,
+        "topic": n.topic,
+        "question": n.question,
+        "expected_answer": n.expected_answer,
+        "actual_answer": n.actual_answer,
+        "effectiveness": n.effectiveness,
+        "notes": n.notes,
         "created_at": str(n.created_at),
     }

@@ -2,28 +2,31 @@
 EventBus - Event publishing and subscription.
 """
 
-from typing import Dict, Any, List, Callable, Optional
-from datetime import datetime
-from dataclasses import dataclass, field
-import logging
 import fnmatch
+import logging
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class EventValidationError(Exception):
     """Event validation failed."""
+
     pass
 
 
 class EventDeliveryError(Exception):
     """Event delivery failed."""
+
     pass
 
 
 @dataclass
 class Event:
     """An event in the system."""
+
     event_type: str
     payload: Dict[str, Any]
     source: str
@@ -88,7 +91,7 @@ class EventBus:
         # Add to history
         self._event_history.insert(0, event)
         if len(self._event_history) > self._max_history:
-            self._event_history = self._event_history[:self._max_history]
+            self._event_history = self._event_history[: self._max_history]
 
         # Deliver to subscribers
         for pattern, callbacks in self._subscribers.items():
@@ -96,11 +99,13 @@ class EventBus:
                 for callback in callbacks:
                     try:
                         if callable(callback):
-                            result = callback({
-                                "event_type": event_type,
-                                "payload": payload,
-                                "source": source,
-                            })
+                            result = callback(
+                                {
+                                    "event_type": event_type,
+                                    "payload": payload,
+                                    "source": source,
+                                }
+                            )
                             # Handle async callbacks
                             if hasattr(result, "__await__"):
                                 await result
@@ -127,7 +132,7 @@ class EventBus:
             else:
                 events = [e for e in events if e.event_type == event_type]
 
-        return events[offset:offset + limit]
+        return events[offset : offset + limit]
 
     def get_event_types(self) -> List[str]:
         """Get list of unique event types in history."""

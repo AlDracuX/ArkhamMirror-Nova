@@ -12,7 +12,13 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../../components/common/Icon';
 import { useToast } from '../../context/ToastContext';
-import { useUploadBatch, useQueue, usePending, useIngestSettings, useUpdateIngestSettings } from './api';
+import {
+  useUploadBatch,
+  useQueue,
+  usePending,
+  useIngestSettings,
+  useUpdateIngestSettings,
+} from './api';
 import type { PendingJob, OcrMode, IngestSettings, IngestSettingsUpdate } from './api';
 
 export function IngestPage() {
@@ -27,7 +33,11 @@ export function IngestPage() {
   const { uploadBatch, loading: uploading } = useUploadBatch();
   const { data: queueStats, loading: loadingQueue, refetch: refetchQueue } = useQueue();
   const { data: pendingData, loading: loadingPending, refetch: refetchPending } = usePending(10);
-  const { data: settings, loading: loadingSettings, refetch: refetchSettings } = useIngestSettings();
+  const {
+    data: settings,
+    loading: loadingSettings,
+    refetch: refetchSettings,
+  } = useIngestSettings();
   const { update: updateSettings, loading: savingSettings } = useUpdateIngestSettings();
 
   // Auto-refresh queue stats and pending jobs
@@ -65,19 +75,19 @@ export function IngestPage() {
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      setSelectedFiles(prev => [...prev, ...files]);
+      setSelectedFiles((prev) => [...prev, ...files]);
     }
   }, []);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
     if (files.length > 0) {
-      setSelectedFiles(prev => [...prev, ...files]);
+      setSelectedFiles((prev) => [...prev, ...files]);
     }
   }, []);
 
   const handleRemoveFile = useCallback((index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const handleUpload = useCallback(async () => {
@@ -177,28 +187,28 @@ export function IngestPage() {
         <div className="stat-card">
           <Icon name="Clock" size={24} className="stat-icon" style={{ color: '#6b7280' }} />
           <div className="stat-content">
-            <div className="stat-value">{loadingQueue ? '...' : queueStats?.pending ?? 0}</div>
+            <div className="stat-value">{loadingQueue ? '...' : (queueStats?.pending ?? 0)}</div>
             <div className="stat-label">Pending</div>
           </div>
         </div>
         <div className="stat-card">
           <Icon name="Loader" size={24} className="stat-icon" style={{ color: '#3b82f6' }} />
           <div className="stat-content">
-            <div className="stat-value">{loadingQueue ? '...' : queueStats?.processing ?? 0}</div>
+            <div className="stat-value">{loadingQueue ? '...' : (queueStats?.processing ?? 0)}</div>
             <div className="stat-label">Processing</div>
           </div>
         </div>
         <div className="stat-card">
           <Icon name="CheckCircle" size={24} className="stat-icon" style={{ color: '#22c55e' }} />
           <div className="stat-content">
-            <div className="stat-value">{loadingQueue ? '...' : queueStats?.completed ?? 0}</div>
+            <div className="stat-value">{loadingQueue ? '...' : (queueStats?.completed ?? 0)}</div>
             <div className="stat-label">Completed</div>
           </div>
         </div>
         <div className="stat-card">
           <Icon name="XCircle" size={24} className="stat-icon" style={{ color: '#ef4444' }} />
           <div className="stat-content">
-            <div className="stat-value">{loadingQueue ? '...' : queueStats?.failed ?? 0}</div>
+            <div className="stat-value">{loadingQueue ? '...' : (queueStats?.failed ?? 0)}</div>
             <div className="stat-label">Failed</div>
           </div>
         </div>
@@ -232,7 +242,7 @@ export function IngestPage() {
                     <input
                       type="checkbox"
                       checked={settings.ingest_enable_deduplication}
-                      onChange={e =>
+                      onChange={(e) =>
                         handleSettingChange('ingest_enable_deduplication', e.target.checked)
                       }
                       disabled={savingSettings}
@@ -250,7 +260,7 @@ export function IngestPage() {
                     <input
                       type="checkbox"
                       checked={settings.ingest_enable_validation}
-                      onChange={e =>
+                      onChange={(e) =>
                         handleSettingChange('ingest_enable_validation', e.target.checked)
                       }
                       disabled={savingSettings}
@@ -268,7 +278,7 @@ export function IngestPage() {
                     <input
                       type="checkbox"
                       checked={settings.ingest_enable_downscale}
-                      onChange={e =>
+                      onChange={(e) =>
                         handleSettingChange('ingest_enable_downscale', e.target.checked)
                       }
                       disabled={savingSettings}
@@ -286,7 +296,7 @@ export function IngestPage() {
                     <input
                       type="checkbox"
                       checked={settings.ingest_skip_blank_pages}
-                      onChange={e =>
+                      onChange={(e) =>
                         handleSettingChange('ingest_skip_blank_pages', e.target.checked)
                       }
                       disabled={savingSettings}
@@ -310,7 +320,7 @@ export function IngestPage() {
                     <input
                       type="checkbox"
                       checked={settings.ocr_enable_escalation}
-                      onChange={e =>
+                      onChange={(e) =>
                         handleSettingChange('ocr_enable_escalation', e.target.checked)
                       }
                       disabled={savingSettings}
@@ -328,7 +338,7 @@ export function IngestPage() {
                     <input
                       type="checkbox"
                       checked={settings.ocr_enable_cache}
-                      onChange={e => handleSettingChange('ocr_enable_cache', e.target.checked)}
+                      onChange={(e) => handleSettingChange('ocr_enable_cache', e.target.checked)}
                       disabled={savingSettings}
                     />
                     <span className="toggle-slider" />
@@ -350,7 +360,7 @@ export function IngestPage() {
                       min="1"
                       max="16"
                       value={settings.ocr_parallel_pages}
-                      onChange={e =>
+                      onChange={(e) =>
                         handleSettingChange('ocr_parallel_pages', parseInt(e.target.value, 10))
                       }
                       disabled={savingSettings}
@@ -367,7 +377,7 @@ export function IngestPage() {
                       max="1"
                       step="0.05"
                       value={settings.ocr_confidence_threshold}
-                      onChange={e =>
+                      onChange={(e) =>
                         handleSettingChange('ocr_confidence_threshold', parseFloat(e.target.value))
                       }
                       disabled={savingSettings}
@@ -383,7 +393,7 @@ export function IngestPage() {
                       min="1"
                       max="90"
                       value={settings.ocr_cache_ttl_days}
-                      onChange={e =>
+                      onChange={(e) =>
                         handleSettingChange('ocr_cache_ttl_days', parseInt(e.target.value, 10))
                       }
                       disabled={savingSettings}
@@ -443,7 +453,7 @@ export function IngestPage() {
                   </div>
                   <button
                     className="button-icon"
-                    onClick={e => {
+                    onClick={(e) => {
                       e.stopPropagation();
                       handleRemoveFile(index);
                     }}

@@ -4,12 +4,12 @@ Parse Shard - Extractor Tests
 Tests for NER, Date, Location, and Relation extractors.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
-from arkham_shard_parse.extractors.ner import NERExtractor
+import pytest
 from arkham_shard_parse.extractors.dates import DateExtractor
+from arkham_shard_parse.extractors.ner import NERExtractor
 from arkham_shard_parse.extractors.relations import RelationExtractor
 from arkham_shard_parse.models import EntityMention, EntityType
 

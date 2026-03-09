@@ -31,19 +31,27 @@ export function CorpusSearchDialog({
 
   const getRelevanceColor = (relevance: string): string => {
     switch (relevance) {
-      case 'supports': return '#4ade80';
-      case 'contradicts': return '#f87171';
-      case 'ambiguous': return '#fbbf24';
-      default: return '#9ca3af';
+      case 'supports':
+        return '#4ade80';
+      case 'contradicts':
+        return '#f87171';
+      case 'ambiguous':
+        return '#fbbf24';
+      default:
+        return '#9ca3af';
     }
   };
 
   const getRelevanceBg = (relevance: string): string => {
     switch (relevance) {
-      case 'supports': return 'rgba(74, 222, 128, 0.15)';
-      case 'contradicts': return 'rgba(248, 113, 113, 0.15)';
-      case 'ambiguous': return 'rgba(251, 191, 36, 0.15)';
-      default: return 'rgba(156, 163, 175, 0.15)';
+      case 'supports':
+        return 'rgba(74, 222, 128, 0.15)';
+      case 'contradicts':
+        return 'rgba(248, 113, 113, 0.15)';
+      case 'ambiguous':
+        return 'rgba(251, 191, 36, 0.15)';
+      default:
+        return 'rgba(156, 163, 175, 0.15)';
     }
   };
 
@@ -142,9 +150,7 @@ export function CorpusSearchDialog({
                             <Icon name="FileText" size={12} />
                             {ev.source_document_name || 'Document'}
                           </span>
-                          {ev.page_number && (
-                            <span className="meta-page">p. {ev.page_number}</span>
-                          )}
+                          {ev.page_number && <span className="meta-page">p. {ev.page_number}</span>}
                           <span
                             className="meta-relevance"
                             style={{
@@ -158,9 +164,7 @@ export function CorpusSearchDialog({
                             {(ev.similarity_score * 100).toFixed(0)}% match
                           </span>
                         </div>
-                        {ev.explanation && (
-                          <div className="card-explanation">{ev.explanation}</div>
-                        )}
+                        {ev.explanation && <div className="card-explanation">{ev.explanation}</div>}
                         {ev.possible_duplicate && (
                           <div className="card-warning">
                             <Icon name="AlertTriangle" size={12} />

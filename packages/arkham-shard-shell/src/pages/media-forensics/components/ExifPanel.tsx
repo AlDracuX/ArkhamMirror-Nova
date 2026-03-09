@@ -178,7 +178,8 @@ export function ExifPanel({ analysis }: ExifPanelProps) {
               <div className="metadata-item">
                 <span className="metadata-label">Direction</span>
                 <span className="metadata-value">
-                  {gps.direction.toFixed(1)}{gps.direction_ref || ''}
+                  {gps.direction.toFixed(1)}
+                  {gps.direction_ref || ''}
                 </span>
               </div>
             )}
@@ -274,7 +275,9 @@ export function ExifPanel({ analysis }: ExifPanelProps) {
       )}
 
       {/* Timestamps */}
-      {(timestamps.datetime_original || timestamps.datetime_digitized || timestamps.datetime_modified) && (
+      {(timestamps.datetime_original ||
+        timestamps.datetime_digitized ||
+        timestamps.datetime_modified) && (
         <div className="panel-section">
           <div className="panel-section-header">
             <Icon name="Clock" size={16} />

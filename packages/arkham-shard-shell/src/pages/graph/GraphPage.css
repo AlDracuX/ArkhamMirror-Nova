@@ -895,7 +895,7 @@
   cursor: pointer;
 }
 
-.checkbox-item input[type="checkbox"] {
+.checkbox-item input[type='checkbox'] {
   width: 14px;
   height: 14px;
   accent-color: var(--primary-color);
@@ -919,7 +919,7 @@
   border-radius: 4px;
 }
 
-.toggle-label input[type="checkbox"] {
+.toggle-label input[type='checkbox'] {
   width: 16px;
   height: 16px;
   accent-color: var(--primary-color);
@@ -986,11 +986,21 @@
   transition: flex 0.3s;
 }
 
-.weight-segment.weight-centrality { background: #4299e1; }
-.weight-segment.weight-frequency { background: #48bb78; }
-.weight-segment.weight-recency { background: #ed8936; }
-.weight-segment.weight-credibility { background: #9f7aea; }
-.weight-segment.weight-corroboration { background: #f56565; }
+.weight-segment.weight-centrality {
+  background: #4299e1;
+}
+.weight-segment.weight-frequency {
+  background: #48bb78;
+}
+.weight-segment.weight-recency {
+  background: #ed8936;
+}
+.weight-segment.weight-credibility {
+  background: #9f7aea;
+}
+.weight-segment.weight-corroboration {
+  background: #f56565;
+}
 
 .weight-legend {
   display: flex;
@@ -1003,11 +1013,21 @@
   color: var(--text-secondary);
 }
 
-.legend-item.weight-centrality { color: #4299e1; }
-.legend-item.weight-frequency { color: #48bb78; }
-.legend-item.weight-recency { color: #ed8936; }
-.legend-item.weight-credibility { color: #9f7aea; }
-.legend-item.weight-corroboration { color: #f56565; }
+.legend-item.weight-centrality {
+  color: #4299e1;
+}
+.legend-item.weight-frequency {
+  color: #48bb78;
+}
+.legend-item.weight-recency {
+  color: #ed8936;
+}
+.legend-item.weight-credibility {
+  color: #9f7aea;
+}
+.legend-item.weight-corroboration {
+  color: #f56565;
+}
 
 /* Recalculate Button */
 .recalculate-btn {
@@ -1424,7 +1444,7 @@
   background: rgba(59, 130, 246, 0.05);
 }
 
-.document-item input[type="checkbox"] {
+.document-item input[type='checkbox'] {
   width: 14px;
   height: 14px;
   accent-color: var(--primary-color);
@@ -1774,7 +1794,7 @@
   background: var(--bg-hover);
 }
 
-.rel-type-item input[type="checkbox"] {
+.rel-type-item input[type='checkbox'] {
   width: 12px;
   height: 12px;
   accent-color: var(--primary-color);
@@ -1793,7 +1813,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 
 /* ===================================
    TIME SLIDER / TEMPORAL CONTROLS
@@ -1829,8 +1848,12 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .time-slider-header {
@@ -2650,7 +2673,9 @@
 
 .row-label,
 .col-label {
-  transition: fill 0.2s, font-weight 0.2s;
+  transition:
+    fill 0.2s,
+    font-weight 0.2s;
 }
 
 .row-label:hover,
@@ -2745,7 +2770,7 @@
 }
 
 .matrix-controls .control-group select,
-.matrix-controls .control-group input[type="range"] {
+.matrix-controls .control-group input[type='range'] {
   width: 100%;
 }
 
@@ -2758,7 +2783,7 @@
   font-size: 0.8rem;
 }
 
-.matrix-controls .control-group input[type="range"] {
+.matrix-controls .control-group input[type='range'] {
   height: 6px;
   background: var(--bg-tertiary);
   border-radius: 3px;
@@ -2766,7 +2791,7 @@
   cursor: pointer;
 }
 
-.matrix-controls .control-group input[type="range"]::-webkit-slider-thumb {
+.matrix-controls .control-group input[type='range']::-webkit-slider-thumb {
   appearance: none;
   width: 14px;
   height: 14px;
@@ -2783,7 +2808,7 @@
   cursor: pointer;
 }
 
-.matrix-controls .checkbox-label input[type="checkbox"] {
+.matrix-controls .checkbox-label input[type='checkbox'] {
   width: 16px;
   height: 16px;
   accent-color: var(--primary-color);
@@ -2893,7 +2918,7 @@
 }
 
 .sankey-controls .control-group select,
-.sankey-controls .control-group input[type="range"] {
+.sankey-controls .control-group input[type='range'] {
   width: 100%;
 }
 
@@ -2906,7 +2931,7 @@
   font-size: 0.8rem;
 }
 
-.sankey-controls .control-group input[type="range"] {
+.sankey-controls .control-group input[type='range'] {
   height: 6px;
   background: var(--bg-tertiary);
   border-radius: 3px;
@@ -2914,7 +2939,7 @@
   cursor: pointer;
 }
 
-.sankey-controls .control-group input[type="range"]::-webkit-slider-thumb {
+.sankey-controls .control-group input[type='range']::-webkit-slider-thumb {
   appearance: none;
   width: 14px;
   height: 14px;
@@ -2947,7 +2972,7 @@
   text-transform: capitalize;
 }
 
-.sankey-controls .checkbox-label input[type="checkbox"] {
+.sankey-controls .checkbox-label input[type='checkbox'] {
   width: 14px;
   height: 14px;
   accent-color: var(--primary-color);
@@ -3134,7 +3159,9 @@
   border: 2px solid transparent;
   border-radius: 4px;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .highlight-color:hover {
@@ -3398,7 +3425,9 @@
   border: 2px solid transparent;
   border-radius: 4px;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .annotation-modal .color-option:hover {
@@ -3615,7 +3644,7 @@
   cursor: pointer;
 }
 
-.argumentation-controls .checkbox-label input[type="checkbox"] {
+.argumentation-controls .checkbox-label input[type='checkbox'] {
   width: 16px;
   height: 16px;
   accent-color: var(--primary-color);
@@ -3954,7 +3983,7 @@
   cursor: pointer;
 }
 
-.causal-controls .checkbox-label input[type="checkbox"] {
+.causal-controls .checkbox-label input[type='checkbox'] {
   width: 16px;
   height: 16px;
   accent-color: var(--primary-color);
@@ -4119,7 +4148,7 @@
   color: var(--text-primary);
 }
 
-.geo-options input[type="checkbox"] {
+.geo-options input[type='checkbox'] {
   width: 14px;
   height: 14px;
   accent-color: var(--primary-color);
@@ -4137,7 +4166,7 @@
   color: var(--text-tertiary);
 }
 
-.geo-options .cluster-radius input[type="range"] {
+.geo-options .cluster-radius input[type='range'] {
   width: 100px;
   height: 4px;
   accent-color: var(--primary-color);
@@ -4250,13 +4279,13 @@
   cursor: pointer;
 }
 
-.geo-controls .checkbox-label input[type="checkbox"] {
+.geo-controls .checkbox-label input[type='checkbox'] {
   width: 16px;
   height: 16px;
   accent-color: var(--primary-color);
 }
 
-.geo-controls input[type="range"] {
+.geo-controls input[type='range'] {
   width: 100%;
   height: 4px;
   accent-color: var(--primary-color);

@@ -136,7 +136,7 @@ class TextChunker:
         # Split on sentence-ending punctuation followed by whitespace and capital letter,
         # or followed by newline/end of text
         # This preserves: emails (agent.smith@cia.gov), URLs, abbreviations, decimals
-        sentence_pattern = r'(?<=[.!?])\s+(?=[A-Z])|(?<=[.!?])\s*(?=\n)'
+        sentence_pattern = r"(?<=[.!?])\s+(?=[A-Z])|(?<=[.!?])\s*(?=\n)"
 
         sentences = re.split(sentence_pattern, text)
 
@@ -155,7 +155,7 @@ class TextChunker:
 
             if current_size + sentence_len > self.chunk_size and current_chunk:
                 # Create chunk
-                chunk_text = ' '.join(current_chunk)
+                chunk_text = " ".join(current_chunk)
                 chunk = TextChunk(
                     id=str(uuid4()),
                     text=chunk_text,
@@ -179,7 +179,7 @@ class TextChunker:
 
         # Add final chunk
         if current_chunk:
-            chunk_text = ' '.join(current_chunk)
+            chunk_text = " ".join(current_chunk)
             chunk = TextChunk(
                 id=str(uuid4()),
                 text=chunk_text,
@@ -218,11 +218,12 @@ class TextChunker:
             List of text chunks
         """
         import re
+
         import numpy as np
 
         # Split into sentences - preserve emails, URLs, abbreviations
         # Only split on punctuation followed by whitespace and capital letter
-        sentence_pattern = r'(?<=[.!?])\s+(?=[A-Z])|(?<=[.!?])\s*(?=\n)'
+        sentence_pattern = r"(?<=[.!?])\s+(?=[A-Z])|(?<=[.!?])\s*(?=\n)"
         sentences = re.split(sentence_pattern, text)
         sentences = [s.strip() for s in sentences if s.strip()]
 
@@ -245,8 +246,8 @@ class TextChunker:
 
         for i in range(len(sentences) - window_size):
             # Get embeddings for current window and next window
-            current_window = embeddings[i:i + window_size]
-            next_window = embeddings[i + 1:i + 1 + window_size]
+            current_window = embeddings[i : i + window_size]
+            next_window = embeddings[i + 1 : i + 1 + window_size]
 
             # Calculate mean embedding for each window
             current_mean = np.mean(current_window, axis=0)
@@ -295,7 +296,7 @@ class TextChunker:
                 should_break = False  # Don't create tiny chunks
 
             if should_break and current_sentences:
-                chunk_text = ' '.join(current_sentences)
+                chunk_text = " ".join(current_sentences)
                 chunk = TextChunk(
                     id=str(uuid4()),
                     text=chunk_text,
@@ -316,7 +317,7 @@ class TextChunker:
 
         # Add final chunk
         if current_sentences:
-            chunk_text = ' '.join(current_sentences)
+            chunk_text = " ".join(current_sentences)
             chunk = TextChunk(
                 id=str(uuid4()),
                 text=chunk_text,
@@ -345,14 +346,14 @@ class TextChunker:
         """
         try:
             # Try to use sentence-transformers if available
-            from sentence_transformers import SentenceTransformer
             import numpy as np
+            from sentence_transformers import SentenceTransformer
 
             # Use a lightweight model for chunking
             # This is cached after first load
-            if not hasattr(self, '_embed_model'):
+            if not hasattr(self, "_embed_model"):
                 try:
-                    self._embed_model = SentenceTransformer('all-MiniLM-L6-v2')
+                    self._embed_model = SentenceTransformer("all-MiniLM-L6-v2")
                 except Exception as e:
                     logger.warning(f"Could not load embedding model: {e}")
                     self._embed_model = None

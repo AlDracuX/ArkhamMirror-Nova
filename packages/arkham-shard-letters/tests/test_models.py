@@ -2,9 +2,9 @@
 Tests for Letters Shard - Data Models
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_letters.models import (
     ExportFormat,
     Letter,

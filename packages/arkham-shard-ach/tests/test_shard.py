@@ -4,22 +4,21 @@ ACH Shard - Shard Class Tests
 Tests for ACHShard with mocked Frame services.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from arkham_shard_ach.shard import ACHShard
+import pytest
 from arkham_shard_ach.models import (
     ACHMatrix,
-    Hypothesis,
-    Evidence,
-    Rating,
-    HypothesisScore,
     ConsistencyRating,
+    Evidence,
     EvidenceType,
+    Hypothesis,
+    HypothesisScore,
     MatrixStatus,
+    Rating,
 )
-
+from arkham_shard_ach.shard import ACHShard
 
 # === Fixtures ===
 
@@ -46,12 +45,14 @@ def mock_llm():
 def mock_frame(mock_events, mock_llm):
     """Create a mock Frame with all services."""
     frame = MagicMock()
-    frame.get_service = MagicMock(side_effect=lambda name: {
-        "events": mock_events,
-        "llm": mock_llm,
-        "database": None,
-        "vectors": None,
-    }.get(name))
+    frame.get_service = MagicMock(
+        side_effect=lambda name: {
+            "events": mock_events,
+            "llm": mock_llm,
+            "database": None,
+            "vectors": None,
+        }.get(name)
+    )
     return frame
 
 
@@ -115,10 +116,12 @@ class TestInitialization:
     async def test_initialize_without_llm(self, mock_events):
         """Test shard initializes without LLM service."""
         frame = MagicMock()
-        frame.get_service = MagicMock(side_effect=lambda name: {
-            "events": mock_events,
-            "llm": None,
-        }.get(name))
+        frame.get_service = MagicMock(
+            side_effect=lambda name: {
+                "events": mock_events,
+                "llm": None,
+            }.get(name)
+        )
 
         shard = ACHShard()
         await shard.initialize(frame)

@@ -45,18 +45,20 @@ export function DeceptionChecklist({
   const info = CHECKLIST_INFO[checklistType];
 
   // Use checklist indicators if available, otherwise create from standards
-  const indicators: DeceptionIndicator[] = checklist?.indicators || standardIndicators.map(std => ({
-    id: std.id,
-    checklist: checklistType,
-    question: std.question,
-    answer: null,
-    strength: 'none' as IndicatorStrength,
-    confidence: 0,
-    evidence_ids: [],
-    notes: null,
-  }));
+  const indicators: DeceptionIndicator[] =
+    checklist?.indicators ||
+    standardIndicators.map((std) => ({
+      id: std.id,
+      checklist: checklistType,
+      question: std.question,
+      answer: null,
+      strength: 'none' as IndicatorStrength,
+      confidence: 0,
+      evidence_ids: [],
+      notes: null,
+    }));
 
-  const completedCount = indicators.filter(i => i.strength !== 'none').length;
+  const completedCount = indicators.filter((i) => i.strength !== 'none').length;
   const totalCount = indicators.length;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
@@ -136,21 +138,16 @@ export function DeceptionChecklist({
       <div className="indicators-list">
         {indicators.map((indicator, idx) => {
           const isExpanded = expandedIndicator === indicator.id;
-          const stdIndicator = standardIndicators.find(s => s.id === indicator.id);
+          const stdIndicator = standardIndicators.find((s) => s.id === indicator.id);
 
           return (
-            <div
-              key={indicator.id}
-              className={`indicator-item ${isExpanded ? 'expanded' : ''}`}
-            >
+            <div key={indicator.id} className={`indicator-item ${isExpanded ? 'expanded' : ''}`}>
               <div
                 className="indicator-header"
                 onClick={() => setExpandedIndicator(isExpanded ? null : indicator.id)}
               >
                 <div className="indicator-number">{idx + 1}</div>
-                <div className="indicator-question">
-                  {indicator.question}
-                </div>
+                <div className="indicator-question">{indicator.question}</div>
                 <div
                   className="indicator-strength"
                   style={{ backgroundColor: STRENGTH_COLORS[indicator.strength] }}
@@ -181,13 +178,19 @@ export function DeceptionChecklist({
                     <div className="indicator-controls">
                       <label className="control-label">Deception Indicator Strength:</label>
                       <div className="strength-buttons">
-                        {STRENGTH_OPTIONS.map(opt => (
+                        {STRENGTH_OPTIONS.map((opt) => (
                           <button
                             key={opt.value}
                             className={`strength-btn ${indicator.strength === opt.value ? 'active' : ''}`}
                             style={{
-                              borderColor: indicator.strength === opt.value ? STRENGTH_COLORS[opt.value] : undefined,
-                              backgroundColor: indicator.strength === opt.value ? `${STRENGTH_COLORS[opt.value]}20` : undefined,
+                              borderColor:
+                                indicator.strength === opt.value
+                                  ? STRENGTH_COLORS[opt.value]
+                                  : undefined,
+                              backgroundColor:
+                                indicator.strength === opt.value
+                                  ? `${STRENGTH_COLORS[opt.value]}20`
+                                  : undefined,
                             }}
                             onClick={() => handleStrengthChange(indicator, opt.value)}
                           >

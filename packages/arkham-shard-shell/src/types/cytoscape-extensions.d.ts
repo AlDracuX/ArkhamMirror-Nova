@@ -50,7 +50,13 @@ declare module 'cytoscape-fcose' {
     /** Alignment constraint */
     alignmentConstraint?: { vertical?: string[][]; horizontal?: string[][] };
     /** Relative placement constraint */
-    relativePlacementConstraint?: Array<{ top?: string; left?: string; bottom?: string; right?: string; gap?: number }>;
+    relativePlacementConstraint?: Array<{
+      top?: string;
+      left?: string;
+      bottom?: string;
+      right?: string;
+      gap?: number;
+    }>;
     /** Quality: 'draft' | 'default' | 'proof' */
     quality?: 'draft' | 'default' | 'proof';
     /** Tile padding */
@@ -93,7 +99,9 @@ declare module 'cytoscape-dagre' {
     /** Easing of animation */
     animationEasing?: string;
     /** Whether to use bounding box */
-    boundingBox?: { x1: number; y1: number; w: number; h: number } | { x1: number; y1: number; x2: number; y2: number };
+    boundingBox?:
+      | { x1: number; y1: number; w: number; h: number }
+      | { x1: number; y1: number; x2: number; y2: number };
     /** Dagre layout options */
     rankDir?: 'TB' | 'BT' | 'LR' | 'RL';
     /** Alignment of nodes within ranks */

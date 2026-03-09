@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING, Dict, Optional
 
 from .models import (
     ACHMatrix,
-    Hypothesis,
-    Evidence,
-    Rating,
-    MatrixStatus,
     ConsistencyRating,
+    Evidence,
+    Hypothesis,
+    MatrixStatus,
+    Rating,
 )
 
 if TYPE_CHECKING:
@@ -70,12 +70,14 @@ class MatrixManager:
             loop = asyncio.get_running_loop()
             # We're in an async context - schedule task and ensure it completes
             task = loop.create_task(coro)
+
             # Add callback to log errors since we can't await here
             def log_result(t):
                 try:
                     t.result()
                 except Exception as e:
                     logger.error(f"Async persistence failed: {e}")
+
             task.add_done_callback(log_result)
             return task
         except RuntimeError:
@@ -247,10 +249,7 @@ class MatrixManager:
         if self._shard:
             try:
                 status_str = status.value if status else None
-                matrices = await self._shard._load_all_matrices(
-                    project_id=project_id,
-                    status=status_str
-                )
+                matrices = await self._shard._load_all_matrices(project_id=project_id, status=status_str)
                 # Update cache with loaded matrices
                 for matrix in matrices:
                     self._matrices[matrix.id] = matrix
@@ -307,9 +306,7 @@ class MatrixManager:
         matrix.hypotheses = [h for h in matrix.hypotheses if h.id != hypothesis_id]
 
         # Remove associated ratings
-        matrix.ratings = [
-            r for r in matrix.ratings if r.hypothesis_id != hypothesis_id
-        ]
+        matrix.ratings = [r for r in matrix.ratings if r.hypothesis_id != hypothesis_id]
 
         # Remove associated scores
         matrix.scores = [s for s in matrix.scores if s.hypothesis_id != hypothesis_id]

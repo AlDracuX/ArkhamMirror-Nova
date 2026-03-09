@@ -82,7 +82,13 @@ function ContradictionListView() {
     setError(null);
     try {
       const [listData, statsData] = await Promise.all([
-        api.listContradictions(page, pageSize, statusFilter || undefined, severityFilter || undefined, typeFilter || undefined),
+        api.listContradictions(
+          page,
+          pageSize,
+          statusFilter || undefined,
+          severityFilter || undefined,
+          typeFilter || undefined
+        ),
         api.getStats(),
       ]);
       setContradictions(listData.contradictions);
@@ -115,7 +121,7 @@ function ContradictionListView() {
     if (selectedIds.size === contradictions.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(contradictions.map(c => c.id)));
+      setSelectedIds(new Set(contradictions.map((c) => c.id)));
     }
   };
 
@@ -203,7 +209,7 @@ function ContradictionListView() {
                 severity: severityFilter || null,
                 type: typeFilter || null,
               },
-              contradictions: contradictions.slice(0, 20).map(c => ({
+              contradictions: contradictions.slice(0, 20).map((c) => ({
                 id: c.id,
                 doc_a_id: c.doc_a_id,
                 doc_b_id: c.doc_b_id,
@@ -235,21 +241,38 @@ function ContradictionListView() {
             </div>
           </div>
           <div className="stat-card">
-            <Icon name="Clock" size={24} className="stat-icon" style={{ color: 'var(--arkham-info)' }} />
+            <Icon
+              name="Clock"
+              size={24}
+              className="stat-icon"
+              style={{ color: 'var(--arkham-info)' }}
+            />
             <div className="stat-content">
-              <div className="stat-value">{(stats.by_status.detected || 0) + (stats.by_status.investigating || 0)}</div>
+              <div className="stat-value">
+                {(stats.by_status.detected || 0) + (stats.by_status.investigating || 0)}
+              </div>
               <div className="stat-label">Pending Review</div>
             </div>
           </div>
           <div className="stat-card">
-            <Icon name="CheckCircle" size={24} className="stat-icon" style={{ color: 'var(--arkham-error)' }} />
+            <Icon
+              name="CheckCircle"
+              size={24}
+              className="stat-icon"
+              style={{ color: 'var(--arkham-error)' }}
+            />
             <div className="stat-content">
               <div className="stat-value">{stats.by_status.confirmed || 0}</div>
               <div className="stat-label">Confirmed</div>
             </div>
           </div>
           <div className="stat-card">
-            <Icon name="GitBranch" size={24} className="stat-icon" style={{ color: 'var(--arkham-warning)' }} />
+            <Icon
+              name="GitBranch"
+              size={24}
+              className="stat-icon"
+              style={{ color: 'var(--arkham-warning)' }}
+            />
             <div className="stat-content">
               <div className="stat-value">{stats.chains_detected || 0}</div>
               <div className="stat-label">Chains</div>
@@ -265,12 +288,17 @@ function ContradictionListView() {
           <select
             id="status-filter"
             value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
             className="filter-select"
           >
             <option value="">All Status</option>
-            {STATUS_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
         </div>
@@ -279,12 +307,17 @@ function ContradictionListView() {
           <select
             id="severity-filter"
             value={severityFilter}
-            onChange={(e) => { setSeverityFilter(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSeverityFilter(e.target.value);
+              setPage(1);
+            }}
             className="filter-select"
           >
             <option value="">All Severity</option>
-            {SEVERITY_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {SEVERITY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
         </div>
@@ -293,12 +326,17 @@ function ContradictionListView() {
           <select
             id="type-filter"
             value={typeFilter}
-            onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setTypeFilter(e.target.value);
+              setPage(1);
+            }}
             className="filter-select"
           >
             <option value="">All Types</option>
-            {TYPE_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
         </div>
@@ -326,15 +364,24 @@ function ContradictionListView() {
             </div>
           ) : (
             <div className="bulk-action-buttons">
-              <button className="btn btn-sm btn-light" onClick={() => handleBulkStatus('confirmed')}>
+              <button
+                className="btn btn-sm btn-light"
+                onClick={() => handleBulkStatus('confirmed')}
+              >
                 <Icon name="CheckCircle" size={14} />
                 Confirm
               </button>
-              <button className="btn btn-sm btn-light" onClick={() => handleBulkStatus('dismissed')}>
+              <button
+                className="btn btn-sm btn-light"
+                onClick={() => handleBulkStatus('dismissed')}
+              >
                 <Icon name="XCircle" size={14} />
                 Dismiss
               </button>
-              <button className="btn btn-sm btn-light" onClick={() => handleBulkStatus('investigating')}>
+              <button
+                className="btn btn-sm btn-light"
+                onClick={() => handleBulkStatus('investigating')}
+              >
                 <Icon name="Search" size={14} />
                 Investigate
               </button>
@@ -373,7 +420,7 @@ function ContradictionListView() {
           </div>
 
           <div className="contradictions-list">
-            {contradictions.map(contradiction => (
+            {contradictions.map((contradiction) => (
               <div
                 key={contradiction.id}
                 className={`contradiction-card ${selectedIds.has(contradiction.id) ? 'selected' : ''}`}
@@ -394,18 +441,25 @@ function ContradictionListView() {
                     <div className="contradiction-badges">
                       <span
                         className="badge"
-                        style={{ backgroundColor: SEVERITY_COLORS[contradiction.severity as Severity] }}
+                        style={{
+                          backgroundColor: SEVERITY_COLORS[contradiction.severity as Severity],
+                        }}
                       >
                         {SEVERITY_LABELS[contradiction.severity as Severity]}
                       </span>
                       <span className="badge badge-outline">
-                        <Icon name={TYPE_ICONS[contradiction.contradiction_type as ContradictionType]} size={12} />
+                        <Icon
+                          name={TYPE_ICONS[contradiction.contradiction_type as ContradictionType]}
+                          size={12}
+                        />
                         {TYPE_LABELS[contradiction.contradiction_type as ContradictionType]}
                       </span>
                     </div>
                     <span
                       className="status-badge"
-                      style={{ backgroundColor: STATUS_COLORS[contradiction.status as ContradictionStatus] }}
+                      style={{
+                        backgroundColor: STATUS_COLORS[contradiction.status as ContradictionStatus],
+                      }}
                     >
                       {STATUS_LABELS[contradiction.status as ContradictionStatus]}
                     </span>
@@ -453,7 +507,7 @@ function ContradictionListView() {
             <div className="contradictions-pagination">
               <button
                 className="btn btn-secondary"
-                onClick={() => setPage(p => p - 1)}
+                onClick={() => setPage((p) => p - 1)}
                 disabled={!hasPrev}
               >
                 <Icon name="ChevronLeft" size={16} />
@@ -464,7 +518,7 @@ function ContradictionListView() {
               </span>
               <button
                 className="btn btn-secondary"
-                onClick={() => setPage(p => p + 1)}
+                onClick={() => setPage((p) => p + 1)}
                 disabled={!hasNext}
               >
                 Next
@@ -504,7 +558,9 @@ function AnalyzeDialog({ onClose, onComplete }: AnalyzeDialogProps) {
   const [threshold, setThreshold] = useState(0.7);
   const [useLLM, setUseLLM] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
-  const [documents, setDocuments] = useState<Array<{ id: string; filename: string; title: string; status: string }>>([]);
+  const [documents, setDocuments] = useState<
+    Array<{ id: string; filename: string; title: string; status: string }>
+  >([]);
   const [loadingDocs, setLoadingDocs] = useState(true);
   const [progress, setProgress] = useState({ current: 0, total: 0, found: 0 });
   const [searchQuery, setSearchQuery] = useState('');
@@ -533,10 +589,12 @@ function AnalyzeDialog({ onClose, onComplete }: AnalyzeDialogProps) {
   }, []);
 
   // Filter documents by search query
-  const filteredDocuments = documents.filter(doc => {
+  const filteredDocuments = documents.filter((doc) => {
     const query = searchQuery.toLowerCase();
-    return doc.filename.toLowerCase().includes(query) ||
-           (doc.title && doc.title.toLowerCase().includes(query));
+    return (
+      doc.filename.toLowerCase().includes(query) ||
+      (doc.title && doc.title.toLowerCase().includes(query))
+    );
   });
 
   // Generate all unique pairs from selected documents
@@ -564,7 +622,7 @@ function AnalyzeDialog({ onClose, onComplete }: AnalyzeDialogProps) {
     if (selectedDocIds.size === filteredDocuments.length) {
       setSelectedDocIds(new Set());
     } else {
-      setSelectedDocIds(new Set(filteredDocuments.map(d => d.id)));
+      setSelectedDocIds(new Set(filteredDocuments.map((d) => d.id)));
     }
   };
 
@@ -587,7 +645,9 @@ function AnalyzeDialog({ onClose, onComplete }: AnalyzeDialogProps) {
       setProgress({ current: pairs.length, total: pairs.length, found: result.count });
 
       if (result.count > 0) {
-        toast.success(`Analysis complete! Found ${result.count} contradictions across ${pairs.length} document pairs`);
+        toast.success(
+          `Analysis complete! Found ${result.count} contradictions across ${pairs.length} document pairs`
+        );
       } else {
         toast.info(`No contradictions found across ${pairs.length} document pairs`);
       }
@@ -599,13 +659,12 @@ function AnalyzeDialog({ onClose, onComplete }: AnalyzeDialogProps) {
     }
   };
 
-  const pairCount = selectedDocIds.size >= 2
-    ? (selectedDocIds.size * (selectedDocIds.size - 1)) / 2
-    : 0;
+  const pairCount =
+    selectedDocIds.size >= 2 ? (selectedDocIds.size * (selectedDocIds.size - 1)) / 2 : 0;
 
   return (
     <div className="dialog-overlay" onClick={onClose}>
-      <div className="dialog dialog-large" onClick={e => e.stopPropagation()}>
+      <div className="dialog dialog-large" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-header">
           <h2>
             <Icon name="Search" size={20} />
@@ -633,7 +692,7 @@ function AnalyzeDialog({ onClose, onComplete }: AnalyzeDialogProps) {
                 type="text"
                 placeholder="Search documents..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchQuery && (
                 <button className="btn btn-icon btn-sm" onClick={() => setSearchQuery('')}>
@@ -659,7 +718,10 @@ function AnalyzeDialog({ onClose, onComplete }: AnalyzeDialogProps) {
                   <label className="document-checkbox">
                     <input
                       type="checkbox"
-                      checked={selectedDocIds.size === filteredDocuments.length && filteredDocuments.length > 0}
+                      checked={
+                        selectedDocIds.size === filteredDocuments.length &&
+                        filteredDocuments.length > 0
+                      }
                       onChange={handleSelectAll}
                     />
                     <span>Select All ({filteredDocuments.length} documents)</span>
@@ -668,7 +730,7 @@ function AnalyzeDialog({ onClose, onComplete }: AnalyzeDialogProps) {
 
                 {/* Document List */}
                 <div className="document-checklist">
-                  {filteredDocuments.map(doc => (
+                  {filteredDocuments.map((doc) => (
                     <label
                       key={doc.id}
                       className={`document-checkbox ${selectedDocIds.has(doc.id) ? 'selected' : ''}`}
@@ -699,7 +761,7 @@ function AnalyzeDialog({ onClose, onComplete }: AnalyzeDialogProps) {
               max="0.95"
               step="0.05"
               value={threshold}
-              onChange={e => setThreshold(parseFloat(e.target.value))}
+              onChange={(e) => setThreshold(parseFloat(e.target.value))}
             />
             <p className="form-hint">
               Higher threshold = stricter matching. Lower = more potential contradictions found.
@@ -712,9 +774,11 @@ function AnalyzeDialog({ onClose, onComplete }: AnalyzeDialogProps) {
                 <input
                   type="checkbox"
                   checked={useLLM}
-                  onChange={e => setUseLLM(e.target.checked)}
+                  onChange={(e) => setUseLLM(e.target.checked)}
                 />
-                <span>Use LLM for claim extraction and verification (more accurate but slower)</span>
+                <span>
+                  Use LLM for claim extraction and verification (more accurate but slower)
+                </span>
               </label>
             </div>
           </div>
@@ -729,11 +793,15 @@ function AnalyzeDialog({ onClose, onComplete }: AnalyzeDialogProps) {
               <div className="progress-bar">
                 <div
                   className="progress-fill"
-                  style={{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }}
+                  style={{
+                    width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%`,
+                  }}
                 />
               </div>
               <div className="progress-stats">
-                <span>Progress: {progress.current} / {progress.total} pairs</span>
+                <span>
+                  Progress: {progress.current} / {progress.total} pairs
+                </span>
                 <span>Contradictions found: {progress.found}</span>
               </div>
             </div>
@@ -767,7 +835,6 @@ function AnalyzeDialog({ onClose, onComplete }: AnalyzeDialogProps) {
   );
 }
 
-
 // ============================================
 // Contradiction Detail View
 // ============================================
@@ -782,7 +849,9 @@ function ContradictionDetailView({ contradictionId }: { contradictionId: string 
   const [error, setError] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [chains, setChains] = useState<Array<{ id: string; description: string; contradiction_count: number }>>([]);
+  const [chains, setChains] = useState<
+    Array<{ id: string; description: string; contradiction_count: number }>
+  >([]);
 
   const fetchContradiction = useCallback(async () => {
     setLoading(true);
@@ -904,12 +973,17 @@ function ContradictionDetailView({ contradictionId }: { contradictionId: string 
                 {SEVERITY_LABELS[contradiction.severity as Severity]}
               </span>
               <span className="badge badge-outline">
-                <Icon name={TYPE_ICONS[contradiction.contradiction_type as ContradictionType]} size={12} />
+                <Icon
+                  name={TYPE_ICONS[contradiction.contradiction_type as ContradictionType]}
+                  size={12}
+                />
                 {TYPE_LABELS[contradiction.contradiction_type as ContradictionType]}
               </span>
               <span
                 className="status-badge"
-                style={{ backgroundColor: STATUS_COLORS[contradiction.status as ContradictionStatus] }}
+                style={{
+                  backgroundColor: STATUS_COLORS[contradiction.status as ContradictionStatus],
+                }}
               >
                 {STATUS_LABELS[contradiction.status as ContradictionStatus]}
               </span>
@@ -1003,7 +1077,7 @@ function ContradictionDetailView({ contradictionId }: { contradictionId: string 
         </h3>
         {chains.length > 0 ? (
           <div className="chain-list">
-            {chains.map(chain => (
+            {chains.map((chain) => (
               <div key={chain.id} className="chain-item">
                 <Icon name="Link" size={16} />
                 <div className="chain-info">

@@ -15,7 +15,12 @@ interface SearchResultCardProps {
   onAskAbout?: (result: SearchResultItem) => void;
 }
 
-export function SearchResultCard({ result, onView, onFindSimilar, onAskAbout }: SearchResultCardProps) {
+export function SearchResultCard({
+  result,
+  onView,
+  onFindSimilar,
+  onAskAbout,
+}: SearchResultCardProps) {
   // Format date if available
   const formattedDate = result.created_at
     ? new Date(result.created_at).toLocaleDateString('en-US', {
@@ -58,9 +63,7 @@ export function SearchResultCard({ result, onView, onFindSimilar, onAskAbout }: 
           <Icon name={getFileIcon(result.file_type)} size={18} className="result-file-icon" />
           <h3 className="search-result-title">{result.title}</h3>
         </div>
-        <div className="search-result-score-badge">
-          {(result.score * 100).toFixed(0)}%
-        </div>
+        <div className="search-result-score-badge">{(result.score * 100).toFixed(0)}%</div>
       </div>
 
       {renderExcerpt()}

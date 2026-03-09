@@ -669,7 +669,7 @@
   color: var(--color-text-secondary, #9ca3af);
 }
 
-.ela-controls input[type="range"] {
+.ela-controls input[type='range'] {
   flex: 1;
 }
 
@@ -1025,7 +1025,7 @@
   cursor: pointer;
 }
 
-.checkbox-label input[type="checkbox"] {
+.checkbox-label input[type='checkbox'] {
   width: auto;
 }
 
@@ -1100,8 +1100,12 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ==========================================

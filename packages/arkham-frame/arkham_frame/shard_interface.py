@@ -8,7 +8,7 @@ Manifest Schema v5 - See SHARD_MANIFEST_SCHEMA_v5.md for full documentation.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any, Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
 from uuid import UUID
 
 if TYPE_CHECKING:
@@ -19,9 +19,11 @@ if TYPE_CHECKING:
 # Manifest v5 Data Classes
 # ============================================
 
+
 @dataclass
 class SubRoute:
     """Sub-route for navigation."""
+
     id: str
     label: str
     route: str
@@ -33,6 +35,7 @@ class SubRoute:
 @dataclass
 class NavigationConfig:
     """Navigation configuration for v5 manifest."""
+
     category: Literal["System", "Data", "Search", "Analysis", "Visualize", "Export"]
     order: int
     icon: str
@@ -46,6 +49,7 @@ class NavigationConfig:
 @dataclass
 class DependencyConfig:
     """Dependency configuration."""
+
     services: List[str] = field(default_factory=list)
     optional: List[str] = field(default_factory=list)
     shards: List[str] = field(default_factory=list)
@@ -54,6 +58,7 @@ class DependencyConfig:
 @dataclass
 class EventConfig:
     """Event pub/sub configuration."""
+
     publishes: List[str] = field(default_factory=list)
     subscribes: List[str] = field(default_factory=list)
 
@@ -61,6 +66,7 @@ class EventConfig:
 @dataclass
 class StateConfig:
     """State management configuration."""
+
     strategy: Literal["url", "local", "session", "none"] = "none"
     url_params: List[str] = field(default_factory=list)
     local_keys: List[str] = field(default_factory=list)
@@ -69,6 +75,7 @@ class StateConfig:
 @dataclass
 class UIConfig:
     """UI configuration for generic/custom rendering."""
+
     has_custom_ui: bool = False
     id_field: str = "id"
     selectable: bool = True
@@ -89,6 +96,7 @@ class ShardManifest:
 
     Supports both legacy format (menu) and v5 format (navigation).
     """
+
     # Required fields
     name: str
     version: str
@@ -142,7 +150,9 @@ class ShardManifest:
                         "badge_type": sr.badge_type,
                     }
                     for sr in self.navigation.sub_routes
-                ] if self.navigation.sub_routes else [],
+                ]
+                if self.navigation.sub_routes
+                else [],
             }
 
         if self.dependencies:
@@ -207,8 +217,9 @@ def load_manifest_from_yaml(yaml_path) -> ShardManifest:
     Returns:
         ShardManifest instance
     """
-    import yaml
     from pathlib import Path
+
+    import yaml
 
     yaml_path = Path(yaml_path)
 
@@ -221,14 +232,16 @@ def load_manifest_from_yaml(yaml_path) -> ShardManifest:
     if nav_data:
         sub_routes = []
         for sr in nav_data.get("sub_routes", []):
-            sub_routes.append(SubRoute(
-                id=sr["id"],
-                label=sr["label"],
-                route=sr["route"],
-                icon=sr.get("icon", "Circle"),
-                badge_endpoint=sr.get("badge_endpoint"),
-                badge_type=sr.get("badge_type"),
-            ))
+            sub_routes.append(
+                SubRoute(
+                    id=sr["id"],
+                    label=sr["label"],
+                    route=sr["route"],
+                    icon=sr.get("icon", "Circle"),
+                    badge_endpoint=sr.get("badge_endpoint"),
+                    badge_type=sr.get("badge_type"),
+                )
+            )
 
         navigation = NavigationConfig(
             category=nav_data.get("category", "Analysis"),
@@ -354,6 +367,7 @@ class ArkhamShard(ABC):
         # Find shard.yaml relative to the subclass's module
         try:
             import sys
+
             module = sys.modules.get(self.__class__.__module__)
             if module and hasattr(module, "__file__") and module.__file__:
                 module_dir = Path(module.__file__).parent
@@ -447,6 +461,7 @@ class ArkhamShard(ABC):
             UUID of the current tenant, or None
         """
         from .middleware.tenant import get_current_tenant_id
+
         return get_current_tenant_id()
 
     async def tenant_query(self, query: str, params: Optional[dict] = None) -> Any:

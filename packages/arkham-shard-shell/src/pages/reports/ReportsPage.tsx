@@ -105,9 +105,12 @@ export function ReportsPage() {
   } = usePaginatedFetch<Report>('/api/reports/');
 
   // Fetch templates
-  const { data: templates, loading: templatesLoading, error: templatesError, refetch: refetchTemplates } = useFetch<ReportTemplate[]>(
-    '/api/reports/templates'
-  );
+  const {
+    data: templates,
+    loading: templatesLoading,
+    error: templatesError,
+    refetch: refetchTemplates,
+  } = useFetch<ReportTemplate[]>('/api/reports/templates');
 
   // Fetch shared templates from Templates shard
   const { data: sharedTemplatesData, loading: sharedLoading } = useFetch<SharedTemplatesResponse>(
@@ -285,10 +288,7 @@ export function ReportsPage() {
         </div>
 
         <div className="header-actions">
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowCreateDialog(true)}
-          >
+          <button className="btn btn-primary" onClick={() => setShowCreateDialog(true)}>
             <Icon name="Plus" size={16} />
             New Report
           </button>
@@ -331,11 +331,15 @@ export function ReportsPage() {
             </div>
           ) : reports && reports.length > 0 ? (
             <div className="reports-list">
-              {reports.map(report => (
+              {reports.map((report) => (
                 <div key={report.id} className="report-card">
                   <div className="report-header">
                     <div className="report-title-row">
-                      <Icon name={getStatusIcon(report.status)} size={20} className={getStatusClass(report.status)} />
+                      <Icon
+                        name={getStatusIcon(report.status)}
+                        size={20}
+                        className={getStatusClass(report.status)}
+                      />
                       <h3>{report.title}</h3>
                       <span className={`status-badge ${getStatusClass(report.status)}`}>
                         {report.status}
@@ -411,10 +415,7 @@ export function ReportsPage() {
             <div className="reports-empty">
               <Icon name="FileText" size={48} />
               <span>No reports yet</span>
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowCreateDialog(true)}
-              >
+              <button className="btn btn-primary" onClick={() => setShowCreateDialog(true)}>
                 Create your first report
               </button>
             </div>
@@ -438,7 +439,7 @@ export function ReportsPage() {
               </div>
             ) : sharedTemplatesData?.templates && sharedTemplatesData.templates.length > 0 ? (
               <div className="templates-list">
-                {sharedTemplatesData.templates.map(template => (
+                {sharedTemplatesData.templates.map((template) => (
                   <div key={template.id} className="template-card shared">
                     <Icon name="Library" size={20} />
                     <div className="template-info">
@@ -491,7 +492,7 @@ export function ReportsPage() {
               </div>
             ) : templates && templates.length > 0 ? (
               <div className="templates-list">
-                {templates.map(template => (
+                {templates.map((template) => (
                   <div key={template.id} className="template-card">
                     <Icon name="FileTemplate" size={20} />
                     <div className="template-info">
@@ -529,13 +530,10 @@ export function ReportsPage() {
       {/* Create Report Dialog */}
       {showCreateDialog && (
         <div className="dialog-overlay" onClick={() => setShowCreateDialog(false)}>
-          <div className="dialog" onClick={e => e.stopPropagation()}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
             <div className="dialog-header">
               <h2>Create New Report</h2>
-              <button
-                className="dialog-close"
-                onClick={() => setShowCreateDialog(false)}
-              >
+              <button className="dialog-close" onClick={() => setShowCreateDialog(false)}>
                 <Icon name="X" size={20} />
               </button>
             </div>
@@ -548,7 +546,7 @@ export function ReportsPage() {
                   type="text"
                   className="form-input"
                   value={reportTitle}
-                  onChange={e => setReportTitle(e.target.value)}
+                  onChange={(e) => setReportTitle(e.target.value)}
                   placeholder="Enter report title"
                 />
               </div>
@@ -559,9 +557,9 @@ export function ReportsPage() {
                   id="report-type"
                   className="form-select"
                   value={reportType}
-                  onChange={e => setReportType(e.target.value)}
+                  onChange={(e) => setReportType(e.target.value)}
                 >
-                  {REPORT_TYPES.map(type => (
+                  {REPORT_TYPES.map((type) => (
                     <option key={type.value} value={type.value}>
                       {type.label}
                     </option>
@@ -575,9 +573,9 @@ export function ReportsPage() {
                   id="output-format"
                   className="form-select"
                   value={outputFormat}
-                  onChange={e => setOutputFormat(e.target.value)}
+                  onChange={(e) => setOutputFormat(e.target.value)}
                 >
-                  {FORMAT_OPTIONS.map(format => (
+                  {FORMAT_OPTIONS.map((format) => (
                     <option key={format.value} value={format.value}>
                       {format.label}
                     </option>
@@ -594,11 +592,7 @@ export function ReportsPage() {
               >
                 Cancel
               </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleCreateReport}
-                disabled={creating}
-              >
+              <button className="btn btn-primary" onClick={handleCreateReport} disabled={creating}>
                 {creating ? (
                   <>
                     <Icon name="Loader2" size={16} className="spin" />
@@ -618,13 +612,10 @@ export function ReportsPage() {
       {/* View Report Modal */}
       {viewingReport && (
         <div className="dialog-overlay" onClick={() => setViewingReport(null)}>
-          <div className="dialog dialog-lg" onClick={e => e.stopPropagation()}>
+          <div className="dialog dialog-lg" onClick={(e) => e.stopPropagation()}>
             <div className="dialog-header">
               <h2>{viewingReport.title}</h2>
-              <button
-                className="dialog-close"
-                onClick={() => setViewingReport(null)}
-              >
+              <button className="dialog-close" onClick={() => setViewingReport(null)}>
                 <Icon name="X" size={20} />
               </button>
             </div>
@@ -644,10 +635,7 @@ export function ReportsPage() {
               )}
             </div>
             <div className="dialog-actions">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setViewingReport(null)}
-              >
+              <button className="btn btn-secondary" onClick={() => setViewingReport(null)}>
                 Close
               </button>
               <button
@@ -665,13 +653,10 @@ export function ReportsPage() {
       {/* Use Shared Template Dialog */}
       {templateDialog && (
         <div className="dialog-overlay" onClick={() => setTemplateDialog(null)}>
-          <div className="dialog" onClick={e => e.stopPropagation()}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
             <div className="dialog-header">
               <h2>Create Report from Template</h2>
-              <button
-                className="dialog-close"
-                onClick={() => setTemplateDialog(null)}
-              >
+              <button className="dialog-close" onClick={() => setTemplateDialog(null)}>
                 <Icon name="X" size={20} />
               </button>
             </div>
@@ -688,7 +673,7 @@ export function ReportsPage() {
                   type="text"
                   className="form-input"
                   value={templateTitle}
-                  onChange={e => setTemplateTitle(e.target.value)}
+                  onChange={(e) => setTemplateTitle(e.target.value)}
                   placeholder="Enter report title"
                 />
               </div>
@@ -697,7 +682,7 @@ export function ReportsPage() {
                 <div className="placeholders-info">
                   <label>Template Placeholders</label>
                   <div className="placeholder-list">
-                    {templateDialog.placeholders.map(p => (
+                    {templateDialog.placeholders.map((p) => (
                       <div key={p.name} className="placeholder-item">
                         <span className="placeholder-name">{p.name}</span>
                         <span className="placeholder-desc">{p.description}</span>

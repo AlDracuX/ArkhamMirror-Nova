@@ -1,7 +1,7 @@
 """ACH Shard API endpoints."""
 
 import logging
-from typing import Annotated, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -19,6 +19,7 @@ def get_shard(request: Request) -> "ACHShard":
     if not shard:
         raise HTTPException(status_code=503, detail="ACH shard not available")
     return shard
+
 
 router = APIRouter(prefix="/api/ach", tags=["ach"])
 
@@ -45,7 +46,16 @@ def init_api(
     shard=None,
 ):
     """Initialize API with shard dependencies."""
-    global _matrix_manager, _scorer, _evidence_analyzer, _exporter, _event_bus, _llm_service, _llm_integration, _corpus_service, _shard
+    global \
+        _matrix_manager, \
+        _scorer, \
+        _evidence_analyzer, \
+        _exporter, \
+        _event_bus, \
+        _llm_service, \
+        _llm_integration, \
+        _corpus_service, \
+        _shard
     _matrix_manager = matrix_manager
     _scorer = scorer
     _evidence_analyzer = evidence_analyzer
@@ -58,13 +68,12 @@ def init_api(
     # Initialize LLM integration if service available
     if llm_service:
         from .llm import ACHLLMIntegration
+
         _llm_integration = ACHLLMIntegration(llm_service)
         logger.info("ACH LLM integration initialized")
 
     if corpus_service:
         logger.info("ACH Corpus search service initialized")
-
-
 
 
 async def _get_corpus_context_for_matrix(matrix, limit: int = 10) -> list[dict]:
@@ -85,12 +94,14 @@ async def _get_corpus_context_for_matrix(matrix, limit: int = 10) -> list[dict]:
                 score_threshold=0.6,
             )
             for r in results:
-                all_chunks.append({
-                    "text": r.get("payload", {}).get("text", "")[:500],
-                    "document_name": r.get("payload", {}).get("filename", "Unknown"),
-                    "page_number": r.get("payload", {}).get("page_number"),
-                    "similarity_score": r.get("score", 0),
-                })
+                all_chunks.append(
+                    {
+                        "text": r.get("payload", {}).get("text", "")[:500],
+                        "document_name": r.get("payload", {}).get("filename", "Unknown"),
+                        "page_number": r.get("payload", {}).get("page_number"),
+                        "similarity_score": r.get("score", 0),
+                    }
+                )
         except Exception as e:
             logger.warning(f"Corpus context fetch failed: {e}")
 
@@ -106,6 +117,7 @@ async def _get_corpus_context_for_matrix(matrix, limit: int = 10) -> list[dict]:
                 break
 
     return unique
+
 
 # --- Request/Response Models ---
 
@@ -162,6 +174,7 @@ class DevilsAdvocateRequest(BaseModel):
 
 class SuggestHypothesesRequest(BaseModel):
     """Request to suggest hypotheses."""
+
     focus_question: str
     matrix_id: str | None = None  # If provided, uses existing matrix context
     context: str = ""
@@ -169,6 +182,7 @@ class SuggestHypothesesRequest(BaseModel):
 
 class SuggestEvidenceRequest(BaseModel):
     """Request to suggest evidence."""
+
     matrix_id: str
     focus_question: str = ""
     use_corpus: bool = False
@@ -176,22 +190,26 @@ class SuggestEvidenceRequest(BaseModel):
 
 class SuggestRatingsRequest(BaseModel):
     """Request to suggest ratings for a specific evidence item."""
+
     matrix_id: str
     evidence_id: str
 
 
 class AnalysisInsightsRequest(BaseModel):
     """Request for analysis insights."""
+
     matrix_id: str
 
 
 class SuggestMilestonesRequest(BaseModel):
     """Request to suggest milestones."""
+
     matrix_id: str
 
 
 class ExtractEvidenceRequest(BaseModel):
     """Request to extract evidence from document text."""
+
     matrix_id: str
     text: str
     document_id: str | None = None
@@ -200,6 +218,7 @@ class ExtractEvidenceRequest(BaseModel):
 
 class CorpusSearchRequest(BaseModel):
     """Request to search corpus for evidence."""
+
     matrix_id: str
     hypothesis_id: str
     chunk_limit: int = 30
@@ -209,14 +228,15 @@ class CorpusSearchRequest(BaseModel):
 
 class AcceptCorpusEvidenceRequest(BaseModel):
     """Request to accept corpus-extracted evidence into matrix."""
+
     matrix_id: str
     evidence: list[dict]
     auto_rate: bool = False
 
 
-
 class LinkDocumentsRequest(BaseModel):
     """Request to link documents to a matrix."""
+
     document_ids: list[str]
 
 
@@ -225,12 +245,14 @@ class LinkDocumentsRequest(BaseModel):
 
 class RunPremortemRequest(BaseModel):
     """Request to run premortem analysis on a hypothesis."""
+
     matrix_id: str
     hypothesis_id: str
 
 
 class ConvertFailureModeRequest(BaseModel):
     """Request to convert a failure mode to hypothesis/milestone."""
+
     premortem_id: str
     failure_mode_id: str
     convert_to: str  # "hypothesis" | "milestone"
@@ -241,6 +263,7 @@ class ConvertFailureModeRequest(BaseModel):
 
 class GenerateScenarioTreeRequest(BaseModel):
     """Request to generate a scenario tree."""
+
     matrix_id: str
     title: str
     situation_summary: str
@@ -249,6 +272,7 @@ class GenerateScenarioTreeRequest(BaseModel):
 
 class AddScenarioBranchRequest(BaseModel):
     """Request to add branches to an existing scenario node."""
+
     tree_id: str
     parent_node_id: str
     situation_summary: str | None = None
@@ -256,6 +280,7 @@ class AddScenarioBranchRequest(BaseModel):
 
 class UpdateScenarioNodeRequest(BaseModel):
     """Request to update a scenario node."""
+
     title: str | None = None
     description: str | None = None
     probability: float | None = None
@@ -265,6 +290,7 @@ class UpdateScenarioNodeRequest(BaseModel):
 
 class ConvertScenarioRequest(BaseModel):
     """Request to convert a scenario to a hypothesis."""
+
     tree_id: str
     node_id: str
 
@@ -389,7 +415,6 @@ async def delete_matrix(matrix_id: str):
         )
 
     return {"status": "deleted", "matrix_id": matrix_id}
-
 
 
 # --- Linked Documents Endpoints ---
@@ -554,22 +579,24 @@ async def list_all_evidence(
             ORDER BY e.created_at DESC
             LIMIT :limit
             """,
-            {"limit": limit}
+            {"limit": limit},
         )
 
         items = []
         for row in rows:
-            items.append({
-                "id": row["id"],
-                "matrix_id": row["matrix_id"],
-                "matrix_title": row["matrix_title"],
-                "description": row["description"],
-                "source": row["source"],
-                "evidence_type": row["evidence_type"],
-                "credibility": row["credibility"],
-                "relevance": row["relevance"],
-                "created_at": row["created_at"].isoformat() if row["created_at"] else None,
-            })
+            items.append(
+                {
+                    "id": row["id"],
+                    "matrix_id": row["matrix_id"],
+                    "matrix_title": row["matrix_title"],
+                    "description": row["description"],
+                    "source": row["source"],
+                    "evidence_type": row["evidence_type"],
+                    "credibility": row["credibility"],
+                    "relevance": row["relevance"],
+                    "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+                }
+            )
 
         # Get total count
         count_row = await _shard._db.fetch_one("SELECT COUNT(*) as cnt FROM arkham_ach.evidence")
@@ -601,20 +628,22 @@ async def list_all_hypotheses(
             ORDER BY h.created_at DESC
             LIMIT :limit
             """,
-            {"limit": limit}
+            {"limit": limit},
         )
 
         items = []
         for row in rows:
-            items.append({
-                "id": row["id"],
-                "matrix_id": row["matrix_id"],
-                "matrix_title": row["matrix_title"],
-                "title": row["title"],
-                "description": row["description"],
-                "is_lead": row["is_lead"],
-                "created_at": row["created_at"].isoformat() if row["created_at"] else None,
-            })
+            items.append(
+                {
+                    "id": row["id"],
+                    "matrix_id": row["matrix_id"],
+                    "matrix_title": row["matrix_title"],
+                    "title": row["title"],
+                    "description": row["description"],
+                    "is_lead": row["is_lead"],
+                    "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+                }
+            )
 
         # Get total count
         count_row = await _shard._db.fetch_one("SELECT COUNT(*) as cnt FROM arkham_ach.hypotheses")
@@ -902,9 +931,7 @@ async def devils_advocate(request: DevilsAdvocateRequest):
     for evidence in matrix.evidence:
         rating = matrix.get_rating(evidence.id, hypothesis.id)
         if rating:
-            context_parts.append(
-                f"- [{rating.rating.value}] {evidence.description}"
-            )
+            context_parts.append(f"- [{rating.rating.value}] {evidence.description}")
 
     context = "\n".join(context_parts)
 
@@ -972,7 +999,7 @@ async def export_matrix(
         return Response(
             content=export.content,
             media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
     # Determine content type for other formats
@@ -1108,10 +1135,7 @@ async def suggest_evidence(request: SuggestEvidenceRequest):
         raise HTTPException(status_code=404, detail=f"Matrix not found: {request.matrix_id}")
 
     if len(matrix.hypotheses) < 2:
-        raise HTTPException(
-            status_code=400,
-            detail="At least 2 hypotheses required for evidence suggestion"
-        )
+        raise HTTPException(status_code=400, detail="At least 2 hypotheses required for evidence suggestion")
 
     # Use matrix title as focus question if not provided
     focus_question = request.focus_question or matrix.title
@@ -1268,10 +1292,7 @@ async def suggest_milestones(request: SuggestMilestonesRequest):
         raise HTTPException(status_code=404, detail=f"Matrix not found: {request.matrix_id}")
 
     if len(matrix.hypotheses) < 2:
-        raise HTTPException(
-            status_code=400,
-            detail="At least 2 hypotheses required for milestone suggestion"
-        )
+        raise HTTPException(status_code=400, detail="At least 2 hypotheses required for milestone suggestion")
 
     try:
         suggestions = await _llm_integration.suggest_milestones(matrix)
@@ -1430,7 +1451,8 @@ async def search_corpus_for_evidence(request: CorpusSearchRequest):
     if not hypothesis:
         raise HTTPException(status_code=404, detail=f"Hypothesis not found: {request.hypothesis_id}")
 
-    from .models import SearchScope, CorpusSearchConfig
+    from .models import CorpusSearchConfig, SearchScope
+
     scope = None
     if request.scope:
         scope = SearchScope(
@@ -1502,6 +1524,7 @@ async def search_corpus_all_hypotheses(
         raise HTTPException(status_code=400, detail="No hypotheses in matrix")
 
     from .models import CorpusSearchConfig
+
     config = CorpusSearchConfig(chunk_limit=chunk_limit, min_similarity=min_similarity)
 
     try:
@@ -1796,6 +1819,7 @@ async def convert_failure_mode(request: ConvertFailureModeRequest):
         if hypothesis:
             # Update the failure mode with conversion info
             from .models import PremortemConversionType
+
             failure_mode.converted_to = PremortemConversionType.HYPOTHESIS
             failure_mode.converted_id = hypothesis.id
             await _shard.save_premortem(premortem)
@@ -1951,7 +1975,10 @@ async def add_scenario_branch(request: AddScenarioBranchRequest):
         raise HTTPException(status_code=404, detail=f"Matrix not found: {tree.matrix_id}")
 
     try:
-        situation = request.situation_summary or f"{tree.situation_summary}\n\nCurrent scenario: {parent_node.title}\n{parent_node.description}"
+        situation = (
+            request.situation_summary
+            or f"{tree.situation_summary}\n\nCurrent scenario: {parent_node.title}\n{parent_node.description}"
+        )
 
         new_nodes = await _llm_integration.generate_scenarios(
             matrix=matrix,
@@ -2012,6 +2039,7 @@ async def update_scenario_node(tree_id: str, node_id: str, request: UpdateScenar
         node.probability = request.probability
     if request.status is not None:
         from .models import ScenarioStatus
+
         try:
             node.status = ScenarioStatus(request.status)
         except ValueError:
@@ -2020,6 +2048,7 @@ async def update_scenario_node(tree_id: str, node_id: str, request: UpdateScenar
         node.notes = request.notes
 
     from datetime import datetime
+
     node.updated_at = datetime.utcnow()
 
     await _shard.update_scenario_node(node)
@@ -2056,6 +2085,7 @@ async def convert_scenario_to_hypothesis(request: ConvertScenarioRequest):
     if hypothesis:
         # Update scenario status
         from .models import ScenarioStatus
+
         node.status = ScenarioStatus.CONVERTED
         node.converted_hypothesis_id = hypothesis.id
         await _shard.update_scenario_node(node)
@@ -2140,6 +2170,7 @@ def _format_scenario_tree(tree) -> dict:
 
 class AIJuniorAnalystRequest(BaseModel):
     """Request for AI Junior Analyst analysis."""
+
     target_id: str
     context: dict[str, Any] = {}
     depth: str = "quick"
@@ -2164,13 +2195,10 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     frame = shard._frame
 
     if not frame or not getattr(frame, "ai_analyst", None):
-        raise HTTPException(
-            status_code=503,
-            detail="AI Analyst service not available"
-        )
+        raise HTTPException(status_code=503, detail="AI Analyst service not available")
 
     # Build context from request
-    from arkham_frame.services import AnalysisRequest, AnalysisDepth, AnalystMessage
+    from arkham_frame.services import AnalysisDepth, AnalysisRequest, AnalystMessage
 
     # Parse depth
     try:
@@ -2181,10 +2209,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     # Build conversation history
     history = None
     if body.conversation_history:
-        history = [
-            AnalystMessage(role=msg["role"], content=msg["content"])
-            for msg in body.conversation_history
-        ]
+        history = [AnalystMessage(role=msg["role"], content=msg["content"]) for msg in body.conversation_history]
 
     analysis_request = AnalysisRequest(
         shard="ach",

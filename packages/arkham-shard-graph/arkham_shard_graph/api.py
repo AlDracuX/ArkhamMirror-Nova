@@ -2,34 +2,36 @@
 
 import logging
 from datetime import datetime
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from fastapi import APIRouter, HTTPException, Query, Request, Body
+from fastapi import APIRouter, Body, HTTPException, Query, Request
 from pydantic import BaseModel
 
+from .flows import FlowAnalyzer
+from .layouts import HierarchicalDirection, LayoutEngine, LayoutType
 from .models import (
     BuildGraphRequest,
-    PathRequest,
-    PathResponse,
+    CentralityMetric,
     CentralityRequest,
     CentralityResponse,
     CommunityRequest,
     CommunityResponse,
-    NeighborsRequest,
+    EntityScoreResponse,
+    ExportFormat,
     ExportRequest,
     ExportResponse,
     FilterRequest,
     GraphResponse,
-    ExportFormat,
-    CentralityMetric,
+    NeighborsRequest,
+    PathRequest,
+    PathResponse,
     ScoreConfigRequest,
+)
+from .models import (
     ScoreResponse as ScoreResponseModel,
-    EntityScoreResponse,
 )
 from .scoring import CompositeScorer, ScoreConfig
-from .layouts import LayoutEngine, LayoutType, HierarchicalDirection
-from .temporal import TemporalGraphEngine, TemporalSnapshot, EvolutionMetrics
-from .flows import FlowAnalyzer
+from .temporal import EvolutionMetrics, TemporalGraphEngine, TemporalSnapshot
 
 if TYPE_CHECKING:
     from .shard import GraphShard
@@ -54,6 +56,7 @@ _flow_analyzer = None
 
 # === Helper to get shard instance ===
 
+
 def get_shard(request: Request) -> "GraphShard":
     """Get the graph shard instance from app state."""
     shard = getattr(request.app.state, "graph_shard", None)
@@ -62,7 +65,9 @@ def get_shard(request: Request) -> "GraphShard":
     return shard
 
 
-def init_api(builder, algorithms, exporter, storage=None, event_bus=None, scorer=None, layout_engine=None, db_service=None):
+def init_api(
+    builder, algorithms, exporter, storage=None, event_bus=None, scorer=None, layout_engine=None, db_service=None
+):
     """
     Initialize API with shard components.
 
@@ -76,7 +81,17 @@ def init_api(builder, algorithms, exporter, storage=None, event_bus=None, scorer
         layout_engine: Optional LayoutEngine instance
         db_service: Optional database service for temporal queries
     """
-    global _builder, _algorithms, _exporter, _storage, _event_bus, _scorer, _layout_engine, _temporal_engine, _db_service, _flow_analyzer
+    global \
+        _builder, \
+        _algorithms, \
+        _exporter, \
+        _storage, \
+        _event_bus, \
+        _scorer, \
+        _layout_engine, \
+        _temporal_engine, \
+        _db_service, \
+        _flow_analyzer
 
     _builder = builder
     _algorithms = algorithms
@@ -137,6 +152,7 @@ async def _get_or_build_graph(project_id: str, document_ids: list[str] | None = 
 
 class AIJuniorAnalystRequest(BaseModel):
     """Request for AI Junior Analyst analysis."""
+
     target_id: str
     context: dict[str, Any] = {}
     depth: str = "quick"  # "quick" or "detailed"
@@ -175,7 +191,7 @@ async def ai_junior_analyst(
 
     try:
         # Build analysis request
-        from arkham_frame.services import AnalysisRequest, AnalysisDepth
+        from arkham_frame.services import AnalysisDepth, AnalysisRequest
 
         analysis_request = AnalysisRequest(
             shard="graph",
@@ -253,9 +269,7 @@ async def submit_ai_feedback(request: Request, body: AIFeedbackRequest):
             source="graph-shard",
         )
 
-    logger.info(
-        f"AI Feedback: session={body.session_id}, rating={body.rating}"
-    )
+    logger.info(f"AI Feedback: session={body.session_id}, rating={body.rating}")
 
     return AIFeedbackResponse(success=True, feedback_id=feedback_id)
 
@@ -329,13 +343,15 @@ async def calculate_scores(request: ScoreConfigRequest) -> ScoreResponseModel:
                         entity_id = row.get("entity_id")
                         if entity_id not in entity_mentions:
                             entity_mentions[entity_id] = []
-                        entity_mentions[entity_id].append({
-                            "document_id": row.get("document_id"),
-                            "document_name": row.get("document_name"),
-                            "mention_text": row.get("mention_text"),
-                            "confidence": row.get("confidence", 1.0),
-                            "created_at": row.get("created_at").isoformat() if row.get("created_at") else None,
-                        })
+                        entity_mentions[entity_id].append(
+                            {
+                                "document_id": row.get("document_id"),
+                                "document_name": row.get("document_name"),
+                                "mention_text": row.get("mention_text"),
+                                "confidence": row.get("confidence", 1.0),
+                                "created_at": row.get("created_at").isoformat() if row.get("created_at") else None,
+                            }
+                        )
             except Exception as e:
                 logger.warning(f"Failed to fetch entity mentions: {e}")
 
@@ -370,7 +386,7 @@ async def calculate_scores(request: ScoreConfigRequest) -> ScoreResponseModel:
         )
 
         # Limit results
-        scores = scores[:request.limit]
+        scores = scores[: request.limit]
 
         calculation_time = (datetime.utcnow() - start_time).total_seconds() * 1000
 
@@ -436,6 +452,7 @@ async def get_scores(
 
 class LayoutRequest(BaseModel):
     """Request for layout calculation."""
+
     project_id: str
     layout_type: str = "hierarchical"  # hierarchical, radial, circular, tree, bipartite, grid
     root_node_id: str | None = None
@@ -490,16 +507,12 @@ async def calculate_layout(request: LayoutRequest) -> dict[str, Any]:
         except ValueError:
             valid_types = [lt.value for lt in LayoutType if lt != LayoutType.FORCE_DIRECTED]
             raise HTTPException(
-                status_code=400,
-                detail=f"Invalid layout type: {request.layout_type}. Valid types: {valid_types}"
+                status_code=400, detail=f"Invalid layout type: {request.layout_type}. Valid types: {valid_types}"
             )
 
         # Force-directed should be handled by frontend
         if layout_type == LayoutType.FORCE_DIRECTED:
-            raise HTTPException(
-                status_code=400,
-                detail="Force-directed layout is handled by the frontend"
-            )
+            raise HTTPException(status_code=400, detail="Force-directed layout is handled by the frontend")
 
         # Build options dict
         options = {
@@ -596,9 +609,10 @@ async def get_layout_types() -> dict[str, Any]:
 
 class TemporalSnapshotsRequest(BaseModel):
     """Request for temporal snapshots."""
+
     project_id: str
     start_date: str | None = None  # ISO format
-    end_date: str | None = None    # ISO format
+    end_date: str | None = None  # ISO format
     interval_days: int = 7
     cumulative: bool = True
     max_snapshots: int = 50
@@ -803,13 +817,17 @@ async def get_evolution_metrics(
 RELATIONSHIP_TYPE_METADATA = {
     # Basic relationships
     "works_for": {"category": "organizational", "label": "Works For", "color": "#3b82f6", "directed": True},
-    "affiliated_with": {"category": "organizational", "label": "Affiliated With", "color": "#8b5cf6", "directed": False},
+    "affiliated_with": {
+        "category": "organizational",
+        "label": "Affiliated With",
+        "color": "#8b5cf6",
+        "directed": False,
+    },
     "located_in": {"category": "spatial", "label": "Located In", "color": "#10b981", "directed": True},
     "mentioned_with": {"category": "basic", "label": "Mentioned With", "color": "#6b7280", "directed": False},
     "related_to": {"category": "basic", "label": "Related To", "color": "#6b7280", "directed": False},
     "temporal": {"category": "temporal", "label": "Temporal", "color": "#f59e0b", "directed": True},
     "hierarchical": {"category": "organizational", "label": "Hierarchical", "color": "#3b82f6", "directed": True},
-
     # Organizational relationships
     "owns": {"category": "organizational", "label": "Owns", "color": "#059669", "directed": True},
     "founded": {"category": "organizational", "label": "Founded", "color": "#0891b2", "directed": True},
@@ -818,7 +836,6 @@ RELATIONSHIP_TYPE_METADATA = {
     "reports_to": {"category": "organizational", "label": "Reports To", "color": "#7c3aed", "directed": True},
     "subsidiary_of": {"category": "organizational", "label": "Subsidiary Of", "color": "#2563eb", "directed": True},
     "partner_of": {"category": "organizational", "label": "Partner Of", "color": "#4f46e5", "directed": False},
-
     # Personal relationships
     "married_to": {"category": "personal", "label": "Married To", "color": "#ec4899", "directed": False},
     "child_of": {"category": "personal", "label": "Child Of", "color": "#f472b6", "directed": True},
@@ -827,35 +844,51 @@ RELATIONSHIP_TYPE_METADATA = {
     "relative_of": {"category": "personal", "label": "Relative Of", "color": "#d946ef", "directed": False},
     "knows": {"category": "personal", "label": "Knows", "color": "#a855f7", "directed": False},
     "friend_of": {"category": "personal", "label": "Friend Of", "color": "#c084fc", "directed": False},
-
     # Interaction relationships
-    "communicated_with": {"category": "interaction", "label": "Communicated With", "color": "#14b8a6", "directed": False},
+    "communicated_with": {
+        "category": "interaction",
+        "label": "Communicated With",
+        "color": "#14b8a6",
+        "directed": False,
+    },
     "met_with": {"category": "interaction", "label": "Met With", "color": "#06b6d4", "directed": False},
     "transacted_with": {"category": "interaction", "label": "Transacted With", "color": "#22c55e", "directed": False},
-    "collaborated_with": {"category": "interaction", "label": "Collaborated With", "color": "#84cc16", "directed": False},
-
+    "collaborated_with": {
+        "category": "interaction",
+        "label": "Collaborated With",
+        "color": "#84cc16",
+        "directed": False,
+    },
     # Spatial relationships
     "visited": {"category": "spatial", "label": "Visited", "color": "#f97316", "directed": True},
     "resides_in": {"category": "spatial", "label": "Resides In", "color": "#fb923c", "directed": True},
     "headquartered_in": {"category": "spatial", "label": "Headquartered In", "color": "#ea580c", "directed": True},
     "traveled_to": {"category": "spatial", "label": "Traveled To", "color": "#fdba74", "directed": True},
-
     # Temporal relationships
     "preceded_by": {"category": "temporal", "label": "Preceded By", "color": "#eab308", "directed": True},
     "followed_by": {"category": "temporal", "label": "Followed By", "color": "#facc15", "directed": True},
     "concurrent_with": {"category": "temporal", "label": "Concurrent With", "color": "#fde047", "directed": False},
-
     # Cross-shard relationship types
-    "contradicts": {"category": "analysis", "label": "Contradicts", "color": "#ef4444", "directed": False, "dash": [5, 5]},
+    "contradicts": {
+        "category": "analysis",
+        "label": "Contradicts",
+        "color": "#ef4444",
+        "directed": False,
+        "dash": [5, 5],
+    },
     "supports": {"category": "analysis", "label": "Supports", "color": "#22c55e", "directed": False},
-    "pattern_match": {"category": "analysis", "label": "Pattern Match", "color": "#a855f7", "directed": False, "dash": [3, 3]},
+    "pattern_match": {
+        "category": "analysis",
+        "label": "Pattern Match",
+        "color": "#a855f7",
+        "directed": False,
+        "dash": [3, 3],
+    },
     "derived_from": {"category": "analysis", "label": "Derived From", "color": "#64748b", "directed": True},
     "evidence_for": {"category": "analysis", "label": "Evidence For", "color": "#16a34a", "directed": True},
     "evidence_against": {"category": "analysis", "label": "Evidence Against", "color": "#dc2626", "directed": True},
-
     # Co-occurrence (default)
     "co_occurrence": {"category": "basic", "label": "Co-occurrence", "color": "#94a3b8", "directed": False},
-
     # Timeline-specific relationships
     "mentions": {"category": "temporal", "label": "Mentions", "color": "#ec4899", "directed": True},
     "conflict": {"category": "temporal", "label": "Conflict", "color": "#ef4444", "directed": False, "dashed": True},
@@ -876,10 +909,12 @@ async def get_relationship_types() -> dict[str, Any]:
         category = metadata["category"]
         if category not in categories:
             categories[category] = []
-        categories[category].append({
-            "id": rel_type,
-            **metadata,
-        })
+        categories[category].append(
+            {
+                "id": rel_type,
+                **metadata,
+            }
+        )
 
     # Sort each category
     for category in categories:
@@ -925,9 +960,7 @@ async def get_sources_status() -> dict[str, Any]:
                     source["available"] = True
                     # Try different count fields
                     source["count"] = (
-                        data.get("total") or
-                        data.get("count") or
-                        len(data.get("items", data.get("results", [])))
+                        data.get("total") or data.get("count") or len(data.get("items", data.get("results", [])))
                     )
             except Exception:
                 pass
@@ -962,17 +995,19 @@ async def get_cross_shard_nodes(
                 if response.status_code == 200:
                     data = response.json()
                     for item in data.get("items", data.get("claims", [])):
-                        nodes.append({
-                            "id": f"claim-{item.get('id')}",
-                            "label": item.get("text", item.get("claim", ""))[:50],
-                            "entity_type": "claim",
-                            "source_shard": "claims",
-                            "original_id": item.get("id"),
-                            "properties": {
-                                "status": item.get("status"),
-                                "confidence": item.get("confidence"),
-                            },
-                        })
+                        nodes.append(
+                            {
+                                "id": f"claim-{item.get('id')}",
+                                "label": item.get("text", item.get("claim", ""))[:50],
+                                "entity_type": "claim",
+                                "source_shard": "claims",
+                                "original_id": item.get("id"),
+                                "properties": {
+                                    "status": item.get("status"),
+                                    "confidence": item.get("confidence"),
+                                },
+                            }
+                        )
             except Exception as e:
                 errors.append(f"claims: {str(e)}")
 
@@ -983,18 +1018,20 @@ async def get_cross_shard_nodes(
                 if response.status_code == 200:
                     data = response.json()
                     for item in data.get("items", data.get("evidence", [])):
-                        nodes.append({
-                            "id": f"evidence-{item.get('id')}",
-                            "label": item.get("description", "")[:50],
-                            "entity_type": "evidence",
-                            "source_shard": "ach",
-                            "original_id": item.get("id"),
-                            "properties": {
-                                "credibility": item.get("credibility"),
-                                "relevance": item.get("relevance"),
-                                "matrix_id": item.get("matrix_id"),
-                            },
-                        })
+                        nodes.append(
+                            {
+                                "id": f"evidence-{item.get('id')}",
+                                "label": item.get("description", "")[:50],
+                                "entity_type": "evidence",
+                                "source_shard": "ach",
+                                "original_id": item.get("id"),
+                                "properties": {
+                                    "credibility": item.get("credibility"),
+                                    "relevance": item.get("relevance"),
+                                    "matrix_id": item.get("matrix_id"),
+                                },
+                            }
+                        )
             except Exception as e:
                 errors.append(f"ach_evidence: {str(e)}")
 
@@ -1005,17 +1042,19 @@ async def get_cross_shard_nodes(
                 if response.status_code == 200:
                     data = response.json()
                     for item in data.get("items", data.get("hypotheses", [])):
-                        nodes.append({
-                            "id": f"hypothesis-{item.get('id')}",
-                            "label": item.get("title", item.get("description", ""))[:50],
-                            "entity_type": "hypothesis",
-                            "source_shard": "ach",
-                            "original_id": item.get("id"),
-                            "properties": {
-                                "is_lead": item.get("is_lead"),
-                                "matrix_id": item.get("matrix_id"),
-                            },
-                        })
+                        nodes.append(
+                            {
+                                "id": f"hypothesis-{item.get('id')}",
+                                "label": item.get("title", item.get("description", ""))[:50],
+                                "entity_type": "hypothesis",
+                                "source_shard": "ach",
+                                "original_id": item.get("id"),
+                                "properties": {
+                                    "is_lead": item.get("is_lead"),
+                                    "matrix_id": item.get("matrix_id"),
+                                },
+                            }
+                        )
             except Exception as e:
                 errors.append(f"ach_hypotheses: {str(e)}")
 
@@ -1026,17 +1065,19 @@ async def get_cross_shard_nodes(
                 if response.status_code == 200:
                     data = response.json()
                     for item in data.get("items", data.get("artifacts", [])):
-                        nodes.append({
-                            "id": f"artifact-{item.get('id')}",
-                            "label": item.get("name", item.get("title", ""))[:50],
-                            "entity_type": "artifact",
-                            "source_shard": "provenance",
-                            "original_id": item.get("id"),
-                            "properties": {
-                                "artifact_type": item.get("artifact_type"),
-                                "source_type": item.get("source_type"),
-                            },
-                        })
+                        nodes.append(
+                            {
+                                "id": f"artifact-{item.get('id')}",
+                                "label": item.get("name", item.get("title", ""))[:50],
+                                "entity_type": "artifact",
+                                "source_shard": "provenance",
+                                "original_id": item.get("id"),
+                                "properties": {
+                                    "artifact_type": item.get("artifact_type"),
+                                    "source_type": item.get("source_type"),
+                                },
+                            }
+                        )
             except Exception as e:
                 errors.append(f"provenance: {str(e)}")
 
@@ -1047,17 +1088,19 @@ async def get_cross_shard_nodes(
                 if response.status_code == 200:
                     data = response.json()
                     for item in data.get("items", data.get("events", [])):
-                        nodes.append({
-                            "id": f"event-{item.get('id')}",
-                            "label": item.get("title", item.get("description", ""))[:50],
-                            "entity_type": "event",
-                            "source_shard": "timeline",
-                            "original_id": item.get("id"),
-                            "properties": {
-                                "event_date": item.get("event_date"),
-                                "event_type": item.get("event_type"),
-                            },
-                        })
+                        nodes.append(
+                            {
+                                "id": f"event-{item.get('id')}",
+                                "label": item.get("title", item.get("description", ""))[:50],
+                                "entity_type": "event",
+                                "source_shard": "timeline",
+                                "original_id": item.get("id"),
+                                "properties": {
+                                    "event_date": item.get("event_date"),
+                                    "event_type": item.get("event_type"),
+                                },
+                            }
+                        )
             except Exception as e:
                 errors.append(f"timeline: {str(e)}")
 
@@ -1096,18 +1139,20 @@ async def get_cross_shard_edges(
                         source_id = item.get("entity_a_id") or item.get("source_entity_id")
                         target_id = item.get("entity_b_id") or item.get("target_entity_id")
                         if source_id and target_id:
-                            edges.append({
-                                "source": source_id,
-                                "target": target_id,
-                                "relationship_type": "contradicts",
-                                "weight": item.get("severity", 0.5),
-                                "source_shard": "contradictions",
-                                "original_id": item.get("id"),
-                                "properties": {
-                                    "contradiction_type": item.get("contradiction_type"),
-                                    "severity": item.get("severity"),
-                                },
-                            })
+                            edges.append(
+                                {
+                                    "source": source_id,
+                                    "target": target_id,
+                                    "relationship_type": "contradicts",
+                                    "weight": item.get("severity", 0.5),
+                                    "source_shard": "contradictions",
+                                    "original_id": item.get("id"),
+                                    "properties": {
+                                        "contradiction_type": item.get("contradiction_type"),
+                                        "severity": item.get("severity"),
+                                    },
+                                }
+                            )
             except Exception as e:
                 errors.append(f"contradictions: {str(e)}")
 
@@ -1122,18 +1167,20 @@ async def get_cross_shard_edges(
                         source_id = item.get("entity_a_id") or item.get("source_entity_id")
                         target_id = item.get("entity_b_id") or item.get("target_entity_id")
                         if source_id and target_id:
-                            edges.append({
-                                "source": source_id,
-                                "target": target_id,
-                                "relationship_type": "pattern_match",
-                                "weight": item.get("confidence", 0.5),
-                                "source_shard": "patterns",
-                                "original_id": item.get("id"),
-                                "properties": {
-                                    "pattern_type": item.get("pattern_type"),
-                                    "confidence": item.get("confidence"),
-                                },
-                            })
+                            edges.append(
+                                {
+                                    "source": source_id,
+                                    "target": target_id,
+                                    "relationship_type": "pattern_match",
+                                    "weight": item.get("confidence", 0.5),
+                                    "source_shard": "patterns",
+                                    "original_id": item.get("id"),
+                                    "properties": {
+                                        "pattern_type": item.get("pattern_type"),
+                                        "confidence": item.get("confidence"),
+                                    },
+                                }
+                            )
             except Exception as e:
                 errors.append(f"patterns: {str(e)}")
 
@@ -1201,7 +1248,8 @@ async def _enrich_graph_with_cross_shard_data(
         Tuple of (added_nodes, added_edges, credibility_ratings)
     """
     import httpx
-    from .models import GraphNode, GraphEdge
+
+    from .models import GraphEdge, GraphNode
 
     added_nodes = []
     added_edges = []
@@ -1311,7 +1359,7 @@ async def _enrich_graph_with_cross_shard_data(
         timeline_event_entities: dict[str, list[str]] = {}  # event_id -> entity_ids
         if include_timeline:
             try:
-                response = await client.get(f"/api/timeline/events?limit=500")
+                response = await client.get("/api/timeline/events?limit=500")
                 if response.status_code == 200:
                     data = response.json()
                     events = data.get("items", data.get("events", []))
@@ -1364,7 +1412,12 @@ async def _enrich_graph_with_cross_shard_data(
                         source_id = item.get("entity_a_id") or item.get("source_entity_id")
                         target_id = item.get("entity_b_id") or item.get("target_entity_id")
                         # Only add edge if both nodes exist
-                        if source_id and target_id and source_id in existing_node_ids and target_id in existing_node_ids:
+                        if (
+                            source_id
+                            and target_id
+                            and source_id in existing_node_ids
+                            and target_id in existing_node_ids
+                        ):
                             edge = GraphEdge(
                                 source=source_id,
                                 target=target_id,
@@ -1393,7 +1446,12 @@ async def _enrich_graph_with_cross_shard_data(
                         source_id = item.get("entity_a_id") or item.get("source_entity_id")
                         target_id = item.get("entity_b_id") or item.get("target_entity_id")
                         # Only add edge if both nodes exist
-                        if source_id and target_id and source_id in existing_node_ids and target_id in existing_node_ids:
+                        if (
+                            source_id
+                            and target_id
+                            and source_id in existing_node_ids
+                            and target_id in existing_node_ids
+                        ):
                             edge = GraphEdge(
                                 source=source_id,
                                 target=target_id,
@@ -1424,7 +1482,7 @@ async def _enrich_graph_with_cross_shard_data(
             # Edges between events that share entities (temporal relationship)
             for i, event_id_a in enumerate(event_ids):
                 entities_a = set(timeline_event_entities[event_id_a])
-                for event_id_b in event_ids[i + 1:]:
+                for event_id_b in event_ids[i + 1 :]:
                     entities_b = set(timeline_event_entities[event_id_b])
                     shared = entities_a & entities_b
 
@@ -1481,7 +1539,7 @@ async def _enrich_graph_with_cross_shard_data(
 
                         # Create conflict edges between involved events
                         for i, eid_a in enumerate(event_ids):
-                            for eid_b in event_ids[i + 1:]:
+                            for eid_b in event_ids[i + 1 :]:
                                 # Map event IDs to graph node IDs
                                 node_id_a = f"timeline-event-{eid_a}"
                                 node_id_b = f"timeline-event-{eid_b}"
@@ -1819,10 +1877,7 @@ async def get_ego_network(
 
         # Check for error
         if ego_graph.metadata.get("error"):
-            raise HTTPException(
-                status_code=404,
-                detail=f"Entity {entity_id} not found in graph"
-            )
+            raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found in graph")
 
         # Calculate metrics if requested
         metrics = None
@@ -1882,10 +1937,7 @@ async def get_ego_metrics(
         metrics = _algorithms.calculate_ego_metrics(graph, entity_id)
 
         if metrics.get("error"):
-            raise HTTPException(
-                status_code=404,
-                detail=f"Entity {entity_id} not found in graph"
-            )
+            raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found in graph")
 
         return {
             "project_id": project_id,
@@ -1954,6 +2006,7 @@ async def find_path(request: PathRequest) -> PathResponse:
 
 class AllPathsRequest(BaseModel):
     """Request for finding all paths between entities."""
+
     project_id: str
     source_entity_id: str
     target_entity_id: str
@@ -1963,12 +2016,14 @@ class AllPathsRequest(BaseModel):
 
 class AllPathsResponse(BaseModel):
     """Response for all paths query."""
+
     paths_found: int
     paths: list[dict[str, Any]]
 
 
 class WeightedPathRequest(BaseModel):
     """Request for weighted path finding."""
+
     project_id: str
     source_entity_id: str
     target_entity_id: str
@@ -1978,6 +2033,7 @@ class WeightedPathRequest(BaseModel):
 
 class ConstrainedPathRequest(BaseModel):
     """Request for constrained path finding."""
+
     project_id: str
     source_entity_id: str
     target_entity_id: str
@@ -1990,6 +2046,7 @@ class ConstrainedPathRequest(BaseModel):
 
 class PathsThroughRequest(BaseModel):
     """Request for finding paths through an entity."""
+
     project_id: str
     intermediate_entity_id: str
     max_sources: int = 5
@@ -2251,16 +2308,19 @@ async def calculate_centrality(
                 label, entity_type = entity_labels.get(entity_id, (entity_id, ""))
 
                 from .models import CentralityResult
-                merged.append(CentralityResult(
-                    entity_id=entity_id,
-                    label=label,
-                    score=composite,
-                    rank=0,  # Will be set after sorting
-                    entity_type=entity_type,
-                    degree_score=d_score,
-                    betweenness_score=b_score,
-                    pagerank_score=p_score,
-                ))
+
+                merged.append(
+                    CentralityResult(
+                        entity_id=entity_id,
+                        label=label,
+                        score=composite,
+                        rank=0,  # Will be set after sorting
+                        entity_type=entity_type,
+                        degree_score=d_score,
+                        betweenness_score=b_score,
+                        pagerank_score=p_score,
+                    )
+                )
 
             # Sort by composite score and assign ranks
             merged.sort(key=lambda x: x.score, reverse=True)
@@ -2478,6 +2538,7 @@ async def filter_graph(request: FilterRequest) -> GraphResponse:
 
 class FlowRequest(BaseModel):
     """Request for flow data extraction."""
+
     project_id: str
     flow_type: str = "entity"  # "entity" or "relationship"
     source_types: list[str] | None = None
@@ -2636,8 +2697,10 @@ async def get_flows_simple(
 # Link Analysis Mode - Positions & Annotations
 # =============================================================================
 
+
 class PositionData(BaseModel):
     """Single node position."""
+
     node_id: str
     x: float
     y: float
@@ -2646,6 +2709,7 @@ class PositionData(BaseModel):
 
 class SavePositionsRequest(BaseModel):
     """Request to save multiple node positions."""
+
     project_id: str
     positions: list[PositionData]
     user_id: str | None = None
@@ -2653,6 +2717,7 @@ class SavePositionsRequest(BaseModel):
 
 class AnnotationData(BaseModel):
     """Annotation data."""
+
     graph_id: str
     node_id: str | None = None
     edge_source: str | None = None
@@ -2676,8 +2741,7 @@ async def save_positions(request: SavePositionsRequest) -> dict[str, Any]:
     try:
         # Get or create graph ID for project
         graph_id_result = await _db_service.fetch_one(
-            "SELECT id FROM arkham_graph.graphs WHERE project_id = :project_id",
-            {"project_id": request.project_id}
+            "SELECT id FROM arkham_graph.graphs WHERE project_id = :project_id", {"project_id": request.project_id}
         )
 
         if not graph_id_result:
@@ -2712,7 +2776,7 @@ async def save_positions(request: SavePositionsRequest) -> dict[str, Any]:
                     "pinned": pos.pinned,
                     "created_at": now,
                     "updated_at": now,
-                }
+                },
             )
             saved_count += 1
 
@@ -2743,8 +2807,7 @@ async def get_positions(
     try:
         # Get graph ID for project
         graph_id_result = await _db_service.fetch_one(
-            "SELECT id FROM arkham_graph.graphs WHERE project_id = :project_id",
-            {"project_id": project_id}
+            "SELECT id FROM arkham_graph.graphs WHERE project_id = :project_id", {"project_id": project_id}
         )
 
         if not graph_id_result:
@@ -2761,7 +2824,7 @@ async def get_positions(
                 WHERE graph_id = :graph_id AND (user_id = :user_id OR user_id IS NULL)
                 ORDER BY updated_at DESC
                 """,
-                {"graph_id": graph_id, "user_id": user_id}
+                {"graph_id": graph_id, "user_id": user_id},
             )
         else:
             rows = await _db_service.fetch_all(
@@ -2771,7 +2834,7 @@ async def get_positions(
                 WHERE graph_id = :graph_id AND user_id IS NULL
                 ORDER BY updated_at DESC
                 """,
-                {"graph_id": graph_id}
+                {"graph_id": graph_id},
             )
 
         # Build positions dict
@@ -2810,8 +2873,7 @@ async def clear_positions(
     try:
         # Get graph ID for project
         graph_id_result = await _db_service.fetch_one(
-            "SELECT id FROM arkham_graph.graphs WHERE project_id = :project_id",
-            {"project_id": project_id}
+            "SELECT id FROM arkham_graph.graphs WHERE project_id = :project_id", {"project_id": project_id}
         )
 
         if not graph_id_result:
@@ -2826,7 +2888,7 @@ async def clear_positions(
                 DELETE FROM arkham_graph.user_positions
                 WHERE graph_id = :graph_id AND user_id = :user_id
                 """,
-                {"graph_id": graph_id, "user_id": user_id}
+                {"graph_id": graph_id, "user_id": user_id},
             )
         else:
             await _db_service.execute(
@@ -2834,7 +2896,7 @@ async def clear_positions(
                 DELETE FROM arkham_graph.user_positions
                 WHERE graph_id = :graph_id AND user_id IS NULL
                 """,
-                {"graph_id": graph_id}
+                {"graph_id": graph_id},
             )
 
         return {
@@ -2858,8 +2920,8 @@ async def save_annotation(annotation: AnnotationData) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail="Database service not available")
 
     try:
-        import uuid
         import json
+        import uuid
         from datetime import datetime
 
         annotation_id = str(uuid.uuid4())
@@ -2885,7 +2947,7 @@ async def save_annotation(annotation: AnnotationData) -> dict[str, Any]:
                 "created_at": now,
                 "updated_at": now,
                 "user_id": annotation.user_id,
-            }
+            },
         )
 
         return {
@@ -2915,8 +2977,7 @@ async def get_annotations(
     try:
         # Get graph ID for project
         graph_id_result = await _db_service.fetch_one(
-            "SELECT id FROM arkham_graph.graphs WHERE project_id = :project_id",
-            {"project_id": project_id}
+            "SELECT id FROM arkham_graph.graphs WHERE project_id = :project_id", {"project_id": project_id}
         )
 
         if not graph_id_result:
@@ -2946,6 +3007,7 @@ async def get_annotations(
         rows = await _db_service.fetch_all(query, params)
 
         import json
+
         annotations = []
         for row in rows:
             style = row["style"]
@@ -2955,17 +3017,19 @@ async def get_annotations(
                 except:
                     style = {}
 
-            annotations.append({
-                "id": row["id"],
-                "node_id": row["node_id"],
-                "edge_source": row["edge_source"],
-                "edge_target": row["edge_target"],
-                "annotation_type": row["annotation_type"],
-                "content": row["content"],
-                "style": style,
-                "created_at": row["created_at"].isoformat() if row["created_at"] else None,
-                "user_id": row["user_id"],
-            })
+            annotations.append(
+                {
+                    "id": row["id"],
+                    "node_id": row["node_id"],
+                    "edge_source": row["edge_source"],
+                    "edge_target": row["edge_target"],
+                    "annotation_type": row["annotation_type"],
+                    "content": row["content"],
+                    "style": style,
+                    "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+                    "user_id": row["user_id"],
+                }
+            )
 
         return {
             "annotations": annotations,
@@ -3018,7 +3082,7 @@ async def update_annotation(
             SET {", ".join(updates)}
             WHERE id = :id
             """,
-            params
+            params,
         )
 
         return {
@@ -3043,10 +3107,7 @@ async def delete_annotation(annotation_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail="Database service not available")
 
     try:
-        await _db_service.execute(
-            "DELETE FROM arkham_graph.annotations WHERE id = :id",
-            {"id": annotation_id}
-        )
+        await _db_service.execute("DELETE FROM arkham_graph.annotations WHERE id = :id", {"id": annotation_id})
 
         return {
             "success": True,
@@ -3072,6 +3133,7 @@ def _get_argumentation_builder():
     global _argumentation_builder
     if _argumentation_builder is None:
         from .argumentation import ArgumentationBuilder
+
         _argumentation_builder = ArgumentationBuilder()
     return _argumentation_builder
 
@@ -3110,7 +3172,7 @@ async def get_argumentation_graph(
             FROM arkham_ach.matrices
             WHERE id = :matrix_id
             """,
-            {"matrix_id": matrix_id}
+            {"matrix_id": matrix_id},
         )
 
         if not matrix_result:
@@ -3124,7 +3186,7 @@ async def get_argumentation_graph(
             WHERE matrix_id = :matrix_id
             ORDER BY column_index
             """,
-            {"matrix_id": matrix_id}
+            {"matrix_id": matrix_id},
         )
 
         hypotheses = [
@@ -3146,7 +3208,7 @@ async def get_argumentation_graph(
             WHERE matrix_id = :matrix_id
             ORDER BY row_index
             """,
-            {"matrix_id": matrix_id}
+            {"matrix_id": matrix_id},
         )
 
         evidence = [
@@ -3168,7 +3230,7 @@ async def get_argumentation_graph(
             FROM arkham_ach.ratings
             WHERE matrix_id = :matrix_id
             """,
-            {"matrix_id": matrix_id}
+            {"matrix_id": matrix_id},
         )
 
         ratings = [
@@ -3204,7 +3266,7 @@ async def get_argumentation_graph(
                     WHERE matrix_id = :matrix_id
                     ORDER BY rank
                     """,
-                    {"matrix_id": matrix_id}
+                    {"matrix_id": matrix_id},
                 )
 
                 scores = [
@@ -3331,7 +3393,7 @@ async def list_ach_matrices_for_graph(
             GROUP BY m.id, m.title, m.description, m.status, m.created_at
             ORDER BY m.created_at DESC
             """,
-            {"project_id": project_id}
+            {"project_id": project_id},
         )
 
         matrices = [
@@ -3370,12 +3432,14 @@ def _get_causal_engine():
     global _causal_engine
     if _causal_engine is None:
         from .causal import CausalGraphEngine
+
         _causal_engine = CausalGraphEngine()
     return _causal_engine
 
 
 class InterventionRequest(BaseModel):
     """Request for causal intervention analysis."""
+
     intervention_node: str
     intervention_value: str = "true"
     target_node: str
@@ -3712,6 +3776,7 @@ def _get_geo_engine():
     global _geo_engine
     if _geo_engine is None:
         from .geospatial import GeoGraphEngine
+
         _geo_engine = GeoGraphEngine()
     return _geo_engine
 
@@ -3835,7 +3900,9 @@ async def get_geo_bounds(
                 "min_lng": bounds.min_lng,
                 "max_lng": bounds.max_lng,
                 "center": bounds.center,
-            } if bounds else None,
+            }
+            if bounds
+            else None,
             "node_count": len(geo_nodes),
         }
 
@@ -3893,8 +3960,10 @@ async def calculate_distance(
             }
 
         distance = engine.calculate_distance(
-            source_node.latitude, source_node.longitude,
-            target_node.latitude, target_node.longitude,
+            source_node.latitude,
+            source_node.longitude,
+            target_node.latitude,
+            target_node.longitude,
         )
 
         return {

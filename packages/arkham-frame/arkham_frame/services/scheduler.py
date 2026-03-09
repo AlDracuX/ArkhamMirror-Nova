@@ -7,11 +7,11 @@ one-time jobs, and interval-based execution.
 
 import asyncio
 import logging
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Union
-import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,9 @@ logger = logging.getLogger(__name__)
 try:
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from apscheduler.triggers.cron import CronTrigger
-    from apscheduler.triggers.interval import IntervalTrigger
     from apscheduler.triggers.date import DateTrigger
+    from apscheduler.triggers.interval import IntervalTrigger
+
     APSCHEDULER_AVAILABLE = True
 except ImportError:
     APSCHEDULER_AVAILABLE = False
@@ -31,23 +32,28 @@ except ImportError:
 # Exceptions
 # ============================================
 
+
 class SchedulerError(Exception):
     """Base exception for scheduler errors."""
+
     pass
 
 
 class JobNotFoundError(SchedulerError):
     """Scheduled job not found."""
+
     pass
 
 
 class JobExecutionError(SchedulerError):
     """Error during job execution."""
+
     pass
 
 
 class InvalidScheduleError(SchedulerError):
     """Invalid schedule configuration."""
+
     pass
 
 
@@ -55,8 +61,10 @@ class InvalidScheduleError(SchedulerError):
 # Enums and Types
 # ============================================
 
+
 class JobStatus(str, Enum):
     """Status of a scheduled job."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -67,6 +75,7 @@ class JobStatus(str, Enum):
 
 class TriggerType(str, Enum):
     """Types of job triggers."""
+
     CRON = "cron"
     INTERVAL = "interval"
     DATE = "date"
@@ -75,6 +84,7 @@ class TriggerType(str, Enum):
 @dataclass
 class JobResult:
     """Result of a job execution."""
+
     job_id: str
     started_at: datetime
     finished_at: datetime
@@ -87,6 +97,7 @@ class JobResult:
 @dataclass
 class ScheduledJob:
     """A scheduled job definition."""
+
     id: str
     name: str
     func_name: str
@@ -104,6 +115,7 @@ class ScheduledJob:
 # ============================================
 # Basic Scheduler (No APScheduler)
 # ============================================
+
 
 class BasicScheduler:
     """
@@ -236,15 +248,14 @@ class BasicScheduler:
         if job_id in self._jobs:
             job = self._jobs[job_id]
             if job["trigger"] == "interval":
-                task = asyncio.create_task(
-                    self._run_interval_job(job_id, job["func"], job["interval"])
-                )
+                task = asyncio.create_task(self._run_interval_job(job_id, job["func"], job["interval"]))
                 self._tasks[job_id] = task
 
 
 # ============================================
 # Scheduler Service
 # ============================================
+
 
 class SchedulerService:
     """
@@ -382,14 +393,22 @@ class SchedulerService:
                     "day_of_week": parts[4],
                 }
         else:
-            if year: trigger_config["year"] = year
-            if month: trigger_config["month"] = month
-            if day: trigger_config["day"] = day
-            if week: trigger_config["week"] = week
-            if day_of_week: trigger_config["day_of_week"] = day_of_week
-            if hour: trigger_config["hour"] = hour
-            if minute: trigger_config["minute"] = minute
-            if second: trigger_config["second"] = second
+            if year:
+                trigger_config["year"] = year
+            if month:
+                trigger_config["month"] = month
+            if day:
+                trigger_config["day"] = day
+            if week:
+                trigger_config["week"] = week
+            if day_of_week:
+                trigger_config["day_of_week"] = day_of_week
+            if hour:
+                trigger_config["hour"] = hour
+            if minute:
+                trigger_config["minute"] = minute
+            if second:
+                trigger_config["second"] = second
 
         job = ScheduledJob(
             id=job_id,
@@ -457,13 +476,7 @@ class SchedulerService:
             raise InvalidScheduleError(f"Function not registered: {func_name}")
 
         # Calculate total seconds
-        total_seconds = (
-            weeks * 7 * 24 * 3600 +
-            days * 24 * 3600 +
-            hours * 3600 +
-            minutes * 60 +
-            seconds
-        )
+        total_seconds = weeks * 7 * 24 * 3600 + days * 24 * 3600 + hours * 3600 + minutes * 60 + seconds
 
         if total_seconds <= 0:
             raise InvalidScheduleError("Interval must be positive")
@@ -587,6 +600,7 @@ class SchedulerService:
         func: Callable,
     ) -> Callable:
         """Wrap a job function with tracking and error handling."""
+
         async def wrapped():
             job = self._jobs.get(job_id)
             if not job:
@@ -622,9 +636,7 @@ class SchedulerService:
 
             finally:
                 result.finished_at = datetime.utcnow()
-                result.execution_time_ms = (
-                    result.finished_at - result.started_at
-                ).total_seconds() * 1000
+                result.execution_time_ms = (result.finished_at - result.started_at).total_seconds() * 1000
 
                 # Add to history
                 self._history.append(result)
@@ -639,7 +651,7 @@ class SchedulerService:
                             "job_id": job_id,
                             "status": result.status.value,
                             "execution_time_ms": result.execution_time_ms,
-                        }
+                        },
                     )
 
         return wrapped

@@ -26,6 +26,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@lo
 async def get_db_pool():
     """Get async PostgreSQL connection pool."""
     import asyncpg
+
     try:
         pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=5)
         async with pool.acquire() as conn:
@@ -39,13 +40,19 @@ async def get_db_pool():
 async def enqueue_job(pool, pool_name: str, job_id: str, payload: dict, priority: int = 1):
     """Enqueue a job."""
     async with pool.acquire() as conn:
-        await conn.execute("""
+        await conn.execute(
+            """
             INSERT INTO arkham_jobs.jobs (id, pool, payload, priority, status)
             VALUES ($1, $2, $3, $4, 'pending')
             ON CONFLICT (id) DO UPDATE SET
                 status = 'pending',
                 payload = EXCLUDED.payload
-        """, job_id, pool_name, json.dumps(payload), priority)
+        """,
+            job_id,
+            pool_name,
+            json.dumps(payload),
+            priority,
+        )
 
 
 async def wait_for_job(pool, job_id: str, timeout: float = 60.0) -> dict:
@@ -55,10 +62,7 @@ async def wait_for_job(pool, job_id: str, timeout: float = 60.0) -> dict:
 
     while elapsed < timeout:
         async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT status, result, error FROM arkham_jobs.jobs WHERE id = $1",
-                job_id
-            )
+            row = await conn.fetchrow("SELECT status, result, error FROM arkham_jobs.jobs WHERE id = $1", job_id)
             if row and row["status"] in ["completed", "failed"]:
                 return {
                     "status": row["status"],
@@ -74,10 +78,7 @@ async def wait_for_job(pool, job_id: str, timeout: float = 60.0) -> dict:
 async def cleanup_jobs(pool, prefix="e2e-test"):
     """Clean up test jobs."""
     async with pool.acquire() as conn:
-        await conn.execute(
-            "DELETE FROM arkham_jobs.jobs WHERE id LIKE $1",
-            f"{prefix}-%"
-        )
+        await conn.execute("DELETE FROM arkham_jobs.jobs WHERE id LIKE $1", f"{prefix}-%")
 
 
 def create_test_document():
@@ -149,7 +150,7 @@ async def run_e2e_test(test_file: str = None):
 
     # Start workers
     print("\n[2] Starting workers...")
-    from arkham_frame.workers import ExtractWorker, LightWorker, NERWorker, EmbedWorker
+    from arkham_frame.workers import EmbedWorker, ExtractWorker, LightWorker, NERWorker
 
     workers = []
     tasks = []
@@ -177,7 +178,7 @@ async def run_e2e_test(test_file: str = None):
     else:
         print("\n[3] Creating test document...")
         content = create_test_document()
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write(content)
             file_path = f.name
         print(f"    Created: {file_path}")
@@ -193,9 +194,14 @@ async def run_e2e_test(test_file: str = None):
         print("-" * 70)
 
         job_id = "e2e-test-extract"
-        await enqueue_job(pool, "cpu-extract", job_id, {
-            "file_path": file_path,
-        })
+        await enqueue_job(
+            pool,
+            "cpu-extract",
+            job_id,
+            {
+                "file_path": file_path,
+            },
+        )
         print(f"    Dispatched job: {job_id}")
 
         result = await wait_for_job(pool, job_id, timeout=30)
@@ -207,7 +213,7 @@ async def run_e2e_test(test_file: str = None):
         text = extract_result.get("text", "")
         results["extract"] = extract_result
 
-        print(f"    Status: COMPLETED")
+        print("    Status: COMPLETED")
         print(f"    Extracted: {len(text)} characters")
         print(f"    Preview: {text[:100]}...")
 
@@ -217,10 +223,15 @@ async def run_e2e_test(test_file: str = None):
         print("-" * 70)
 
         job_id = "e2e-test-light"
-        await enqueue_job(pool, "cpu-light", job_id, {
-            "task": "process",
-            "text": text,
-        })
+        await enqueue_job(
+            pool,
+            "cpu-light",
+            job_id,
+            {
+                "task": "process",
+                "text": text,
+            },
+        )
         print(f"    Dispatched job: {job_id}")
 
         result = await wait_for_job(pool, job_id, timeout=30)
@@ -232,7 +243,7 @@ async def run_e2e_test(test_file: str = None):
         normalized_text = light_result.get("normalized_text", text)
         results["light"] = light_result
 
-        print(f"    Status: COMPLETED")
+        print("    Status: COMPLETED")
         print(f"    Language: {light_result.get('language', 'unknown')}")
         print(f"    Quality Score: {light_result.get('quality_score', 0)}")
         print(f"    Word Count: {light_result.get('word_count', 0)}")
@@ -243,10 +254,15 @@ async def run_e2e_test(test_file: str = None):
         print("-" * 70)
 
         job_id = "e2e-test-ner"
-        await enqueue_job(pool, "cpu-ner", job_id, {
-            "text": normalized_text,
-            "doc_id": "e2e-test-doc",
-        })
+        await enqueue_job(
+            pool,
+            "cpu-ner",
+            job_id,
+            {
+                "text": normalized_text,
+                "doc_id": "e2e-test-doc",
+            },
+        )
         print(f"    Dispatched job: {job_id}")
 
         result = await wait_for_job(pool, job_id, timeout=60)
@@ -258,7 +274,7 @@ async def run_e2e_test(test_file: str = None):
         entities = ner_result.get("entities", [])
         results["ner"] = ner_result
 
-        print(f"    Status: COMPLETED")
+        print("    Status: COMPLETED")
         print(f"    Total Entities: {len(entities)}")
 
         # Group entities by type
@@ -280,34 +296,41 @@ async def run_e2e_test(test_file: str = None):
 
         # Chunk the text for embedding (simple chunking)
         chunk_size = 500
-        chunks = [normalized_text[i:i+chunk_size] for i in range(0, len(normalized_text), chunk_size)]
+        chunks = [normalized_text[i : i + chunk_size] for i in range(0, len(normalized_text), chunk_size)]
         print(f"    Text split into {len(chunks)} chunks")
 
         embeddings = []
         for i, chunk in enumerate(chunks[:3]):  # Limit to first 3 chunks for speed
             job_id = f"e2e-test-embed-{i}"
-            await enqueue_job(pool, "gpu-embed", job_id, {
-                "text": chunk,
-            })
+            await enqueue_job(
+                pool,
+                "gpu-embed",
+                job_id,
+                {
+                    "text": chunk,
+                },
+            )
 
             result = await wait_for_job(pool, job_id, timeout=60)
             if result.get("status") == "completed":
                 embed_result = json.loads(result.get("result", "{}"))
-                embeddings.append({
-                    "chunk_index": i,
-                    "dimensions": embed_result.get("dimensions", 0),
-                    "model": embed_result.get("model", "unknown"),
-                })
+                embeddings.append(
+                    {
+                        "chunk_index": i,
+                        "dimensions": embed_result.get("dimensions", 0),
+                        "model": embed_result.get("model", "unknown"),
+                    }
+                )
 
         results["embed"] = embeddings
 
         if embeddings:
-            print(f"    Status: COMPLETED")
+            print("    Status: COMPLETED")
             print(f"    Chunks Embedded: {len(embeddings)}")
             print(f"    Model: {embeddings[0].get('model', 'unknown')}")
             print(f"    Dimensions: {embeddings[0].get('dimensions', 0)}")
         else:
-            print(f"    Status: FAILED - No embeddings generated")
+            print("    Status: FAILED - No embeddings generated")
 
         # Summary
         pipeline_time = time.time() - pipeline_start
@@ -335,6 +358,7 @@ async def run_e2e_test(test_file: str = None):
     except Exception as e:
         print(f"\nERROR: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -356,6 +380,7 @@ async def run_e2e_test(test_file: str = None):
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(description="End-to-end pipeline test")
     parser.add_argument("--file", help="Path to test file (optional)")
     args = parser.parse_args()

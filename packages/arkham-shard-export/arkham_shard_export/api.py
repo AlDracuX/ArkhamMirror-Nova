@@ -4,7 +4,7 @@ Export Shard - FastAPI Routes
 REST API endpoints for export management.
 """
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse
@@ -24,6 +24,7 @@ router = APIRouter(prefix="/api/export", tags=["export"])
 
 # === Helper to get shard instance ===
 
+
 def get_shard(request: Request) -> "ExportShard":
     """Get the export shard instance from app state."""
     shard = getattr(request.app.state, "export_shard", None)
@@ -37,6 +38,7 @@ def get_shard(request: Request) -> "ExportShard":
 
 class ExportOptionsRequest(BaseModel):
     """Request model for export options."""
+
     include_metadata: bool = Field(default=True)
     include_relationships: bool = Field(default=True)
     date_range_start: Optional[str] = None
@@ -50,6 +52,7 @@ class ExportOptionsRequest(BaseModel):
 
 class ExportJobCreate(BaseModel):
     """Request model for creating an export job."""
+
     format: ExportFormat = Field(..., description="Export format")
     target: ExportTarget = Field(..., description="Data target to export")
     filters: Optional[Dict[str, Any]] = Field(default_factory=dict)
@@ -58,6 +61,7 @@ class ExportJobCreate(BaseModel):
 
 class ExportJobResponse(BaseModel):
     """Response model for an export job."""
+
     id: str
     format: str
     target: str
@@ -79,6 +83,7 @@ class ExportJobResponse(BaseModel):
 
 class ExportJobListResponse(BaseModel):
     """Response model for listing export jobs."""
+
     jobs: List[ExportJobResponse]
     total: int
     limit: int
@@ -87,6 +92,7 @@ class ExportJobListResponse(BaseModel):
 
 class FormatInfoResponse(BaseModel):
     """Response model for format information."""
+
     format: str
     name: str
     description: str
@@ -100,6 +106,7 @@ class FormatInfoResponse(BaseModel):
 
 class TargetInfoResponse(BaseModel):
     """Response model for target information."""
+
     target: str
     name: str
     description: str
@@ -110,6 +117,7 @@ class TargetInfoResponse(BaseModel):
 
 class StatisticsResponse(BaseModel):
     """Response model for export statistics."""
+
     total_jobs: int
     by_status: Dict[str, int]
     by_format: Dict[str, int]
@@ -126,11 +134,13 @@ class StatisticsResponse(BaseModel):
 
 class CountResponse(BaseModel):
     """Response model for count endpoint."""
+
     count: int
 
 
 class PreviewRequest(BaseModel):
     """Request model for export preview."""
+
     format: ExportFormat
     target: ExportTarget
     filters: Optional[Dict[str, Any]] = Field(default_factory=dict)
@@ -140,6 +150,7 @@ class PreviewRequest(BaseModel):
 
 class PreviewResponse(BaseModel):
     """Response model for export preview."""
+
     format: str
     target: str
     estimated_record_count: int
@@ -231,10 +242,13 @@ async def create_job(body: ExportJobCreate, request: Request):
     options = None
     if body.options:
         from datetime import datetime
+
         options = ExportOptions(
             include_metadata=body.options.include_metadata,
             include_relationships=body.options.include_relationships,
-            date_range_start=datetime.fromisoformat(body.options.date_range_start) if body.options.date_range_start else None,
+            date_range_start=datetime.fromisoformat(body.options.date_range_start)
+            if body.options.date_range_start
+            else None,
             date_range_end=datetime.fromisoformat(body.options.date_range_end) if body.options.date_range_end else None,
             entity_types=body.options.entity_types,
             flatten=body.options.flatten,
@@ -296,6 +310,7 @@ async def download_job(job_id: str, request: Request):
 
     # Check expiration
     from datetime import datetime
+
     if job.expires_at and datetime.utcnow() > job.expires_at:
         raise HTTPException(status_code=410, detail="Export file has expired")
 
@@ -309,6 +324,7 @@ async def download_job(job_id: str, request: Request):
 
     # Return file
     import os
+
     filename = os.path.basename(job.file_path)
     return FileResponse(
         path=job.file_path,

@@ -11,37 +11,42 @@ import os
 import platform
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class ResourceTier(Enum):
     """System resource tiers based on available hardware."""
-    MINIMAL = "minimal"      # CPU-only, limited concurrency
-    STANDARD = "standard"    # < 6GB GPU VRAM
+
+    MINIMAL = "minimal"  # CPU-only, limited concurrency
+    STANDARD = "standard"  # < 6GB GPU VRAM
     RECOMMENDED = "recommended"  # 6-12GB GPU VRAM
-    POWER = "power"          # > 12GB VRAM with high concurrency
+    POWER = "power"  # > 12GB VRAM with high concurrency
 
 
 class ResourceError(Exception):
     """Base exception for resource errors."""
+
     pass
 
 
 class GPUMemoryError(ResourceError):
     """GPU memory allocation failed."""
+
     pass
 
 
 class CPUAllocationError(ResourceError):
     """CPU thread allocation failed."""
+
     pass
 
 
 @dataclass
 class SystemResources:
     """Detected system resources."""
+
     # GPU
     gpu_available: bool = False
     gpu_name: Optional[str] = None
@@ -70,6 +75,7 @@ class SystemResources:
 @dataclass
 class PoolConfig:
     """Configuration for a worker pool."""
+
     max_workers: int
     min_workers: int = 0
     threads_per_worker: int = 1
@@ -100,8 +106,8 @@ TIER_POOL_CONFIGS = {
         "cpu-image": PoolConfig(max_workers=2),
         "cpu-archive": PoolConfig(max_workers=1),
         "cpu-paddle": PoolConfig(max_workers=2, threads_per_worker=2),  # CPU fallback for OCR
-        "cpu-embed": PoolConfig(max_workers=2, threads_per_worker=2),   # CPU fallback for embeddings
-        "cpu-whisper": PoolConfig(max_workers=1, threads_per_worker=4), # CPU fallback for transcription
+        "cpu-embed": PoolConfig(max_workers=2, threads_per_worker=2),  # CPU fallback for embeddings
+        "cpu-whisper": PoolConfig(max_workers=1, threads_per_worker=4),  # CPU fallback for transcription
         "gpu-paddle": PoolConfig(max_workers=0, enabled=False, fallback="cpu-paddle"),
         "gpu-qwen": PoolConfig(max_workers=0, enabled=False),
         "gpu-whisper": PoolConfig(max_workers=0, enabled=False, fallback="cpu-whisper"),
@@ -235,6 +241,7 @@ class ResourceService:
         # Detect GPU using PyTorch
         try:
             import torch
+
             if torch.cuda.is_available():
                 resources.gpu_available = True
                 resources.gpu_name = torch.cuda.get_device_name(0)
@@ -253,6 +260,7 @@ class ResourceService:
         # Detect CPU
         try:
             import psutil
+
             resources.cpu_cores_physical = psutil.cpu_count(logical=False) or 1
             resources.cpu_cores_logical = psutil.cpu_count(logical=True) or 1
             resources.cpu_model = platform.processor() or "Unknown"
@@ -265,6 +273,7 @@ class ResourceService:
         # Detect memory
         try:
             import psutil
+
             mem = psutil.virtual_memory()
             resources.ram_total_mb = mem.total // (1024 * 1024)
             resources.ram_available_mb = mem.available // (1024 * 1024)
@@ -275,6 +284,7 @@ class ResourceService:
         # Detect disk space for data_silo
         try:
             import psutil
+
             # Use relative path from frame package
             frame_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
             data_silo = os.path.join(frame_dir, "data_silo")
@@ -299,12 +309,10 @@ class ResourceService:
         """Quick check if PostgreSQL is available."""
         try:
             import asyncpg
+
             url = self.config.database_url if self.config else "postgresql://localhost:5432/anomdb"
             # Parse URL for asyncpg
-            conn = await asyncio.wait_for(
-                asyncpg.connect(url, timeout=2),
-                timeout=3
-            )
+            conn = await asyncio.wait_for(asyncpg.connect(url, timeout=2), timeout=3)
             await conn.close()
             return True
         except Exception:
@@ -314,6 +322,7 @@ class ResourceService:
         """Quick check if LM Studio is available."""
         try:
             import httpx
+
             url = self.config.llm_endpoint if self.config else "http://localhost:1234/v1"
             async with httpx.AsyncClient(timeout=2) as client:
                 resp = await client.get(f"{url}/models")
@@ -476,6 +485,7 @@ class ResourceService:
         Returns True if memory became available, raises GPUMemoryError on timeout.
         """
         import time
+
         start = time.time()
 
         while not await self.gpu_can_load(model):

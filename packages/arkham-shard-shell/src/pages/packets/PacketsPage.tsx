@@ -32,7 +32,14 @@ interface Packet {
 interface PacketContent {
   id: string;
   packet_id: string;
-  content_type: 'document' | 'entity' | 'claim' | 'evidence_chain' | 'matrix' | 'timeline' | 'report';
+  content_type:
+    | 'document'
+    | 'entity'
+    | 'claim'
+    | 'evidence_chain'
+    | 'matrix'
+    | 'timeline'
+    | 'report';
   content_id: string;
   content_title: string;
   added_at: string;
@@ -54,11 +61,9 @@ export function PacketsPage() {
   const [showAddContentModal, setShowAddContentModal] = useState(false);
 
   // Fetch packets with usePaginatedFetch
-  const { items: packets, loading, error, refetch } = usePaginatedFetch<Packet>(
-    '/api/packets/'
-  );
+  const { items: packets, loading, error, refetch } = usePaginatedFetch<Packet>('/api/packets/');
 
-  const selectedPacketData = packets.find(p => p.id === selectedPacket);
+  const selectedPacketData = packets.find((p) => p.id === selectedPacket);
 
   // Fetch contents for selected packet
   const { data: contents, refetch: refetchContents } = useFetch<PacketContent[]>(
@@ -213,7 +218,7 @@ export function PacketsPage() {
             </div>
           ) : (
             <div className="packets-list">
-              {packets.map(packet => (
+              {packets.map((packet) => (
                 <div
                   key={packet.id}
                   className={`packet-item ${selectedPacket === packet.id ? 'active' : ''}`}
@@ -227,7 +232,9 @@ export function PacketsPage() {
                       style={{ color: STATUS_LABELS[packet.status].color }}
                     />
                   </div>
-                  <p className="packet-item-description">{packet.description || 'No description'}</p>
+                  <p className="packet-item-description">
+                    {packet.description || 'No description'}
+                  </p>
                   <div className="packet-item-meta">
                     <span>
                       <Icon name="FileText" size={12} />
@@ -261,7 +268,9 @@ export function PacketsPage() {
                       <Icon name={STATUS_LABELS[selectedPacketData.status].icon} size={14} />
                       {STATUS_LABELS[selectedPacketData.status].label}
                     </span>
-                    <span className="packet-version-badge">Version {selectedPacketData.version}</span>
+                    <span className="packet-version-badge">
+                      Version {selectedPacketData.version}
+                    </span>
                   </div>
                   <p className="packet-description">{selectedPacketData.description}</p>
                   <div className="packet-metadata">
@@ -326,7 +335,7 @@ export function PacketsPage() {
                   </div>
                 ) : (
                   <div className="contents-list">
-                    {contents.map(content => (
+                    {contents.map((content) => (
                       <div key={content.id} className="content-item">
                         <Icon name="FileText" size={20} />
                         <div className="content-info">
@@ -336,9 +345,7 @@ export function PacketsPage() {
                         {selectedPacketData.status === 'draft' && (
                           <button
                             className="btn-icon"
-                            onClick={() =>
-                              handleRemoveContent(selectedPacketData.id, content.id)
-                            }
+                            onClick={() => handleRemoveContent(selectedPacketData.id, content.id)}
                             title="Remove from packet"
                           >
                             <Icon name="X" size={16} />
@@ -414,7 +421,7 @@ function CreatePacketModal({ onClose, onCreate }: CreatePacketModalProps) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Create New Packet</h3>
           <button className="btn-icon" onClick={onClose}>
@@ -429,7 +436,7 @@ function CreatePacketModal({ onClose, onCreate }: CreatePacketModalProps) {
                 id="packet-name"
                 type="text"
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Q4 Financial Analysis"
                 autoFocus
                 required
@@ -440,7 +447,7 @@ function CreatePacketModal({ onClose, onCreate }: CreatePacketModalProps) {
               <textarea
                 id="packet-description"
                 value={description}
-                onChange={e => setDescription(e.target.value)}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe the purpose of this packet"
                 rows={3}
               />
@@ -491,7 +498,7 @@ function AddContentModal({ onClose, onAdd }: AddContentModalProps) {
   const [loading, setLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ContentSearchResult | null>(null);
 
-  const currentType = CONTENT_TYPES.find(t => t.value === contentType);
+  const currentType = CONTENT_TYPES.find((t) => t.value === contentType);
 
   // Fetch items when content type changes or search query changes
   useEffect(() => {
@@ -515,9 +522,15 @@ function AddContentModal({ onClose, onAdd }: AddContentModalProps) {
 
         // Normalize different response formats
         let items: ContentSearchResult[] = [];
-        const rawItems = data.items || data.documents || data.entities ||
-                        data.matrices || data.reports || data.events ||
-                        data.claims || [];
+        const rawItems =
+          data.items ||
+          data.documents ||
+          data.entities ||
+          data.matrices ||
+          data.reports ||
+          data.events ||
+          data.claims ||
+          [];
 
         items = rawItems.map((item: any) => ({
           id: item.id,
@@ -546,7 +559,7 @@ function AddContentModal({ onClose, onAdd }: AddContentModalProps) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+      <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Add Content to Packet</h3>
           <button className="btn-icon" onClick={onClose}>
@@ -557,7 +570,7 @@ function AddContentModal({ onClose, onAdd }: AddContentModalProps) {
           <div className="content-type-selector">
             <label>Content Type</label>
             <div className="content-type-grid">
-              {CONTENT_TYPES.map(type => (
+              {CONTENT_TYPES.map((type) => (
                 <button
                   key={type.value}
                   className={`content-type-btn ${contentType === type.value ? 'active' : ''}`}
@@ -581,7 +594,7 @@ function AddContentModal({ onClose, onAdd }: AddContentModalProps) {
                 type="text"
                 placeholder={`Search ${currentType?.label?.toLowerCase()}s...`}
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
@@ -594,13 +607,13 @@ function AddContentModal({ onClose, onAdd }: AddContentModalProps) {
               </div>
             ) : results.length > 0 ? (
               <div className="content-list">
-                {results.map(item => (
+                {results.map((item) => (
                   <div
                     key={item.id}
                     className={`content-item ${selectedItem?.id === item.id ? 'selected' : ''}`}
                     onClick={() => setSelectedItem(item)}
                   >
-                    <Icon name={currentType?.icon as any || 'File'} size={18} />
+                    <Icon name={(currentType?.icon as any) || 'File'} size={18} />
                     <div className="content-item-info">
                       <div className="content-item-title">{item.title}</div>
                       {item.subtitle && (
@@ -615,7 +628,7 @@ function AddContentModal({ onClose, onAdd }: AddContentModalProps) {
               </div>
             ) : (
               <div className="content-empty">
-                <Icon name={currentType?.icon as any || 'File'} size={32} />
+                <Icon name={(currentType?.icon as any) || 'File'} size={32} />
                 <span>No {currentType?.label?.toLowerCase()}s found</span>
               </div>
             )}

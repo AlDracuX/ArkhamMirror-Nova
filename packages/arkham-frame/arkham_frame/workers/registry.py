@@ -5,12 +5,12 @@ Provides discovery and health monitoring of workers using PostgreSQL.
 Workers register themselves in arkham_jobs.workers table.
 """
 
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
 import asyncio
 import logging
 import os
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 import asyncpg
 
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class WorkerInfo:
     """Information about a registered worker."""
+
     worker_id: str
     pool: str
     name: str
@@ -96,10 +97,7 @@ class WorkerRegistry:
             return
 
         if not self.database_url:
-            self.database_url = os.environ.get(
-                "DATABASE_URL",
-                "postgresql://arkham:arkhampass@localhost:5432/arkhamdb"
-            )
+            self.database_url = os.environ.get("DATABASE_URL", "postgresql://arkham:arkhampass@localhost:5432/arkhamdb")
 
         try:
             self._pool = await asyncpg.create_pool(self.database_url, min_size=1, max_size=5)
@@ -116,16 +114,16 @@ class WorkerRegistry:
     def _parse_worker_row(self, row: asyncpg.Record) -> WorkerInfo:
         """Parse worker data from database row."""
         return WorkerInfo(
-            worker_id=row['id'],
-            pool=row['pool'],
-            name=row['name'],
-            state=row['state'],
-            pid=row['pid'] or 0,
-            started_at=row['started_at'] or datetime.utcnow(),
-            last_heartbeat=row['last_heartbeat'],
-            jobs_completed=row['jobs_completed'] or 0,
-            jobs_failed=row['jobs_failed'] or 0,
-            current_job=row['current_job'],
+            worker_id=row["id"],
+            pool=row["pool"],
+            name=row["name"],
+            state=row["state"],
+            pid=row["pid"] or 0,
+            started_at=row["started_at"] or datetime.utcnow(),
+            last_heartbeat=row["last_heartbeat"],
+            jobs_completed=row["jobs_completed"] or 0,
+            jobs_failed=row["jobs_failed"] or 0,
+            current_job=row["current_job"],
         )
 
     async def get_all_workers(self, use_cache: bool = True) -> List[WorkerInfo]:
@@ -187,13 +185,16 @@ class WorkerRegistry:
 
         try:
             async with self._pool.acquire() as conn:
-                row = await conn.fetchrow("""
+                row = await conn.fetchrow(
+                    """
                     SELECT id, pool, name, state, pid, hostname,
                            started_at, last_heartbeat,
                            jobs_completed, jobs_failed, current_job
                     FROM arkham_jobs.workers
                     WHERE id = $1
-                """, worker_id)
+                """,
+                    worker_id,
+                )
 
                 if not row:
                     return None

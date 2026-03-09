@@ -88,14 +88,18 @@ function SchemaCard({ schema, onExpand, expanded, tables, loadingTables }: Schem
                     <td>{formatNumber(table.row_count)}</td>
                     <td>{formatBytes(table.size_bytes)}</td>
                     <td className="date-cell">
-                      {table.last_vacuum
-                        ? new Date(table.last_vacuum).toLocaleDateString()
-                        : <span className="never">Never</span>}
+                      {table.last_vacuum ? (
+                        new Date(table.last_vacuum).toLocaleDateString()
+                      ) : (
+                        <span className="never">Never</span>
+                      )}
                     </td>
                     <td className="date-cell">
-                      {table.last_analyze
-                        ? new Date(table.last_analyze).toLocaleDateString()
-                        : <span className="never">Never</span>}
+                      {table.last_analyze ? (
+                        new Date(table.last_analyze).toLocaleDateString()
+                      ) : (
+                        <span className="never">Never</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -111,7 +115,17 @@ function SchemaCard({ schema, onExpand, expanded, tables, loadingTables }: Schem
 export function DatabaseTab() {
   const { toast } = useToast();
   const confirm = useConfirm();
-  const { info, stats, loading, error, refresh, runMigrations, resetDatabase, vacuumDatabase, getTableInfo } = useDatabase();
+  const {
+    info,
+    stats,
+    loading,
+    error,
+    refresh,
+    runMigrations,
+    resetDatabase,
+    vacuumDatabase,
+    getTableInfo,
+  } = useDatabase();
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [operating, setOperating] = useState<string | null>(null);
   const [expandedSchema, setExpandedSchema] = useState<string | null>(null);
@@ -145,7 +159,8 @@ export function DatabaseTab() {
   const handleReset = async () => {
     const confirmed = await confirm({
       title: 'Reset Database',
-      message: 'This will delete ALL data in the database. This action cannot be undone. Are you sure?',
+      message:
+        'This will delete ALL data in the database. This action cannot be undone. Are you sure?',
       confirmLabel: 'Yes, Delete Everything',
       cancelLabel: 'Cancel',
       variant: 'danger',
@@ -168,7 +183,7 @@ export function DatabaseTab() {
     if (!tableInfo[schemaName]) {
       setLoadingTables(schemaName);
       const tables = await getTableInfo(schemaName);
-      setTableInfo(prev => ({ ...prev, [schemaName]: tables }));
+      setTableInfo((prev) => ({ ...prev, [schemaName]: tables }));
       setLoadingTables(null);
     }
   };
@@ -330,11 +345,7 @@ export function DatabaseTab() {
               <strong>Reset Database</strong>
               <p>Delete all data and recreate tables. This action cannot be undone.</p>
             </div>
-            <button
-              className="btn btn-danger"
-              onClick={handleReset}
-              disabled={operating !== null}
-            >
+            <button className="btn btn-danger" onClick={handleReset} disabled={operating !== null}>
               {operating === 'Reset' ? (
                 <>
                   <Icon name="Loader2" size={16} className="spin" />

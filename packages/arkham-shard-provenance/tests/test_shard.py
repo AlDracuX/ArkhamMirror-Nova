@@ -1,7 +1,8 @@
 """Tests for ProvenanceShard class."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from arkham_shard_provenance.shard import ProvenanceShard
 
 
@@ -292,7 +293,7 @@ class TestSchemaCreation:
         shard = ProvenanceShard()
 
         # Mock the _create_schema method to track calls
-        with patch.object(shard, '_create_schema', new_callable=AsyncMock) as mock_create:
+        with patch.object(shard, "_create_schema", new_callable=AsyncMock) as mock_create:
             await shard.initialize(mock_frame)
             mock_create.assert_called_once()
 

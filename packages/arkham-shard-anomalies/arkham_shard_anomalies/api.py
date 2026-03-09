@@ -2,7 +2,7 @@
 
 import logging
 import time
-from typing import Annotated, Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -12,23 +12,23 @@ if TYPE_CHECKING:
     from .shard import AnomaliesShard
 
 from .models import (
-    Anomaly,
-    AnomalyType,
-    AnomalyStatus,
-    SeverityLevel,
-    DetectRequest,
-    DetectionConfig,
-    PatternRequest,
-    AnomalyResult,
-    AnomalyList,
-    AnomalyStats,
-    StatusUpdate,
     AnalystNote,
+    Anomaly,
+    AnomalyList,
+    AnomalyResult,
+    AnomalyStats,
+    AnomalyStatus,
+    AnomalyType,
+    DetectionConfig,
+    DetectRequest,
     # Hidden content models
     HiddenContentConfig,
     HiddenContentScan,
     HiddenContentScanType,
     HiddenContentStats,
+    PatternRequest,
+    SeverityLevel,
+    StatusUpdate,
 )
 
 logger = logging.getLogger(__name__)
@@ -70,6 +70,7 @@ def get_shard(request: Request) -> "AnomaliesShard":
 
 class DetectResponse(BaseModel):
     """Response from anomaly detection."""
+
     anomalies_detected: int
     duration_ms: float
     job_id: str | None = None
@@ -77,11 +78,13 @@ class DetectResponse(BaseModel):
 
 class AnomalyResponse(BaseModel):
     """Single anomaly response."""
+
     anomaly: dict
 
 
 class AnomalyListResponse(BaseModel):
     """Paginated anomaly list response."""
+
     total: int
     items: list[dict]
     offset: int
@@ -92,11 +95,13 @@ class AnomalyListResponse(BaseModel):
 
 class StatsResponse(BaseModel):
     """Statistics response."""
+
     stats: dict
 
 
 class StatusUpdateRequest(BaseModel):
     """Request to update anomaly status."""
+
     status: str
     notes: str = ""
     reviewed_by: str | None = None
@@ -104,6 +109,7 @@ class StatusUpdateRequest(BaseModel):
 
 class NoteRequest(BaseModel):
     """Request to add a note."""
+
     content: str
     author: str
 
@@ -150,9 +156,7 @@ async def detect_anomalies(request: DetectRequest):
         doc_ids = request.doc_ids
         if not doc_ids and _db:
             # If no specific doc_ids, get all documents from arkham_frame.documents
-            rows = await _db.fetch_all(
-                "SELECT id FROM arkham_frame.documents LIMIT 1000"
-            )
+            rows = await _db.fetch_all("SELECT id FROM arkham_frame.documents LIMIT 1000")
             doc_ids = [row["id"] for row in rows] if rows else []
 
         detected_anomalies = []
@@ -521,6 +525,7 @@ async def add_note(anomaly_id: str, request: NoteRequest):
 
         # Create note
         import uuid
+
         note = AnalystNote(
             id=str(uuid.uuid4()),
             anomaly_id=anomaly_id,
@@ -643,18 +648,22 @@ async def get_related_anomalies(anomaly_id: str, limit: int = 10):
         for a in same_doc_anomalies:
             if a.id not in seen_ids:
                 seen_ids.add(a.id)
-                related.append({
-                    **_anomaly_to_dict(a),
-                    "relation": "same_document",
-                })
+                related.append(
+                    {
+                        **_anomaly_to_dict(a),
+                        "relation": "same_document",
+                    }
+                )
 
         for a in same_type_anomalies:
             if a.id not in seen_ids and len(related) < limit:
                 seen_ids.add(a.id)
-                related.append({
-                    **_anomaly_to_dict(a),
-                    "relation": "same_type",
-                })
+                related.append(
+                    {
+                        **_anomaly_to_dict(a),
+                        "relation": "same_type",
+                    }
+                )
 
         return {
             "related": related[:limit],
@@ -708,7 +717,7 @@ async def get_document_preview(doc_id: str):
         row = await _db.fetch_one(
             """SELECT id, file_name, file_type, file_size, content, created_at
                FROM arkham_frame.documents WHERE id = :doc_id""",
-            {"doc_id": doc_id}
+            {"doc_id": doc_id},
         )
 
         if not row:
@@ -801,7 +810,7 @@ async def _detect_document_anomalies_internal(
         # Fetch document metadata from database
         doc_row = await _db.fetch_one(
             "SELECT id, filename, file_size, mime_type, created_at, metadata FROM arkham_frame.documents WHERE id = :doc_id",
-            {"doc_id": doc_id}
+            {"doc_id": doc_id},
         )
 
         if not doc_row:
@@ -811,6 +820,7 @@ async def _detect_document_anomalies_internal(
         metadata = {}
         if doc_row.get("metadata"):
             import json
+
             try:
                 if isinstance(doc_row["metadata"], str):
                     metadata = json.loads(doc_row["metadata"])
@@ -826,8 +836,7 @@ async def _detect_document_anomalies_internal(
 
         # Fetch content from chunks
         chunk_rows = await _db.fetch_all(
-            "SELECT text FROM arkham_frame.chunks WHERE document_id = :doc_id ORDER BY chunk_index",
-            {"doc_id": doc_id}
+            "SELECT text FROM arkham_frame.chunks WHERE document_id = :doc_id ORDER BY chunk_index", {"doc_id": doc_id}
         )
 
         text = "\n".join(row.get("text", "") for row in chunk_rows if row.get("text")) if chunk_rows else ""
@@ -842,9 +851,7 @@ async def _detect_document_anomalies_internal(
             try:
                 corpus_stats = await _get_corpus_stats()
                 if corpus_stats:
-                    stat_anomalies = _detector.detect_statistical_anomalies(
-                        doc_id, text, corpus_stats
-                    )
+                    stat_anomalies = _detector.detect_statistical_anomalies(doc_id, text, corpus_stats)
                     anomalies.extend(stat_anomalies)
             except Exception as stat_error:
                 logger.debug(f"Statistical detection failed: {stat_error}")
@@ -854,9 +861,7 @@ async def _detect_document_anomalies_internal(
             try:
                 corpus_metadata_stats = await _get_corpus_metadata_stats()
                 if corpus_metadata_stats:
-                    meta_anomalies = _detector.detect_metadata_anomalies(
-                        doc_id, metadata, corpus_metadata_stats
-                    )
+                    meta_anomalies = _detector.detect_metadata_anomalies(doc_id, metadata, corpus_metadata_stats)
                     anomalies.extend(meta_anomalies)
             except Exception as meta_error:
                 logger.debug(f"Metadata detection failed: {meta_error}")
@@ -905,13 +910,13 @@ async def _get_corpus_stats() -> Dict[str, Any]:
 
         # Build corpus stats structure
         corpus_stats = {
-            'char_count': {
-                'mean': float(row.get('avg_char_count') or 0),
-                'std': float(row.get('avg_char_count', 0) or 0) * 0.5,  # Estimate std as 50% of mean
+            "char_count": {
+                "mean": float(row.get("avg_char_count") or 0),
+                "std": float(row.get("avg_char_count", 0) or 0) * 0.5,  # Estimate std as 50% of mean
             },
-            'word_count': {
-                'mean': float(row.get('avg_word_count') or 0),
-                'std': float(row.get('avg_word_count', 0) or 0) * 0.5,
+            "word_count": {
+                "mean": float(row.get("avg_word_count") or 0),
+                "std": float(row.get("avg_word_count", 0) or 0) * 0.5,
             },
         }
 
@@ -946,17 +951,17 @@ async def _get_corpus_metadata_stats() -> Dict[str, Any]:
         if not row:
             return {}
 
-        avg_size = float(row.get('avg_size') or 0)
-        min_size = float(row.get('min_size') or 0)
-        max_size = float(row.get('max_size') or 0)
+        avg_size = float(row.get("avg_size") or 0)
+        min_size = float(row.get("min_size") or 0)
+        max_size = float(row.get("max_size") or 0)
 
         # Estimate std from range
         estimated_std = (max_size - min_size) / 4 if max_size > min_size else avg_size * 0.5
 
         return {
-            'file_size': {
-                'mean': avg_size,
-                'std': estimated_std,
+            "file_size": {
+                "mean": avg_size,
+                "std": estimated_std,
             }
         }
 
@@ -988,7 +993,7 @@ async def _detect_content_anomalies(doc_id: str, text: str) -> List[Anomaly]:
         # 3. Call _detector.detect_content_anomalies()
 
         # Check if vector text search is available (embeds text then searches)
-        if hasattr(_vectors, 'search_text'):
+        if hasattr(_vectors, "search_text"):
             # Search for similar documents using text query
             # search_text handles embedding internally
             results = await _vectors.search_text(
@@ -1000,20 +1005,23 @@ async def _detect_content_anomalies(doc_id: str, text: str) -> List[Anomaly]:
             # If this document is very different from results, it might be anomalous
             if results and len(results) > 0:
                 # SearchResult is a dataclass with .score attribute
-                avg_score = sum(r.score if hasattr(r, 'score') else r.get('score', 0) for r in results) / len(results)
+                avg_score = sum(r.score if hasattr(r, "score") else r.get("score", 0) for r in results) / len(results)
                 if avg_score < 0.3:  # Low similarity to corpus
                     import uuid
                     from datetime import datetime
-                    return [Anomaly(
-                        id=str(uuid.uuid4()),
-                        doc_id=doc_id,
-                        anomaly_type=AnomalyType.CONTENT,
-                        score=1.0 - avg_score,
-                        severity=SeverityLevel.MEDIUM,
-                        confidence=0.7,
-                        explanation=f"Document is semantically distant from corpus (avg similarity: {avg_score:.2f})",
-                        details={'avg_similarity': avg_score, 'compared_to': len(results)},
-                    )]
+
+                    return [
+                        Anomaly(
+                            id=str(uuid.uuid4()),
+                            doc_id=doc_id,
+                            anomaly_type=AnomalyType.CONTENT,
+                            score=1.0 - avg_score,
+                            severity=SeverityLevel.MEDIUM,
+                            confidence=0.7,
+                            explanation=f"Document is semantically distant from corpus (avg similarity: {avg_score:.2f})",
+                            details={"avg_similarity": avg_score, "compared_to": len(results)},
+                        )
+                    ]
 
         return []
 
@@ -1058,6 +1066,7 @@ async def get_anomaly_count(status: Optional[str] = None):
 
 class AIJuniorAnalystRequest(BaseModel):
     """Request for AI Junior Analyst analysis."""
+
     target_id: str
     context: dict[str, Any] = {}
     depth: str = "quick"
@@ -1082,13 +1091,10 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     frame = shard._frame
 
     if not frame or not getattr(frame, "ai_analyst", None):
-        raise HTTPException(
-            status_code=503,
-            detail="AI Analyst service not available"
-        )
+        raise HTTPException(status_code=503, detail="AI Analyst service not available")
 
     # Build context from request
-    from arkham_frame.services import AnalysisRequest, AnalysisDepth, AnalystMessage
+    from arkham_frame.services import AnalysisDepth, AnalysisRequest, AnalystMessage
 
     # Parse depth
     try:
@@ -1099,10 +1105,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     # Build conversation history
     history = None
     if body.conversation_history:
-        history = [
-            AnalystMessage(role=msg["role"], content=msg["content"])
-            for msg in body.conversation_history
-        ]
+        history = [AnalystMessage(role=msg["role"], content=msg["content"]) for msg in body.conversation_history]
 
     analysis_request = AnalysisRequest(
         shard="anomalies",
@@ -1133,6 +1136,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
 
 class HiddenContentScanRequest(BaseModel):
     """Request to scan document for hidden content."""
+
     doc_id: str
     scan_type: str = "stego"  # entropy, lsb, magic, stego (full)
     config: dict = {}
@@ -1140,17 +1144,20 @@ class HiddenContentScanRequest(BaseModel):
 
 class HiddenContentQuickScanRequest(BaseModel):
     """Request for quick entropy-only scan."""
+
     doc_ids: list[str]
 
 
 class HiddenContentScanResponse(BaseModel):
     """Response from hidden content scan."""
+
     scan: dict
     anomaly_created: bool = False
 
 
 class HiddenContentListResponse(BaseModel):
     """Paginated list of hidden content scans."""
+
     total: int
     items: list[dict]
     offset: int
@@ -1159,6 +1166,7 @@ class HiddenContentListResponse(BaseModel):
 
 class HiddenContentStatsResponse(BaseModel):
     """Hidden content detection statistics."""
+
     stats: dict
 
 
@@ -1185,10 +1193,7 @@ async def scan_hidden_content(
     shard = get_shard(request)
 
     if not shard.hidden_detector:
-        raise HTTPException(
-            status_code=503,
-            detail="Hidden content detector not available"
-        )
+        raise HTTPException(status_code=503, detail="Hidden content detector not available")
 
     # Get document metadata and file path
     if not _db:
@@ -1197,7 +1202,7 @@ async def scan_hidden_content(
     doc_row = await _db.fetch_one(
         """SELECT id, filename, storage_id, mime_type, file_size, metadata
            FROM arkham_frame.documents WHERE id = :doc_id""",
-        {"doc_id": body.doc_id}
+        {"doc_id": body.doc_id},
     )
 
     if not doc_row:
@@ -1208,6 +1213,7 @@ async def scan_hidden_content(
     metadata = doc_row.get("metadata") or {}
     if isinstance(metadata, str):
         import json
+
         try:
             metadata = json.loads(metadata)
         except json.JSONDecodeError:
@@ -1215,10 +1221,7 @@ async def scan_hidden_content(
 
     storage_path = metadata.get("storage_path")
     if not storage_id and not storage_path:
-        raise HTTPException(
-            status_code=400,
-            detail="Document has no associated file storage"
-        )
+        raise HTTPException(status_code=400, detail="Document has no associated file storage")
 
     # Read file content using storage service
     try:
@@ -1226,14 +1229,12 @@ async def scan_hidden_content(
             file_data = (await _storage.retrieve(storage_id))[0]
         elif storage_path:
             from pathlib import Path
+
             file_data = Path(storage_path).read_bytes()
         else:
             raise ValueError("No storage path available")
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to read file: {e}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to read file: {e}")
 
     # Get file extension
     filename = doc_row.get("filename", "")
@@ -1263,7 +1264,8 @@ async def scan_hidden_content(
     if scan_result.stego_confidence >= 0.7 or scan_result.file_mismatch:
         import uuid
         from datetime import datetime
-        from .models import AnomalyType, SeverityLevel, AnomalyStatus
+
+        from .models import AnomalyStatus, AnomalyType, SeverityLevel
 
         severity = SeverityLevel.HIGH if scan_result.stego_confidence >= 0.8 else SeverityLevel.MEDIUM
 
@@ -1329,7 +1331,9 @@ async def scan_hidden_content(
             "is_suspicious": scan_result.lsb_result.is_suspicious,
             "confidence": scan_result.lsb_result.confidence,
             "sample_size": scan_result.lsb_result.sample_size,
-        } if scan_result.lsb_result else None,
+        }
+        if scan_result.lsb_result
+        else None,
         "stego_indicators": [
             {
                 "indicator_type": i.indicator_type,
@@ -1368,10 +1372,7 @@ async def quick_scan_hidden_content(
     shard = get_shard(request)
 
     if not shard.hidden_detector:
-        raise HTTPException(
-            status_code=503,
-            detail="Hidden content detector not available"
-        )
+        raise HTTPException(status_code=503, detail="Hidden content detector not available")
 
     if not _db:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -1382,15 +1383,16 @@ async def quick_scan_hidden_content(
         try:
             # Get document file path
             doc_row = await _db.fetch_one(
-                """SELECT storage_id, metadata FROM arkham_frame.documents WHERE id = :doc_id""",
-                {"doc_id": doc_id}
+                """SELECT storage_id, metadata FROM arkham_frame.documents WHERE id = :doc_id""", {"doc_id": doc_id}
             )
 
             if not doc_row:
-                results.append({
-                    "doc_id": doc_id,
-                    "error": "Document not found",
-                })
+                results.append(
+                    {
+                        "doc_id": doc_id,
+                        "error": "Document not found",
+                    }
+                )
                 continue
 
             # Get storage path from storage_id or metadata
@@ -1398,6 +1400,7 @@ async def quick_scan_hidden_content(
             doc_metadata = doc_row.get("metadata") or {}
             if isinstance(doc_metadata, str):
                 import json
+
                 try:
                     doc_metadata = json.loads(doc_metadata)
                 except json.JSONDecodeError:
@@ -1405,10 +1408,12 @@ async def quick_scan_hidden_content(
 
             storage_path = doc_metadata.get("storage_path")
             if not storage_id and not storage_path:
-                results.append({
-                    "doc_id": doc_id,
-                    "error": "Document has no storage path",
-                })
+                results.append(
+                    {
+                        "doc_id": doc_id,
+                        "error": "Document has no storage path",
+                    }
+                )
                 continue
 
             # Read file content
@@ -1417,14 +1422,17 @@ async def quick_scan_hidden_content(
                     file_data = (await _storage.retrieve(storage_id))[0]
                 elif storage_path:
                     from pathlib import Path
+
                     file_data = Path(storage_path).read_bytes()
                 else:
                     raise ValueError("No storage path available")
             except Exception as e:
-                results.append({
-                    "doc_id": doc_id,
-                    "error": f"Failed to read file: {e}",
-                })
+                results.append(
+                    {
+                        "doc_id": doc_id,
+                        "error": f"Failed to read file: {e}",
+                    }
+                )
                 continue
 
             # Quick entropy scan
@@ -1432,10 +1440,12 @@ async def quick_scan_hidden_content(
             results.append(quick_result)
 
         except Exception as e:
-            results.append({
-                "doc_id": doc_id,
-                "error": str(e),
-            })
+            results.append(
+                {
+                    "doc_id": doc_id,
+                    "error": str(e),
+                }
+            )
 
     # Summary
     requires_full_scan = [r for r in results if r.get("requires_full_scan")]

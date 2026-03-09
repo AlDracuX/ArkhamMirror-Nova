@@ -38,7 +38,7 @@ export function GenericForm({
   // Form state
   const [formData, setFormData] = useState<Record<string, unknown>>(() => {
     const initial: Record<string, unknown> = {};
-    action.fields.forEach(field => {
+    action.fields.forEach((field) => {
       initial[field.name] = initialData[field.name] ?? field.default ?? '';
     });
     return initial;
@@ -48,23 +48,26 @@ export function GenericForm({
   const [submitting, setSubmitting] = useState(false);
 
   // Handle field change
-  const handleChange = useCallback((fieldName: string, value: unknown) => {
-    setFormData(prev => ({ ...prev, [fieldName]: value }));
-    // Clear error when user types
-    if (errors[fieldName]) {
-      setErrors(prev => {
-        const next = { ...prev };
-        delete next[fieldName];
-        return next;
-      });
-    }
-  }, [errors]);
+  const handleChange = useCallback(
+    (fieldName: string, value: unknown) => {
+      setFormData((prev) => ({ ...prev, [fieldName]: value }));
+      // Clear error when user types
+      if (errors[fieldName]) {
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next[fieldName];
+          return next;
+        });
+      }
+    },
+    [errors]
+  );
 
   // Validate form
   const validateForm = useCallback((): boolean => {
     const newErrors: FieldError = {};
 
-    action.fields.forEach(field => {
+    action.fields.forEach((field) => {
       const value = formData[field.name];
 
       // Required validation
@@ -132,52 +135,53 @@ export function GenericForm({
   }, [action.fields, formData]);
 
   // Handle submit
-  const handleSubmit = useCallback(async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
 
-    if (!validateForm()) {
-      toast.error('Please fix the form errors');
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const response = await fetch(`${apiPrefix}${action.endpoint}`, {
-        method: action.method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        // Handle validation errors from server
-        if (result.errors && typeof result.errors === 'object') {
-          setErrors(result.errors as FieldError);
-          toast.error('Please fix the form errors');
-          return;
-        }
-        throw new Error(result.detail || result.message || 'Form submission failed');
+      if (!validateForm()) {
+        toast.error('Please fix the form errors');
+        return;
       }
 
-      toast.success(result.message || 'Success');
-      onSuccess?.(result);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Form submission failed');
-    } finally {
-      setSubmitting(false);
-    }
-  }, [apiPrefix, action, formData, validateForm, toast, onSuccess]);
+      setSubmitting(true);
+
+      try {
+        const response = await fetch(`${apiPrefix}${action.endpoint}`, {
+          method: action.method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          // Handle validation errors from server
+          if (result.errors && typeof result.errors === 'object') {
+            setErrors(result.errors as FieldError);
+            toast.error('Please fix the form errors');
+            return;
+          }
+          throw new Error(result.detail || result.message || 'Form submission failed');
+        }
+
+        toast.success(result.message || 'Success');
+        onSuccess?.(result);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Form submission failed');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [apiPrefix, action, formData, validateForm, toast, onSuccess]
+  );
 
   return (
     <form className="generic-form" onSubmit={handleSubmit}>
-      {action.description && (
-        <p className="form-description">{action.description}</p>
-      )}
+      {action.description && <p className="form-description">{action.description}</p>}
 
       <div className="form-fields">
-        {action.fields.map(field => (
+        {action.fields.map((field) => (
           <FormField
             key={field.name}
             field={field}
@@ -200,11 +204,7 @@ export function GenericForm({
             Cancel
           </button>
         )}
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={submitting}
-        >
+        <button type="submit" className="btn btn-primary" disabled={submitting}>
           {submitting ? (
             <>
               <Icon name="Loader2" size={16} className="spin" />
@@ -354,7 +354,7 @@ export function GenericFormDialog({
 
   return (
     <div className="generic-form-dialog-overlay" onClick={onClose}>
-      <div className="generic-form-dialog" onClick={e => e.stopPropagation()}>
+      <div className="generic-form-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-header">
           <h2>{formProps.action.label}</h2>
           <button className="btn btn-icon" onClick={onClose} aria-label="Close">
@@ -362,11 +362,7 @@ export function GenericFormDialog({
           </button>
         </div>
         <div className="dialog-content">
-          <GenericForm
-            {...formProps}
-            onSuccess={handleSuccess}
-            onCancel={onClose}
-          />
+          <GenericForm {...formProps} onSuccess={handleSuccess} onCancel={onClose} />
         </div>
       </div>
     </div>

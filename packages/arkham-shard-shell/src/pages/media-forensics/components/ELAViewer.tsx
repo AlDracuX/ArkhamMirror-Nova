@@ -58,7 +58,13 @@ export function ELAViewer({ analysis, onRegenerate }: ELAViewerProps) {
         <div className="panel-empty">
           <Icon name="Layers" size={48} />
           <p>Error Level Analysis not yet performed</p>
-          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginBottom: '1rem' }}>
+          <p
+            style={{
+              fontSize: '0.75rem',
+              color: 'var(--color-text-tertiary)',
+              marginBottom: '1rem',
+            }}
+          >
             ELA can help detect edited or manipulated regions in JPEG images
           </p>
         </div>
@@ -101,9 +107,7 @@ export function ELAViewer({ analysis, onRegenerate }: ELAViewerProps) {
   return (
     <div className="ela-container">
       {/* Result Summary */}
-      <div
-        className={`ela-result-banner ${elaResult.is_potentially_edited ? 'warning' : 'clean'}`}
-      >
+      <div className={`ela-result-banner ${elaResult.is_potentially_edited ? 'warning' : 'clean'}`}>
         <Icon name={elaResult.is_potentially_edited ? 'AlertTriangle' : 'CheckCircle'} size={20} />
         <div className="ela-result-text">
           <span className="ela-result-title">
@@ -172,10 +176,7 @@ export function ELAViewer({ analysis, onRegenerate }: ELAViewerProps) {
           {elaResult.ela_image_url ? (
             <img src={elaResult.ela_image_url} alt="ELA" />
           ) : elaResult.ela_image_base64 ? (
-            <img
-              src={`data:image/png;base64,${elaResult.ela_image_base64}`}
-              alt="ELA"
-            />
+            <img src={`data:image/png;base64,${elaResult.ela_image_base64}`} alt="ELA" />
           ) : (
             <div className="ela-placeholder">
               <Icon name="Layers" size={32} />
@@ -275,9 +276,9 @@ export function ELAViewer({ analysis, onRegenerate }: ELAViewerProps) {
       <div className="ela-explanation">
         <Icon name="Info" size={14} />
         <p>
-          <strong>How to read ELA:</strong> Areas with high intensity (bright spots) have been
-          saved at a different quality level than the rest of the image, which may indicate
-          manipulation. Uniform intensity usually indicates an unedited image.
+          <strong>How to read ELA:</strong> Areas with high intensity (bright spots) have been saved
+          at a different quality level than the rest of the image, which may indicate manipulation.
+          Uniform intensity usually indicates an unedited image.
         </p>
       </div>
     </div>

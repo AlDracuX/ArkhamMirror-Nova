@@ -114,6 +114,7 @@ def get_worker_class(pool: str):
 
     try:
         import importlib
+
         # Use full module path for import
         full_module = f"{package_path}.{module_name}"
         module = importlib.import_module(full_module)
@@ -245,7 +246,8 @@ Examples:
         help="List resource tiers",
     )
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="Enable debug logging",
     )

@@ -4,24 +4,24 @@ Anomalies Shard - Model Tests
 Tests for all dataclasses and enums in the models module.
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_anomalies.models import (
-    AnomalyType,
-    AnomalyStatus,
-    SeverityLevel,
+    AnalystNote,
     Anomaly,
+    AnomalyList,
     AnomalyPattern,
-    OutlierResult,
+    AnomalyResult,
+    AnomalyStats,
+    AnomalyStatus,
+    AnomalyType,
     DetectionConfig,
     DetectRequest,
+    OutlierResult,
     PatternRequest,
-    AnomalyResult,
-    AnomalyList,
-    AnomalyStats,
+    SeverityLevel,
     StatusUpdate,
-    AnalystNote,
 )
 
 

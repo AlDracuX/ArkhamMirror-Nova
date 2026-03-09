@@ -13,6 +13,7 @@ from uuid import uuid4
 from arkham_frame import ArkhamShard
 
 from .models import (
+    STANDARD_FACTORS,
     AssessmentMethod,
     CredibilityAssessment,
     CredibilityCalculation,
@@ -21,17 +22,16 @@ from .models import (
     CredibilityHistory,
     CredibilityLevel,
     CredibilityStatistics,
-    FactorType,
-    SourceCredibility,
-    SourceType,
-    STANDARD_FACTORS,
     # Deception detection models
     DeceptionAssessment,
     DeceptionChecklist,
     DeceptionChecklistType,
     DeceptionIndicator,
     DeceptionRisk,
+    FactorType,
     IndicatorStrength,
+    SourceCredibility,
+    SourceType,
     create_empty_checklist,
     get_indicators_for_checklist,
 )
@@ -100,6 +100,7 @@ class CredibilityShard(ArkhamShard):
     def get_routes(self):
         """Return FastAPI router for this shard."""
         from .api import router
+
         return router
 
     # === Database Schema ===
@@ -599,6 +600,7 @@ class CredibilityShard(ArkhamShard):
     ) -> CredibilityCalculation:
         """Calculate credibility score for a source."""
         import time
+
         start_time = time.time()
 
         factors = []
@@ -832,15 +834,17 @@ Return as JSON with factors and overall score."""
         import json
 
         # Serialize factors
-        factors_json = json.dumps([
-            {
-                "factor_type": f.factor_type,
-                "weight": f.weight,
-                "score": f.score,
-                "notes": f.notes,
-            }
-            for f in assessment.factors
-        ])
+        factors_json = json.dumps(
+            [
+                {
+                    "factor_type": f.factor_type,
+                    "weight": f.weight,
+                    "score": f.score,
+                    "notes": f.notes,
+                }
+                for f in assessment.factors
+            ]
+        )
 
         data = (
             assessment.id,
@@ -858,21 +862,27 @@ Return as JSON with factors and overall score."""
         )
 
         if update:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 UPDATE arkham_credibility_assessments SET
                     source_type=?, source_id=?, score=?, confidence=?,
                     factors=?, assessed_by=?, assessor_id=?, notes=?,
                     created_at=?, updated_at=?, metadata=?
                 WHERE id=?
-            """, data[1:] + (assessment.id,))
+            """,
+                data[1:] + (assessment.id,),
+            )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_credibility_assessments (
                     id, source_type, source_id, score, confidence,
                     factors, assessed_by, assessor_id, notes,
                     created_at, updated_at, metadata
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, data)
+            """,
+                data,
+            )
 
     def _row_to_assessment(self, row: Dict[str, Any]) -> CredibilityAssessment:
         """Convert database row to CredibilityAssessment object."""
@@ -920,6 +930,7 @@ Return as JSON with factors and overall score."""
     def _parse_llm_assessment(self, response: str) -> Dict[str, Any]:
         """Parse LLM credibility assessment response."""
         import json
+
         try:
             # Try to extract JSON from response
             start = response.find("{")
@@ -930,12 +941,14 @@ Return as JSON with factors and overall score."""
                 # Convert to CredibilityFactor objects
                 factors = []
                 for f in data.get("factors", []):
-                    factors.append(CredibilityFactor(
-                        factor_type=f.get("type", "custom"),
-                        weight=f.get("weight", 0.1),
-                        score=f.get("score", 50),
-                        notes=f.get("notes", ""),
-                    ))
+                    factors.append(
+                        CredibilityFactor(
+                            factor_type=f.get("type", "custom"),
+                            weight=f.get("weight", 0.1),
+                            score=f.get("score", 50),
+                            notes=f.get("notes", ""),
+                        )
+                    )
 
                 return {
                     "score": data.get("score", 50),
@@ -1166,14 +1179,20 @@ Return as JSON with factors and overall score."""
         # Update indicators
         indicator_map = {ind.id: ind for ind in checklist.indicators}
         for ind_data in indicators:
-            ind_id = ind_data.id if hasattr(ind_data, 'id') else ind_data.get('id')
+            ind_id = ind_data.id if hasattr(ind_data, "id") else ind_data.get("id")
             if ind_id in indicator_map:
                 existing = indicator_map[ind_id]
-                existing.answer = ind_data.answer if hasattr(ind_data, 'answer') else ind_data.get('answer')
-                existing.strength = IndicatorStrength(ind_data.strength if hasattr(ind_data, 'strength') else ind_data.get('strength', 'none'))
-                existing.confidence = ind_data.confidence if hasattr(ind_data, 'confidence') else ind_data.get('confidence', 0.0)
-                existing.evidence_ids = ind_data.evidence_ids if hasattr(ind_data, 'evidence_ids') else ind_data.get('evidence_ids', [])
-                existing.notes = ind_data.notes if hasattr(ind_data, 'notes') else ind_data.get('notes')
+                existing.answer = ind_data.answer if hasattr(ind_data, "answer") else ind_data.get("answer")
+                existing.strength = IndicatorStrength(
+                    ind_data.strength if hasattr(ind_data, "strength") else ind_data.get("strength", "none")
+                )
+                existing.confidence = (
+                    ind_data.confidence if hasattr(ind_data, "confidence") else ind_data.get("confidence", 0.0)
+                )
+                existing.evidence_ids = (
+                    ind_data.evidence_ids if hasattr(ind_data, "evidence_ids") else ind_data.get("evidence_ids", [])
+                )
+                existing.notes = ind_data.notes if hasattr(ind_data, "notes") else ind_data.get("notes")
 
         # Calculate checklist score
         checklist.overall_score = checklist.calculate_score()
@@ -1224,8 +1243,12 @@ Return as JSON with factors and overall score."""
             return None
 
         # Recalculate each checklist score
-        for checklist in [assessment.mom_checklist, assessment.pop_checklist,
-                          assessment.moses_checklist, assessment.eve_checklist]:
+        for checklist in [
+            assessment.mom_checklist,
+            assessment.pop_checklist,
+            assessment.moses_checklist,
+            assessment.eve_checklist,
+        ]:
             if checklist:
                 checklist.overall_score = checklist.calculate_score()
                 checklist.risk_level = self._score_to_risk_level(checklist.overall_score)
@@ -1281,6 +1304,7 @@ Return as JSON with factors and overall score."""
     ) -> Optional[Dict[str, Any]]:
         """Use LLM to analyze and populate a checklist."""
         import time
+
         start_time = time.time()
 
         assessment = await self.get_deception_assessment(assessment_id)
@@ -1302,10 +1326,9 @@ Return as JSON with factors and overall score."""
             DeceptionChecklistType.EVE: "EVE Analysis (Evaluation of Evidence): Focus on the evidence quality, consistency, and signs of fabrication.",
         }
 
-        questions_formatted = "\n".join([
-            f"- ID: {ind.id}\n  Question: {ind.question}\n  Guidance: {ind.guidance}"
-            for ind in indicators
-        ])
+        questions_formatted = "\n".join(
+            [f"- ID: {ind.id}\n  Question: {ind.question}\n  Guidance: {ind.guidance}" for ind in indicators]
+        )
 
         prompt = f"""You are an intelligence analyst specializing in deception detection.
 
@@ -1314,12 +1337,12 @@ Analyze the following source for deception risk using the {checklist_type.value.
 ## Source Information
 - Type: {assessment.source_type.value}
 - ID: {assessment.source_id}
-- Name: {assessment.source_name or 'Unknown'}
+- Name: {assessment.source_name or "Unknown"}
 
-## {checklist_guidance.get(checklist_type, '')}
+## {checklist_guidance.get(checklist_type, "")}
 
 ## Context
-{context or 'No additional context provided.'}
+{context or "No additional context provided."}
 
 ## Questions to Assess
 
@@ -1328,7 +1351,7 @@ Analyze the following source for deception risk using the {checklist_type.value.
 For each question, provide an assessment using the EXACT indicator ID shown above.
 
 ## Output Format (JSON)
-IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicators[0].id if indicators else 'id_example'}").
+IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicators[0].id if indicators else "id_example"}").
 {{
   "indicators": [
     {{
@@ -1413,10 +1436,10 @@ IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicat
         # Create credibility factors from completed checklists
         # Use the same weights as the deception assessment calculation
         checklist_weights = {
-            "MOM Analysis": 0.35,    # MOM most heavily weighted
-            "EVE Analysis": 0.25,    # Evidence evaluation second
+            "MOM Analysis": 0.35,  # MOM most heavily weighted
+            "EVE Analysis": 0.25,  # Evidence evaluation second
             "MOSES Analysis": 0.25,  # Manipulability third
-            "POP Analysis": 0.15,    # Past practices least (often unknown)
+            "POP Analysis": 0.15,  # Past practices least (often unknown)
         }
         factors = []
 
@@ -1429,12 +1452,14 @@ IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicat
             if checklist and checklist.completed_at:
                 # Invert the checklist score (high deception indicator = low credibility)
                 checklist_credibility = 100 - checklist.overall_score
-                factors.append(CredibilityFactor(
-                    factor_type=f"deception_{name.lower().replace(' ', '_')}",
-                    weight=checklist_weights[name],
-                    score=checklist_credibility,
-                    notes=f"{name}: {checklist.risk_level} risk ({checklist.overall_score}% deception indicators)",
-                ))
+                factors.append(
+                    CredibilityFactor(
+                        factor_type=f"deception_{name.lower().replace(' ', '_')}",
+                        weight=checklist_weights[name],
+                        score=checklist_credibility,
+                        notes=f"{name}: {checklist.risk_level} risk ({checklist.overall_score}% deception indicators)",
+                    )
+                )
 
         if not factors:
             return
@@ -1452,18 +1477,24 @@ IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicat
         if deception.overall_score >= 80:  # Critical risk
             # Conclusive deception: cap credibility at 15 (Unreliable)
             final_score = min(final_score, 15)
-            logger.info(f"Deception severity override: critical risk ({deception.overall_score}%) "
-                       f"capped credibility at {final_score}")
+            logger.info(
+                f"Deception severity override: critical risk ({deception.overall_score}%) "
+                f"capped credibility at {final_score}"
+            )
         elif deception.overall_score >= 60:  # High risk
             # Strong deception: cap credibility at 30 (Low)
             final_score = min(final_score, 30)
-            logger.info(f"Deception severity override: high risk ({deception.overall_score}%) "
-                       f"capped credibility at {final_score}")
+            logger.info(
+                f"Deception severity override: high risk ({deception.overall_score}%) "
+                f"capped credibility at {final_score}"
+            )
         elif deception.overall_score >= 40:  # Moderate risk
             # Moderate deception: cap credibility at 50 (Medium)
             final_score = min(final_score, 50)
-            logger.info(f"Deception severity override: moderate risk ({deception.overall_score}%) "
-                       f"capped credibility at {final_score}")
+            logger.info(
+                f"Deception severity override: moderate risk ({deception.overall_score}%) "
+                f"capped credibility at {final_score}"
+            )
 
         # Confidence based on how many checklists were completed
         confidence = deception.confidence if deception.confidence > 0 else 0.5
@@ -1480,10 +1511,12 @@ IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicat
                         confidence=confidence,
                         factors=factors,
                         notes=f"Auto-updated from deception assessment {deception.id}. "
-                              f"Deception risk: {deception.risk_level} ({deception.overall_score}%)",
+                        f"Deception risk: {deception.risk_level} ({deception.overall_score}%)",
                     )
-                    logger.info(f"Updated credibility assessment {deception.linked_assessment_id} "
-                               f"from deception {deception.id}: score={final_score}")
+                    logger.info(
+                        f"Updated credibility assessment {deception.linked_assessment_id} "
+                        f"from deception {deception.id}: score={final_score}"
+                    )
                     return
 
             # Create new credibility assessment
@@ -1495,15 +1528,16 @@ IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicat
                 factors=factors,
                 assessed_by=AssessmentMethod.AUTOMATED,
                 notes=f"Auto-generated from deception assessment {deception.id}. "
-                      f"Deception risk: {deception.risk_level} ({deception.overall_score}%)",
+                f"Deception risk: {deception.risk_level} ({deception.overall_score}%)",
             )
 
             # Link the new assessment back to deception
             deception.linked_assessment_id = assessment.id
             await self._save_deception_assessment(deception, update=True)
 
-            logger.info(f"Created credibility assessment {assessment.id} "
-                       f"from deception {deception.id}: score={final_score}")
+            logger.info(
+                f"Created credibility assessment {assessment.id} from deception {deception.id}: score={final_score}"
+            )
 
         except Exception as e:
             logger.error(f"Failed to sync deception to credibility: {e}")
@@ -1525,7 +1559,9 @@ IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicat
             "moses_data": json.dumps(assessment.moses_checklist.to_dict()) if assessment.moses_checklist else "{}",
             "eve_data": json.dumps(assessment.eve_checklist.to_dict()) if assessment.eve_checklist else "{}",
             "overall_score": assessment.overall_score,
-            "risk_level": assessment.risk_level.value if isinstance(assessment.risk_level, DeceptionRisk) else assessment.risk_level,
+            "risk_level": assessment.risk_level.value
+            if isinstance(assessment.risk_level, DeceptionRisk)
+            else assessment.risk_level,
             "confidence": assessment.confidence,
             "linked_assessment_id": assessment.linked_assessment_id,
             "affects_credibility": 1 if assessment.affects_credibility else 0,
@@ -1539,7 +1575,8 @@ IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicat
         }
 
         if update:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 UPDATE arkham_deception_assessments SET
                     source_type=:source_type, source_id=:source_id, source_name=:source_name,
                     mom_data=:mom_data, pop_data=:pop_data, moses_data=:moses_data, eve_data=:eve_data,
@@ -1548,9 +1585,12 @@ IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicat
                     credibility_weight=:credibility_weight, assessed_by=:assessed_by, assessor_id=:assessor_id,
                     summary=:summary, red_flags=:red_flags, created_at=:created_at, updated_at=:updated_at
                 WHERE id=:id
-            """, data)
+            """,
+                data,
+            )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_deception_assessments (
                     id, source_type, source_id, source_name,
                     mom_data, pop_data, moses_data, eve_data,
@@ -1564,7 +1604,9 @@ IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicat
                     :linked_assessment_id, :affects_credibility, :credibility_weight,
                     :assessed_by, :assessor_id, :summary, :red_flags,
                     :created_at, :updated_at)
-            """, data)
+            """,
+                data,
+            )
 
     def _row_to_deception_assessment(self, row: Dict[str, Any]) -> DeceptionAssessment:
         """Convert database row to DeceptionAssessment object."""
@@ -1660,7 +1702,9 @@ IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicat
                 json_str = response[start:end]
                 logger.info(f"Extracted JSON: {json_str[:300]}...")
                 data = json.loads(json_str)
-                logger.info(f"Parsed data keys: {list(data.keys())}, indicators count: {len(data.get('indicators', []))}")
+                logger.info(
+                    f"Parsed data keys: {list(data.keys())}, indicators count: {len(data.get('indicators', []))}"
+                )
 
                 # Build indicators from response
                 indicators = []
@@ -1675,15 +1719,17 @@ IMPORTANT: Use the exact indicator IDs from the questions above (e.g., "{indicat
                     except ValueError:
                         strength = IndicatorStrength.NONE
 
-                    indicators.append(DeceptionIndicator(
-                        id=std_ind.id,
-                        checklist=checklist_type,
-                        question=std_ind.question,
-                        answer=resp_ind.get("answer"),
-                        strength=strength,
-                        confidence=resp_ind.get("confidence", 0.5),
-                        notes=resp_ind.get("reasoning"),
-                    ))
+                    indicators.append(
+                        DeceptionIndicator(
+                            id=std_ind.id,
+                            checklist=checklist_type,
+                            question=std_ind.question,
+                            answer=resp_ind.get("answer"),
+                            strength=strength,
+                            confidence=resp_ind.get("confidence", 0.5),
+                            notes=resp_ind.get("reasoning"),
+                        )
+                    )
 
                 checklist = DeceptionChecklist(
                     checklist_type=checklist_type,

@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Callable
 
-from .models import Graph, GraphNode, GraphEdge
+from .models import Graph, GraphEdge, GraphNode
 
 logger = logging.getLogger(__name__)
 
@@ -171,15 +171,17 @@ class GraphStorage:
         if not self.db_service:
             # Return cached graphs
             graphs = []
-            for project_id, graph in list(self._cache.items())[offset:offset+limit]:
-                graphs.append({
-                    "id": f"graph-{project_id}",
-                    "project_id": project_id,
-                    "node_count": len(graph.nodes),
-                    "edge_count": len(graph.edges),
-                    "created_at": graph.created_at.isoformat() if graph.created_at else None,
-                    "updated_at": graph.updated_at.isoformat() if graph.updated_at else None,
-                })
+            for project_id, graph in list(self._cache.items())[offset : offset + limit]:
+                graphs.append(
+                    {
+                        "id": f"graph-{project_id}",
+                        "project_id": project_id,
+                        "node_count": len(graph.nodes),
+                        "edge_count": len(graph.edges),
+                        "created_at": graph.created_at.isoformat() if graph.created_at else None,
+                        "updated_at": graph.updated_at.isoformat() if graph.updated_at else None,
+                    }
+                )
             return graphs
 
         try:
@@ -275,7 +277,7 @@ class GraphStorage:
                 INSERT INTO arkham_graph.graphs (id, project_id, node_count, edge_count, created_at, updated_at, metadata, tenant_id)
                 VALUES (:id, :project_id, :node_count, :edge_count, :created_at, :updated_at, :metadata, :tenant_id)
                 """,
-                {**insert_params, "tenant_id": tenant_id}
+                {**insert_params, "tenant_id": tenant_id},
             )
         else:
             await self.db_service.execute(
@@ -283,7 +285,7 @@ class GraphStorage:
                 INSERT INTO arkham_graph.graphs (id, project_id, node_count, edge_count, created_at, updated_at, metadata)
                 VALUES (:id, :project_id, :node_count, :edge_count, :created_at, :updated_at, :metadata)
                 """,
-                insert_params
+                insert_params,
             )
 
         # Insert nodes in batches
@@ -307,7 +309,7 @@ class GraphStorage:
                         (id, graph_id, entity_id, entity_type, label, document_count, degree, properties, created_at, tenant_id)
                         VALUES (:id, :graph_id, :entity_id, :entity_type, :label, :document_count, :degree, :properties, :created_at, :tenant_id)
                         """,
-                        {**node_params, "tenant_id": tenant_id}
+                        {**node_params, "tenant_id": tenant_id},
                     )
                 else:
                     await self.db_service.execute(
@@ -316,7 +318,7 @@ class GraphStorage:
                         (id, graph_id, entity_id, entity_type, label, document_count, degree, properties, created_at)
                         VALUES (:id, :graph_id, :entity_id, :entity_type, :label, :document_count, :degree, :properties, :created_at)
                         """,
-                        node_params
+                        node_params,
                     )
 
         # Insert edges in batches
@@ -342,7 +344,7 @@ class GraphStorage:
                         (id, graph_id, source_id, target_id, relationship_type, weight, co_occurrence_count, document_ids, properties, created_at, tenant_id)
                         VALUES (:id, :graph_id, :source_id, :target_id, :relationship_type, :weight, :co_occurrence_count, :document_ids, :properties, :created_at, :tenant_id)
                         """,
-                        {**edge_params, "tenant_id": tenant_id}
+                        {**edge_params, "tenant_id": tenant_id},
                     )
                 else:
                     await self.db_service.execute(
@@ -351,7 +353,7 @@ class GraphStorage:
                         (id, graph_id, source_id, target_id, relationship_type, weight, co_occurrence_count, document_ids, properties, created_at)
                         VALUES (:id, :graph_id, :source_id, :target_id, :relationship_type, :weight, :co_occurrence_count, :document_ids, :properties, :created_at)
                         """,
-                        edge_params
+                        edge_params,
                     )
 
         logger.debug(f"Persisted graph {graph_id}: {len(graph.nodes)} nodes, {len(graph.edges)} edges")

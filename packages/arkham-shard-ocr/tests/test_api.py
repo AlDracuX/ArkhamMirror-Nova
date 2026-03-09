@@ -1,18 +1,19 @@
 """Tests for OCR shard API routes."""
 
+from io import BytesIO
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 import pytest_asyncio
+from arkham_shard_ocr.api import OCRRequest, OCRResponse, init_api, router
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock, patch
-from io import BytesIO
-
-from arkham_shard_ocr.api import router, init_api, OCRRequest, OCRResponse
 
 
 @pytest.fixture
 def client():
     """Create a test client."""
     from fastapi import FastAPI
+
     app = FastAPI()
     app.include_router(router)
     return TestClient(app)
@@ -106,6 +107,7 @@ class TestOCRPageEndpoint:
     def test_ocr_page_not_initialized(self, client):
         """Test OCR page when shard not initialized."""
         from arkham_shard_ocr import api
+
         api._shard = None
 
         response = client.post(
@@ -202,6 +204,7 @@ class TestOCRDocumentEndpoint:
     def test_ocr_document_not_initialized(self, client):
         """Test OCR document when shard not initialized."""
         from arkham_shard_ocr import api
+
         api._shard = None
 
         response = client.post(
@@ -309,6 +312,7 @@ class TestOCRUploadEndpoint:
     def test_ocr_upload_not_initialized(self, client):
         """Test OCR upload when shard not initialized."""
         from arkham_shard_ocr import api
+
         api._shard = None
 
         response = client.post(

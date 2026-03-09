@@ -2,21 +2,21 @@
 
 import logging
 import time
-from typing import Annotated, Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from .models import (
-    TimelineEvent,
-    EventType,
-    DatePrecision,
-    ConflictType,
     ConflictSeverity,
-    MergeStrategy,
+    ConflictType,
+    DatePrecision,
     DateRange,
+    EventType,
     ExtractionContext,
+    MergeStrategy,
+    TimelineEvent,
 )
 
 if TYPE_CHECKING:
@@ -36,15 +36,7 @@ _entities_service = None
 _event_bus = None
 
 
-def init_api(
-    extractor,
-    merger,
-    conflict_detector,
-    database_service,
-    documents_service,
-    entities_service,
-    event_bus
-):
+def init_api(extractor, merger, conflict_detector, database_service, documents_service, entities_service, event_bus):
     """Initialize API with shard dependencies."""
     global _extractor, _merger, _conflict_detector
     global _database_service, _documents_service, _entities_service, _event_bus
@@ -160,9 +152,7 @@ async def health_check(request: Request):
 
     # Count total events
     if shard.database_service:
-        result = await shard.database_service.fetch_one(
-            "SELECT COUNT(*) as count FROM arkham_timeline_events"
-        )
+        result = await shard.database_service.fetch_one("SELECT COUNT(*) as count FROM arkham_timeline_events")
         event_count = result["count"] if result else 0
     else:
         event_count = 0
@@ -181,9 +171,7 @@ async def get_event_count(request: Request):
     shard = get_shard(request)
 
     if shard.database_service:
-        result = await shard.database_service.fetch_one(
-            "SELECT COUNT(*) as count FROM arkham_timeline_events"
-        )
+        result = await shard.database_service.fetch_one("SELECT COUNT(*) as count FROM arkham_timeline_events")
         count = result["count"] if result else 0
     else:
         count = 0
@@ -268,6 +256,7 @@ async def extract_timeline(request: ExtractionRequest):
     if request.context:
         if "reference_date" in request.context:
             from datetime import datetime
+
             context.reference_date = datetime.fromisoformat(request.context["reference_date"])
         if "timezone" in request.context:
             context.timezone = request.context["timezone"]
@@ -363,7 +352,7 @@ async def list_documents(
             ORDER BY d.created_at DESC
             LIMIT :limit OFFSET :offset
             """,
-            {"limit": limit, "offset": offset}
+            {"limit": limit, "offset": offset},
         )
 
         documents = [
@@ -385,6 +374,7 @@ async def list_documents(
 
 # NOTE: Using /document/{document_id} instead of /{document_id} to avoid route conflicts
 # with static routes like /range, /stats, /documents
+
 
 @router.get("/range", response_model=RangeResponse)
 async def get_events_in_range(
@@ -631,6 +621,7 @@ async def merge_timelines(http_request: Request, request: MergeRequest):
     # Apply date range filter if provided
     if request.date_range:
         from datetime import datetime
+
         start = datetime.fromisoformat(request.date_range.get("start")) if request.date_range.get("start") else None
         end = datetime.fromisoformat(request.date_range.get("end")) if request.date_range.get("end") else None
 
@@ -720,6 +711,7 @@ async def detect_conflicts(http_request: Request, request: ConflictsRequest):
     # Update detector tolerance
     if request.tolerance_days != shard.conflict_detector.tolerance_days:
         from .conflicts import ConflictDetector
+
         temp_detector = ConflictDetector(tolerance_days=request.tolerance_days)
     else:
         temp_detector = shard.conflict_detector
@@ -835,10 +827,9 @@ async def delete_event(request: Request, event_id: str):
 
     try:
         result = await shard.database_service.execute(
-            "DELETE FROM arkham_timeline_events WHERE id = :event_id",
-            {"event_id": event_id}
+            "DELETE FROM arkham_timeline_events WHERE id = :event_id", {"event_id": event_id}
         )
-        deleted = result.rowcount if hasattr(result, 'rowcount') else 1
+        deleted = result.rowcount if hasattr(result, "rowcount") else 1
 
         if deleted == 0:
             raise HTTPException(status_code=404, detail=f"Event not found: {event_id}")
@@ -872,8 +863,7 @@ async def delete_document_events(request: Request, document_id: str):
     try:
         # First count how many will be deleted
         count_result = await shard.database_service.fetch_one(
-            "SELECT COUNT(*) as count FROM arkham_timeline_events WHERE document_id = :doc_id",
-            {"doc_id": document_id}
+            "SELECT COUNT(*) as count FROM arkham_timeline_events WHERE document_id = :doc_id", {"doc_id": document_id}
         )
         count = count_result["count"] if count_result else 0
 
@@ -882,8 +872,7 @@ async def delete_document_events(request: Request, document_id: str):
 
         # Delete all events for this document
         await shard.database_service.execute(
-            "DELETE FROM arkham_timeline_events WHERE document_id = :doc_id",
-            {"doc_id": document_id}
+            "DELETE FROM arkham_timeline_events WHERE document_id = :doc_id", {"doc_id": document_id}
         )
 
         # Emit event
@@ -902,17 +891,13 @@ async def delete_document_events(request: Request, document_id: str):
 
 @router.delete("/events", response_model=DeleteResponse)
 async def delete_all_events(
-    request: Request,
-    confirm: bool = Query(False, description="Must be true to confirm deletion of all events")
+    request: Request, confirm: bool = Query(False, description="Must be true to confirm deletion of all events")
 ):
     """
     Delete all timeline events. Requires confirm=true query parameter.
     """
     if not confirm:
-        raise HTTPException(
-            status_code=400,
-            detail="Must pass confirm=true query parameter to delete all events"
-        )
+        raise HTTPException(status_code=400, detail="Must pass confirm=true query parameter to delete all events")
 
     shard = get_shard(request)
 
@@ -921,9 +906,7 @@ async def delete_all_events(
 
     try:
         # Count events first
-        count_result = await shard.database_service.fetch_one(
-            "SELECT COUNT(*) as count FROM arkham_timeline_events"
-        )
+        count_result = await shard.database_service.fetch_one("SELECT COUNT(*) as count FROM arkham_timeline_events")
         count = count_result["count"] if count_result else 0
 
         if count == 0:
@@ -958,6 +941,7 @@ async def normalize_dates(request: NormalizeRequest):
 
     # Parse reference date
     from datetime import datetime
+
     ref_date = None
     if request.reference_date:
         try:
@@ -973,39 +957,46 @@ async def normalize_dates(request: NormalizeRequest):
         try:
             normalized = _extractor.normalize_date(date_str, context)
             if normalized:
-                results.append({
-                    "original": normalized.original,
-                    "normalized": normalized.normalized.isoformat(),
-                    "precision": normalized.precision.value,
-                    "confidence": round(normalized.confidence, 2),
-                    "is_range": normalized.is_range,
-                    "range_end": normalized.range_end.isoformat() if normalized.range_end else None,
-                })
+                results.append(
+                    {
+                        "original": normalized.original,
+                        "normalized": normalized.normalized.isoformat(),
+                        "precision": normalized.precision.value,
+                        "confidence": round(normalized.confidence, 2),
+                        "is_range": normalized.is_range,
+                        "range_end": normalized.range_end.isoformat() if normalized.range_end else None,
+                    }
+                )
             else:
-                results.append({
+                results.append(
+                    {
+                        "original": date_str,
+                        "normalized": None,
+                        "precision": None,
+                        "confidence": 0.0,
+                        "is_range": False,
+                        "range_end": None,
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Failed to normalize date '{date_str}': {e}")
+            results.append(
+                {
                     "original": date_str,
                     "normalized": None,
                     "precision": None,
                     "confidence": 0.0,
                     "is_range": False,
                     "range_end": None,
-                })
-        except Exception as e:
-            logger.error(f"Failed to normalize date '{date_str}': {e}")
-            results.append({
-                "original": date_str,
-                "normalized": None,
-                "precision": None,
-                "confidence": 0.0,
-                "is_range": False,
-                "range_end": None,
-            })
+                }
+            )
 
     return NormalizeResponse(normalized=results)
 
 
 class EntityWithTimelineEvents(BaseModel):
     """Entity with timeline event count."""
+
     entity_id: str
     name: str
     entity_type: str
@@ -1014,6 +1005,7 @@ class EntityWithTimelineEvents(BaseModel):
 
 class EntitiesWithEventsResponse(BaseModel):
     """Response for entities with timeline events."""
+
     entities: list[EntityWithTimelineEvents]
     count: int
 
@@ -1060,7 +1052,7 @@ async def list_entities_with_events(
             ORDER BY ec.event_count DESC, e.name
             LIMIT :limit OFFSET :offset
             """,
-            {"limit": limit, "offset": offset, "min_events": min_events}
+            {"limit": limit, "offset": offset, "min_events": min_events},
         )
 
         entities = [
@@ -1088,6 +1080,7 @@ async def list_entities_with_events(
 
 class UpdateEventRequest(BaseModel):
     """Request to update a timeline event."""
+
     text: Optional[str] = None
     date_start: Optional[str] = None
     date_end: Optional[str] = None
@@ -1098,6 +1091,7 @@ class UpdateEventRequest(BaseModel):
 
 class UpdateEventResponse(BaseModel):
     """Response after updating an event."""
+
     id: str
     updated: bool
     message: str
@@ -1122,8 +1116,7 @@ async def update_event(
     try:
         # Check if event exists
         existing = await shard.database_service.fetch_one(
-            "SELECT id FROM arkham_timeline_events WHERE id = :event_id",
-            {"event_id": event_id}
+            "SELECT id FROM arkham_timeline_events WHERE id = :event_id", {"event_id": event_id}
         )
         if not existing:
             raise HTTPException(status_code=404, detail=f"Event not found: {event_id}")
@@ -1154,15 +1147,12 @@ async def update_event(
 
         if update.entities is not None:
             import json
+
             updates.append("entities = :entities")
             params["entities"] = json.dumps(update.entities)
 
         if not updates:
-            return UpdateEventResponse(
-                id=event_id,
-                updated=False,
-                message="No fields to update"
-            )
+            return UpdateEventResponse(id=event_id, updated=False, message="No fields to update")
 
         query = f"UPDATE arkham_timeline_events SET {', '.join(updates)} WHERE id = :event_id"
         await shard.database_service.execute(query, params)
@@ -1175,11 +1165,7 @@ async def update_event(
                 source="timeline-shard",
             )
 
-        return UpdateEventResponse(
-            id=event_id,
-            updated=True,
-            message=f"Updated {len(updates)} field(s)"
-        )
+        return UpdateEventResponse(id=event_id, updated=True, message=f"Updated {len(updates)} field(s)")
 
     except HTTPException:
         raise
@@ -1190,12 +1176,14 @@ async def update_event(
 
 class AddNoteRequest(BaseModel):
     """Request to add a note to an event."""
+
     note: str
     author: Optional[str] = None
 
 
 class NoteResponse(BaseModel):
     """A single note/annotation."""
+
     id: str
     event_id: str
     note: str
@@ -1205,6 +1193,7 @@ class NoteResponse(BaseModel):
 
 class NotesListResponse(BaseModel):
     """List of notes for an event."""
+
     notes: list[NoteResponse]
     count: int
 
@@ -1226,8 +1215,7 @@ async def add_event_note(
     try:
         # Check if event exists
         existing = await shard.database_service.fetch_one(
-            "SELECT id FROM arkham_timeline_events WHERE id = :event_id",
-            {"event_id": event_id}
+            "SELECT id FROM arkham_timeline_events WHERE id = :event_id", {"event_id": event_id}
         )
         if not existing:
             raise HTTPException(status_code=404, detail=f"Event not found: {event_id}")
@@ -1250,7 +1238,7 @@ async def add_event_note(
                 "author": note_request.author,
                 "created_at": created_at,
                 "updated_at": created_at,
-            }
+            },
         )
 
         # Emit event
@@ -1297,7 +1285,7 @@ async def get_event_notes(
             WHERE event_id = :event_id
             ORDER BY created_at DESC
             """,
-            {"event_id": event_id}
+            {"event_id": event_id},
         )
 
         notes = [
@@ -1335,10 +1323,10 @@ async def delete_event_note(
     try:
         result = await shard.database_service.execute(
             "DELETE FROM arkham_timeline_annotations WHERE id = :note_id AND event_id = :event_id",
-            {"note_id": note_id, "event_id": event_id}
+            {"note_id": note_id, "event_id": event_id},
         )
 
-        deleted = result.rowcount if hasattr(result, 'rowcount') else 1
+        deleted = result.rowcount if hasattr(result, "rowcount") else 1
 
         if deleted == 0:
             raise HTTPException(status_code=404, detail=f"Note not found: {note_id}")
@@ -1354,6 +1342,7 @@ async def delete_event_note(
 
 class TimelineGap(BaseModel):
     """A gap in the timeline."""
+
     start_date: str
     end_date: str
     gap_days: int
@@ -1364,6 +1353,7 @@ class TimelineGap(BaseModel):
 
 class GapsResponse(BaseModel):
     """Response for timeline gaps analysis."""
+
     gaps: list[TimelineGap]
     count: int
     total_gap_days: int
@@ -1434,14 +1424,16 @@ async def get_timeline_gaps(
                 else:
                     severity = "low"
 
-                gaps.append(TimelineGap(
-                    start_date=event1.date_start.isoformat(),
-                    end_date=event2.date_start.isoformat(),
-                    gap_days=gap_days,
-                    before_event_id=event1.id,
-                    after_event_id=event2.id,
-                    severity=severity,
-                ))
+                gaps.append(
+                    TimelineGap(
+                        start_date=event1.date_start.isoformat(),
+                        end_date=event2.date_start.isoformat(),
+                        gap_days=gap_days,
+                        before_event_id=event1.id,
+                        after_event_id=event2.id,
+                        severity=severity,
+                    )
+                )
 
         # Calculate statistics
         total_gap_days = sum(all_gap_days)
@@ -1474,6 +1466,7 @@ async def get_timeline_gaps(
 
 class ConflictDetail(BaseModel):
     """Detailed conflict information."""
+
     id: str
     type: str
     severity: str
@@ -1486,6 +1479,7 @@ class ConflictDetail(BaseModel):
 
 class ConflictsDetailResponse(BaseModel):
     """Enhanced conflicts response with full details."""
+
     conflicts: list[ConflictDetail]
     count: int
     by_type: dict[str, int]
@@ -1510,9 +1504,7 @@ async def analyze_conflicts(
 
     try:
         # Get all events
-        rows = await shard.database_service.fetch_all(
-            "SELECT * FROM arkham_timeline_events ORDER BY date_start"
-        )
+        rows = await shard.database_service.fetch_all("SELECT * FROM arkham_timeline_events ORDER BY date_start")
         events = [shard._row_to_event(row) for row in rows]
 
         if len(events) < 2:
@@ -1525,6 +1517,7 @@ async def analyze_conflicts(
 
         # Run conflict detection
         from .conflicts import ConflictDetector
+
         detector = ConflictDetector(tolerance_days=tolerance_days)
         conflicts = detector.detect_conflicts(events)
 
@@ -1540,16 +1533,18 @@ async def analyze_conflicts(
             by_type[type_str] = by_type.get(type_str, 0) + 1
             by_severity[severity_str] = by_severity.get(severity_str, 0) + 1
 
-            conflict_details.append(ConflictDetail(
-                id=conflict.id,
-                type=type_str,
-                severity=severity_str,
-                event_ids=conflict.events,
-                description=conflict.description,
-                documents=conflict.documents,
-                suggested_resolution=conflict.suggested_resolution,
-                metadata=conflict.metadata or {},
-            ))
+            conflict_details.append(
+                ConflictDetail(
+                    id=conflict.id,
+                    type=type_str,
+                    severity=severity_str,
+                    event_ids=conflict.events,
+                    description=conflict.description,
+                    documents=conflict.documents,
+                    suggested_resolution=conflict.suggested_resolution,
+                    metadata=conflict.metadata or {},
+                )
+            )
 
         # Store conflicts for future reference
         if conflicts:
@@ -1572,12 +1567,14 @@ async def analyze_conflicts(
 
 class MergeEventsRequest(BaseModel):
     """Request to merge multiple events."""
+
     event_ids: list[str]
     keep_event_id: Optional[str] = None  # If specified, merge into this event; otherwise use first
 
 
 class MergeEventsResponse(BaseModel):
     """Response after merging events."""
+
     merged_event_id: str
     merged_count: int
     deleted_ids: list[str]
@@ -1610,8 +1607,7 @@ async def merge_events(
         params = {f"id{i}": eid for i, eid in enumerate(merge_request.event_ids)}
 
         rows = await shard.database_service.fetch_all(
-            f"SELECT * FROM arkham_timeline_events WHERE id IN ({placeholders})",
-            params
+            f"SELECT * FROM arkham_timeline_events WHERE id IN ({placeholders})", params
         )
 
         if len(rows) < 2:
@@ -1665,15 +1661,14 @@ async def merge_events(
                 "event_id": keep_id,
                 "text": combined_text,
                 "entities": json.dumps(list(all_entities)),
-            }
+            },
         )
 
         # Delete the merged events
         deleted_ids = [ev["id"] for ev in merge_events_list]
         for eid in deleted_ids:
             await shard.database_service.execute(
-                "DELETE FROM arkham_timeline_events WHERE id = :event_id",
-                {"event_id": eid}
+                "DELETE FROM arkham_timeline_events WHERE id = :event_id", {"event_id": eid}
             )
 
         # Emit event
@@ -1702,6 +1697,7 @@ async def merge_events(
 
 class AIJuniorAnalystRequest(BaseModel):
     """Request for AI Junior Analyst analysis."""
+
     target_id: str
     context: dict[str, Any] = {}
     depth: str = "quick"
@@ -1726,13 +1722,10 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     frame = shard.frame
 
     if not frame or not getattr(frame, "ai_analyst", None):
-        raise HTTPException(
-            status_code=503,
-            detail="AI Analyst service not available"
-        )
+        raise HTTPException(status_code=503, detail="AI Analyst service not available")
 
     # Build context from request
-    from arkham_frame.services import AnalysisRequest, AnalysisDepth, AnalystMessage
+    from arkham_frame.services import AnalysisDepth, AnalysisRequest, AnalystMessage
 
     # Parse depth
     try:
@@ -1743,10 +1736,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     # Build conversation history
     history = None
     if body.conversation_history:
-        history = [
-            AnalystMessage(role=msg["role"], content=msg["content"])
-            for msg in body.conversation_history
-        ]
+        history = [AnalystMessage(role=msg["role"], content=msg["content"]) for msg in body.conversation_history]
 
     analysis_request = AnalysisRequest(
         shard="timeline",

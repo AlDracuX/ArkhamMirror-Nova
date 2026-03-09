@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class HypothesisSuggestion:
     """A suggested hypothesis from LLM."""
+
     title: str
     description: str = ""
 
@@ -50,6 +51,7 @@ class HypothesisSuggestion:
 @dataclass
 class EvidenceSuggestion:
     """A suggested evidence item from LLM."""
+
     description: str
     evidence_type: EvidenceType = EvidenceType.FACT
     source: str = ""
@@ -58,6 +60,7 @@ class EvidenceSuggestion:
 @dataclass
 class RatingSuggestion:
     """A suggested rating for evidence-hypothesis pair."""
+
     hypothesis_id: str
     hypothesis_label: str
     rating: ConsistencyRating
@@ -67,6 +70,7 @@ class RatingSuggestion:
 @dataclass
 class Challenge:
     """A devil's advocate challenge for a hypothesis."""
+
     hypothesis_id: str
     hypothesis_label: str
     counter_argument: str
@@ -77,6 +81,7 @@ class Challenge:
 @dataclass
 class MilestoneSuggestion:
     """A suggested future indicator/milestone."""
+
     hypothesis_id: str
     hypothesis_label: str
     description: str
@@ -85,6 +90,7 @@ class MilestoneSuggestion:
 @dataclass
 class AnalysisInsights:
     """LLM-generated analysis insights."""
+
     leading_hypothesis: str
     key_evidence: list[str]
     evidence_gaps: list[str]
@@ -109,7 +115,6 @@ Guidelines:
 - Provide brief descriptions when helpful
 - Consider both obvious and non-obvious explanations
 - Avoid confirmation bias - include unlikely but possible alternatives""",
-
     "evidence": """You are an intelligence analyst helping with Analysis of Competing Hypotheses (ACH).
 Your role is to suggest specific, concrete evidence items that could help distinguish between hypotheses.
 
@@ -121,7 +126,6 @@ Guidelines:
 - Example format: "Witness testimony from John Smith stating he saw X on Y date (testimony)"
 - NOT: "Interview witnesses to determine..." - that's an investigation method, not evidence
 - Be specific and concrete - name sources, dates, locations when relevant""",
-
     "ratings": """You are an intelligence analyst helping with Analysis of Competing Hypotheses (ACH).
 Your role is to rate how consistent evidence is with each hypothesis.
 
@@ -137,7 +141,6 @@ Guidelines:
 - Consider the reliability and credibility of the evidence
 - Provide brief reasoning for each rating
 - Be objective - don't favor any hypothesis""",
-
     "devils_advocate": """You are a devil's advocate analyst. Your job is to challenge hypotheses and find weaknesses.
 
 For each hypothesis, you must provide:
@@ -151,7 +154,6 @@ Guidelines:
 - Identify hidden assumptions
 - Consider alternative interpretations of evidence
 - Highlight confirmation bias risks""",
-
     "insights": """You are an intelligence analyst providing insights on an ACH matrix analysis.
 
 Provide analysis covering:
@@ -162,7 +164,6 @@ Provide analysis covering:
 5. Recommended next steps for investigation
 
 Be objective, thorough, and actionable.""",
-
     "milestones": """You are an intelligence analyst helping identify future indicators and milestones.
 
 For each relevant hypothesis, suggest 2-3 observable events or indicators that would:
@@ -174,7 +175,6 @@ Guidelines:
 - Include timeframes where relevant
 - Focus on testable predictions
 - Consider leading indicators""",
-
     "premortem": """You are an intelligence analyst conducting a premortem analysis.
 
 A premortem assumes the hypothesis turned out to be WRONG and works backwards to understand why.
@@ -195,7 +195,6 @@ Guidelines:
 - Consider adversarial deception
 - Think about what evidence might be missing
 - Question underlying assumptions""",
-
     "scenarios": """You are a strategic analyst generating a cone of plausibility.
 
 The cone of plausibility maps possible future scenarios branching from the current situation.
@@ -312,16 +311,10 @@ class ACHLLMIntegration:
             prompt_parts.append(f"\nContext: {context}")
 
         if existing_hypotheses:
-            existing = "\n".join(
-                f"- H{i+1}: {h.title}"
-                for i, h in enumerate(existing_hypotheses)
-            )
+            existing = "\n".join(f"- H{i + 1}: {h.title}" for i, h in enumerate(existing_hypotheses))
             prompt_parts.append(f"\nExisting Hypotheses (avoid duplicating):\n{existing}")
 
-        prompt_parts.append(
-            "\nGenerate 3-5 additional hypotheses. "
-            "Format: Number each hypothesis, one per line."
-        )
+        prompt_parts.append("\nGenerate 3-5 additional hypotheses. Format: Number each hypothesis, one per line.")
 
         user_prompt = "\n".join(prompt_parts)
 
@@ -337,9 +330,9 @@ class ACHLLMIntegration:
         suggestions = []
 
         # Match numbered items: "1. hypothesis text" or "1) hypothesis text"
-        pattern = r'^\s*\d+[\.\)]\s*(.+)$'
+        pattern = r"^\s*\d+[\.\)]\s*(.+)$"
 
-        for line in text.strip().split('\n'):
+        for line in text.strip().split("\n"):
             match = re.match(pattern, line.strip())
             if match:
                 title = match.group(1).strip()
@@ -373,10 +366,7 @@ class ACHLLMIntegration:
             return []
 
         # Build hypotheses list
-        hyp_list = "\n".join(
-            f"- H{i+1}: {h.title}"
-            for i, h in enumerate(hypotheses)
-        )
+        hyp_list = "\n".join(f"- H{i + 1}: {h.title}" for i, h in enumerate(hypotheses))
 
         prompt_parts = [
             f"Focus Question: {focus_question}",
@@ -430,10 +420,7 @@ class ACHLLMIntegration:
             return []
 
         # Build hypotheses list
-        hyp_list = chr(10).join(
-            f"- H{i+1}: {h.title}"
-            for i, h in enumerate(hypotheses)
-        )
+        hyp_list = chr(10).join(f"- H{i + 1}: {h.title}" for i, h in enumerate(hypotheses))
 
         prompt_parts = [
             f"Focus Question: {focus_question}",
@@ -457,14 +444,12 @@ class ACHLLMIntegration:
                 page_num = chunk.get("page_number")
                 page_info = f", p.{page_num}" if page_num else ""
 
-                chunks_text.append(f"[Chunk {i+1}] (Source: {doc_name}{page_info}){chr(10)}{text}")
+                chunks_text.append(f"[Chunk {i + 1}] (Source: {doc_name}{page_info}){chr(10)}{text}")
                 total_chars += len(text)
 
             if chunks_text:
                 corpus_context = (chr(10) + chr(10)).join(chunks_text)
-                prompt_parts.append(
-                    f"{chr(10)}Relevant excerpts from documents:{chr(10)}{corpus_context}"
-                )
+                prompt_parts.append(f"{chr(10)}Relevant excerpts from documents:{chr(10)}{corpus_context}")
 
         if existing_evidence:
             existing = chr(10).join(
@@ -474,9 +459,9 @@ class ACHLLMIntegration:
             prompt_parts.append(f"{chr(10)}Existing Evidence (avoid duplicating):{chr(10)}{existing}")
 
         prompt_parts.append(
-            f"{chr(10)}Based on the hypotheses" +
-            (" and the document excerpts provided" if corpus_chunks else "") +
-            f", suggest 3-5 diagnostic evidence items that would help distinguish "
+            f"{chr(10)}Based on the hypotheses"
+            + (" and the document excerpts provided" if corpus_chunks else "")
+            + f", suggest 3-5 diagnostic evidence items that would help distinguish "
             f"between hypotheses. Format each as:{chr(10)}"
             f"1. Evidence description (TYPE){chr(10)}"
             "Where TYPE is one of: fact, testimony, document, physical, circumstantial, inference"
@@ -497,7 +482,7 @@ class ACHLLMIntegration:
 
         # Split into numbered sections (handles multi-line evidence items)
         # Match patterns like "1. Evidence description (type)" or "1) Evidence..."
-        sections = re.split(r'\n(?=\s*\d+[\.\)])', text.strip())
+        sections = re.split(r"\n(?=\s*\d+[\.\)])", text.strip())
 
         for section in sections:
             if not section.strip():
@@ -505,42 +490,39 @@ class ACHLLMIntegration:
 
             # Extract the type from the header line
             header_match = re.match(
-                r'^\s*\d+[\.\)]\s*(?:Evidence\s+description\s*)?\((\w+)\)',
-                section.strip(),
-                re.IGNORECASE
+                r"^\s*\d+[\.\)]\s*(?:Evidence\s+description\s*)?\((\w+)\)", section.strip(), re.IGNORECASE
             )
             type_str = header_match.group(1) if header_match else None
 
             # Get the full text after the header
-            lines = section.strip().split('\n')
+            lines = section.strip().split("\n")
             if len(lines) > 1:
                 # Multi-line: description is in subsequent lines
                 description_lines = []
                 for line in lines[1:]:
                     # Clean up em-dashes, bullets, and leading whitespace
-                    cleaned = re.sub(r'^[\s\-\u2014\u2013\*\u2022]+', '', line.strip())
+                    cleaned = re.sub(r"^[\s\-\u2014\u2013\*\u2022]+", "", line.strip())
                     if cleaned:
                         description_lines.append(cleaned)
-                description = ' '.join(description_lines)
+                description = " ".join(description_lines)
             else:
                 # Single line: extract description from the line itself
-                single_match = re.match(
-                    r'^\s*\d+[\.\)]\s*(.+?)(?:\((\w+)\))?\s*$',
-                    section.strip()
-                )
+                single_match = re.match(r"^\s*\d+[\.\)]\s*(.+?)(?:\((\w+)\))?\s*$", section.strip())
                 if single_match:
                     description = single_match.group(1).strip()
                     if not type_str:
                         type_str = single_match.group(2)
                 else:
-                    description = ''
+                    description = ""
 
-            if description and description.lower() != 'evidence description':
+            if description and description.lower() != "evidence description":
                 evidence_type = self._parse_evidence_type(type_str)
-                suggestions.append(EvidenceSuggestion(
-                    description=description,
-                    evidence_type=evidence_type,
-                ))
+                suggestions.append(
+                    EvidenceSuggestion(
+                        description=description,
+                        evidence_type=evidence_type,
+                    )
+                )
 
         return suggestions
 
@@ -583,10 +565,7 @@ class ACHLLMIntegration:
             return []
 
         # Build hypotheses list with labels
-        hyp_list = "\n".join(
-            f"- H{i+1}: {h.title}"
-            for i, h in enumerate(hypotheses)
-        )
+        hyp_list = "\n".join(f"- H{i + 1}: {h.title}" for i, h in enumerate(hypotheses))
 
         prompt = f"""Evidence to rate:
 Description: {evidence.description}
@@ -621,12 +600,12 @@ Where RATING is: ++, +, N, -, or --"""
         suggestions = []
 
         # Map hypothesis labels to IDs
-        hyp_map = {f"H{i+1}": h for i, h in enumerate(hypotheses)}
+        hyp_map = {f"H{i + 1}": h for i, h in enumerate(hypotheses)}
 
         # Match patterns like "H1: ++ - explanation" or "H1: -- (explanation)"
-        pattern = r'^\s*(H\d+)\s*:\s*(\+\+|\+|N|-|--)\s*[-:]*\s*(.*)$'
+        pattern = r"^\s*(H\d+)\s*:\s*(\+\+|\+|N|-|--)\s*[-:]*\s*(.*)$"
 
-        for line in text.strip().split('\n'):
+        for line in text.strip().split("\n"):
             match = re.match(pattern, line.strip(), re.IGNORECASE)
             if match:
                 label = match.group(1).upper()
@@ -635,12 +614,14 @@ Where RATING is: ++, +, N, -, or --"""
 
                 if label in hyp_map:
                     rating = self._parse_rating(rating_str)
-                    suggestions.append(RatingSuggestion(
-                        hypothesis_id=hyp_map[label].id,
-                        hypothesis_label=label,
-                        rating=rating,
-                        explanation=explanation,
-                    ))
+                    suggestions.append(
+                        RatingSuggestion(
+                            hypothesis_id=hyp_map[label].id,
+                            hypothesis_label=label,
+                            rating=rating,
+                            explanation=explanation,
+                        )
+                    )
 
         return suggestions
 
@@ -699,18 +680,13 @@ Where RATING is: ++, +, N, -, or --"""
                 context_parts.append(f"   Description: {h.description}")
 
             # Add relevant evidence
-            relevant_ratings = [
-                r for r in matrix.ratings
-                if r.hypothesis_id == h.id
-            ]
+            relevant_ratings = [r for r in matrix.ratings if r.hypothesis_id == h.id]
             if relevant_ratings:
                 context_parts.append("   Evidence ratings:")
                 for r in relevant_ratings[:5]:
                     evidence = matrix.get_evidence(r.evidence_id)
                     if evidence:
-                        context_parts.append(
-                            f"   - [{r.rating.value}] {evidence.description[:100]}"
-                        )
+                        context_parts.append(f"   - [{r.rating.value}] {evidence.description[:100]}")
 
         context_parts.append("""
 
@@ -743,26 +719,28 @@ Provide devil's advocate challenges. Return as JSON:
         challenges = []
 
         # Map hypothesis labels to IDs
-        hyp_map = {f"H{i+1}": h for i, h in enumerate(matrix.hypotheses)}
+        hyp_map = {f"H{i + 1}": h for i, h in enumerate(matrix.hypotheses)}
 
         # Try to extract JSON
         try:
             # Clean markdown code blocks
-            cleaned = re.sub(r'```json?\s*', '', text)
-            cleaned = re.sub(r'```\s*$', '', cleaned)
+            cleaned = re.sub(r"```json?\s*", "", text)
+            cleaned = re.sub(r"```\s*$", "", cleaned)
 
             data = json.loads(cleaned)
 
             for c in data.get("challenges", []):
                 label = c.get("hypothesis_label", "").upper()
                 if label in hyp_map:
-                    challenges.append(Challenge(
-                        hypothesis_id=hyp_map[label].id,
-                        hypothesis_label=label,
-                        counter_argument=c.get("counter_argument", ""),
-                        disproof_evidence=c.get("disproof_evidence", ""),
-                        alternative_angle=c.get("alternative_angle", ""),
-                    ))
+                    challenges.append(
+                        Challenge(
+                            hypothesis_id=hyp_map[label].id,
+                            hypothesis_label=label,
+                            counter_argument=c.get("counter_argument", ""),
+                            disproof_evidence=c.get("disproof_evidence", ""),
+                            alternative_angle=c.get("alternative_angle", ""),
+                        )
+                    )
         except json.JSONDecodeError:
             logger.warning("Failed to parse JSON challenges, using text fallback")
             # Fallback: try to extract from unstructured text
@@ -827,10 +805,8 @@ Provide devil's advocate challenges. Return as JSON:
             alternative_interpretation=challenge.alternative_angle,
             weaknesses_identified=[challenge.counter_argument],
             evidence_gaps=[challenge.disproof_evidence],
-            recommended_investigations=[
-                f"Investigate: {challenge.disproof_evidence}"
-            ],
-            model_used=self.llm_service.model if hasattr(self.llm_service, 'model') else "unknown",
+            recommended_investigations=[f"Investigate: {challenge.disproof_evidence}"],
+            model_used=self.llm_service.model if hasattr(self.llm_service, "model") else "unknown",
         )
 
     # =========================================================================
@@ -860,11 +836,11 @@ Provide devil's advocate challenges. Return as JSON:
         for i, h in enumerate(matrix.hypotheses):
             score = matrix.get_score(h.id)
             score_info = f" (Score: {score.normalized_score:.1f}, Rank: {score.rank})" if score else ""
-            summary_parts.append(f"  H{i+1}: {h.title}{score_info}")
+            summary_parts.append(f"  H{i + 1}: {h.title}{score_info}")
 
         summary_parts.append(f"\nEvidence ({len(matrix.evidence)}):")
         for i, e in enumerate(matrix.evidence[:10]):
-            summary_parts.append(f"  E{i+1}: {e.description[:80]}")
+            summary_parts.append(f"  E{i + 1}: {e.description[:80]}")
         if len(matrix.evidence) > 10:
             summary_parts.append(f"  ... and {len(matrix.evidence) - 10} more")
 
@@ -923,13 +899,10 @@ Provide devil's advocate challenges. Return as JSON:
             return []
 
         # Build hypotheses list
-        hyp_list = "\n".join(
-            f"- H{i+1}: {h.title}"
-            for i, h in enumerate(matrix.hypotheses)
-        )
+        hyp_list = "\n".join(f"- H{i + 1}: {h.title}" for i, h in enumerate(matrix.hypotheses))
 
         prompt = f"""Matrix: {matrix.title}
-Description: {matrix.description or 'N/A'}
+Description: {matrix.description or "N/A"}
 
 Hypotheses:
 {hyp_list}
@@ -965,58 +938,55 @@ Be specific about what would be observable and when."""
         suggestions = []
 
         # Map hypothesis labels to IDs
-        hyp_map = {f"H{i+1}": h for i, h in enumerate(matrix.hypotheses)}
+        hyp_map = {f"H{i + 1}": h for i, h in enumerate(matrix.hypotheses)}
 
         # Helper to check if text is a placeholder
         def is_placeholder_text(desc: str) -> bool:
             lower_desc = desc.lower()
             return (
-                lower_desc in ('description of milestone/indicator', '...')
-                or lower_desc.startswith('by [timeframe]')
-                or '[specific observable event' in lower_desc
-                or lower_desc.startswith('genuine lunar landing')
-                or lower_desc.startswith('filmed on earth')
-                or lower_desc.startswith('misinterpretation')
-                or lower_desc.startswith('partial lunar')
+                lower_desc in ("description of milestone/indicator", "...")
+                or lower_desc.startswith("by [timeframe]")
+                or "[specific observable event" in lower_desc
+                or lower_desc.startswith("genuine lunar landing")
+                or lower_desc.startswith("filmed on earth")
+                or lower_desc.startswith("misinterpretation")
+                or lower_desc.startswith("partial lunar")
             )
 
         # Helper to strip markdown formatting
         def strip_markdown(s: str) -> str:
             """Remove markdown bold/italic markers."""
-            return re.sub(r'\*+', '', s).strip()
+            return re.sub(r"\*+", "", s).strip()
 
         # Strategy 1: Look for bullet points with H labels like "* **H1:** milestone text"
         # This matches the common LLM output format
         bullet_pattern = re.compile(
-            r'^[\*\-\u2022]\s*\*{0,2}\s*(H\d+)\s*[:\-]\*{0,2}\s*(.+)$',
-            re.IGNORECASE | re.MULTILINE
+            r"^[\*\-\u2022]\s*\*{0,2}\s*(H\d+)\s*[:\-]\*{0,2}\s*(.+)$", re.IGNORECASE | re.MULTILINE
         )
 
         for match in bullet_pattern.finditer(text):
             label = match.group(1).upper()
             description = strip_markdown(match.group(2)).strip()
             if label in hyp_map and description and not is_placeholder_text(description):
-                suggestions.append(MilestoneSuggestion(
-                    hypothesis_id=hyp_map[label].id,
-                    hypothesis_label=label,
-                    description=description,
-                ))
+                suggestions.append(
+                    MilestoneSuggestion(
+                        hypothesis_id=hyp_map[label].id,
+                        hypothesis_label=label,
+                        description=description,
+                    )
+                )
 
         # Strategy 2: If no results from Strategy 1, try parsing section-based format
         if not suggestions:
             # Split into hypothesis sections (H1:, **H1:, etc.)
-            sections = re.split(r'\n(?=\s*\*{0,2}\s*H\d+\s*[:\-])', text.strip())
+            sections = re.split(r"\n(?=\s*\*{0,2}\s*H\d+\s*[:\-])", text.strip())
 
             for section in sections:
                 if not section.strip():
                     continue
 
                 # Match the hypothesis label at the start (with optional markdown)
-                header_match = re.match(
-                    r'^\s*\*{0,2}\s*(H\d+)\s*[:\-]\*{0,2}\s*(.*)$',
-                    section.strip(),
-                    re.IGNORECASE
-                )
+                header_match = re.match(r"^\s*\*{0,2}\s*(H\d+)\s*[:\-]\*{0,2}\s*(.*)$", section.strip(), re.IGNORECASE)
                 if not header_match:
                     continue
 
@@ -1026,29 +996,37 @@ Be specific about what would be observable and when."""
 
                 # Get the rest after the header
                 first_line_content = strip_markdown(header_match.group(2)).strip()
-                remaining_lines = section.strip().split('\n')[1:]
+                remaining_lines = section.strip().split("\n")[1:]
 
                 # If first line has content, it's a single-line milestone
-                if first_line_content and not first_line_content.startswith('-') and not is_placeholder_text(first_line_content):
-                    suggestions.append(MilestoneSuggestion(
-                        hypothesis_id=hyp_map[label].id,
-                        hypothesis_label=label,
-                        description=first_line_content,
-                    ))
+                if (
+                    first_line_content
+                    and not first_line_content.startswith("-")
+                    and not is_placeholder_text(first_line_content)
+                ):
+                    suggestions.append(
+                        MilestoneSuggestion(
+                            hypothesis_id=hyp_map[label].id,
+                            hypothesis_label=label,
+                            description=first_line_content,
+                        )
+                    )
 
                 # Parse bullet points as individual milestones
                 for line in remaining_lines:
                     line = line.strip()
                     # Match bullet points: "- milestone" or "* milestone" (without H label)
-                    bullet_match = re.match(r'^[\-\*\u2022]\s+(.+)$', line)
+                    bullet_match = re.match(r"^[\-\*\u2022]\s+(.+)$", line)
                     if bullet_match:
                         description = strip_markdown(bullet_match.group(1)).strip()
                         if description and not is_placeholder_text(description):
-                            suggestions.append(MilestoneSuggestion(
-                                hypothesis_id=hyp_map[label].id,
-                                hypothesis_label=label,
-                                description=description,
-                            ))
+                            suggestions.append(
+                                MilestoneSuggestion(
+                                    hypothesis_id=hyp_map[label].id,
+                                    hypothesis_label=label,
+                                    description=description,
+                                )
+                            )
 
         return suggestions
 
@@ -1084,10 +1062,7 @@ Be specific about what would be observable and when."""
         if len(text) > max_chars:
             text = text[:max_chars] + "..."
 
-        hyp_list = "\n".join(
-            f"- H{i+1}: {h.title}"
-            for i, h in enumerate(hypotheses)
-        )
+        hyp_list = "\n".join(f"- H{i + 1}: {h.title}" for i, h in enumerate(hypotheses))
 
         prompt = f"""Hypotheses under consideration:
 {hyp_list}
@@ -1218,11 +1193,11 @@ Return as JSON:
         # Try to parse JSON
         try:
             # Clean markdown code blocks
-            cleaned = re.sub(r'```json?\s*', '', text)
-            cleaned = re.sub(r'```\s*$', '', cleaned)
+            cleaned = re.sub(r"```json?\s*", "", text)
+            cleaned = re.sub(r"```\s*$", "", cleaned)
 
             # Find JSON object
-            json_match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+            json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
             if json_match:
                 data = json.loads(json_match.group(0))
 
@@ -1237,15 +1212,17 @@ Return as JSON:
                         "alternative_explanation": FailureModeType.ALTERNATIVE_EXPLANATION,
                     }
 
-                    failure_modes.append(FailureMode(
-                        id=str(uuid.uuid4()),
-                        premortem_id=premortem_id,
-                        failure_type=type_map.get(fm_type, FailureModeType.MISINTERPRETATION),
-                        description=fm.get("description", ""),
-                        likelihood=fm.get("likelihood", "medium"),
-                        early_warning_indicator=fm.get("early_warning_indicator", ""),
-                        mitigation_action=fm.get("mitigation_action", ""),
-                    ))
+                    failure_modes.append(
+                        FailureMode(
+                            id=str(uuid.uuid4()),
+                            premortem_id=premortem_id,
+                            failure_type=type_map.get(fm_type, FailureModeType.MISINTERPRETATION),
+                            description=fm.get("description", ""),
+                            likelihood=fm.get("likelihood", "medium"),
+                            early_warning_indicator=fm.get("early_warning_indicator", ""),
+                            mitigation_action=fm.get("mitigation_action", ""),
+                        )
+                    )
 
                 return PremortemAnalysis(
                     id=premortem_id,
@@ -1308,7 +1285,7 @@ Return as JSON:
         if matrix.hypotheses:
             hyp_context = "\n\nCurrent hypotheses being considered:\n"
             for i, h in enumerate(matrix.hypotheses):
-                hyp_context += f"- H{i+1}: {h.title}\n"
+                hyp_context += f"- H{i + 1}: {h.title}\n"
 
         parent_context = ""
         if parent_node:
@@ -1372,11 +1349,11 @@ Ensure probabilities approximately sum to 1.0."""
 
         try:
             # Clean markdown code blocks
-            cleaned = re.sub(r'```json?\s*', '', text)
-            cleaned = re.sub(r'```\s*$', '', cleaned)
+            cleaned = re.sub(r"```json?\s*", "", text)
+            cleaned = re.sub(r"```\s*$", "", cleaned)
 
             # Find JSON object
-            json_match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+            json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
             if json_match:
                 data = json.loads(json_match.group(0))
 
@@ -1384,11 +1361,13 @@ Ensure probabilities approximately sum to 1.0."""
                     # Parse indicators
                     indicators = []
                     for ind_desc in s.get("indicators", []):
-                        indicators.append(ScenarioIndicator(
-                            id=str(uuid.uuid4()),
-                            scenario_id="",  # Will be set after node ID is created
-                            description=ind_desc,
-                        ))
+                        indicators.append(
+                            ScenarioIndicator(
+                                id=str(uuid.uuid4()),
+                                scenario_id="",  # Will be set after node ID is created
+                                description=ind_desc,
+                            )
+                        )
 
                     node_id = str(uuid.uuid4())
 
@@ -1400,7 +1379,7 @@ Ensure probabilities approximately sum to 1.0."""
                         id=node_id,
                         tree_id=tree_id,
                         parent_id=parent_node.id if parent_node else None,
-                        title=s.get("title", f"Scenario {i+1}"),
+                        title=s.get("title", f"Scenario {i + 1}"),
                         description=s.get("description", ""),
                         probability=float(s.get("probability", 0.0)),
                         timeframe=s.get("timeframe", ""),
@@ -1493,5 +1472,5 @@ Ensure probabilities approximately sum to 1.0."""
             root_node_id=root_id,
             nodes=all_nodes,
             drivers=[],  # Could extract from nodes
-            model_used=self.llm_service.model if hasattr(self.llm_service, 'model') else "unknown",
+            model_used=self.llm_service.model if hasattr(self.llm_service, "model") else "unknown",
         )

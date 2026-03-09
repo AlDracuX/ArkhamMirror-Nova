@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DuplicateMatch:
     """A potential duplicate match."""
+
     document_id: str
     title: str
     similarity_score: float
@@ -27,6 +28,7 @@ class DuplicateMatch:
 @dataclass
 class DuplicateGroup:
     """A group of duplicate documents."""
+
     group_id: str
     primary_document_id: str
     duplicate_ids: list[str]
@@ -38,6 +40,7 @@ class DuplicateGroup:
 @dataclass
 class MergeResult:
     """Result of merging duplicate documents."""
+
     primary_id: str
     merged_count: int
     references_updated: int
@@ -74,7 +77,7 @@ class SimHash:
         """
         # Normalize text
         text = text.lower()
-        text = re.sub(r'[^\w\s]', '', text)
+        text = re.sub(r"[^\w\s]", "", text)
 
         # Generate word shingles (3-grams)
         words = text.split()
@@ -85,11 +88,11 @@ class SimHash:
 
         # Bigrams
         for i in range(len(words) - 1):
-            shingles.append(f"{words[i]} {words[i+1]}")
+            shingles.append(f"{words[i]} {words[i + 1]}")
 
         # Trigrams
         for i in range(len(words) - 2):
-            shingles.append(f"{words[i]} {words[i+1]} {words[i+2]}")
+            shingles.append(f"{words[i]} {words[i + 1]} {words[i + 2]}")
 
         return shingles
 
@@ -104,8 +107,8 @@ class SimHash:
             64-bit hash integer
         """
         # Use MD5 and take first 8 bytes (64 bits)
-        h = hashlib.md5(token.encode('utf-8')).digest()
-        return int.from_bytes(h[:8], byteorder='big')
+        h = hashlib.md5(token.encode("utf-8")).digest()
+        return int.from_bytes(h[:8], byteorder="big")
 
     def compute(self, text: str) -> int:
         """
@@ -143,7 +146,7 @@ class SimHash:
         simhash = 0
         for i in range(self.hash_bits):
             if v[i] > 0:
-                simhash |= (1 << (self.hash_bits - 1 - i))
+                simhash |= 1 << (self.hash_bits - 1 - i)
 
         return simhash
 
@@ -228,8 +231,8 @@ class DeduplicationService:
             Dict with hash values
         """
         # Compute hashes
-        content_md5 = hashlib.md5(text.encode('utf-8')).hexdigest()
-        content_sha256 = hashlib.sha256(text.encode('utf-8')).hexdigest()
+        content_md5 = hashlib.md5(text.encode("utf-8")).hexdigest()
+        content_sha256 = hashlib.sha256(text.encode("utf-8")).hexdigest()
         simhash = self._simhash.compute(text)
 
         result = {
@@ -260,7 +263,7 @@ class DeduplicationService:
                         "sha256": content_sha256,
                         "simhash": simhash,
                         "text_len": len(text),
-                    }
+                    },
                 )
             except Exception as e:
                 logger.warning(f"Failed to store content hashes: {e}")
@@ -287,8 +290,7 @@ class DeduplicationService:
 
         # Get source document's hash
         source_row = await self._db.fetch_one(
-            "SELECT * FROM arkham_documents.content_hashes WHERE document_id = :doc_id",
-            {"doc_id": document_id}
+            "SELECT * FROM arkham_documents.content_hashes WHERE document_id = :doc_id", {"doc_id": document_id}
         )
 
         if not source_row:
@@ -349,8 +351,7 @@ class DeduplicationService:
 
         # Get source document's simhash
         source_row = await self._db.fetch_one(
-            "SELECT * FROM arkham_documents.content_hashes WHERE document_id = :doc_id",
-            {"doc_id": document_id}
+            "SELECT * FROM arkham_documents.content_hashes WHERE document_id = :doc_id", {"doc_id": document_id}
         )
 
         if not source_row or source_row["simhash"] is None:
@@ -387,13 +388,15 @@ class DeduplicationService:
             if similarity >= threshold:
                 match_type = "exact" if hamming == 0 else "near" if hamming <= 5 else "content_similar"
 
-                similar.append(DuplicateMatch(
-                    document_id=row["document_id"],
-                    title=row["title"] or "",
-                    similarity_score=round(similarity, 4),
-                    hamming_distance=hamming,
-                    match_type=match_type,
-                ))
+                similar.append(
+                    DuplicateMatch(
+                        document_id=row["document_id"],
+                        title=row["title"] or "",
+                        similarity_score=round(similarity, 4),
+                        hamming_distance=hamming,
+                        match_type=match_type,
+                    )
+                )
 
         # Sort by similarity descending
         similar.sort(key=lambda x: x.similarity_score, reverse=True)
@@ -430,7 +433,7 @@ class DeduplicationService:
                WHERE d.project_id = :project_id
                AND ch.simhash IS NOT NULL
                ORDER BY d.created_at""",
-            {"project_id": project_id}
+            {"project_id": project_id},
         )
 
         if len(rows) < 2:
@@ -485,13 +488,15 @@ class DeduplicationService:
         for primary_id, members in groups.items():
             if len(members) > 1:
                 duplicate_ids = [m for m in members if m != primary_id]
-                result.append(DuplicateGroup(
-                    group_id=str(uuid.uuid4())[:8],
-                    primary_document_id=primary_id,
-                    duplicate_ids=duplicate_ids,
-                    similarity_threshold=threshold,
-                    detection_method="simhash",
-                ))
+                result.append(
+                    DuplicateGroup(
+                        group_id=str(uuid.uuid4())[:8],
+                        primary_document_id=primary_id,
+                        duplicate_ids=duplicate_ids,
+                        similarity_threshold=threshold,
+                        detection_method="simhash",
+                    )
+                )
 
         return result
 
@@ -555,9 +560,9 @@ class DeduplicationService:
                         """UPDATE arkham_entity_mentions
                            SET document_id = :primary_id
                            WHERE document_id = :dup_id""",
-                        {"primary_id": primary_id, "dup_id": dup_id}
+                        {"primary_id": primary_id, "dup_id": dup_id},
                     )
-                    references_updated += getattr(result, 'rowcount', 0)
+                    references_updated += getattr(result, "rowcount", 0)
                 except Exception as e:
                     logger.warning(f"Failed to update entity mentions: {e}")
 
@@ -567,9 +572,9 @@ class DeduplicationService:
                         """UPDATE arkham_claims
                            SET document_id = :primary_id
                            WHERE document_id = :dup_id""",
-                        {"primary_id": primary_id, "dup_id": dup_id}
+                        {"primary_id": primary_id, "dup_id": dup_id},
                     )
-                    references_updated += getattr(result, 'rowcount', 0)
+                    references_updated += getattr(result, "rowcount", 0)
                 except Exception as e:
                     logger.warning(f"Failed to update claims: {e}")
 
@@ -590,7 +595,7 @@ class DeduplicationService:
                                ),
                                updated_at = CURRENT_TIMESTAMP
                            WHERE id = :dup_id""",
-                        {"primary_json": json.dumps(primary_id), "dup_id": dup_id}
+                        {"primary_json": json.dumps(primary_id), "dup_id": dup_id},
                     )
                     documents_cleaned += 1
 
@@ -606,7 +611,7 @@ class DeduplicationService:
                                ),
                                updated_at = CURRENT_TIMESTAMP
                            WHERE id = :dup_id""",
-                        {"reason_json": json.dumps(f"duplicate_of_{primary_id}"), "dup_id": dup_id}
+                        {"reason_json": json.dumps(f"duplicate_of_{primary_id}"), "dup_id": dup_id},
                     )
                     documents_cleaned += 1
 
@@ -614,17 +619,12 @@ class DeduplicationService:
                     # DANGER: Permanent deletion - use with caution
                     # Delete in order: chunks -> embeddings -> hashes -> document
                     await self._db.execute(
-                        "DELETE FROM arkham_frame.chunks WHERE document_id = :dup_id",
-                        {"dup_id": dup_id}
+                        "DELETE FROM arkham_frame.chunks WHERE document_id = :dup_id", {"dup_id": dup_id}
                     )
                     await self._db.execute(
-                        "DELETE FROM arkham_documents.content_hashes WHERE document_id = :dup_id",
-                        {"dup_id": dup_id}
+                        "DELETE FROM arkham_documents.content_hashes WHERE document_id = :dup_id", {"dup_id": dup_id}
                     )
-                    await self._db.execute(
-                        "DELETE FROM arkham_frame.documents WHERE id = :dup_id",
-                        {"dup_id": dup_id}
-                    )
+                    await self._db.execute("DELETE FROM arkham_frame.documents WHERE id = :dup_id", {"dup_id": dup_id})
                     documents_cleaned += 1
 
                 elif cleanup_action == "keep":
@@ -648,7 +648,7 @@ class DeduplicationService:
                 "cleanup": cleanup_action,
                 "refs": references_updated,
                 "cleaned": documents_cleaned,
-            }
+            },
         )
 
         return MergeResult(

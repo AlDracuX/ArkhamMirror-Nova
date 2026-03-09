@@ -11,7 +11,13 @@ export type ContradictionStatus = 'detected' | 'confirmed' | 'dismissed' | 'inve
 export type Severity = 'high' | 'medium' | 'low';
 
 // Contradiction type
-export type ContradictionType = 'direct' | 'temporal' | 'numeric' | 'entity' | 'logical' | 'contextual';
+export type ContradictionType =
+  | 'direct'
+  | 'temporal'
+  | 'numeric'
+  | 'entity'
+  | 'logical'
+  | 'contextual';
 
 // Contradiction details
 export interface Contradiction {

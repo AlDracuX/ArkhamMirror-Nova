@@ -124,9 +124,7 @@ export function ChunksPage() {
                         {chunk.token_count} tokens
                       </span>
                     </div>
-                    <div className="chunk-preview">
-                      {chunk.text}
-                    </div>
+                    <div className="chunk-preview">{chunk.text}</div>
                   </div>
                   <Icon
                     name={expandedChunk === chunk.id ? 'ChevronUp' : 'ChevronDown'}
@@ -137,9 +135,7 @@ export function ChunksPage() {
 
                 {expandedChunk === chunk.id && (
                   <div className="chunk-details">
-                    <div className="chunk-full-text">
-                      {chunk.full_text}
-                    </div>
+                    <div className="chunk-full-text">{chunk.full_text}</div>
                     <div className="chunk-actions">
                       <button
                         className="button-secondary"
@@ -149,7 +145,9 @@ export function ChunksPage() {
                         View Document
                       </button>
                       <div className="chunk-stats">
-                        <span>Characters: {chunk.start_char} - {chunk.end_char}</span>
+                        <span>
+                          Characters: {chunk.start_char} - {chunk.end_char}
+                        </span>
                         {chunk.vector_id && (
                           <span className="has-vector">
                             <Icon name="Box" size={12} />

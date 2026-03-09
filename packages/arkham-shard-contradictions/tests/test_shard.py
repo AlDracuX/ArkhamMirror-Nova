@@ -5,11 +5,11 @@ Tests for the ContradictionsShard class including initialization,
 lifecycle, and public API.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
-from arkham_shard_contradictions.shard import ContradictionsShard
+import pytest
 from arkham_shard_contradictions.models import ContradictionStatus
+from arkham_shard_contradictions.shard import ContradictionsShard
 
 
 class TestShardMetadata:
@@ -119,9 +119,7 @@ class TestShardInitialization:
         assert shard._llm_service == mock_llm_service
 
     @pytest.mark.asyncio
-    async def test_initialize_gets_embedding_service(
-        self, mock_frame, mock_embedding_service
-    ):
+    async def test_initialize_gets_embedding_service(self, mock_frame, mock_embedding_service):
         """Test initialization gets embedding service."""
         mock_frame.get_service.side_effect = lambda name: {
             "embeddings": mock_embedding_service,
@@ -296,9 +294,7 @@ class TestPublicAnalyzePairAPI:
     @pytest.mark.asyncio
     async def test_analyze_pair_with_threshold(self, initialized_shard):
         """Test analyze_pair with custom threshold."""
-        result = await initialized_shard.analyze_pair(
-            "doc-1", "doc-2", threshold=0.5
-        )
+        result = await initialized_shard.analyze_pair("doc-1", "doc-2", threshold=0.5)
         assert result == []
 
 
@@ -339,14 +335,16 @@ class TestPublicGetStatisticsAPI:
         shard._frame = MagicMock()
         shard.detector = MagicMock()
         shard.storage = MagicMock()
-        shard.storage.get_statistics = MagicMock(return_value={
-            "total_contradictions": 50,
-            "by_status": {"detected": 30, "confirmed": 20},
-            "by_severity": {"high": 10, "medium": 40},
-            "by_type": {"direct": 25, "temporal": 25},
-            "chains_detected": 3,
-            "recent_count": 5,
-        })
+        shard.storage.get_statistics = MagicMock(
+            return_value={
+                "total_contradictions": 50,
+                "by_status": {"detected": 30, "confirmed": 20},
+                "by_severity": {"high": 10, "medium": 40},
+                "by_type": {"direct": 25, "temporal": 25},
+                "chains_detected": 3,
+                "recent_count": 5,
+            }
+        )
         return shard
 
     def test_get_statistics_requires_init(self):

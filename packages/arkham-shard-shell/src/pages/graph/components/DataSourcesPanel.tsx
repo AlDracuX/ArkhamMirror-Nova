@@ -210,7 +210,7 @@ export function DataSourcesPanel({
   const toggleDocument = (docId: string) => {
     if (allDocsSelected) {
       // Switching from "all" to specific selection - select all except this one
-      const allIds = documents.map(d => d.id).filter(id => id !== docId);
+      const allIds = documents.map((d) => d.id).filter((id) => id !== docId);
       onChange({ selectedDocumentIds: allIds });
     } else if (noneSelected) {
       // Switching from "none" to selecting just this one
@@ -218,7 +218,7 @@ export function DataSourcesPanel({
     } else {
       // Toggle individual document
       if (selectedDocIds!.includes(docId)) {
-        const newIds = selectedDocIds!.filter(id => id !== docId);
+        const newIds = selectedDocIds!.filter((id) => id !== docId);
         onChange({ selectedDocumentIds: newIds });
       } else {
         onChange({ selectedDocumentIds: [...selectedDocIds!, docId] });
@@ -239,16 +239,20 @@ export function DataSourcesPanel({
   };
 
   // Count enabled sources
-  const enabledCrossShardCount = SOURCE_CONFIGS.filter(c => settings[c.key]).length;
-  const selectedDocCount = allDocsSelected ? documents.length : (noneSelected ? 0 : selectedDocIds!.length);
+  const enabledCrossShardCount = SOURCE_CONFIGS.filter((c) => settings[c.key]).length;
+  const selectedDocCount = allDocsSelected
+    ? documents.length
+    : noneSelected
+      ? 0
+      : selectedDocIds!.length;
   const totalEntityCount = documents
-    .filter(d => isDocSelected(d.id))
+    .filter((d) => isDocSelected(d.id))
     .reduce((sum, d) => sum + (d.entity_count || 0), 0);
 
   // Group cross-shard by category
-  const nodesSources = SOURCE_CONFIGS.filter(c => c.category === 'nodes');
-  const edgesSources = SOURCE_CONFIGS.filter(c => c.category === 'edges');
-  const weightsSources = SOURCE_CONFIGS.filter(c => c.category === 'weights');
+  const nodesSources = SOURCE_CONFIGS.filter((c) => c.category === 'nodes');
+  const edgesSources = SOURCE_CONFIGS.filter((c) => c.category === 'edges');
+  const weightsSources = SOURCE_CONFIGS.filter((c) => c.category === 'weights');
 
   const renderSource = (config: SourceConfig) => {
     const status = statuses[config.key];
@@ -266,7 +270,7 @@ export function DataSourcesPanel({
             type="checkbox"
             checked={isEnabled}
             disabled={!isAvailable}
-            onChange={e => onChange({ [config.key]: e.target.checked })}
+            onChange={(e) => onChange({ [config.key]: e.target.checked })}
           />
         </div>
         <div className="source-icon">
@@ -309,25 +313,27 @@ export function DataSourcesPanel({
             disabled={isLoading || (selectedDocCount === 0 && enabledCrossShardCount === 0)}
             title="Rebuild graph with selected sources"
           >
-            <Icon name={isLoading ? 'Loader2' : 'RefreshCw'} size={14} className={isLoading ? 'spin' : ''} />
+            <Icon
+              name={isLoading ? 'Loader2' : 'RefreshCw'}
+              size={14}
+              className={isLoading ? 'spin' : ''}
+            />
           </button>
         </div>
       </div>
 
       {/* Document Selector */}
       <div className="document-selector">
-        <div
-          className="document-selector-header"
-          onClick={() => setDocsExpanded(!docsExpanded)}
-        >
+        <div className="document-selector-header" onClick={() => setDocsExpanded(!docsExpanded)}>
           <Icon name="FileText" size={18} />
           <div className="header-text">
             <span className="header-title">Document Sources</span>
             <span className="header-subtitle">
-              {loadingDocs ? 'Loading...' : allDocsSelected
-                ? `All ${documents.length} documents (~${totalEntityCount} entities)`
-                : `${selectedDocCount} of ${documents.length} selected (~${totalEntityCount} entities)`
-              }
+              {loadingDocs
+                ? 'Loading...'
+                : allDocsSelected
+                  ? `All ${documents.length} documents (~${totalEntityCount} entities)`
+                  : `${selectedDocCount} of ${documents.length} selected (~${totalEntityCount} entities)`}
             </span>
           </div>
           <Icon
@@ -343,7 +349,10 @@ export function DataSourcesPanel({
               <button onClick={selectAllDocs} disabled={allDocsSelected}>
                 Select All
               </button>
-              <button onClick={selectNoneDocs} disabled={selectedDocCount === 0 && !settings.documentEntities}>
+              <button
+                onClick={selectNoneDocs}
+                disabled={selectedDocCount === 0 && !settings.documentEntities}
+              >
                 Select None
               </button>
             </div>
@@ -358,7 +367,7 @@ export function DataSourcesPanel({
                   No documents found. Ingest documents first.
                 </div>
               ) : (
-                documents.map(doc => (
+                documents.map((doc) => (
                   <label
                     key={doc.id}
                     className={`document-item ${isDocSelected(doc.id) ? 'selected' : ''}`}
@@ -391,10 +400,7 @@ export function DataSourcesPanel({
 
       {/* Co-occurrence Toggle */}
       <div className={`source-category ${edgesExpanded ? 'expanded' : 'collapsed'}`}>
-        <div
-          className="category-header clickable"
-          onClick={() => setEdgesExpanded(!edgesExpanded)}
-        >
+        <div className="category-header clickable" onClick={() => setEdgesExpanded(!edgesExpanded)}>
           <Icon name="Link" size={14} />
           <span>Relationship Edges</span>
           <Icon
@@ -409,7 +415,7 @@ export function DataSourcesPanel({
               <input
                 type="checkbox"
                 checked={settings.entityCooccurrences}
-                onChange={e => onChange({ entityCooccurrences: e.target.checked })}
+                onChange={(e) => onChange({ entityCooccurrences: e.target.checked })}
               />
             </div>
             <div className="source-icon">
@@ -427,10 +433,7 @@ export function DataSourcesPanel({
 
       {/* Node Sources */}
       <div className={`source-category ${nodesExpanded ? 'expanded' : 'collapsed'}`}>
-        <div
-          className="category-header clickable"
-          onClick={() => setNodesExpanded(!nodesExpanded)}
-        >
+        <div className="category-header clickable" onClick={() => setNodesExpanded(!nodesExpanded)}>
           <Icon name="Circle" size={14} />
           <span>Additional Nodes</span>
           <span className="category-hint">Cross-shard entities</span>
@@ -440,11 +443,7 @@ export function DataSourcesPanel({
             className={`category-toggle ${nodesExpanded ? 'expanded' : ''}`}
           />
         </div>
-        {nodesExpanded && (
-          <div className="source-list">
-            {nodesSources.map(renderSource)}
-          </div>
-        )}
+        {nodesExpanded && <div className="source-list">{nodesSources.map(renderSource)}</div>}
       </div>
 
       {/* Edge Sources */}
@@ -463,9 +462,7 @@ export function DataSourcesPanel({
           />
         </div>
         {additionalEdgesExpanded && (
-          <div className="source-list">
-            {edgesSources.map(renderSource)}
-          </div>
+          <div className="source-list">{edgesSources.map(renderSource)}</div>
         )}
       </div>
 
@@ -484,19 +481,15 @@ export function DataSourcesPanel({
             className={`category-toggle ${weightsExpanded ? 'expanded' : ''}`}
           />
         </div>
-        {weightsExpanded && (
-          <div className="source-list">
-            {weightsSources.map(renderSource)}
-          </div>
-        )}
+        {weightsExpanded && <div className="source-list">{weightsSources.map(renderSource)}</div>}
       </div>
 
       {/* Info */}
       <div className="data-sources-info">
         <Icon name="Info" size={14} />
         <span>
-          Select documents to include entities from. Use "Additional" sources to enrich with cross-shard data.
-          Click refresh to rebuild the graph.
+          Select documents to include entities from. Use "Additional" sources to enrich with
+          cross-shard data. Click refresh to rebuild the graph.
         </span>
       </div>
     </div>

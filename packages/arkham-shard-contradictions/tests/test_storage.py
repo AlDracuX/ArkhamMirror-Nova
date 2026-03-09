@@ -4,18 +4,18 @@ Contradictions Shard - Storage Tests
 Tests for the ContradictionStore class.
 """
 
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
-from arkham_shard_contradictions.storage import ContradictionStore
+import pytest
 from arkham_shard_contradictions.models import (
     Contradiction,
     ContradictionChain,
     ContradictionStatus,
-    Severity,
     ContradictionType,
+    Severity,
 )
+from arkham_shard_contradictions.storage import ContradictionStore
 
 
 class TestContradictionStoreCRUD:
@@ -131,18 +131,14 @@ class TestContradictionListing:
 
     def test_list_all_filter_by_status(self, populated_store):
         """Test filtering by status."""
-        contradictions, total = populated_store.list_all(
-            status=ContradictionStatus.CONFIRMED
-        )
+        contradictions, total = populated_store.list_all(status=ContradictionStatus.CONFIRMED)
 
         assert total == 5  # 5 confirmed (odd indices)
         assert all(c.status == ContradictionStatus.CONFIRMED for c in contradictions)
 
     def test_list_all_filter_by_severity(self, populated_store):
         """Test filtering by severity."""
-        contradictions, total = populated_store.list_all(
-            severity=Severity.HIGH
-        )
+        contradictions, total = populated_store.list_all(severity=Severity.HIGH)
 
         assert total == 3  # First 3 have HIGH severity
         assert all(c.severity == Severity.HIGH for c in contradictions)
@@ -158,19 +154,34 @@ class TestDocumentQueries:
         store = ContradictionStore(db_service=mock_db)
 
         # Contradictions involving doc-1
-        store.create(Contradiction(
-            id="c-1", doc_a_id="doc-1", doc_b_id="doc-2",
-            claim_a="A", claim_b="B",
-        ))
-        store.create(Contradiction(
-            id="c-2", doc_a_id="doc-1", doc_b_id="doc-3",
-            claim_a="A", claim_b="C",
-        ))
+        store.create(
+            Contradiction(
+                id="c-1",
+                doc_a_id="doc-1",
+                doc_b_id="doc-2",
+                claim_a="A",
+                claim_b="B",
+            )
+        )
+        store.create(
+            Contradiction(
+                id="c-2",
+                doc_a_id="doc-1",
+                doc_b_id="doc-3",
+                claim_a="A",
+                claim_b="C",
+            )
+        )
         # Contradiction not involving doc-1
-        store.create(Contradiction(
-            id="c-3", doc_a_id="doc-4", doc_b_id="doc-5",
-            claim_a="D", claim_b="E",
-        ))
+        store.create(
+            Contradiction(
+                id="c-3",
+                doc_a_id="doc-4",
+                doc_b_id="doc-5",
+                claim_a="D",
+                claim_b="E",
+            )
+        )
 
         return store
 
@@ -179,10 +190,7 @@ class TestDocumentQueries:
         contradictions = store_with_document_data.get_by_document("doc-1")
 
         assert len(contradictions) == 2
-        assert all(
-            c.doc_a_id == "doc-1" or c.doc_b_id == "doc-1"
-            for c in contradictions
-        )
+        assert all(c.doc_a_id == "doc-1" or c.doc_b_id == "doc-1" for c in contradictions)
 
     def test_get_by_document_no_matches(self, store_with_document_data):
         """Test getting contradictions for document with none."""
@@ -191,9 +199,7 @@ class TestDocumentQueries:
 
     def test_get_by_status(self, store_with_document_data):
         """Test getting contradictions by status."""
-        contradictions = store_with_document_data.get_by_status(
-            ContradictionStatus.DETECTED
-        )
+        contradictions = store_with_document_data.get_by_status(ContradictionStatus.DETECTED)
 
         assert len(contradictions) == 3  # All are DETECTED by default
 
@@ -213,24 +219,32 @@ class TestSearch:
         mock_db = MagicMock()
         store = ContradictionStore(db_service=mock_db)
 
-        store.create(Contradiction(
-            id="c-1", doc_a_id="doc-1", doc_b_id="doc-2",
-            claim_a="The revenue was $1 million",
-            claim_b="The revenue was $2 million",
-            explanation="Numeric discrepancy in revenue",
-            status=ContradictionStatus.CONFIRMED,
-            severity=Severity.HIGH,
-            confidence_score=0.95,
-        ))
-        store.create(Contradiction(
-            id="c-2", doc_a_id="doc-3", doc_b_id="doc-4",
-            claim_a="The meeting was on Monday",
-            claim_b="The meeting was on Tuesday",
-            explanation="Date contradiction",
-            status=ContradictionStatus.DETECTED,
-            severity=Severity.MEDIUM,
-            confidence_score=0.7,
-        ))
+        store.create(
+            Contradiction(
+                id="c-1",
+                doc_a_id="doc-1",
+                doc_b_id="doc-2",
+                claim_a="The revenue was $1 million",
+                claim_b="The revenue was $2 million",
+                explanation="Numeric discrepancy in revenue",
+                status=ContradictionStatus.CONFIRMED,
+                severity=Severity.HIGH,
+                confidence_score=0.95,
+            )
+        )
+        store.create(
+            Contradiction(
+                id="c-2",
+                doc_a_id="doc-3",
+                doc_b_id="doc-4",
+                claim_a="The meeting was on Monday",
+                claim_b="The meeting was on Tuesday",
+                explanation="Date contradiction",
+                status=ContradictionStatus.DETECTED,
+                severity=Severity.MEDIUM,
+                confidence_score=0.7,
+            )
+        )
 
         return store
 
@@ -283,8 +297,12 @@ class TestStatistics:
         store = ContradictionStore(db_service=mock_db)
 
         # Add varied contradictions for statistics
-        statuses = [ContradictionStatus.DETECTED, ContradictionStatus.CONFIRMED,
-                    ContradictionStatus.DISMISSED, ContradictionStatus.INVESTIGATING]
+        statuses = [
+            ContradictionStatus.DETECTED,
+            ContradictionStatus.CONFIRMED,
+            ContradictionStatus.DISMISSED,
+            ContradictionStatus.INVESTIGATING,
+        ]
         severities = [Severity.HIGH, Severity.MEDIUM, Severity.LOW]
         types = [ContradictionType.DIRECT, ContradictionType.TEMPORAL, ContradictionType.NUMERIC]
 
@@ -342,14 +360,24 @@ class TestChainOperations:
         store = ContradictionStore(db_service=mock_db)
 
         # Create contradictions
-        store.create(Contradiction(
-            id="c-1", doc_a_id="doc-1", doc_b_id="doc-2",
-            claim_a="A", claim_b="B",
-        ))
-        store.create(Contradiction(
-            id="c-2", doc_a_id="doc-2", doc_b_id="doc-3",
-            claim_a="B", claim_b="C",
-        ))
+        store.create(
+            Contradiction(
+                id="c-1",
+                doc_a_id="doc-1",
+                doc_b_id="doc-2",
+                claim_a="A",
+                claim_b="B",
+            )
+        )
+        store.create(
+            Contradiction(
+                id="c-2",
+                doc_a_id="doc-2",
+                doc_b_id="doc-3",
+                claim_a="B",
+                claim_b="C",
+            )
+        )
 
         return store
 
@@ -436,11 +464,16 @@ class TestAnalystWorkflow:
         mock_db = MagicMock()
         store = ContradictionStore(db_service=mock_db)
 
-        store.create(Contradiction(
-            id="c-1", doc_a_id="doc-1", doc_b_id="doc-2",
-            claim_a="Claim A", claim_b="Claim B",
-            status=ContradictionStatus.DETECTED,
-        ))
+        store.create(
+            Contradiction(
+                id="c-1",
+                doc_a_id="doc-1",
+                doc_b_id="doc-2",
+                claim_a="Claim A",
+                claim_b="Claim B",
+                status=ContradictionStatus.DETECTED,
+            )
+        )
 
         return store
 

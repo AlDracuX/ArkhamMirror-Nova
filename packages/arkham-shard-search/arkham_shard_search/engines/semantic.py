@@ -20,7 +20,7 @@ async def _fetch_chunk_text(db, chunk_id: str) -> dict | None:
                FROM arkham_frame.chunks c
                LEFT JOIN arkham_frame.documents d ON c.document_id = d.id
                WHERE c.id = $1""",
-            chunk_id
+            chunk_id,
         )
         if row:
             return dict(row)
@@ -37,7 +37,7 @@ async def _fetch_document_info(db, doc_id: str) -> dict | None:
         row = await db.fetchrow(
             """SELECT id, filename, mime_type, file_size, created_at
                FROM arkham_frame.documents WHERE id = $1""",
-            doc_id
+            doc_id,
         )
         if row:
             return dict(row)
@@ -79,7 +79,7 @@ class SemanticSearchEngine:
 
     def _get_db_pool(self):
         """Get database pool dynamically from vectors service."""
-        if self.vectors and hasattr(self.vectors, '_pool'):
+        if self.vectors and hasattr(self.vectors, "_pool"):
             return self.vectors._pool
         return None
 
@@ -138,9 +138,9 @@ class SemanticSearchEngine:
 
         try:
             for result in results:
-                payload = result.payload if hasattr(result, 'payload') else {}
+                payload = result.payload if hasattr(result, "payload") else {}
                 doc_id = payload.get("document_id", payload.get("doc_id", ""))
-                chunk_id = payload.get("chunk_id") or (result.id if hasattr(result, 'id') else None)
+                chunk_id = payload.get("chunk_id") or (result.id if hasattr(result, "id") else None)
 
                 # Default values from payload
                 title = payload.get("title", payload.get("filename", ""))
@@ -177,7 +177,7 @@ class SemanticSearchEngine:
                     chunk_id=chunk_id,
                     title=title,
                     excerpt=excerpt[:500] if excerpt else "",
-                    score=result.score if hasattr(result, 'score') else 0.0,
+                    score=result.score if hasattr(result, "score") else 0.0,
                     file_type=file_type,
                     created_at=created_at,
                     page_number=page_number,
@@ -235,17 +235,19 @@ class SemanticSearchEngine:
             results = []
 
         # Filter out the source document
-        results = [r for r in results if (r.payload.get("document_id") if hasattr(r, 'payload') else r.get("doc_id")) != doc_id][:limit]
+        results = [
+            r for r in results if (r.payload.get("document_id") if hasattr(r, "payload") else r.get("doc_id")) != doc_id
+        ][:limit]
 
         search_items = []
         for result in results:
-            payload = result.payload if hasattr(result, 'payload') else {}
+            payload = result.payload if hasattr(result, "payload") else {}
             item = SearchResultItem(
                 doc_id=payload.get("document_id", payload.get("doc_id", "")),
                 chunk_id=None,
                 title=payload.get("title", payload.get("filename", "")),
                 excerpt=payload.get("excerpt", payload.get("text", "")[:300] if payload.get("text") else ""),
-                score=result.score if hasattr(result, 'score') else 0.0,
+                score=result.score if hasattr(result, "score") else 0.0,
                 file_type=payload.get("file_type"),
                 created_at=payload.get("created_at"),
                 highlights=[],
@@ -266,7 +268,7 @@ class SemanticSearchEngine:
             Embedding vector or None if failed
         """
         # Try vectors service embed_text method first (primary method)
-        if self.vectors and hasattr(self.vectors, 'embed_text'):
+        if self.vectors and hasattr(self.vectors, "embed_text"):
             try:
                 result = await self.vectors.embed_text(query)
                 if result:

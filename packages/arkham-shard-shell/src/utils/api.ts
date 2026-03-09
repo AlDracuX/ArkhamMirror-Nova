@@ -10,10 +10,7 @@ const TOKEN_KEY = 'arkham_token';
 /**
  * Fetch wrapper that automatically includes auth token and handles 401 responses.
  */
-export async function apiFetch(
-  url: string,
-  options: RequestInit = {}
-): Promise<Response> {
+export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = localStorage.getItem(TOKEN_KEY);
 
   const headers = new Headers(options.headers);
@@ -34,8 +31,10 @@ export async function apiFetch(
   if (response.status === 401) {
     localStorage.removeItem(TOKEN_KEY);
     // Only redirect if not already on auth pages
-    if (!window.location.pathname.startsWith('/login') &&
-        !window.location.pathname.startsWith('/setup')) {
+    if (
+      !window.location.pathname.startsWith('/login') &&
+      !window.location.pathname.startsWith('/setup')
+    ) {
       window.location.href = '/login';
     }
   }
@@ -117,10 +116,7 @@ export async function apiDelete<T = void>(url: string): Promise<T> {
 /**
  * Upload file(s) with multipart form data.
  */
-export async function apiUpload<T>(
-  url: string,
-  formData: FormData
-): Promise<T> {
+export async function apiUpload<T>(url: string, formData: FormData): Promise<T> {
   const res = await apiFetch(url, {
     method: 'POST',
     body: formData,

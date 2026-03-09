@@ -5,10 +5,10 @@ This stage dispatches embedding jobs to the gpu-embed worker pool.
 Workers are registered by the arkham-shard-embed package.
 """
 
-from typing import Dict, Any, List
-from datetime import datetime
 import logging
 import uuid
+from datetime import datetime
+from typing import Any, Dict, List
 
 from .base import PipelineStage, StageResult, StageStatus
 

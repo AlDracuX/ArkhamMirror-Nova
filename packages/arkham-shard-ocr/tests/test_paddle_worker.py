@@ -1,11 +1,11 @@
 """Tests for PaddleOCR worker."""
 
-import pytest
-import pytest_asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
 import base64
 from io import BytesIO
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+import pytest_asyncio
 from arkham_shard_ocr.workers.paddle_worker import PaddleWorker
 
 
@@ -124,6 +124,7 @@ class TestPaddleWorkerEngine:
         """Test error when PaddleOCR not installed."""
         # Temporarily remove paddleocr from sys.modules
         import sys
+
         paddleocr_backup = sys.modules.get("paddleocr")
         if "paddleocr" in sys.modules:
             del sys.modules["paddleocr"]
@@ -168,10 +169,11 @@ class TestPaddleWorkerProcessJob:
             ]
         ]
 
-        with patch.object(PaddleWorker, "_get_engine", return_value=mock_engine), \
-             patch("os.path.exists", return_value=True), \
-             patch("PIL.Image.open") as mock_image:
-
+        with (
+            patch.object(PaddleWorker, "_get_engine", return_value=mock_engine),
+            patch("os.path.exists", return_value=True),
+            patch("PIL.Image.open") as mock_image,
+        ):
             mock_img = MagicMock()
             mock_image.return_value = mock_img
 
@@ -199,8 +201,10 @@ class TestPaddleWorkerProcessJob:
         mock_engine = MagicMock()
         mock_paddleocr_module.PaddleOCR = MagicMock(return_value=mock_engine)
 
-        with patch.dict("sys.modules", {"paddleocr": mock_paddleocr_module}), \
-             patch("os.path.exists", return_value=False):
+        with (
+            patch.dict("sys.modules", {"paddleocr": mock_paddleocr_module}),
+            patch("os.path.exists", return_value=False),
+        ):
             payload = {"image_path": "/missing/image.png"}
 
             with pytest.raises(FileNotFoundError):
@@ -225,9 +229,7 @@ class TestPaddleWorkerProcessJob:
             ]
         ]
 
-        with patch.object(PaddleWorker, "_get_engine", return_value=mock_engine), \
-             patch("PIL.Image.open") as mock_image:
-
+        with patch.object(PaddleWorker, "_get_engine", return_value=mock_engine), patch("PIL.Image.open") as mock_image:
             mock_img = MagicMock()
             mock_image.return_value = mock_img
 
@@ -281,10 +283,11 @@ class TestPaddleWorkerProcessJob:
             ]
         ]
 
-        with patch.object(PaddleWorker, "_get_engine", return_value=mock_engine), \
-             patch("os.path.exists", return_value=True), \
-             patch("PIL.Image.open"):
-
+        with (
+            patch.object(PaddleWorker, "_get_engine", return_value=mock_engine),
+            patch("os.path.exists", return_value=True),
+            patch("PIL.Image.open"),
+        ):
             payload = {"image_path": "/test.png"}
 
             result = await worker.process_job("job-123", payload)
@@ -302,10 +305,11 @@ class TestPaddleWorkerProcessJob:
         mock_engine = MagicMock()
         mock_engine.ocr.return_value = [[]]  # No text detected
 
-        with patch.object(PaddleWorker, "_get_engine", return_value=mock_engine), \
-             patch("os.path.exists", return_value=True), \
-             patch("PIL.Image.open"):
-
+        with (
+            patch.object(PaddleWorker, "_get_engine", return_value=mock_engine),
+            patch("os.path.exists", return_value=True),
+            patch("PIL.Image.open"),
+        ):
             payload = {"image_path": "/blank.png"}
 
             result = await worker.process_job("job-123", payload)
@@ -322,10 +326,11 @@ class TestPaddleWorkerProcessJob:
         mock_engine = MagicMock()
         mock_engine.ocr.return_value = [[]]
 
-        with patch.object(PaddleWorker, "_get_engine", return_value=mock_engine), \
-             patch("os.path.exists", return_value=True), \
-             patch("PIL.Image.open"):
-
+        with (
+            patch.object(PaddleWorker, "_get_engine", return_value=mock_engine),
+            patch("os.path.exists", return_value=True),
+            patch("PIL.Image.open"),
+        ):
             payload = {
                 "image_path": "/test.png",
                 "det_only": True,
@@ -347,10 +352,11 @@ class TestPaddleWorkerProcessJob:
         mock_engine = MagicMock()
         mock_engine.ocr.return_value = [[]]
 
-        with patch.object(PaddleWorker, "_get_engine", return_value=mock_engine) as mock_get_engine, \
-             patch("os.path.exists", return_value=True), \
-             patch("PIL.Image.open"):
-
+        with (
+            patch.object(PaddleWorker, "_get_engine", return_value=mock_engine) as mock_get_engine,
+            patch("os.path.exists", return_value=True),
+            patch("PIL.Image.open"),
+        ):
             payload = {
                 "image_path": "/test.png",
                 "lang": "zh",
@@ -392,10 +398,11 @@ class TestPaddleWorkerBatchMode:
             ]
         ]
 
-        with patch.object(PaddleWorker, "_get_engine", return_value=mock_engine), \
-             patch("os.path.exists", return_value=True), \
-             patch("PIL.Image.open"):
-
+        with (
+            patch.object(PaddleWorker, "_get_engine", return_value=mock_engine),
+            patch("os.path.exists", return_value=True),
+            patch("PIL.Image.open"),
+        ):
             payload = {
                 "batch": True,
                 "images": [
@@ -445,10 +452,11 @@ class TestPaddleWorkerBatchMode:
             ]
         ]
 
-        with patch.object(PaddleWorker, "_get_engine", return_value=mock_engine), \
-             patch("os.path.exists", side_effect=[True, False, True]), \
-             patch("PIL.Image.open"):
-
+        with (
+            patch.object(PaddleWorker, "_get_engine", return_value=mock_engine),
+            patch("os.path.exists", side_effect=[True, False, True]),
+            patch("PIL.Image.open"),
+        ):
             payload = {
                 "batch": True,
                 "images": [
@@ -478,10 +486,11 @@ class TestPaddleWorkerBatchMode:
         mock_engine = MagicMock()
         mock_engine.ocr.return_value = [[]]
 
-        with patch.object(PaddleWorker, "_get_engine", return_value=mock_engine), \
-             patch("os.path.exists", return_value=True), \
-             patch("PIL.Image.open"):
-
+        with (
+            patch.object(PaddleWorker, "_get_engine", return_value=mock_engine),
+            patch("os.path.exists", return_value=True),
+            patch("PIL.Image.open"),
+        ):
             payload = {
                 "batch": True,
                 "images": [
@@ -503,4 +512,5 @@ class TestPaddleWorkerHelpers:
     def test_run_paddle_worker_function_exists(self):
         """Test run_paddle_worker function exists."""
         from arkham_shard_ocr.workers.paddle_worker import run_paddle_worker
+
         assert callable(run_paddle_worker)

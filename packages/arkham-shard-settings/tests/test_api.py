@@ -1,11 +1,11 @@
 """Tests for settings shard API endpoints."""
 
-import pytest
-from fastapi.testclient import TestClient
-from fastapi import FastAPI
 from unittest.mock import MagicMock
 
-from arkham_shard_settings.api import router, init_api
+import pytest
+from arkham_shard_settings.api import init_api, router
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture

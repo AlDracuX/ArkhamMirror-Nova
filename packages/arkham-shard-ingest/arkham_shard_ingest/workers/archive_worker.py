@@ -7,14 +7,14 @@ file archive operations.
 """
 
 import asyncio
-import gzip
 import bz2
+import gzip
 import logging
 import os
 import tarfile
 import zipfile
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from arkham_frame.workers.base import BaseWorker
 
@@ -43,7 +43,7 @@ class ArchiveWorker(BaseWorker):
     poll_interval = 1.0
     heartbeat_interval = 10.0
     idle_timeout = 300.0  # 5 minutes
-    job_timeout = 300.0   # 5 minutes for large archives
+    job_timeout = 300.0  # 5 minutes for large archives
     max_retries = 2
 
     # Security limits
@@ -78,6 +78,7 @@ class ArchiveWorker(BaseWorker):
 
         try:
             import py7zr
+
             self._has_py7zr = True
             logger.info("py7zr available - 7z format supported")
         except ImportError:
@@ -85,6 +86,7 @@ class ArchiveWorker(BaseWorker):
 
         try:
             import rarfile
+
             self._has_rarfile = True
             logger.info("rarfile available - RAR format supported")
         except ImportError:
@@ -134,8 +136,7 @@ class ArchiveWorker(BaseWorker):
             return await self._test_archive(payload, job_id)
         else:
             raise ValueError(
-                f"Unknown operation: {operation}. "
-                "Supported: extract, extract_file, list, info, create, test"
+                f"Unknown operation: {operation}. Supported: extract, extract_file, list, info, create, test"
             )
 
     def _detect_format(self, path: Path) -> str:
@@ -196,10 +197,10 @@ class ArchiveWorker(BaseWorker):
                 elif magic.startswith(b"BZ"):
                     return "bz2"
                 # 7z magic: 7z\xBC\xAF\x27\x1C
-                elif magic.startswith(b"7z\xBC\xAF\x27\x1C"):
+                elif magic.startswith(b"7z\xbc\xaf\x27\x1c"):
                     return "7z"
                 # RAR magic: Rar!\x1A\x07
-                elif magic.startswith(b"Rar!\x1A\x07"):
+                elif magic.startswith(b"Rar!\x1a\x07"):
                     return "rar"
                 # TAR (ustar format): check at offset 257
                 f.seek(257)
@@ -238,9 +239,7 @@ class ArchiveWorker(BaseWorker):
         # Check for directory traversal
         for part in parts:
             if part == "..":
-                raise ValueError(
-                    f"Path traversal detected in archive member: {archive_path}"
-                )
+                raise ValueError(f"Path traversal detected in archive member: {archive_path}")
 
         # Build final path
         final_path = base_dir / clean_path
@@ -249,9 +248,7 @@ class ArchiveWorker(BaseWorker):
         try:
             final_path.resolve().relative_to(base_dir.resolve())
         except ValueError:
-            raise ValueError(
-                f"Archive member escapes output directory: {archive_path}"
-            )
+            raise ValueError(f"Archive member escapes output directory: {archive_path}")
 
         return final_path
 
@@ -291,9 +288,7 @@ class ArchiveWorker(BaseWorker):
 
             # Check file count limit
             if file_count > self.MAX_FILES:
-                raise ValueError(
-                    f"Archive contains too many files: {file_count} > {self.MAX_FILES}"
-                )
+                raise ValueError(f"Archive contains too many files: {file_count} > {self.MAX_FILES}")
 
             # Check total size limit
             if uncompressed_size > self.MAX_UNCOMPRESSED_SIZE:
@@ -307,10 +302,7 @@ class ArchiveWorker(BaseWorker):
             if compressed_size > 0:
                 ratio = uncompressed_size / compressed_size
                 if ratio > self.MAX_COMPRESSION_RATIO:
-                    raise ValueError(
-                        f"Suspicious compression ratio: {ratio:.0f}x "
-                        f"(possible zip bomb)"
-                    )
+                    raise ValueError(f"Suspicious compression ratio: {ratio:.0f}x (possible zip bomb)")
 
         except zipfile.BadZipFile as e:
             raise ValueError(f"Corrupt archive: {e}")
@@ -504,9 +496,7 @@ class ArchiveWorker(BaseWorker):
         loop = asyncio.get_event_loop()
         files, size = await loop.run_in_executor(None, extract)
 
-        logger.info(
-            f"Extracted {len(files)} files ({size / (1024**2):.1f}MB) from {archive_path.name}"
-        )
+        logger.info(f"Extracted {len(files)} files ({size / (1024**2):.1f}MB) from {archive_path.name}")
 
         return {
             "files": files,
@@ -548,10 +538,7 @@ class ArchiveWorker(BaseWorker):
             raise FileNotFoundError(f"Archive not found: {archive_path}")
 
         format_type = self._detect_format(archive_path)
-        logger.info(
-            f"Extracting '{file_name}' from {format_type} archive: "
-            f"{archive_path.name} (job {job_id})"
-        )
+        logger.info(f"Extracting '{file_name}' from {format_type} archive: {archive_path.name} (job {job_id})")
 
         # Run extraction in executor
         def extract():
@@ -664,12 +651,14 @@ class ArchiveWorker(BaseWorker):
             if format_type == "zip":
                 with zipfile.ZipFile(archive_path, "r") as zf:
                     for info in zf.infolist():
-                        files.append({
-                            "name": info.filename,
-                            "size": info.file_size,
-                            "compressed": info.compress_size,
-                            "is_dir": info.is_dir(),
-                        })
+                        files.append(
+                            {
+                                "name": info.filename,
+                                "size": info.file_size,
+                                "compressed": info.compress_size,
+                                "is_dir": info.is_dir(),
+                            }
+                        )
 
             elif format_type.startswith("tar"):
                 mode = "r"
@@ -682,30 +671,36 @@ class ArchiveWorker(BaseWorker):
 
                 with tarfile.open(archive_path, mode) as tf:
                     for member in tf.getmembers():
-                        files.append({
-                            "name": member.name,
-                            "size": member.size,
-                            "compressed": 0,  # TAR doesn't track per-file compression
-                            "is_dir": member.isdir(),
-                        })
+                        files.append(
+                            {
+                                "name": member.name,
+                                "size": member.size,
+                                "compressed": 0,  # TAR doesn't track per-file compression
+                                "is_dir": member.isdir(),
+                            }
+                        )
 
             elif format_type == "gz":
                 # Single file
-                files.append({
-                    "name": archive_path.stem,
-                    "size": 0,  # Unknown without decompression
-                    "compressed": archive_path.stat().st_size,
-                    "is_dir": False,
-                })
+                files.append(
+                    {
+                        "name": archive_path.stem,
+                        "size": 0,  # Unknown without decompression
+                        "compressed": archive_path.stat().st_size,
+                        "is_dir": False,
+                    }
+                )
 
             elif format_type == "bz2":
                 # Single file
-                files.append({
-                    "name": archive_path.stem,
-                    "size": 0,  # Unknown without decompression
-                    "compressed": archive_path.stat().st_size,
-                    "is_dir": False,
-                })
+                files.append(
+                    {
+                        "name": archive_path.stem,
+                        "size": 0,  # Unknown without decompression
+                        "compressed": archive_path.stat().st_size,
+                        "is_dir": False,
+                    }
+                )
 
             elif format_type == "7z":
                 if not self._has_py7zr:
@@ -715,12 +710,14 @@ class ArchiveWorker(BaseWorker):
 
                 with py7zr.SevenZipFile(archive_path, mode="r") as archive:
                     for name, info in archive.list():
-                        files.append({
-                            "name": name,
-                            "size": info.uncompressed,
-                            "compressed": info.compressed,
-                            "is_dir": info.is_directory,
-                        })
+                        files.append(
+                            {
+                                "name": name,
+                                "size": info.uncompressed,
+                                "compressed": info.compressed,
+                                "is_dir": info.is_directory,
+                            }
+                        )
 
             elif format_type == "rar":
                 if not self._has_rarfile:
@@ -730,12 +727,14 @@ class ArchiveWorker(BaseWorker):
 
                 with rarfile.RarFile(archive_path, "r") as rf:
                     for info in rf.infolist():
-                        files.append({
-                            "name": info.filename,
-                            "size": info.file_size,
-                            "compressed": info.compress_size,
-                            "is_dir": info.isdir(),
-                        })
+                        files.append(
+                            {
+                                "name": info.filename,
+                                "size": info.file_size,
+                                "compressed": info.compress_size,
+                                "is_dir": info.isdir(),
+                            }
+                        )
 
             else:
                 raise ValueError(f"Listing not supported for: {format_type}")
@@ -888,10 +887,7 @@ class ArchiveWorker(BaseWorker):
             if not fp.exists():
                 raise FileNotFoundError(f"File not found: {fp}")
 
-        logger.info(
-            f"Creating {format_type} archive with {len(files)} files: "
-            f"{output_path.name} (job {job_id})"
-        )
+        logger.info(f"Creating {format_type} archive with {len(files)} files: {output_path.name} (job {job_id})")
 
         # Create parent directory
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -944,8 +940,7 @@ class ArchiveWorker(BaseWorker):
 
             else:
                 raise ValueError(
-                    f"Unsupported format for creation: {format_type}. "
-                    "Supported: zip, tar, tar.gz, tar.bz2, tar.xz, 7z"
+                    f"Unsupported format for creation: {format_type}. Supported: zip, tar, tar.gz, tar.bz2, tar.xz, 7z"
                 )
 
             return file_count
@@ -955,9 +950,7 @@ class ArchiveWorker(BaseWorker):
 
         final_size = output_path.stat().st_size
 
-        logger.info(
-            f"Created archive with {count} files ({final_size / (1024**2):.1f}MB)"
-        )
+        logger.info(f"Created archive with {count} files ({final_size / (1024**2):.1f}MB)")
 
         return {
             "path": str(output_path),

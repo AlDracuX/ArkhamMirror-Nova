@@ -3,11 +3,12 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional, List, Dict
+from typing import Any, Dict, List, Optional
 
 
 class IntegrityStatus(str, Enum):
     """Integrity status of analyzed media."""
+
     UNKNOWN = "unknown"
     VERIFIED = "verified"
     FLAGGED = "flagged"
@@ -16,6 +17,7 @@ class IntegrityStatus(str, Enum):
 
 class ELAAssessment(str, Enum):
     """ELA analysis assessment."""
+
     UNIFORM = "uniform"
     VARIABLE = "variable"
     TYPICAL = "typical"
@@ -23,6 +25,7 @@ class ELAAssessment(str, Enum):
 
 class SunVerificationStatus(str, Enum):
     """Sun position verification status."""
+
     CONSISTENT = "consistent"
     INCONSISTENT = "inconsistent"
     UNCERTAIN = "uncertain"
@@ -31,6 +34,7 @@ class SunVerificationStatus(str, Enum):
 
 class HashType(str, Enum):
     """Types of perceptual hashes."""
+
     PHASH = "phash"
     DHASH = "dhash"
     AHASH = "ahash"
@@ -45,16 +49,19 @@ from pydantic import BaseModel, Field
 
 class AnalyzeRequest(BaseModel):
     """Request to analyze a document."""
+
     document_id: str
 
 
 class BatchAnalyzeRequest(BaseModel):
     """Request to analyze multiple documents."""
+
     document_ids: List[str]
 
 
 class ELARequest(BaseModel):
     """Request to generate ELA analysis."""
+
     analysis_id: str
     quality: int = Field(default=95, ge=70, le=100)
     scale: int = Field(default=15, ge=5, le=30)
@@ -62,6 +69,7 @@ class ELARequest(BaseModel):
 
 class SunPositionRequest(BaseModel):
     """Request to calculate sun position."""
+
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
     datetime: str  # ISO format
@@ -69,6 +77,7 @@ class SunPositionRequest(BaseModel):
 
 class SimilarSearchRequest(BaseModel):
     """Request to find similar images."""
+
     analysis_id: str
     hash_type: str = Field(default="phash", pattern="^(phash|dhash|ahash)$")
     threshold: int = Field(default=10, ge=0, le=64)
@@ -78,19 +87,23 @@ class SimilarSearchRequest(BaseModel):
 # API Response Models (Pydantic)
 # ===========================================
 
+
 class CountResponse(BaseModel):
     """Response with count."""
+
     count: int
 
 
 class AnalysisListResponse(BaseModel):
     """Response with list of analyses."""
+
     items: List[Dict[str, Any]]
     total: int
 
 
 class AnalysisResponse(BaseModel):
     """Response for a single analysis."""
+
     analysis_id: str
     document_id: str
     exif: Dict[str, Any]
@@ -103,11 +116,13 @@ class AnalysisResponse(BaseModel):
 
 class BatchAnalyzeResponse(BaseModel):
     """Response for batch analysis."""
+
     results: List[Dict[str, Any]]
 
 
 class ELAResponse(BaseModel):
     """Response for ELA analysis."""
+
     success: bool
     ela_image_base64: Optional[str] = None
     quality_used: Optional[int] = None
@@ -119,6 +134,7 @@ class ELAResponse(BaseModel):
 
 class SunPositionResponse(BaseModel):
     """Response for sun position calculation."""
+
     success: bool
     latitude: Optional[float] = None
     longitude: Optional[float] = None
@@ -134,6 +150,7 @@ class SunPositionResponse(BaseModel):
 
 class SimilarImageResult(BaseModel):
     """Result for a similar image."""
+
     analysis_id: str
     hash: str
     hamming_distance: int
@@ -142,16 +159,19 @@ class SimilarImageResult(BaseModel):
 
 class SimilarSearchResponse(BaseModel):
     """Response for similar image search."""
+
     similar_images: List[SimilarImageResult]
 
 
 class StatsResponse(BaseModel):
     """Response for statistics."""
+
     stats: Dict[str, Any]
 
 
 class C2PASupportResponse(BaseModel):
     """Response for C2PA support check."""
+
     c2pa_available: bool
     signature_verification_available: bool
     pysolar_available: bool
@@ -161,9 +181,11 @@ class C2PASupportResponse(BaseModel):
 # Data Classes for Internal Use
 # ===========================================
 
+
 @dataclass
 class MediaAnalysis:
     """A media analysis record."""
+
     id: str
     document_id: str
     tenant_id: Optional[str] = None
@@ -221,6 +243,7 @@ class MediaAnalysis:
 @dataclass
 class SimilarImage:
     """A similar image match record."""
+
     id: str
     source_analysis_id: str
     target_analysis_id: str
@@ -233,6 +256,7 @@ class SimilarImage:
 @dataclass
 class ELAResult:
     """An ELA analysis result."""
+
     id: str
     analysis_id: str
     quality: int = 95
@@ -249,6 +273,7 @@ class ELAResult:
 @dataclass
 class SunVerification:
     """A sun position verification record."""
+
     id: str
     analysis_id: str
 
@@ -272,6 +297,7 @@ class SunVerification:
 @dataclass
 class AnalysisStats:
     """Statistics about media analyses."""
+
     total_analyses: int = 0
     with_exif: int = 0
     with_gps: int = 0

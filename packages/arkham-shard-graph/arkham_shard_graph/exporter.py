@@ -5,7 +5,7 @@ import logging
 from typing import Any
 from xml.etree import ElementTree as ET
 
-from .models import Graph, ExportFormat
+from .models import ExportFormat, Graph
 
 logger = logging.getLogger(__name__)
 
@@ -84,8 +84,7 @@ class GraphExporter:
         root.set("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
         root.set(
             "xsi:schemaLocation",
-            "http://graphml.graphdrawing.org/xmlns "
-            "http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"
+            "http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd",
         )
 
         # Define attribute keys
@@ -134,6 +133,7 @@ class GraphExporter:
         ET.indent(tree, space="  ")
 
         import io
+
         output = io.StringIO()
         tree.write(output, encoding="unicode", xml_declaration=True)
         return output.getvalue()
@@ -219,15 +219,14 @@ class GraphExporter:
         ET.indent(tree, space="  ")
 
         import io
+
         output = io.StringIO()
         tree.write(output, encoding="unicode", xml_declaration=True)
         return output.getvalue()
 
     # --- Helper Methods ---
 
-    def _add_graphml_key(
-        self, root: ET.Element, id: str, for_type: str, attr_type: str
-    ) -> None:
+    def _add_graphml_key(self, root: ET.Element, id: str, for_type: str, attr_type: str) -> None:
         """Add GraphML key definition."""
         key = ET.SubElement(root, "key")
         key.set("id", id)
@@ -235,26 +234,20 @@ class GraphExporter:
         key.set("attr.name", id)
         key.set("attr.type", attr_type)
 
-    def _add_graphml_data(
-        self, parent: ET.Element, key: str, value: str
-    ) -> None:
+    def _add_graphml_data(self, parent: ET.Element, key: str, value: str) -> None:
         """Add GraphML data element."""
         data = ET.SubElement(parent, "data")
         data.set("key", key)
         data.text = value
 
-    def _add_gexf_attribute(
-        self, parent: ET.Element, id: str, title: str, type: str
-    ) -> None:
+    def _add_gexf_attribute(self, parent: ET.Element, id: str, title: str, type: str) -> None:
         """Add GEXF attribute definition."""
         attr = ET.SubElement(parent, "attribute")
         attr.set("id", id)
         attr.set("title", title)
         attr.set("type", type)
 
-    def _add_gexf_attvalue(
-        self, parent: ET.Element, for_id: str, value: str
-    ) -> None:
+    def _add_gexf_attvalue(self, parent: ET.Element, for_id: str, value: str) -> None:
         """Add GEXF attribute value."""
         attvalue = ET.SubElement(parent, "attvalue")
         attvalue.set("for", for_id)

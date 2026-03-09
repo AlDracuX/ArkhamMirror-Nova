@@ -1,21 +1,21 @@
 """Tests for Summary Shard models."""
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_summary.models import (
-    Summary,
-    SummaryType,
-    SummaryStatus,
-    SourceType,
-    SummaryLength,
-    SummaryRequest,
-    SummaryResult,
-    SummaryFilter,
-    SummaryStatistics,
     BatchSummaryRequest,
     BatchSummaryResult,
     KeyPoint,
+    SourceType,
+    Summary,
+    SummaryFilter,
+    SummaryLength,
+    SummaryRequest,
+    SummaryResult,
+    SummaryStatistics,
+    SummaryStatus,
+    SummaryType,
 )
 
 

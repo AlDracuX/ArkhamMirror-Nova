@@ -32,7 +32,7 @@ export function GraphControls({
   onRecalculateScores,
   scoresLoading = false,
   scoresError = null,
-  isForceLayout = true
+  isForceLayout = true,
 }: GraphControlsProps) {
   const [expandedSections, setExpandedSections] = useState<Set<SectionId>>(
     new Set(['labels', 'filters'])
@@ -52,11 +52,11 @@ export function GraphControls({
     applyPreset,
     reset,
     exportSettings,
-    importSettings
+    importSettings,
   } = graphSettings;
 
   const toggleSection = (id: SectionId) => {
-    setExpandedSections(prev => {
+    setExpandedSections((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -144,16 +144,12 @@ export function GraphControls({
           <div className="import-export-row">
             <textarea
               value={importText}
-              onChange={e => setImportText(e.target.value)}
+              onChange={(e) => setImportText(e.target.value)}
               placeholder="Paste settings JSON here..."
               className="import-textarea"
               rows={4}
             />
-            <button
-              className="action-btn"
-              onClick={handleImport}
-              disabled={!importText}
-            >
+            <button className="action-btn" onClick={handleImport} disabled={!importText}>
               <Icon name="Download" size={14} />
               Import
             </button>
@@ -165,10 +161,7 @@ export function GraphControls({
       <div className="controls-sections">
         {/* Labels Section */}
         <div className={`section-wrapper ${expandedSections.has('labels') ? 'expanded' : ''}`}>
-          <button
-            className="section-toggle"
-            onClick={() => toggleSection('labels')}
-          >
+          <button className="section-toggle" onClick={() => toggleSection('labels')}>
             <Icon name="Tag" size={16} />
             <span>Labels</span>
             <Icon
@@ -184,10 +177,7 @@ export function GraphControls({
 
         {/* Node Size Section */}
         <div className={`section-wrapper ${expandedSections.has('nodeSize') ? 'expanded' : ''}`}>
-          <button
-            className="section-toggle"
-            onClick={() => toggleSection('nodeSize')}
-          >
+          <button className="section-toggle" onClick={() => toggleSection('nodeSize')}>
             <Icon name="Circle" size={16} />
             <span>Node Size</span>
             <Icon
@@ -203,15 +193,10 @@ export function GraphControls({
 
         {/* Physics Section (Force Simulation) */}
         <div className={`section-wrapper ${expandedSections.has('physics') ? 'expanded' : ''}`}>
-          <button
-            className="section-toggle"
-            onClick={() => toggleSection('physics')}
-          >
+          <button className="section-toggle" onClick={() => toggleSection('physics')}>
             <Icon name="Move" size={16} />
             <span>Force Simulation</span>
-            {!isForceLayout && (
-              <span className="section-badge">Disabled</span>
-            )}
+            {!isForceLayout && <span className="section-badge">Disabled</span>}
             <Icon
               name="ChevronDown"
               size={16}
@@ -229,10 +214,7 @@ export function GraphControls({
 
         {/* Filters Section */}
         <div className={`section-wrapper ${expandedSections.has('filters') ? 'expanded' : ''}`}>
-          <button
-            className="section-toggle"
-            onClick={() => toggleSection('filters')}
-          >
+          <button className="section-toggle" onClick={() => toggleSection('filters')}>
             <Icon name="Filter" size={16} />
             <span>Filters</span>
             <Icon
@@ -254,15 +236,10 @@ export function GraphControls({
 
         {/* Scoring Section */}
         <div className={`section-wrapper ${expandedSections.has('scoring') ? 'expanded' : ''}`}>
-          <button
-            className="section-toggle"
-            onClick={() => toggleSection('scoring')}
-          >
+          <button className="section-toggle" onClick={() => toggleSection('scoring')}>
             <Icon name="BarChart2" size={16} />
             <span>Smart Weighting</span>
-            {settings.scoring.enabled && (
-              <span className="section-badge">ON</span>
-            )}
+            {settings.scoring.enabled && <span className="section-badge">ON</span>}
             <Icon
               name="ChevronDown"
               size={16}

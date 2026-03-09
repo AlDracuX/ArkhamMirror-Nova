@@ -46,8 +46,8 @@ export function AIHypothesesDialog({
         </div>
 
         <p className="dialog-description">
-          The AI has suggested these hypotheses based on your focus question.
-          Accept the ones you want to add, or skip them.
+          The AI has suggested these hypotheses based on your focus question. Accept the ones you
+          want to add, or skip them.
         </p>
 
         <div className="suggestion-list">
@@ -56,9 +56,7 @@ export function AIHypothesesDialog({
               <div className="suggestion-content">
                 <div className="suggestion-header">
                   <span className="suggestion-title">{suggestion.title}</span>
-                  {suggestion.is_null && (
-                    <span className="badge badge-soft">Null Hypothesis</span>
-                  )}
+                  {suggestion.is_null && <span className="badge badge-soft">Null Hypothesis</span>}
                 </div>
                 <p className="suggestion-description">{suggestion.description}</p>
                 {suggestion.rationale && (
@@ -66,10 +64,7 @@ export function AIHypothesesDialog({
                 )}
               </div>
               <div className="suggestion-actions">
-                <button
-                  className="btn btn-sm btn-success"
-                  onClick={() => onAccept(index)}
-                >
+                <button className="btn btn-sm btn-success" onClick={() => onAccept(index)}>
                   <Icon name="Check" size={12} />
                   Accept
                 </button>
@@ -108,11 +103,7 @@ interface AIEvidenceDialogProps {
   onClose: () => void;
 }
 
-export function AIEvidenceDialog({
-  suggestions,
-  onAccept,
-  onClose,
-}: AIEvidenceDialogProps) {
+export function AIEvidenceDialog({ suggestions, onAccept, onClose }: AIEvidenceDialogProps) {
   return (
     <div className="dialog-overlay" onClick={onClose}>
       <div className="dialog dialog-lg" onClick={(e) => e.stopPropagation()}>
@@ -127,8 +118,8 @@ export function AIEvidenceDialog({
         </div>
 
         <p className="dialog-description">
-          The AI suggests considering these evidence items.
-          They are designed to help discriminate between your hypotheses.
+          The AI suggests considering these evidence items. They are designed to help discriminate
+          between your hypotheses.
         </p>
 
         <div className="suggestion-list scrollable">
@@ -147,10 +138,7 @@ export function AIEvidenceDialog({
                 )}
               </div>
               <div className="suggestion-actions">
-                <button
-                  className="btn btn-sm btn-success"
-                  onClick={() => onAccept(index)}
-                >
+                <button className="btn btn-sm btn-success" onClick={() => onAccept(index)}>
                   <Icon name="Plus" size={12} />
                   Add
                 </button>
@@ -292,8 +280,8 @@ export function DevilsAdvocateDialog({
         </div>
 
         <p className="dialog-description">
-          The AI has generated challenges to your hypotheses.
-          Consider these counter-arguments to strengthen your analysis.
+          The AI has generated challenges to your hypotheses. Consider these counter-arguments to
+          strengthen your analysis.
         </p>
 
         <div className="challenge-list scrollable">
@@ -386,8 +374,8 @@ export function AIMilestonesDialog({
         </div>
 
         <p className="dialog-description">
-          Suggested observable milestones to track your hypotheses over time.
-          Click 'Accept' to add any suggestion as a milestone.
+          Suggested observable milestones to track your hypotheses over time. Click 'Accept' to add
+          any suggestion as a milestone.
         </p>
 
         <div className="suggestion-list scrollable">
@@ -406,10 +394,7 @@ export function AIMilestonesDialog({
                 )}
               </div>
               <div className="suggestion-actions">
-                <button
-                  className="btn btn-sm btn-success"
-                  onClick={() => onAccept(suggestion)}
-                >
+                <button className="btn btn-sm btn-success" onClick={() => onAccept(suggestion)}>
                   <Icon name="Plus" size={12} />
                   Accept
                 </button>

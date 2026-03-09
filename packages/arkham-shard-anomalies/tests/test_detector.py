@@ -4,13 +4,12 @@ Anomalies Shard - Detector Tests
 Tests for the AnomalyDetector class.
 """
 
-import pytest
 import numpy as np
-
+import pytest
 from arkham_shard_anomalies.detector import AnomalyDetector
 from arkham_shard_anomalies.models import (
-    DetectionConfig,
     AnomalyType,
+    DetectionConfig,
     SeverityLevel,
 )
 
@@ -130,8 +129,8 @@ class TestStatisticalAnomalyDetection:
         text = "word " * 1000  # Very long document
 
         corpus_stats = {
-            'word_count': {'mean': 100, 'std': 20},
-            'sentence_count': {'mean': 10, 'std': 3},
+            "word_count": {"mean": 100, "std": 20},
+            "sentence_count": {"mean": 10, "std": 3},
         }
 
         anomalies = detector.detect_statistical_anomalies(
@@ -141,7 +140,7 @@ class TestStatisticalAnomalyDetection:
         )
 
         # Should detect word count anomaly
-        word_count_anomalies = [a for a in anomalies if a.details.get('metric') == 'word_count']
+        word_count_anomalies = [a for a in anomalies if a.details.get("metric") == "word_count"]
         assert len(word_count_anomalies) > 0
 
     def test_detect_statistical_normal(self, detector):
@@ -149,8 +148,8 @@ class TestStatisticalAnomalyDetection:
         text = "This is a normal sentence. " * 10  # Normal length
 
         corpus_stats = {
-            'word_count': {'mean': 50, 'std': 20},
-            'sentence_count': {'mean': 10, 'std': 3},
+            "word_count": {"mean": 50, "std": 20},
+            "sentence_count": {"mean": 10, "std": 3},
         }
 
         anomalies = detector.detect_statistical_anomalies(
@@ -167,7 +166,7 @@ class TestStatisticalAnomalyDetection:
         detector.config.detect_statistical = False
 
         text = "word " * 1000
-        corpus_stats = {'word_count': {'mean': 100, 'std': 20}}
+        corpus_stats = {"word_count": {"mean": 100, "std": 20}}
 
         anomalies = detector.detect_statistical_anomalies(
             doc_id="doc-test",
@@ -197,7 +196,7 @@ class TestRedFlagDetection:
             metadata={},
         )
 
-        money_anomalies = [a for a in anomalies if a.details.get('pattern_type') == 'money']
+        money_anomalies = [a for a in anomalies if a.details.get("pattern_type") == "money"]
         assert len(money_anomalies) > 0
 
     def test_detect_sensitive_keywords(self, detector):
@@ -210,7 +209,7 @@ class TestRedFlagDetection:
             metadata={},
         )
 
-        keyword_anomalies = [a for a in anomalies if a.details.get('pattern_type') == 'sensitive_keywords']
+        keyword_anomalies = [a for a in anomalies if a.details.get("pattern_type") == "sensitive_keywords"]
         assert len(keyword_anomalies) > 0
         assert keyword_anomalies[0].severity == SeverityLevel.CRITICAL
 
@@ -225,18 +224,37 @@ class TestRedFlagDetection:
             metadata={},
         )
 
-        date_anomalies = [a for a in anomalies if a.details.get('pattern_type') == 'dates']
+        date_anomalies = [a for a in anomalies if a.details.get("pattern_type") == "dates"]
         assert len(date_anomalies) > 0
 
     def test_detect_name_patterns(self, detector):
         """Test detecting name pattern anomaly."""
         # Text with many unique name-like patterns (need >20 unique names)
         names = [
-            "John Smith", "Jane Doe", "Robert Johnson", "Mary Williams", "James Brown",
-            "Sarah Davis", "Michael Wilson", "Emily Taylor", "David Anderson", "Lisa Thomas",
-            "Chris Jackson", "Amanda White", "Daniel Harris", "Jessica Martin", "Matthew Garcia",
-            "Ashley Martinez", "Joshua Robinson", "Stephanie Clark", "Andrew Rodriguez", "Nicole Lewis",
-            "Kevin Lee", "Jennifer Walker", "Brandon Hall", "Samantha Allen",
+            "John Smith",
+            "Jane Doe",
+            "Robert Johnson",
+            "Mary Williams",
+            "James Brown",
+            "Sarah Davis",
+            "Michael Wilson",
+            "Emily Taylor",
+            "David Anderson",
+            "Lisa Thomas",
+            "Chris Jackson",
+            "Amanda White",
+            "Daniel Harris",
+            "Jessica Martin",
+            "Matthew Garcia",
+            "Ashley Martinez",
+            "Joshua Robinson",
+            "Stephanie Clark",
+            "Andrew Rodriguez",
+            "Nicole Lewis",
+            "Kevin Lee",
+            "Jennifer Walker",
+            "Brandon Hall",
+            "Samantha Allen",
         ]
         text = ". ".join([f"{name} was mentioned" for name in names])
 
@@ -246,7 +264,7 @@ class TestRedFlagDetection:
             metadata={},
         )
 
-        name_anomalies = [a for a in anomalies if a.details.get('pattern_type') == 'names']
+        name_anomalies = [a for a in anomalies if a.details.get("pattern_type") == "names"]
         assert len(name_anomalies) > 0
 
     def test_no_red_flags_normal(self, detector):
@@ -289,8 +307,8 @@ class TestRedFlagDetection:
         )
 
         # Should only detect sensitive keywords, not money
-        money_anomalies = [a for a in anomalies if a.details.get('pattern_type') == 'money']
-        keyword_anomalies = [a for a in anomalies if a.details.get('pattern_type') == 'sensitive_keywords']
+        money_anomalies = [a for a in anomalies if a.details.get("pattern_type") == "money"]
+        keyword_anomalies = [a for a in anomalies if a.details.get("pattern_type") == "sensitive_keywords"]
 
         assert len(money_anomalies) == 0
         assert len(keyword_anomalies) > 0
@@ -306,10 +324,10 @@ class TestMetadataAnomalyDetection:
 
     def test_detect_file_size_anomaly(self, detector):
         """Test detecting file size anomaly."""
-        metadata = {'file_size': 10000000}  # 10MB - very large
+        metadata = {"file_size": 10000000}  # 10MB - very large
 
         corpus_stats = {
-            'file_size': {'mean': 50000, 'std': 10000},  # ~50KB average
+            "file_size": {"mean": 50000, "std": 10000},  # ~50KB average
         }
 
         anomalies = detector.detect_metadata_anomalies(
@@ -323,10 +341,10 @@ class TestMetadataAnomalyDetection:
 
     def test_no_metadata_anomaly_normal(self, detector):
         """Test no anomaly for normal metadata."""
-        metadata = {'file_size': 55000}  # Close to average
+        metadata = {"file_size": 55000}  # Close to average
 
         corpus_stats = {
-            'file_size': {'mean': 50000, 'std': 10000},
+            "file_size": {"mean": 50000, "std": 10000},
         }
 
         anomalies = detector.detect_metadata_anomalies(
@@ -341,8 +359,8 @@ class TestMetadataAnomalyDetection:
         """Test no detection when disabled."""
         detector.config.detect_metadata = False
 
-        metadata = {'file_size': 10000000}
-        corpus_stats = {'file_size': {'mean': 50000, 'std': 10000}}
+        metadata = {"file_size": 10000000}
+        corpus_stats = {"file_size": {"mean": 50000, "std": 10000}}
 
         anomalies = detector.detect_metadata_anomalies(
             doc_id="doc-test",
@@ -367,20 +385,20 @@ class TestTextStatistics:
 
         stats = detector._calculate_text_stats(text)
 
-        assert 'word_count' in stats
-        assert 'sentence_count' in stats
-        assert 'avg_word_length' in stats
-        assert 'avg_sentence_length' in stats
-        assert 'char_count' in stats
-        assert stats['word_count'] > 0
-        assert stats['sentence_count'] > 0
+        assert "word_count" in stats
+        assert "sentence_count" in stats
+        assert "avg_word_length" in stats
+        assert "avg_sentence_length" in stats
+        assert "char_count" in stats
+        assert stats["word_count"] > 0
+        assert stats["sentence_count"] > 0
 
     def test_calculate_text_stats_empty(self, detector):
         """Test text statistics for empty text."""
         stats = detector._calculate_text_stats("")
 
-        assert stats['word_count'] == 0.0
-        assert stats['char_count'] == 0.0
+        assert stats["word_count"] == 0.0
+        assert stats["char_count"] == 0.0
 
 
 class TestSeverityCalculation:

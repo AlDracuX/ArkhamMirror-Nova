@@ -8,27 +8,27 @@ Run with:
     pytest tests/test_models.py -v
 """
 
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
 from arkham_shard_documents.models import (
-    # Enums
-    DocumentStatus,
-    ViewMode,
+    BatchOperationResult,
     ChunkDisplayMode,
-    # Dataclasses
-    DocumentRecord,
-    ViewingRecord,
     CustomMetadataField,
-    UserPreferences,
-    DocumentPage,
     DocumentChunkRecord,
-    EntityOccurrence,
     DocumentEntity,
     DocumentFilter,
+    DocumentPage,
+    # Dataclasses
+    DocumentRecord,
     DocumentStatistics,
-    BatchOperationResult,
+    # Enums
+    DocumentStatus,
+    EntityOccurrence,
+    UserPreferences,
+    ViewingRecord,
+    ViewMode,
 )
-
 
 # =============================================================================
 # Enum Tests
@@ -714,11 +714,11 @@ class TestDocumentStatistics:
 
         # Status counts should sum to total
         status_sum = (
-            stats.uploaded_count +
-            stats.processing_count +
-            stats.processed_count +
-            stats.failed_count +
-            stats.archived_count
+            stats.uploaded_count
+            + stats.processing_count
+            + stats.processed_count
+            + stats.failed_count
+            + stats.archived_count
         )
         assert status_sum == stats.total_documents
 

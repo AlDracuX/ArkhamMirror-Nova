@@ -4,22 +4,21 @@ Projects Shard - API Tests
 Tests for FastAPI endpoints using TestClient.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi.testclient import TestClient
-from fastapi import FastAPI
 
+import pytest
 from arkham_shard_projects.api import router
 from arkham_shard_projects.models import (
     Project,
-    ProjectMember,
-    ProjectDocument,
     ProjectActivity,
-    ProjectStatus,
+    ProjectDocument,
+    ProjectMember,
     ProjectRole,
+    ProjectStatus,
 )
-
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 # === Test Setup ===
 

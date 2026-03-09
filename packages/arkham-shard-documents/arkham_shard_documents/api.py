@@ -1,7 +1,7 @@
 """Documents Shard API endpoints."""
 
 import logging
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/documents", tags=["documents"])
 
 # === Helper to get shard instance ===
 
+
 def get_shard(request: Request) -> "DocumentsShard":
     """Get the documents shard instance from app state."""
     shard = getattr(request.app.state, "documents_shard", None)
@@ -30,6 +31,7 @@ def get_shard(request: Request) -> "DocumentsShard":
 
 class DocumentMetadata(BaseModel):
     """Document metadata model."""
+
     id: str
     title: str
     filename: str
@@ -48,6 +50,7 @@ class DocumentMetadata(BaseModel):
 
 class DocumentContent(BaseModel):
     """Document content model."""
+
     document_id: str
     content: str
     page_number: Optional[int] = None
@@ -56,6 +59,7 @@ class DocumentContent(BaseModel):
 
 class DocumentChunk(BaseModel):
     """Document chunk model."""
+
     id: str
     document_id: str
     chunk_index: int
@@ -67,6 +71,7 @@ class DocumentChunk(BaseModel):
 
 class DocumentEntity(BaseModel):
     """Extracted entity model."""
+
     id: str
     document_id: str
     entity_type: str  # PERSON, ORG, GPE, DATE, etc.
@@ -78,6 +83,7 @@ class DocumentEntity(BaseModel):
 
 class DocumentListResponse(BaseModel):
     """Paginated document list response."""
+
     items: List[DocumentMetadata]
     total: int
     page: int
@@ -86,6 +92,7 @@ class DocumentListResponse(BaseModel):
 
 class UpdateMetadataRequest(BaseModel):
     """Request to update document metadata."""
+
     title: Optional[str] = None
     tags: Optional[List[str]] = None
     custom_metadata: Optional[dict] = None
@@ -93,6 +100,7 @@ class UpdateMetadataRequest(BaseModel):
 
 class DocumentStats(BaseModel):
     """Document statistics."""
+
     total_documents: int
     processed_documents: int
     processing_documents: int
@@ -104,6 +112,7 @@ class DocumentStats(BaseModel):
 
 class ChunkListResponse(BaseModel):
     """Paginated chunk list response."""
+
     items: List[DocumentChunk]
     total: int
     page: int
@@ -112,6 +121,7 @@ class ChunkListResponse(BaseModel):
 
 class EntityListResponse(BaseModel):
     """Entity list response."""
+
     items: List[DocumentEntity]
     total: int
 
@@ -127,7 +137,7 @@ def document_to_response(doc) -> DocumentMetadata:
         filename=doc.filename,
         file_type=doc.file_type,
         file_size=doc.file_size,
-        status=doc.status.value if hasattr(doc.status, 'value') else doc.status,
+        status=doc.status.value if hasattr(doc.status, "value") else doc.status,
         page_count=doc.page_count,
         chunk_count=doc.chunk_count,
         entity_count=doc.entity_count,
@@ -527,6 +537,7 @@ async def get_recently_viewed(
 
 class BatchTagUpdateRequest(BaseModel):
     """Request for batch tag update."""
+
     document_ids: List[str]
     add_tags: Optional[List[str]] = None
     remove_tags: Optional[List[str]] = None
@@ -567,6 +578,7 @@ async def batch_update_tags(
 
 class BatchDeleteRequest(BaseModel):
     """Request for batch delete."""
+
     document_ids: List[str]
 
 
@@ -622,7 +634,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     if not frame or not getattr(frame, "ai_analyst", None):
         raise HTTPException(status_code=503, detail="AI Analyst service not available")
 
-    from arkham_frame.services import AnalysisRequest, AnalysisDepth, AnalystMessage
+    from arkham_frame.services import AnalysisDepth, AnalysisRequest, AnalystMessage
 
     # Map depth string to enum
     depth_map = {
@@ -636,10 +648,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     # Build conversation history
     history = None
     if body.conversation_history:
-        history = [
-            AnalystMessage(role=m["role"], content=m["content"])
-            for m in body.conversation_history
-        ]
+        history = [AnalystMessage(role=m["role"], content=m["content"]) for m in body.conversation_history]
 
     # Create analysis request
     analysis_request = AnalysisRequest(
@@ -669,6 +678,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
 
 class DuplicateMatchResponse(BaseModel):
     """A potential duplicate match."""
+
     document_id: str
     title: str
     similarity_score: float
@@ -678,6 +688,7 @@ class DuplicateMatchResponse(BaseModel):
 
 class DuplicateGroupResponse(BaseModel):
     """A group of duplicate documents."""
+
     group_id: str
     primary_document_id: str
     duplicate_ids: List[str]
@@ -687,6 +698,7 @@ class DuplicateGroupResponse(BaseModel):
 
 class MergeRequest(BaseModel):
     """Request to merge duplicate documents."""
+
     primary_id: str
     duplicate_ids: List[str]
     strategy: str = "keep_primary"
@@ -696,6 +708,7 @@ class MergeRequest(BaseModel):
 
 class MergeResponse(BaseModel):
     """Response from merge operation."""
+
     primary_id: str
     merged_count: int
     references_updated: int
@@ -705,6 +718,7 @@ class MergeResponse(BaseModel):
 
 class DeduplicationStats(BaseModel):
     """Deduplication statistics."""
+
     total_documents: int
     documents_with_hash: int
     unique_content_hashes: int

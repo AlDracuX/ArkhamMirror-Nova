@@ -9,13 +9,7 @@ import { useProject } from '../../context/ProjectContext';
 import { Icon } from './Icon';
 
 export function ProjectSelector() {
-  const {
-    activeProject,
-    activeProjectId,
-    projects,
-    loading,
-    setActiveProject,
-  } = useProject();
+  const { activeProject, activeProjectId, projects, loading, setActiveProject } = useProject();
 
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -48,9 +42,7 @@ export function ProjectSelector() {
         title={activeProject ? `Active: ${activeProject.name}` : 'No active project (global mode)'}
       >
         <Icon name="FolderOpen" size={16} />
-        <span className="project-name">
-          {activeProject ? activeProject.name : 'Global'}
-        </span>
+        <span className="project-name">{activeProject ? activeProject.name : 'Global'}</span>
         <Icon name={isOpen ? 'ChevronUp' : 'ChevronDown'} size={14} />
       </button>
 
@@ -91,15 +83,13 @@ export function ProjectSelector() {
                     <span className="option-desc">{project.description}</span>
                   )}
                 </div>
-                {activeProjectId === project.id && <Icon name="Check" size={16} className="check-icon" />}
+                {activeProjectId === project.id && (
+                  <Icon name="Check" size={16} className="check-icon" />
+                )}
               </button>
             ))}
 
-            {projects.length === 0 && (
-              <div className="dropdown-empty">
-                No projects available
-              </div>
-            )}
+            {projects.length === 0 && <div className="dropdown-empty">No projects available</div>}
           </div>
         </div>
       )}

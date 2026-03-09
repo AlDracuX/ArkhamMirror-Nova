@@ -12,39 +12,43 @@ Key features:
 - Dead letter queue for failed jobs
 """
 
-from typing import List, Dict, Any, Optional, Callable, Type
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+import asyncio
 import json
 import logging
 import multiprocessing
 import os
-from pathlib import Path
 import time
 import uuid
-import asyncio
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Type
 
 logger = logging.getLogger(__name__)
 
 
 class WorkerError(Exception):
     """Base worker error."""
+
     pass
 
 
 class WorkerNotFoundError(WorkerError):
     """Worker not found."""
+
     pass
 
 
 class QueueUnavailableError(WorkerError):
     """Queue not available."""
+
     pass
 
 
 @dataclass
 class Job:
     """A job in the queue."""
+
     id: str
     pool: str
     payload: Dict[str, Any]
@@ -67,7 +71,6 @@ WORKER_POOLS = {
     # IO pools
     "io-file": {"type": "io", "max_workers": 20},
     "io-db": {"type": "io", "max_workers": 10},
-
     # CPU pools
     "cpu-light": {"type": "cpu", "max_workers": 50},
     "cpu-heavy": {"type": "cpu", "max_workers": 6},
@@ -75,13 +78,11 @@ WORKER_POOLS = {
     "cpu-extract": {"type": "cpu", "max_workers": 4},
     "cpu-image": {"type": "cpu", "max_workers": 4},
     "cpu-archive": {"type": "cpu", "max_workers": 2},
-
     # GPU pools
     "gpu-paddle": {"type": "gpu", "max_workers": 1, "vram_mb": 2000},
     "gpu-qwen": {"type": "gpu", "max_workers": 1, "vram_mb": 8000},
     "gpu-whisper": {"type": "gpu", "max_workers": 1, "vram_mb": 4000},
     "gpu-embed": {"type": "gpu", "max_workers": 1, "vram_mb": 2000},
-
     # LLM pools (optional)
     "llm-enrich": {"type": "llm", "max_workers": 4},
     "llm-analysis": {"type": "llm", "max_workers": 2},
@@ -91,6 +92,7 @@ WORKER_POOLS = {
 @dataclass
 class WorkerInfo:
     """Information about a running worker."""
+
     id: str
     pool: str
     name: str = ""
@@ -107,6 +109,7 @@ class WorkerInfo:
 @dataclass
 class WorkerProcess:
     """Tracks a worker subprocess."""
+
     worker_id: str
     pool: str
     process: multiprocessing.Process
@@ -164,23 +167,16 @@ class WorkerService:
                 # JSON codec setup for asyncpg (JSONB is returned as string by default)
                 async def init_connection(conn):
                     """Initialize connection with JSON codecs."""
-                    await conn.set_type_codec(
-                        'jsonb',
-                        encoder=json.dumps,
-                        decoder=json.loads,
-                        schema='pg_catalog'
-                    )
-                    await conn.set_type_codec(
-                        'json',
-                        encoder=json.dumps,
-                        decoder=json.loads,
-                        schema='pg_catalog'
-                    )
+                    await conn.set_type_codec("jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
+                    await conn.set_type_codec("json", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
 
                 database_url = self.config.database_url if self.config else None
                 if not database_url:
                     import os
-                    database_url = os.environ.get("DATABASE_URL", "postgresql://arkham:arkhampass@localhost:5432/arkhamdb")
+
+                    database_url = os.environ.get(
+                        "DATABASE_URL", "postgresql://arkham:arkhampass@localhost:5432/arkhamdb"
+                    )
 
                 if database_url:
                     try:
@@ -191,7 +187,7 @@ class WorkerService:
                             command_timeout=60,
                             init=init_connection,  # Set up JSON codecs
                         )
-                        logger.info(f"WorkerService connected to PostgreSQL")
+                        logger.info("WorkerService connected to PostgreSQL")
                     except Exception as e:
                         logger.warning(f"WorkerService failed to connect to PostgreSQL: {e}")
                         self._available = False
@@ -240,10 +236,10 @@ class WorkerService:
             conn = await self._db_pool.acquire()
             try:
                 # Subscribe to channels
-                await conn.add_listener('arkham_job_available', self._handle_job_available)
-                await conn.add_listener('arkham_job_completed', self._handle_job_completed)
-                await conn.add_listener('arkham_job_failed', self._handle_job_failed)
-                await conn.add_listener('arkham_worker_event', self._handle_worker_event)
+                await conn.add_listener("arkham_job_available", self._handle_job_available)
+                await conn.add_listener("arkham_job_completed", self._handle_job_completed)
+                await conn.add_listener("arkham_job_failed", self._handle_job_failed)
+                await conn.add_listener("arkham_worker_event", self._handle_worker_event)
 
                 logger.info("Subscribed to PostgreSQL NOTIFY channels")
 
@@ -254,10 +250,10 @@ class WorkerService:
             finally:
                 # Unsubscribe and release
                 try:
-                    await conn.remove_listener('arkham_job_available', self._handle_job_available)
-                    await conn.remove_listener('arkham_job_completed', self._handle_job_completed)
-                    await conn.remove_listener('arkham_job_failed', self._handle_job_failed)
-                    await conn.remove_listener('arkham_worker_event', self._handle_worker_event)
+                    await conn.remove_listener("arkham_job_available", self._handle_job_available)
+                    await conn.remove_listener("arkham_job_completed", self._handle_job_completed)
+                    await conn.remove_listener("arkham_job_failed", self._handle_job_failed)
+                    await conn.remove_listener("arkham_worker_event", self._handle_worker_event)
                 except:
                     pass
                 await self._db_pool.release(conn)
@@ -272,11 +268,7 @@ class WorkerService:
             logger.debug(f"Job available: {data.get('pool')} - {data.get('job_id')}")
             # Bridge to EventBus if available
             if self._event_bus:
-                asyncio.create_task(self._event_bus.emit(
-                    "worker.job.available",
-                    data,
-                    source="worker-service"
-                ))
+                asyncio.create_task(self._event_bus.emit("worker.job.available", data, source="worker-service"))
         except Exception as e:
             logger.warning(f"Failed to handle job available: {e}")
 
@@ -284,7 +276,7 @@ class WorkerService:
         """Handle job completed notification."""
         try:
             data = json.loads(payload)
-            job_id = data.get('job_id')
+            job_id = data.get("job_id")
             logger.debug(f"Job completed: {job_id}")
 
             # Update in-memory cache
@@ -295,11 +287,7 @@ class WorkerService:
 
             # Bridge to EventBus
             if self._event_bus:
-                asyncio.create_task(self._event_bus.emit(
-                    "worker.job.completed",
-                    data,
-                    source="worker-service"
-                ))
+                asyncio.create_task(self._event_bus.emit("worker.job.completed", data, source="worker-service"))
         except Exception as e:
             logger.warning(f"Failed to handle job completed: {e}")
 
@@ -307,8 +295,8 @@ class WorkerService:
         """Handle job failed notification."""
         try:
             data = json.loads(payload)
-            job_id = data.get('job_id')
-            error = data.get('error')
+            job_id = data.get("job_id")
+            error = data.get("error")
             logger.debug(f"Job failed: {job_id} - {error}")
 
             # Update in-memory cache
@@ -320,11 +308,7 @@ class WorkerService:
 
             # Bridge to EventBus
             if self._event_bus:
-                asyncio.create_task(self._event_bus.emit(
-                    "worker.job.failed",
-                    data,
-                    source="worker-service"
-                ))
+                asyncio.create_task(self._event_bus.emit("worker.job.failed", data, source="worker-service"))
         except Exception as e:
             logger.warning(f"Failed to handle job failed: {e}")
 
@@ -332,8 +316,8 @@ class WorkerService:
         """Handle worker state change notification."""
         try:
             data = json.loads(payload)
-            worker_id = data.get('worker_id')
-            event = data.get('event')
+            worker_id = data.get("worker_id")
+            event = data.get("event")
             logger.debug(f"Worker event: {worker_id} - {event}")
 
             # Update in-memory cache
@@ -342,11 +326,7 @@ class WorkerService:
 
             # Bridge to EventBus
             if self._event_bus:
-                asyncio.create_task(self._event_bus.emit(
-                    f"worker.{event}",
-                    data,
-                    source="worker-service"
-                ))
+                asyncio.create_task(self._event_bus.emit(f"worker.{event}", data, source="worker-service"))
         except Exception as e:
             logger.warning(f"Failed to handle worker event: {e}")
 
@@ -364,11 +344,14 @@ class WorkerService:
                 if self._available and self._db_pool:
                     async with self._db_pool.acquire() as conn:
                         for worker_id in self._workers:
-                            await conn.execute("""
+                            await conn.execute(
+                                """
                                 UPDATE arkham_jobs.workers
                                 SET last_heartbeat = NOW()
                                 WHERE id = $1
-                            """, worker_id)
+                            """,
+                                worker_id,
+                            )
 
                         # Clean up stale workers (2 minute timeout)
                         cleaned = await conn.fetchval("""
@@ -415,11 +398,14 @@ class WorkerService:
             try:
                 async with self._db_pool.acquire() as conn:
                     for worker_id in self._workers:
-                        await conn.execute("""
+                        await conn.execute(
+                            """
                             UPDATE arkham_jobs.workers
                             SET state = 'stopped'
                             WHERE id = $1
-                        """, worker_id)
+                        """,
+                            worker_id,
+                        )
             except:
                 pass
 
@@ -524,7 +510,8 @@ class WorkerService:
 
         if self._available and self._db_pool:
             async with self._db_pool.acquire() as conn:
-                await conn.execute("""
+                await conn.execute(
+                    """
                     INSERT INTO arkham_jobs.jobs
                     (id, pool, job_type, payload, priority, status, scheduled_at, max_retries)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -533,8 +520,16 @@ class WorkerService:
                         payload = EXCLUDED.payload,
                         priority = EXCLUDED.priority,
                         status = EXCLUDED.status
-                """, job_id, pool, job_type, json.dumps(payload), priority,
-                    status, scheduled_at, max_retries)
+                """,
+                    job_id,
+                    pool,
+                    job_type,
+                    json.dumps(payload),
+                    priority,
+                    status,
+                    scheduled_at,
+                    max_retries,
+                )
 
             logger.debug(f"Enqueued job {job_id} to {pool} (priority={priority})")
         else:
@@ -547,10 +542,7 @@ class WorkerService:
 
     async def _ensure_worker_for_pool(self, pool: str) -> None:
         """Ensure at least one worker is running for the given pool."""
-        running = sum(
-            1 for wp in self._processes.values()
-            if wp.pool == pool and wp.is_alive
-        )
+        running = sum(1 for wp in self._processes.values() if wp.pool == pool and wp.is_alive)
 
         if running == 0:
             logger.info(f"Auto-scaling: spawning worker for pool {pool}")
@@ -586,7 +578,8 @@ class WorkerService:
             """)
 
             # SKIP LOCKED is the magic - it skips rows locked by other workers
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 UPDATE arkham_jobs.jobs
                 SET status = 'processing',
                     started_at = NOW(),
@@ -601,22 +594,25 @@ class WorkerService:
                 )
                 RETURNING id, pool, job_type, payload, priority, created_at,
                           retry_count, max_retries
-            """, pool, worker_id)
+            """,
+                pool,
+                worker_id,
+            )
 
             if not row:
                 return None
 
             job = Job(
-                id=row['id'],
-                pool=row['pool'],
-                job_type=row['job_type'],
-                payload=json.loads(row['payload']) if isinstance(row['payload'], str) else row['payload'],
-                priority=row['priority'],
-                created_at=row['created_at'],
+                id=row["id"],
+                pool=row["pool"],
+                job_type=row["job_type"],
+                payload=json.loads(row["payload"]) if isinstance(row["payload"], str) else row["payload"],
+                priority=row["priority"],
+                created_at=row["created_at"],
                 status="processing",
                 started_at=datetime.utcnow(),
-                retry_count=row['retry_count'],
-                max_retries=row['max_retries'],
+                retry_count=row["retry_count"],
+                max_retries=row["max_retries"],
                 worker_id=worker_id,
             )
 
@@ -637,13 +633,17 @@ class WorkerService:
 
         if self._available and self._db_pool:
             async with self._db_pool.acquire() as conn:
-                await conn.execute("""
+                await conn.execute(
+                    """
                     UPDATE arkham_jobs.jobs
                     SET status = 'completed',
                         completed_at = NOW(),
                         result = $2
                     WHERE id = $1
-                """, job_id, json.dumps(result or {}))
+                """,
+                    job_id,
+                    json.dumps(result or {}),
+                )
 
         # Emit event
         if self._event_bus:
@@ -670,20 +670,24 @@ class WorkerService:
         if self._available and self._db_pool:
             async with self._db_pool.acquire() as conn:
                 # Get current job state
-                row = await conn.fetchrow("""
+                row = await conn.fetchrow(
+                    """
                     SELECT pool, job_type, payload, retry_count, max_retries
                     FROM arkham_jobs.jobs WHERE id = $1
-                """, job_id)
+                """,
+                    job_id,
+                )
 
                 if not row:
                     return
 
-                retry_count = row['retry_count']
-                max_retries = row['max_retries']
+                retry_count = row["retry_count"]
+                max_retries = row["max_retries"]
 
                 if should_retry and retry_count < max_retries:
                     # Re-queue with incremented retry count
-                    await conn.execute("""
+                    await conn.execute(
+                        """
                         UPDATE arkham_jobs.jobs
                         SET status = 'pending',
                             started_at = NULL,
@@ -691,24 +695,35 @@ class WorkerService:
                             retry_count = retry_count + 1,
                             last_error = $2
                         WHERE id = $1
-                    """, job_id, error)
+                    """,
+                        job_id,
+                        error,
+                    )
                     logger.info(f"Job {job_id} retrying ({retry_count + 1}/{max_retries})")
                 else:
                     # Move to dead letter queue
-                    await conn.execute("""
+                    await conn.execute(
+                        """
                         INSERT INTO arkham_jobs.dead_letters
                         (job_id, pool, job_type, payload, error, retry_count, original_created_at)
                         SELECT id, pool, job_type, payload, $2, retry_count, created_at
                         FROM arkham_jobs.jobs WHERE id = $1
-                    """, job_id, error)
+                    """,
+                        job_id,
+                        error,
+                    )
 
-                    await conn.execute("""
+                    await conn.execute(
+                        """
                         UPDATE arkham_jobs.jobs
                         SET status = 'dead',
                             completed_at = NOW(),
                             last_error = $2
                         WHERE id = $1
-                    """, job_id, error)
+                    """,
+                        job_id,
+                        error,
+                    )
                     logger.warning(f"Job {job_id} moved to dead letter queue: {error}")
 
         if job:
@@ -734,32 +749,35 @@ class WorkerService:
             return self._jobs.get(job_id)
 
         async with self._db_pool.acquire() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 SELECT id, pool, job_type, payload, priority, status,
                        created_at, scheduled_at, started_at, completed_at,
                        worker_id, retry_count, max_retries, last_error, result
                 FROM arkham_jobs.jobs WHERE id = $1
-            """, job_id)
+            """,
+                job_id,
+            )
 
             if not row:
                 return None
 
             return Job(
-                id=row['id'],
-                pool=row['pool'],
-                job_type=row['job_type'],
-                payload=json.loads(row['payload']) if isinstance(row['payload'], str) else row['payload'],
-                priority=row['priority'],
-                status=row['status'],
-                created_at=row['created_at'],
-                scheduled_at=row['scheduled_at'],
-                started_at=row['started_at'],
-                completed_at=row['completed_at'],
-                worker_id=row['worker_id'],
-                retry_count=row['retry_count'],
-                max_retries=row['max_retries'],
-                error=row['last_error'],
-                result=json.loads(row['result']) if isinstance(row['result'], str) else row['result'],
+                id=row["id"],
+                pool=row["pool"],
+                job_type=row["job_type"],
+                payload=json.loads(row["payload"]) if isinstance(row["payload"], str) else row["payload"],
+                priority=row["priority"],
+                status=row["status"],
+                created_at=row["created_at"],
+                scheduled_at=row["scheduled_at"],
+                started_at=row["started_at"],
+                completed_at=row["completed_at"],
+                worker_id=row["worker_id"],
+                retry_count=row["retry_count"],
+                max_retries=row["max_retries"],
+                error=row["last_error"],
+                result=json.loads(row["result"]) if isinstance(row["result"], str) else row["result"],
             )
 
     async def get_job_result(self, job_id: str) -> Optional[Dict[str, Any]]:
@@ -780,14 +798,17 @@ class WorkerService:
             return job.result if job else None
 
         async with self._db_pool.acquire() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 SELECT result FROM arkham_jobs.jobs WHERE id = $1
-            """, job_id)
+            """,
+                job_id,
+            )
 
-            if not row or not row['result']:
+            if not row or not row["result"]:
                 return None
 
-            result = row['result']
+            result = row["result"]
             if isinstance(result, str):
                 return json.loads(result)
             return result
@@ -813,16 +834,19 @@ class WorkerService:
 
             if self._available and self._db_pool:
                 async with self._db_pool.acquire() as conn:
-                    rows = await conn.fetch("""
+                    rows = await conn.fetch(
+                        """
                         SELECT status, COUNT(*) as count
                         FROM arkham_jobs.jobs
                         WHERE pool = $1
                         GROUP BY status
-                    """, pool_name)
+                    """,
+                        pool_name,
+                    )
 
                     for row in rows:
-                        if row['status'] in pool_stats:
-                            pool_stats[row['status']] = row['count']
+                        if row["status"] in pool_stats:
+                            pool_stats[row["status"]] = row["count"]
 
             stats.append(pool_stats)
 
@@ -850,16 +874,19 @@ class WorkerService:
 
         if self._available and self._db_pool:
             async with self._db_pool.acquire() as conn:
-                rows = await conn.fetch("""
+                rows = await conn.fetch(
+                    """
                     SELECT status, COUNT(*) as count
                     FROM arkham_jobs.jobs
                     WHERE pool = $1
                     GROUP BY status
-                """, pool)
+                """,
+                    pool,
+                )
 
                 for row in rows:
-                    if row['status'] in stats:
-                        stats[row['status']] = row['count']
+                    if row["status"] in stats:
+                        stats[row["status"]] = row["count"]
 
         return stats
 
@@ -883,27 +910,31 @@ class WorkerService:
                 """)
 
                 for row in rows:
-                    workers.append({
-                        "id": row['id'],
-                        "pool": row['pool'],
-                        "name": row['name'],
-                        "hostname": row['hostname'],
-                        "pid": row['pid'],
-                        "status": row['state'],
-                        "jobs_completed": row['jobs_completed'],
-                        "jobs_failed": row['jobs_failed'],
-                        "current_job_id": row['current_job'],
-                        "started_at": row['started_at'].isoformat() if row['started_at'] else None,
-                        "last_heartbeat": row['last_heartbeat'].isoformat() if row['last_heartbeat'] else None,
-                        "uptime_seconds": (datetime.utcnow() - row['started_at']).total_seconds() if row['started_at'] else 0,
-                    })
+                    workers.append(
+                        {
+                            "id": row["id"],
+                            "pool": row["pool"],
+                            "name": row["name"],
+                            "hostname": row["hostname"],
+                            "pid": row["pid"],
+                            "status": row["state"],
+                            "jobs_completed": row["jobs_completed"],
+                            "jobs_failed": row["jobs_failed"],
+                            "current_job_id": row["current_job"],
+                            "started_at": row["started_at"].isoformat() if row["started_at"] else None,
+                            "last_heartbeat": row["last_heartbeat"].isoformat() if row["last_heartbeat"] else None,
+                            "uptime_seconds": (datetime.utcnow() - row["started_at"]).total_seconds()
+                            if row["started_at"]
+                            else 0,
+                        }
+                    )
 
         return workers
 
     async def get_workers_by_pool(self, pool: str) -> List[Dict[str, Any]]:
         """Get workers for a specific pool."""
         all_workers = await self.get_workers()
-        return [w for w in all_workers if w.get('pool') == pool]
+        return [w for w in all_workers if w.get("pool") == pool]
 
     def get_worker_count(self, pool: str) -> int:
         """Get number of active workers for a pool."""
@@ -916,10 +947,7 @@ class WorkerService:
 
     def _cleanup_dead_processes(self) -> int:
         """Remove dead processes from tracking."""
-        dead = [
-            wid for wid, wp in self._processes.items()
-            if not wp.is_alive
-        ]
+        dead = [wid for wid, wp in self._processes.items() if not wp.is_alive]
         for worker_id in dead:
             del self._processes[worker_id]
             if worker_id in self._workers:
@@ -933,6 +961,7 @@ class WorkerService:
 
         try:
             from arkham_frame.workers.cli import get_worker_class
+
             return get_worker_class(pool)
         except ImportError:
             return None
@@ -945,10 +974,12 @@ class WorkerService:
             return None
 
         # Get database URL from config
-        database_url = getattr(self.config, 'database_url', None) or 'postgresql://arkham:arkhampass@localhost:5432/arkhamdb'
+        database_url = (
+            getattr(self.config, "database_url", None) or "postgresql://arkham:arkhampass@localhost:5432/arkhamdb"
+        )
 
         # Set DATA_SILO_PATH for workers
-        data_silo_path = getattr(self.config, 'data_silo_path', None) or "./data_silo"
+        data_silo_path = getattr(self.config, "data_silo_path", None) or "./data_silo"
         os.environ["DATA_SILO_PATH"] = str(Path(data_silo_path).resolve())
 
         from arkham_frame.workers.base import run_worker
@@ -1078,13 +1109,21 @@ class WorkerService:
         if self._available and self._db_pool:
             try:
                 import socket
+
                 hostname = socket.gethostname()
                 async with self._db_pool.acquire() as conn:
-                    await conn.execute("""
+                    await conn.execute(
+                        """
                         INSERT INTO arkham_jobs.workers
                         (id, pool, name, hostname, pid, state)
                         VALUES ($1, $2, $3, $4, $5, 'starting')
-                    """, worker_id, pool, f"worker-{worker_id}", hostname, worker_proc.pid)
+                    """,
+                        worker_id,
+                        pool,
+                        f"worker-{worker_id}",
+                        hostname,
+                        worker_proc.pid,
+                    )
             except Exception as e:
                 logger.warning(f"Failed to register worker in database: {e}")
 
@@ -1122,11 +1161,14 @@ class WorkerService:
         if self._available and self._db_pool:
             try:
                 async with self._db_pool.acquire() as conn:
-                    await conn.execute("""
+                    await conn.execute(
+                        """
                         UPDATE arkham_jobs.workers
                         SET state = 'stopped'
                         WHERE id = $1
-                    """, worker_id)
+                    """,
+                        worker_id,
+                    )
             except:
                 pass
 
@@ -1227,18 +1269,21 @@ class WorkerService:
             # Always fetch result from DB since NOTIFY doesn't include it
             if self._available and self._db_pool:
                 async with self._db_pool.acquire() as conn:
-                    row = await conn.fetchrow("""
+                    row = await conn.fetchrow(
+                        """
                         SELECT status, result, last_error
                         FROM arkham_jobs.jobs WHERE id = $1
-                    """, job_id)
+                    """,
+                        job_id,
+                    )
 
                     if row:
-                        if row['status'] == 'completed':
-                            result = row['result']
+                        if row["status"] == "completed":
+                            result = row["result"]
                             if isinstance(result, str):
                                 result = json.loads(result)
                             return result or {}
-                        elif row['status'] in ('failed', 'dead'):
+                        elif row["status"] in ("failed", "dead"):
                             raise WorkerError(f"Job {job_id} failed: {row['last_error']}")
 
             await asyncio.sleep(poll_interval)
@@ -1302,23 +1347,33 @@ class WorkerService:
                 rows = await conn.fetch(query, *params)
 
                 for row in rows:
-                    jobs.append({
-                        "id": row['id'],
-                        "pool": row['pool'],
-                        "job_type": row['job_type'],
-                        "status": row['status'],
-                        "priority": row['priority'],
-                        "payload": row['payload'] if isinstance(row['payload'], dict) else json.loads(row['payload']) if row['payload'] else {},
-                        "result": row['result'] if isinstance(row['result'], dict) else json.loads(row['result']) if row['result'] else None,
-                        "error": row['last_error'],
-                        "created_at": row['created_at'].isoformat() if row['created_at'] else None,
-                        "scheduled_at": row['scheduled_at'].isoformat() if row['scheduled_at'] else None,
-                        "started_at": row['started_at'].isoformat() if row['started_at'] else None,
-                        "completed_at": row['completed_at'].isoformat() if row['completed_at'] else None,
-                        "worker_id": row['worker_id'],
-                        "retry_count": row['retry_count'],
-                        "max_retries": row['max_retries'],
-                    })
+                    jobs.append(
+                        {
+                            "id": row["id"],
+                            "pool": row["pool"],
+                            "job_type": row["job_type"],
+                            "status": row["status"],
+                            "priority": row["priority"],
+                            "payload": row["payload"]
+                            if isinstance(row["payload"], dict)
+                            else json.loads(row["payload"])
+                            if row["payload"]
+                            else {},
+                            "result": row["result"]
+                            if isinstance(row["result"], dict)
+                            else json.loads(row["result"])
+                            if row["result"]
+                            else None,
+                            "error": row["last_error"],
+                            "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+                            "scheduled_at": row["scheduled_at"].isoformat() if row["scheduled_at"] else None,
+                            "started_at": row["started_at"].isoformat() if row["started_at"] else None,
+                            "completed_at": row["completed_at"].isoformat() if row["completed_at"] else None,
+                            "worker_id": row["worker_id"],
+                            "retry_count": row["retry_count"],
+                            "max_retries": row["max_retries"],
+                        }
+                    )
 
         return jobs
 
@@ -1338,18 +1393,19 @@ class WorkerService:
 
         if self._available and self._db_pool:
             async with self._db_pool.acquire() as conn:
-                result = await conn.execute("""
+                result = await conn.execute(
+                    """
                     DELETE FROM arkham_jobs.jobs
                     WHERE pool = $1 AND status = $2
-                """, pool, status)
+                """,
+                    pool,
+                    status,
+                )
                 # Parse "DELETE N" result
                 cleared = int(result.split()[-1])
 
         # Clear from in-memory cache
-        jobs_to_remove = [
-            job_id for job_id, job in self._jobs.items()
-            if job.pool == pool and job.status == status
-        ]
+        jobs_to_remove = [job_id for job_id, job in self._jobs.items() if job.pool == pool and job.status == status]
         for job_id in jobs_to_remove:
             del self._jobs[job_id]
 
@@ -1381,34 +1437,51 @@ class WorkerService:
             async with self._db_pool.acquire() as conn:
                 # Get failed jobs
                 if job_ids:
-                    rows = await conn.fetch("""
+                    rows = await conn.fetch(
+                        """
                         SELECT id, payload, priority, job_type
                         FROM arkham_jobs.jobs
                         WHERE pool = $1 AND status IN ('failed', 'dead') AND id = ANY($2)
-                    """, pool, job_ids)
+                    """,
+                        pool,
+                        job_ids,
+                    )
                 else:
-                    rows = await conn.fetch("""
+                    rows = await conn.fetch(
+                        """
                         SELECT id, payload, priority, job_type
                         FROM arkham_jobs.jobs
                         WHERE pool = $1 AND status IN ('failed', 'dead')
-                    """, pool)
+                    """,
+                        pool,
+                    )
 
                 for row in rows:
                     new_job_id = f"{row['id']}-retry-{uuid.uuid4().hex[:4]}"
-                    payload = row['payload'] if isinstance(row['payload'], dict) else json.loads(row['payload'])
+                    payload = row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"])
 
-                    await conn.execute("""
+                    await conn.execute(
+                        """
                         INSERT INTO arkham_jobs.jobs
                         (id, pool, job_type, payload, priority, status)
                         VALUES ($1, $2, $3, $4, $5, 'pending')
-                    """, new_job_id, pool, row['job_type'], json.dumps(payload), row['priority'])
+                    """,
+                        new_job_id,
+                        pool,
+                        row["job_type"],
+                        json.dumps(payload),
+                        row["priority"],
+                    )
 
                     # Remove old failed job
-                    await conn.execute("""
+                    await conn.execute(
+                        """
                         DELETE FROM arkham_jobs.jobs WHERE id = $1
-                    """, row['id'])
+                    """,
+                        row["id"],
+                    )
 
-                    retried.append({"original_id": row['id'], "new_id": new_job_id})
+                    retried.append({"original_id": row["id"], "new_id": new_job_id})
 
         logger.info(f"Retried {len(retried)} failed jobs in {pool}")
 
@@ -1425,13 +1498,16 @@ class WorkerService:
         """Cancel a pending job."""
         if self._available and self._db_pool:
             async with self._db_pool.acquire() as conn:
-                result = await conn.execute("""
+                result = await conn.execute(
+                    """
                     UPDATE arkham_jobs.jobs
                     SET status = 'failed',
                         completed_at = NOW(),
                         last_error = 'Cancelled by user'
                     WHERE id = $1 AND status IN ('pending', 'scheduled')
-                """, job_id)
+                """,
+                    job_id,
+                )
 
                 if "UPDATE 0" in result:
                     return {"success": False, "error": f"Job {job_id} not found or not cancellable"}
@@ -1480,7 +1556,8 @@ class WorkerService:
 
         async with self._db_pool.acquire() as conn:
             if pool:
-                rows = await conn.fetch("""
+                rows = await conn.fetch(
+                    """
                     SELECT id, job_id, pool, job_type, payload, error,
                            retry_count, original_created_at, failed_at,
                            reprocessed_at, reprocessed_job_id
@@ -1488,9 +1565,13 @@ class WorkerService:
                     WHERE pool = $1 AND reprocessed_at IS NULL
                     ORDER BY failed_at DESC
                     LIMIT $2
-                """, pool, limit)
+                """,
+                    pool,
+                    limit,
+                )
             else:
-                rows = await conn.fetch("""
+                rows = await conn.fetch(
+                    """
                     SELECT id, job_id, pool, job_type, payload, error,
                            retry_count, original_created_at, failed_at,
                            reprocessed_at, reprocessed_job_id
@@ -1498,19 +1579,27 @@ class WorkerService:
                     WHERE reprocessed_at IS NULL
                     ORDER BY failed_at DESC
                     LIMIT $1
-                """, limit)
+                """,
+                    limit,
+                )
 
             return [
                 {
-                    "id": row['id'],
-                    "job_id": row['job_id'],
-                    "pool": row['pool'],
-                    "job_type": row['job_type'],
-                    "payload": row['payload'] if isinstance(row['payload'], dict) else json.loads(row['payload']) if row['payload'] else {},
-                    "error": row['error'],
-                    "retry_count": row['retry_count'],
-                    "original_created_at": row['original_created_at'].isoformat() if row['original_created_at'] else None,
-                    "failed_at": row['failed_at'].isoformat() if row['failed_at'] else None,
+                    "id": row["id"],
+                    "job_id": row["job_id"],
+                    "pool": row["pool"],
+                    "job_type": row["job_type"],
+                    "payload": row["payload"]
+                    if isinstance(row["payload"], dict)
+                    else json.loads(row["payload"])
+                    if row["payload"]
+                    else {},
+                    "error": row["error"],
+                    "retry_count": row["retry_count"],
+                    "original_created_at": row["original_created_at"].isoformat()
+                    if row["original_created_at"]
+                    else None,
+                    "failed_at": row["failed_at"].isoformat() if row["failed_at"] else None,
                 }
                 for row in rows
             ]
@@ -1522,31 +1611,44 @@ class WorkerService:
 
         async with self._db_pool.acquire() as conn:
             # Get the dead letter
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 SELECT job_id, pool, job_type, payload
                 FROM arkham_jobs.dead_letters
                 WHERE id = $1 AND reprocessed_at IS NULL
-            """, dlq_id)
+            """,
+                dlq_id,
+            )
 
             if not row:
                 return {"success": False, "error": f"Dead letter {dlq_id} not found"}
 
             # Create new job
             new_job_id = f"{row['job_id']}-dlq-{uuid.uuid4().hex[:4]}"
-            payload = row['payload'] if isinstance(row['payload'], dict) else json.loads(row['payload'])
+            payload = row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"])
 
-            await conn.execute("""
+            await conn.execute(
+                """
                 INSERT INTO arkham_jobs.jobs
                 (id, pool, job_type, payload, status)
                 VALUES ($1, $2, $3, $4, 'pending')
-            """, new_job_id, row['pool'], row['job_type'], json.dumps(payload))
+            """,
+                new_job_id,
+                row["pool"],
+                row["job_type"],
+                json.dumps(payload),
+            )
 
             # Mark dead letter as reprocessed
-            await conn.execute("""
+            await conn.execute(
+                """
                 UPDATE arkham_jobs.dead_letters
                 SET reprocessed_at = NOW(), reprocessed_job_id = $2
                 WHERE id = $1
-            """, dlq_id, new_job_id)
+            """,
+                dlq_id,
+                new_job_id,
+            )
 
             logger.info(f"Reprocessed dead letter {dlq_id} as job {new_job_id}")
 

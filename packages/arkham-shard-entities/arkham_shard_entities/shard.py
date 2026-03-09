@@ -370,30 +370,118 @@ class EntitiesShard(ArkhamShard):
         # Common noise words to filter
         noise_words = {
             # Articles and conjunctions
-            "the", "a", "an", "and", "or", "but", "if", "then",
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "if",
+            "then",
             # Be verbs
-            "is", "are", "was", "were", "be", "been", "being",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
             # Pronouns
-            "this", "that", "these", "those", "it", "its",
-            "he", "she", "they", "we", "you", "i", "my", "your", "his", "her",
+            "this",
+            "that",
+            "these",
+            "those",
+            "it",
+            "its",
+            "he",
+            "she",
+            "they",
+            "we",
+            "you",
+            "i",
+            "my",
+            "your",
+            "his",
+            "her",
             # Question words
-            "what", "which", "who", "whom", "whose", "when", "where", "why", "how",
+            "what",
+            "which",
+            "who",
+            "whom",
+            "whose",
+            "when",
+            "where",
+            "why",
+            "how",
             # Quantifiers
-            "all", "any", "both", "each", "few", "more", "most", "other",
-            "some", "such", "no", "nor", "not", "only",
+            "all",
+            "any",
+            "both",
+            "each",
+            "few",
+            "more",
+            "most",
+            "other",
+            "some",
+            "such",
+            "no",
+            "nor",
+            "not",
+            "only",
             # Time words
-            "today", "tomorrow", "yesterday", "now", "then", "soon", "later",
-            "always", "never",
+            "today",
+            "tomorrow",
+            "yesterday",
+            "now",
+            "soon",
+            "later",
+            "always",
+            "never",
             # Days
-            "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
             # Months (often extracted as entities incorrectly)
-            "january", "february", "march", "april", "may", "june",
-            "july", "august", "september", "october", "november", "december",
+            "january",
+            "february",
+            "march",
+            "april",
+            "may",
+            "june",
+            "july",
+            "august",
+            "september",
+            "october",
+            "november",
+            "december",
             # Ordinals
-            "first", "second", "third", "fourth", "fifth",
-            "sixth", "seventh", "eighth", "ninth", "tenth",
+            "first",
+            "second",
+            "third",
+            "fourth",
+            "fifth",
+            "sixth",
+            "seventh",
+            "eighth",
+            "ninth",
+            "tenth",
             # Common abbreviations
-            "etc", "vs", "mr", "mrs", "ms", "dr", "jr", "sr", "inc", "llc", "ltd", "corp",
+            "etc",
+            "vs",
+            "mr",
+            "mrs",
+            "ms",
+            "dr",
+            "jr",
+            "sr",
+            "inc",
+            "llc",
+            "ltd",
+            "corp",
         }
 
         if text_lower in noise_words:
@@ -414,10 +502,28 @@ class EntitiesShard(ArkhamShard):
             # Filter generic terms for specific entity types
             if entity_type in ("PERSON", "ORG", "GPE", "ORGANIZATION"):
                 generic_terms = {
-                    "company", "group", "team", "organization", "department",
-                    "person", "individual", "someone", "anyone", "everyone",
-                    "city", "town", "country", "state", "place", "location",
-                    "office", "building", "center", "centre", "area", "region",
+                    "company",
+                    "group",
+                    "team",
+                    "organization",
+                    "department",
+                    "person",
+                    "individual",
+                    "someone",
+                    "anyone",
+                    "everyone",
+                    "city",
+                    "town",
+                    "country",
+                    "state",
+                    "place",
+                    "location",
+                    "office",
+                    "building",
+                    "center",
+                    "centre",
+                    "area",
+                    "region",
                 }
                 if text_lower in generic_terms:
                     logger.debug(f"Filtered entity '{entity_text}' - generic term for {entity_type}")
@@ -462,8 +568,7 @@ class EntitiesShard(ArkhamShard):
         # Filter entities before processing
         original_count = len(entities)
         filtered_entities = [
-            e for e in entities
-            if self._is_valid_entity(e.get("text", "").strip(), e.get("entity_type", "OTHER"))
+            e for e in entities if self._is_valid_entity(e.get("text", "").strip(), e.get("entity_type", "OTHER"))
         ]
         filtered_count = original_count - len(filtered_entities)
 
@@ -486,7 +591,7 @@ class EntitiesShard(ArkhamShard):
                     SELECT id, name, document_ids FROM arkham_entities
                     WHERE LOWER(name) = LOWER(:name) AND entity_type = :entity_type
                     """,
-                    {"name": entity_text, "entity_type": entity_type}
+                    {"name": entity_text, "entity_type": entity_type},
                 )
 
                 if existing:
@@ -501,7 +606,7 @@ class EntitiesShard(ArkhamShard):
                             SET document_ids = :doc_ids, mention_count = mention_count + 1, updated_at = CURRENT_TIMESTAMP
                             WHERE id = :id
                             """,
-                            {"id": entity_id, "doc_ids": json.dumps(doc_ids)}
+                            {"id": entity_id, "doc_ids": json.dumps(doc_ids)},
                         )
                 else:
                     # Create new entity
@@ -516,7 +621,7 @@ class EntitiesShard(ArkhamShard):
                             "name": entity_text,
                             "entity_type": entity_type,
                             "doc_ids": json.dumps([document_id]),
-                        }
+                        },
                     )
 
                 # Create mention record
@@ -534,7 +639,7 @@ class EntitiesShard(ArkhamShard):
                         "conf": entity_data.get("confidence", 0.85),
                         "start": entity_data.get("start_offset", 0),
                         "end": entity_data.get("end_offset", 0),
-                    }
+                    },
                 )
 
             except Exception as e:
@@ -578,13 +683,11 @@ class EntitiesShard(ArkhamShard):
 
                 # Find source entity ID by name
                 source_row = await self._db.fetch_one(
-                    "SELECT id FROM arkham_entities WHERE LOWER(name) = LOWER(:name)",
-                    {"name": source_text}
+                    "SELECT id FROM arkham_entities WHERE LOWER(name) = LOWER(:name)", {"name": source_text}
                 )
                 # Find target entity ID by name
                 target_row = await self._db.fetch_one(
-                    "SELECT id FROM arkham_entities WHERE LOWER(name) = LOWER(:name)",
-                    {"name": target_text}
+                    "SELECT id FROM arkham_entities WHERE LOWER(name) = LOWER(:name)", {"name": target_text}
                 )
 
                 if not source_row or not target_row:
@@ -600,7 +703,7 @@ class EntitiesShard(ArkhamShard):
                     SELECT id FROM arkham_entity_relationships
                     WHERE source_id = :src AND target_id = :tgt AND relationship_type = :rel_type
                     """,
-                    {"src": source_id, "tgt": target_id, "rel_type": rel_type}
+                    {"src": source_id, "tgt": target_id, "rel_type": rel_type},
                 )
 
                 if not existing:
@@ -619,7 +722,7 @@ class EntitiesShard(ArkhamShard):
                             "rel_type": rel_type,
                             "conf": rel_data.get("confidence", 0.5),
                             "meta": json.dumps(metadata),
-                        }
+                        },
                     )
 
             except Exception as e:
@@ -635,7 +738,7 @@ class EntitiesShard(ArkhamShard):
         entity_type: Optional[str] = None,
         limit: int = 20,
         offset: int = 0,
-        show_merged: bool = False
+        show_merged: bool = False,
     ) -> List[Entity]:
         """
         List entities with optional filtering.
@@ -697,10 +800,7 @@ class EntitiesShard(ArkhamShard):
         return entities
 
     async def count_entities(
-        self,
-        search: Optional[str] = None,
-        entity_type: Optional[str] = None,
-        show_merged: bool = False
+        self, search: Optional[str] = None, entity_type: Optional[str] = None, show_merged: bool = False
     ) -> int:
         """
         Count entities with optional filtering.
@@ -763,7 +863,9 @@ class EntitiesShard(ArkhamShard):
                 entity = Entity(
                     id=fe.id,
                     name=fe.text,
-                    entity_type=EntityType(fe.entity_type.value) if hasattr(fe.entity_type, 'value') else EntityType.OTHER,
+                    entity_type=EntityType(fe.entity_type.value)
+                    if hasattr(fe.entity_type, "value")
+                    else EntityType.OTHER,
                     canonical_id=fe.canonical_id,
                     aliases=[],
                     metadata=fe.metadata or {},
@@ -830,16 +932,18 @@ class EntitiesShard(ArkhamShard):
 
         mentions = []
         for row in rows:
-            mentions.append({
-                "id": row["id"],
-                "entity_id": row["entity_id"],
-                "document_id": row["document_id"],
-                "mention_text": row["mention_text"],
-                "confidence": row.get("confidence", 1.0),
-                "start_offset": row.get("start_offset", 0),
-                "end_offset": row.get("end_offset", 0),
-                "created_at": row.get("created_at").isoformat() if row.get("created_at") else None,
-            })
+            mentions.append(
+                {
+                    "id": row["id"],
+                    "entity_id": row["entity_id"],
+                    "document_id": row["document_id"],
+                    "mention_text": row["mention_text"],
+                    "confidence": row.get("confidence", 1.0),
+                    "start_offset": row.get("start_offset", 0),
+                    "end_offset": row.get("end_offset", 0),
+                    "created_at": row.get("created_at").isoformat() if row.get("created_at") else None,
+                }
+            )
 
         return mentions
 
@@ -895,18 +999,18 @@ class EntitiesShard(ArkhamShard):
                     "mentions": [],
                 }
             # Add this mention
-            entities_map[entity_id]["mentions"].append({
-                "text": row.get("mention_text", ""),
-                "confidence": row.get("confidence", 1.0),
-                "start_offset": row.get("start_offset"),
-                "end_offset": row.get("end_offset"),
-            })
+            entities_map[entity_id]["mentions"].append(
+                {
+                    "text": row.get("mention_text", ""),
+                    "confidence": row.get("confidence", 1.0),
+                    "start_offset": row.get("start_offset"),
+                    "end_offset": row.get("end_offset"),
+                }
+            )
 
         return list(entities_map.values())
 
-    async def merge_entities(
-        self, source_id: str, target_id: str
-    ) -> Dict[str, Any]:
+    async def merge_entities(self, source_id: str, target_id: str) -> Dict[str, Any]:
         """
         Merge source entity into target entity.
 
@@ -931,19 +1035,27 @@ class EntitiesShard(ArkhamShard):
 
                 # Publish event
                 if self._event_bus:
-                    await self._event_bus.emit("entities.entity.merged", {
-                        "source_id": source_id,
-                        "target_id": target_id,
-                    }, source="entities-shard")
+                    await self._event_bus.emit(
+                        "entities.entity.merged",
+                        {
+                            "source_id": source_id,
+                            "target_id": target_id,
+                        },
+                        source="entities-shard",
+                    )
 
                 # Return updated canonical entity
                 target = await self.get_entity(target_id)
-                return {
-                    "id": target.id,
-                    "name": target.name,
-                    "entity_type": target.entity_type.value,
-                    "mention_count": 0,
-                } if target else {}
+                return (
+                    {
+                        "id": target.id,
+                        "name": target.name,
+                        "entity_type": target.entity_type.value,
+                        "mention_count": 0,
+                    }
+                    if target
+                    else {}
+                )
 
             except Exception as e:
                 logger.error(f"Failed to merge entities via EntityService: {e}")
@@ -964,7 +1076,7 @@ class EntitiesShard(ArkhamShard):
                 "source_id": source_id,
                 "target_id": target_id,
                 "updated_at": datetime.utcnow(),
-            }
+            },
         )
 
         # Update mentions to point to canonical entity
@@ -974,7 +1086,7 @@ class EntitiesShard(ArkhamShard):
             SET entity_id = :target_id
             WHERE entity_id = :source_id
             """,
-            {"source_id": source_id, "target_id": target_id}
+            {"source_id": source_id, "target_id": target_id},
         )
 
         # Recalculate mention count for target
@@ -983,7 +1095,7 @@ class EntitiesShard(ArkhamShard):
             SELECT COUNT(*) as count FROM arkham_entity_mentions
             WHERE entity_id = :target_id
             """,
-            {"target_id": target_id}
+            {"target_id": target_id},
         )
         mention_count = count_row["count"] if count_row else 0
 
@@ -993,7 +1105,7 @@ class EntitiesShard(ArkhamShard):
             SET mention_count = :count, updated_at = :updated_at
             WHERE id = :target_id
             """,
-            {"target_id": target_id, "count": mention_count, "updated_at": datetime.utcnow()}
+            {"target_id": target_id, "count": mention_count, "updated_at": datetime.utcnow()},
         )
 
         # Clear cache
@@ -1004,20 +1116,27 @@ class EntitiesShard(ArkhamShard):
 
         # Publish event
         if self._event_bus:
-            await self._event_bus.emit("entities.entity.merged", {
-                "source_id": source_id,
-                "target_id": target_id,
-                "mention_count": mention_count,
-            })
+            await self._event_bus.emit(
+                "entities.entity.merged",
+                {
+                    "source_id": source_id,
+                    "target_id": target_id,
+                    "mention_count": mention_count,
+                },
+            )
 
         # Return updated canonical entity
         target = await self.get_entity(target_id)
-        return {
-            "id": target.id,
-            "name": target.name,
-            "entity_type": target.entity_type.value,
-            "mention_count": mention_count,
-        } if target else {}
+        return (
+            {
+                "id": target.id,
+                "name": target.name,
+                "entity_type": target.entity_type.value,
+                "mention_count": mention_count,
+            }
+            if target
+            else {}
+        )
 
     async def get_entity_stats(self) -> Dict[str, Any]:
         """
@@ -1092,6 +1211,7 @@ class EntitiesShard(ArkhamShard):
             raise RuntimeError("Entities Shard not initialized")
 
         import uuid
+
         relationship_id = str(uuid.uuid4())
 
         await self._db.execute(
@@ -1107,17 +1227,20 @@ class EntitiesShard(ArkhamShard):
                 "relationship_type": relationship_type,
                 "confidence": confidence,
                 "metadata": json.dumps(metadata or {}),
-            }
+            },
         )
 
         # Publish event
         if self._event_bus:
-            await self._event_bus.emit("entities.relationship.created", {
-                "relationship_id": relationship_id,
-                "source_id": source_id,
-                "target_id": target_id,
-                "relationship_type": relationship_type,
-            })
+            await self._event_bus.emit(
+                "entities.relationship.created",
+                {
+                    "relationship_id": relationship_id,
+                    "source_id": source_id,
+                    "target_id": target_id,
+                    "relationship_type": relationship_type,
+                },
+            )
 
         return {
             "id": relationship_id,

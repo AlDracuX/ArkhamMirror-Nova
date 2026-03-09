@@ -5,38 +5,40 @@ Provides intelligent text chunking for document processing, with multiple
 strategies optimized for different use cases (embedding, LLM context, etc.).
 """
 
-from typing import Optional, List, Dict, Any, Callable, Iterator
-from dataclasses import dataclass, field
-from datetime import datetime
-from enum import Enum
 import logging
 import re
 import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, Iterator, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class ChunkStrategy(str, Enum):
     """Available chunking strategies."""
-    FIXED_SIZE = "fixed_size"          # Fixed character count
-    FIXED_TOKENS = "fixed_tokens"       # Fixed token count
-    SENTENCE = "sentence"               # Sentence-based boundaries
-    PARAGRAPH = "paragraph"             # Paragraph-based boundaries
-    SEMANTIC = "semantic"               # Semantic similarity based
-    RECURSIVE = "recursive"             # Recursive character splitting
-    MARKDOWN = "markdown"               # Markdown-aware splitting
-    CODE = "code"                       # Code-aware splitting
+
+    FIXED_SIZE = "fixed_size"  # Fixed character count
+    FIXED_TOKENS = "fixed_tokens"  # Fixed token count
+    SENTENCE = "sentence"  # Sentence-based boundaries
+    PARAGRAPH = "paragraph"  # Paragraph-based boundaries
+    SEMANTIC = "semantic"  # Semantic similarity based
+    RECURSIVE = "recursive"  # Recursive character splitting
+    MARKDOWN = "markdown"  # Markdown-aware splitting
+    CODE = "code"  # Code-aware splitting
 
 
 @dataclass
 class TextChunk:
     """A chunk of text with metadata."""
+
     id: str
     text: str
-    index: int                          # Position in original document
-    start_char: int                     # Start character offset
-    end_char: int                       # End character offset
-    token_count: Optional[int] = None   # Estimated token count
+    index: int  # Position in original document
+    start_char: int  # Start character offset
+    end_char: int  # End character offset
+    token_count: Optional[int] = None  # Estimated token count
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -66,11 +68,12 @@ class TextChunk:
 @dataclass
 class ChunkConfig:
     """Configuration for chunking."""
+
     strategy: ChunkStrategy = ChunkStrategy.RECURSIVE
-    chunk_size: int = 1000              # Target chunk size (chars or tokens)
-    chunk_overlap: int = 200            # Overlap between chunks
-    min_chunk_size: int = 100           # Minimum chunk size
-    max_chunk_size: int = 2000          # Maximum chunk size
+    chunk_size: int = 1000  # Target chunk size (chars or tokens)
+    chunk_overlap: int = 200  # Overlap between chunks
+    min_chunk_size: int = 100  # Minimum chunk size
+    max_chunk_size: int = 2000  # Maximum chunk size
     separators: List[str] = field(default_factory=lambda: ["\n\n", "\n", ". ", " ", ""])
     respect_sentence_boundary: bool = True
     include_metadata: bool = True
@@ -90,19 +93,21 @@ class ChunkConfig:
 
 class ChunkServiceError(Exception):
     """Base chunk service error."""
+
     pass
 
 
 class TokenizerError(ChunkServiceError):
     """Tokenizer error."""
+
     pass
 
 
 # Precompiled regex patterns
-SENTENCE_PATTERN = re.compile(r'(?<=[.!?])\s+')
-PARAGRAPH_PATTERN = re.compile(r'\n\s*\n')
-MARKDOWN_HEADER_PATTERN = re.compile(r'^#{1,6}\s+.*$', re.MULTILINE)
-CODE_BLOCK_PATTERN = re.compile(r'```[\s\S]*?```|`[^`]+`')
+SENTENCE_PATTERN = re.compile(r"(?<=[.!?])\s+")
+PARAGRAPH_PATTERN = re.compile(r"\n\s*\n")
+MARKDOWN_HEADER_PATTERN = re.compile(r"^#{1,6}\s+.*$", re.MULTILINE)
+CODE_BLOCK_PATTERN = re.compile(r"```[\s\S]*?```|`[^`]+`")
 
 
 class ChunkService:
@@ -118,11 +123,11 @@ class ChunkService:
 
     # Default tokenizer ratios (chars per token)
     TOKENIZER_RATIOS = {
-        "cl100k_base": 4.0,      # GPT-4, GPT-3.5
-        "p50k_base": 4.0,        # Codex
-        "r50k_base": 4.0,        # GPT-3
-        "gpt2": 4.0,             # GPT-2
-        "default": 4.0,          # Default estimate
+        "cl100k_base": 4.0,  # GPT-4, GPT-3.5
+        "p50k_base": 4.0,  # Codex
+        "r50k_base": 4.0,  # GPT-3
+        "gpt2": 4.0,  # GPT-2
+        "default": 4.0,  # Default estimate
     }
 
     def __init__(self, config=None):
@@ -249,8 +254,12 @@ class ChunkService:
                 token_count=self.count_tokens(chunk_text),
                 metadata={
                     "document_id": document_id,
-                    "strategy": config.strategy.value if isinstance(config.strategy, ChunkStrategy) else config.strategy,
-                } if config.include_metadata else {},
+                    "strategy": config.strategy.value
+                    if isinstance(config.strategy, ChunkStrategy)
+                    else config.strategy,
+                }
+                if config.include_metadata
+                else {},
             )
             result.append(chunk)
 
@@ -323,9 +332,7 @@ class ChunkService:
             # Respect sentence boundary if enabled
             if config.respect_sentence_boundary and end < text_len:
                 # Look for sentence end within the chunk
-                sentence_end = self._find_sentence_boundary(
-                    text, start, end, config.min_chunk_size
-                )
+                sentence_end = self._find_sentence_boundary(text, start, end, config.min_chunk_size)
                 if sentence_end > start:
                     end = sentence_end
 
@@ -545,9 +552,7 @@ class ChunkService:
                     current_split = ""
                 # Recursively split large pieces
                 if len(separators) > 1:
-                    sub_chunks = self._recursive_split(
-                        split, separators[1:], chunk_size, chunk_overlap, offset
-                    )
+                    sub_chunks = self._recursive_split(split, separators[1:], chunk_size, chunk_overlap, offset)
                     final_chunks.extend(sub_chunks)
                 else:
                     # Can't split further, add as is
@@ -662,7 +667,7 @@ class ChunkService:
         search_text = text[start:end]
 
         # Find last sentence end
-        for pattern in ['. ', '! ', '? ', '.\n', '!\n', '?\n']:
+        for pattern in [". ", "! ", "? ", ".\n", "!\n", "?\n"]:
             last_pos = search_text.rfind(pattern)
             if last_pos > min_size:
                 return start + last_pos + len(pattern)

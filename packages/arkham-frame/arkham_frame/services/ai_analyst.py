@@ -8,16 +8,16 @@ Provides context-aware analysis across all shards with:
 - Structured output extraction
 """
 
-from typing import List, Dict, Any, Optional, AsyncIterator
+import hashlib
+import json
+import logging
+import time
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from functools import lru_cache
-import logging
-import uuid
-import json
-import hashlib
-import time
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +72,7 @@ class ResponseCache:
 
 class AnalysisDepth(str, Enum):
     """Analysis depth options."""
+
     QUICK = "quick"
     DETAILED = "detailed"
 
@@ -79,6 +80,7 @@ class AnalysisDepth(str, Enum):
 @dataclass
 class Message:
     """A message in a conversation."""
+
     role: str  # "user", "assistant", or "system"
     content: str
     timestamp: datetime = field(default_factory=datetime.utcnow)
@@ -87,6 +89,7 @@ class Message:
 @dataclass
 class AnalysisRequest:
     """Request for AI Junior Analyst analysis."""
+
     shard: str
     target_id: str
     context: Dict[str, Any]
@@ -103,6 +106,7 @@ class AnalysisRequest:
 @dataclass
 class AnalysisResponse:
     """Response from AI Junior Analyst."""
+
     session_id: str
     analysis: str
     key_findings: List[str] = field(default_factory=list)
@@ -152,7 +156,6 @@ For the current graph view, analyze:
 
 Provide plain-language insights a non-expert can understand.
 Reference specific nodes by name when discussing patterns.""",
-
     "timeline": """You are a junior investigative analyst helping interpret event timelines.
 Your role is to spot temporal patterns that might indicate coordination, causation, or gaps.
 
@@ -165,7 +168,6 @@ For the current timeline view, analyze:
 
 Highlight patterns an expert investigator would notice.
 Reference specific dates and events when discussing findings.""",
-
     "ach": """You are a junior intelligence analyst assisting with Analysis of
 Competing Hypotheses (ACH). Your role is to help the analyst review their matrix.
 
@@ -178,7 +180,6 @@ Analyze the current matrix state:
 6. Confidence assessment - how confident should the analyst be in the leading hypothesis?
 
 Keep response concise (2-3 paragraphs). Use specific hypothesis/evidence references.""",
-
     "anomalies": """You are a data quality analyst helping interpret anomalies.
 Your role is to explain what makes items unusual and suggest interpretations.
 
@@ -189,7 +190,6 @@ For the anomalies displayed:
 4. Next steps - should items be confirmed, dismissed, or investigated further?
 
 For each major anomaly type present, explain typical causes and suggest follow-up.""",
-
     "contradictions": """You are an investigative analyst helping interpret
 contradictions in evidence. Your role is to explain conflicts and suggest resolutions.
 
@@ -200,7 +200,6 @@ Analyze the contradictions:
 4. Resolution approaches - which should be prioritized? What evidence would help?
 
 Use plain language and reference specific contradiction types and severities.""",
-
     "patterns": """You are a pattern analyst helping interpret detected patterns.
 Your role is to explain significance and contextualize findings.
 
@@ -212,7 +211,6 @@ For the patterns displayed:
 5. Recommendations - which patterns warrant deeper investigation?
 
 Focus on 2-3 key patterns with specific examples.""",
-
     "entities": """You are a junior analyst helping understand entity significance.
 Your role is to summarize an entity's importance across the document corpus.
 
@@ -222,7 +220,6 @@ Analyze:
 3. Mention patterns - concentrated in certain documents or spread widely?
 4. Reliability - how confident are we in entity identification?
 5. Gaps - what related entities might be missing?""",
-
     "claims": """You are a fact-checking analyst helping assess claim plausibility.
 Your role is to evaluate claims based on available evidence.
 
@@ -232,7 +229,6 @@ Assess:
 3. Contradictions - does this conflict with other claims?
 4. Missing evidence - what would strengthen or weaken the claim?
 5. Credibility rating - HIGH/MEDIUM/LOW with reasoning.""",
-
     "credibility": """You are a credibility analyst explaining source assessments.
 Your role is to make credibility ratings understandable to non-experts.
 
@@ -242,7 +238,6 @@ Explain:
 3. Any deception risk indicators (if applicable)
 4. What would improve the credibility rating
 5. Actionable recommendations for the analyst""",
-
     "provenance": """You are a provenance analyst explaining data lineage.
 Your role is to trace information chains and assess reliability at each step.
 
@@ -252,7 +247,6 @@ Trace:
 3. Reliability assessment at each step
 4. Single points of failure in the chain
 5. Recommended verification steps""",
-
     "documents": """You are a document analyst helping summarize document significance.
 Your role is to provide quick document summaries and identify key themes.
 
@@ -395,11 +389,7 @@ class AIJuniorAnalystService:
 
         return "\n\n".join(parts) if parts else "No context data provided."
 
-    def _build_messages(
-        self,
-        request: AnalysisRequest,
-        system_prompt: str
-    ) -> List[Dict[str, str]]:
+    def _build_messages(self, request: AnalysisRequest, system_prompt: str) -> List[Dict[str, str]]:
         """
         Build the messages array for the LLM call.
 
@@ -415,10 +405,7 @@ class AIJuniorAnalystService:
         # Add conversation history if present
         if request.conversation_history:
             for msg in request.conversation_history:
-                messages.append({
-                    "role": msg.get("role", "user"),
-                    "content": msg.get("content", "")
-                })
+                messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
 
         # Build the current user message
         if request.message:
@@ -453,7 +440,7 @@ Provide your analysis with:
         request: AnalysisRequest,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
-        use_cache: bool = True
+        use_cache: bool = True,
     ) -> AnalysisResponse:
         """
         Perform non-streaming analysis.
@@ -475,9 +462,7 @@ Provide your analysis with:
 
         # Check cache for initial requests only (not follow-ups)
         if use_cache and self._cache_enabled and not is_followup:
-            cached = self._cache.get(
-                request.shard, request.target_id, request.context, request.depth.value
-            )
+            cached = self._cache.get(request.shard, request.target_id, request.context, request.depth.value)
             if cached:
                 self._cache_hits += 1
                 logger.debug(f"Cache hit for {request.shard}:{request.target_id}")
@@ -498,7 +483,7 @@ Provide your analysis with:
                 "target_id": request.target_id,
                 "depth": request.depth.value,
                 "is_followup": is_followup,
-            }
+            },
         )
 
         # Get system prompt and build messages
@@ -507,11 +492,7 @@ Provide your analysis with:
 
         try:
             # Call LLM
-            response = await self._llm.chat(
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
+            response = await self._llm.chat(messages=messages, temperature=temperature, max_tokens=max_tokens)
 
             processing_time = int((time.time() - start_time) * 1000)
             self._analysis_count += 1
@@ -526,15 +507,12 @@ Provide your analysis with:
                     "processing_time_ms": processing_time,
                     "model_used": response.model,
                     "is_followup": is_followup,
-                }
+                },
             )
 
             # Cache the response for initial requests
             if self._cache_enabled and not is_followup:
-                self._cache.set(
-                    request.shard, request.target_id, request.context,
-                    request.depth.value, response.text
-                )
+                self._cache.set(request.shard, request.target_id, request.context, request.depth.value, response.text)
 
             return AnalysisResponse(
                 session_id=session_id,
@@ -551,15 +529,12 @@ Provide your analysis with:
                     "shard": request.shard,
                     "target_id": request.target_id,
                     "error": str(e),
-                }
+                },
             )
             raise
 
     async def stream_analyze(
-        self,
-        request: AnalysisRequest,
-        temperature: float = 0.7,
-        max_tokens: Optional[int] = None
+        self, request: AnalysisRequest, temperature: float = 0.7, max_tokens: Optional[int] = None
     ) -> AsyncIterator[str]:
         """
         Stream analysis response.
@@ -573,6 +548,7 @@ Provide your analysis with:
             Text chunks as they're generated
         """
         import time
+
         start_time = time.time()
 
         # Generate or use existing session ID
@@ -589,7 +565,7 @@ Provide your analysis with:
                 "depth": request.depth.value,
                 "is_followup": is_followup,
                 "streaming": True,
-            }
+            },
         )
 
         # Yield session ID first (as JSON line for parsing)
@@ -601,11 +577,7 @@ Provide your analysis with:
 
         try:
             # Stream from LLM
-            async for chunk in self._llm.stream_chat(
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens
-            ):
+            async for chunk in self._llm.stream_chat(messages=messages, temperature=temperature, max_tokens=max_tokens):
                 if chunk.text:
                     yield f"data: {json.dumps({'type': 'text', 'content': chunk.text})}\n\n"
 
@@ -623,7 +595,7 @@ Provide your analysis with:
                             "processing_time_ms": processing_time,
                             "is_followup": is_followup,
                             "streaming": True,
-                        }
+                        },
                     )
 
                     yield f"data: {json.dumps({'type': 'done', 'finish_reason': chunk.finish_reason})}\n\n"
@@ -637,7 +609,7 @@ Provide your analysis with:
                     "target_id": request.target_id,
                     "error": str(e),
                     "streaming": True,
-                }
+                },
             )
             yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
 

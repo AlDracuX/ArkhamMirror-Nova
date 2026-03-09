@@ -7,8 +7,8 @@ from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
 from .embedder import EmbeddingManager
-from .storage import VectorStore
 from .models import EmbedConfig
+from .storage import VectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +60,7 @@ class EmbedShard(ArkhamShard):
         # Register workers with Frame
         if worker_service:
             from .workers import EmbedWorker
+
             worker_service.register_worker(EmbedWorker)
             logger.info("Registered EmbedWorker to gpu-embed pool")
 
@@ -80,8 +81,7 @@ class EmbedShard(ArkhamShard):
         )
 
         logger.info(
-            f"Embedding config: model={model}, device={device}, "
-            f"batch_size={batch_size}, cache_size={cache_size}"
+            f"Embedding config: model={model}, device={device}, batch_size={batch_size}, cache_size={cache_size}"
         )
 
         # Initialize embedding manager (lazy loads model on first use)
@@ -122,6 +122,7 @@ class EmbedShard(ArkhamShard):
             worker_service = self.frame.get_service("workers")
             if worker_service:
                 from .workers import EmbedWorker
+
                 worker_service.unregister_worker(EmbedWorker)
                 logger.info("Unregistered EmbedWorker from gpu-embed pool")
 
@@ -192,30 +193,32 @@ class EmbedShard(ArkhamShard):
             chunk_data = []
             for chunk in chunks:
                 # Handle both Chunk objects and dicts
-                if hasattr(chunk, 'content'):
+                if hasattr(chunk, "content"):
                     text = chunk.content
                     chunk_id = chunk.id
-                    chunk_index = getattr(chunk, 'chunk_index', 0)
-                elif hasattr(chunk, 'text'):
+                    chunk_index = getattr(chunk, "chunk_index", 0)
+                elif hasattr(chunk, "text"):
                     text = chunk.text
                     chunk_id = chunk.id
-                    chunk_index = getattr(chunk, 'index', 0)
+                    chunk_index = getattr(chunk, "index", 0)
                 elif isinstance(chunk, dict):
-                    text = chunk.get('content') or chunk.get('text', '')
-                    chunk_id = chunk.get('id', chunk.get('chunk_id', ''))
-                    chunk_index = chunk.get('chunk_index', chunk.get('index', 0))
+                    text = chunk.get("content") or chunk.get("text", "")
+                    chunk_id = chunk.get("id", chunk.get("chunk_id", ""))
+                    chunk_index = chunk.get("chunk_index", chunk.get("index", 0))
                 else:
                     logger.warning(f"Unknown chunk format: {type(chunk)}")
                     continue
 
                 if text and text.strip():
                     texts.append(text)
-                    chunk_data.append({
-                        'chunk_id': str(chunk_id),
-                        'doc_id': doc_id,
-                        'chunk_index': chunk_index,
-                        'text_length': len(text),
-                    })
+                    chunk_data.append(
+                        {
+                            "chunk_id": str(chunk_id),
+                            "doc_id": doc_id,
+                            "chunk_index": chunk_index,
+                            "text_length": len(text),
+                        }
+                    )
 
             if not texts:
                 logger.warning(f"No valid text found in chunks for document {doc_id}")
@@ -231,6 +234,7 @@ class EmbedShard(ArkhamShard):
 
             # Store embeddings in vector store
             import uuid as uuid_mod
+
             from arkham_frame.services.vectors import VectorPoint
 
             points = []
@@ -242,16 +246,16 @@ class EmbedShard(ArkhamShard):
                     id=vector_id,
                     vector=emb,
                     payload={
-                        'doc_id': data['doc_id'],
-                        'chunk_id': data['chunk_id'],
-                        'chunk_index': data['chunk_index'],
-                        'text_length': data['text_length'],
-                    }
+                        "doc_id": data["doc_id"],
+                        "chunk_id": data["chunk_id"],
+                        "chunk_index": data["chunk_index"],
+                        "text_length": data["text_length"],
+                    },
                 )
                 points.append(point)
                 vector_ids.append(vector_id)
-                if data.get('chunk_id'):
-                    chunk_ids.append(data['chunk_id'])
+                if data.get("chunk_id"):
+                    chunk_ids.append(data["chunk_id"])
 
             # Get collection name based on active project
             collection_name = self.frame.get_collection_name("documents")
@@ -331,11 +335,7 @@ class EmbedShard(ArkhamShard):
             logger.error(f"Text embedding failed: {e}")
             return []
 
-    async def embed_batch(
-        self,
-        texts: list[str],
-        batch_size: int | None = None
-    ) -> list[list[float]]:
+    async def embed_batch(self, texts: list[str], batch_size: int | None = None) -> list[list[float]]:
         """
         Public method for other shards to embed multiple texts.
 
@@ -363,7 +363,7 @@ class EmbedShard(ArkhamShard):
         limit: int = 10,
         min_similarity: float = 0.5,
         filters: dict | None = None,
-        use_project_scope: bool = True
+        use_project_scope: bool = True,
     ) -> list[dict]:
         """
         Public method to find similar vectors in the vector store.
@@ -421,7 +421,7 @@ class EmbedShard(ArkhamShard):
         payload: dict,
         collection: str | None = None,
         vector_id: str | None = None,
-        use_project_scope: bool = True
+        use_project_scope: bool = True,
     ) -> str | None:
         """
         Public method to store an embedding in the vector store.
@@ -464,7 +464,7 @@ class EmbedShard(ArkhamShard):
         payloads: list[dict],
         collection: str | None = None,
         vector_ids: list[str] | None = None,
-        use_project_scope: bool = True
+        use_project_scope: bool = True,
     ) -> list[str] | None:
         """
         Public method to store multiple embeddings in batch.

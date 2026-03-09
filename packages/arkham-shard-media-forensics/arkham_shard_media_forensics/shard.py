@@ -31,6 +31,7 @@ def _make_json_safe(obj: Any) -> Any:
     # Handle numpy types
     try:
         import numpy as np
+
         if isinstance(obj, np.bool_):
             return bool(obj)
         if isinstance(obj, np.integer):
@@ -48,6 +49,7 @@ def _make_json_safe(obj: Any) -> Any:
         pass
     # Fall back to string representation
     return str(obj)
+
 
 from .api import init_api, router
 from .models import (
@@ -133,6 +135,7 @@ class MediaForensicsShard(ArkhamShard):
         """Initialize service classes (lazy import to avoid import errors)."""
         try:
             from .services.exif_extractor import ExifExtractor
+
             self.exif_extractor = ExifExtractor(self._frame)
             logger.debug("ExifExtractor initialized")
         except ImportError as e:
@@ -140,6 +143,7 @@ class MediaForensicsShard(ArkhamShard):
 
         try:
             from .services.perceptual_hash import PerceptualHashService
+
             self.hash_service = PerceptualHashService(self._frame)
             logger.debug("PerceptualHashService initialized")
         except ImportError as e:
@@ -147,6 +151,7 @@ class MediaForensicsShard(ArkhamShard):
 
         try:
             from .services.c2pa_parser import C2PAParser
+
             self.c2pa_parser = C2PAParser(self._frame)
             logger.debug("C2PAParser initialized")
         except ImportError as e:
@@ -154,6 +159,7 @@ class MediaForensicsShard(ArkhamShard):
 
         try:
             from .services.ela_analyzer import ELAAnalyzer
+
             self.ela_analyzer = ELAAnalyzer(self._frame)
             logger.debug("ELAAnalyzer initialized")
         except ImportError as e:
@@ -161,6 +167,7 @@ class MediaForensicsShard(ArkhamShard):
 
         try:
             from .services.sun_position import SunPositionService
+
             self.sun_position = SunPositionService(self._frame)
             logger.debug("SunPositionService initialized")
         except ImportError as e:
@@ -347,9 +354,7 @@ class MediaForensicsShard(ArkhamShard):
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_media_similar_source ON arkham_media_similar(source_analysis_id)"
             )
-            await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_media_ela_analysis ON arkham_media_ela(analysis_id)"
-            )
+            await self._db.execute("CREATE INDEX IF NOT EXISTS idx_media_ela_analysis ON arkham_media_ela(analysis_id)")
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_media_sun_analysis ON arkham_media_sun_verification(analysis_id)"
             )
@@ -575,9 +580,7 @@ class MediaForensicsShard(ArkhamShard):
 
         # Find similar images
         if self.hash_service and hashes.get("phash"):
-            similar = await self.hash_service.find_similar(
-                hashes["phash"], hash_type="phash", threshold=10
-            )
+            similar = await self.hash_service.find_similar(hashes["phash"], hash_type="phash", threshold=10)
             # Filter out self
             similar = [s for s in similar if s["analysis_id"] != analysis_id]
 
@@ -807,10 +810,7 @@ class MediaForensicsShard(ArkhamShard):
         if not self._db:
             return None
 
-        row = await self._db.fetch_one(
-            "SELECT * FROM arkham_media_analyses WHERE id = :id",
-            {"id": analysis_id}
-        )
+        row = await self._db.fetch_one("SELECT * FROM arkham_media_analyses WHERE id = :id", {"id": analysis_id})
 
         if not row:
             return None
@@ -824,7 +824,7 @@ class MediaForensicsShard(ArkhamShard):
 
         row = await self._db.fetch_one(
             "SELECT * FROM arkham_media_analyses WHERE document_id = :document_id ORDER BY created_at DESC LIMIT 1",
-            {"document_id": document_id}
+            {"document_id": document_id},
         )
 
         if not row:
@@ -947,8 +947,7 @@ class MediaForensicsShard(ArkhamShard):
         # Fall back to documents table if we have a document_id
         if (not file_path or not file_path.exists()) and analysis.get("document_id"):
             doc = await self._db.fetch_one(
-                "SELECT path FROM arkham_frame.documents WHERE id = :id",
-                {"id": analysis["document_id"]}
+                "SELECT path FROM arkham_frame.documents WHERE id = :id", {"id": analysis["document_id"]}
             )
             if doc and doc.get("path"):
                 file_path = Path(doc["path"])
@@ -976,7 +975,7 @@ class MediaForensicsShard(ArkhamShard):
                     "quality": quality,
                     "interpretation": json.dumps(result.get("interpretation", {})),
                     "created_at": datetime.utcnow().isoformat(),
-                }
+                },
             )
 
             # Emit event
@@ -1028,9 +1027,7 @@ class MediaForensicsShard(ArkhamShard):
 
         return similar
 
-    async def reverse_image_search(
-        self, analysis_id: str, base_url: Optional[str] = None
-    ) -> Dict[str, Any]:
+    async def reverse_image_search(self, analysis_id: str, base_url: Optional[str] = None) -> Dict[str, Any]:
         """
         Perform reverse image search using external web APIs or generate search URLs.
 
@@ -1097,9 +1094,9 @@ class MediaForensicsShard(ArkhamShard):
             "search_urls": search_urls,
             "api_results": api_results,
             "has_api_keys": bool(
-                os.environ.get("TINEYE_API_KEY") or
-                os.environ.get("GOOGLE_VISION_API_KEY") or
-                os.environ.get("SERPAPI_KEY")
+                os.environ.get("TINEYE_API_KEY")
+                or os.environ.get("GOOGLE_VISION_API_KEY")
+                or os.environ.get("SERPAPI_KEY")
             ),
         }
 
@@ -1118,71 +1115,81 @@ class MediaForensicsShard(ArkhamShard):
         # Google Images reverse search (supports URL-based search)
         if image_url:
             google_url = f"https://lens.google.com/uploadbyurl?url={quote(image_url)}"
-            search_urls.append({
-                "engine": "Google Lens",
-                "url": google_url,
-                "icon": "search",
-                "description": "Search with Google Lens (URL-based)",
-                "type": "url_search",
-            })
+            search_urls.append(
+                {
+                    "engine": "Google Lens",
+                    "url": google_url,
+                    "icon": "search",
+                    "description": "Search with Google Lens (URL-based)",
+                    "type": "url_search",
+                }
+            )
 
         # Google Images upload page (always available)
-        search_urls.append({
-            "engine": "Google Images",
-            "url": "https://images.google.com/",
-            "icon": "image",
-            "description": "Upload image to Google Images",
-            "type": "upload_search",
-            "instructions": "Click the camera icon and upload the image",
-        })
+        search_urls.append(
+            {
+                "engine": "Google Images",
+                "url": "https://images.google.com/",
+                "icon": "image",
+                "description": "Upload image to Google Images",
+                "type": "upload_search",
+                "instructions": "Click the camera icon and upload the image",
+            }
+        )
 
         # TinEye (upload-based)
-        search_urls.append({
-            "engine": "TinEye",
-            "url": "https://tineye.com/",
-            "icon": "eye",
-            "description": "Upload image to TinEye",
-            "type": "upload_search",
-            "instructions": "Upload the image to search for matches",
-        })
+        search_urls.append(
+            {
+                "engine": "TinEye",
+                "url": "https://tineye.com/",
+                "icon": "eye",
+                "description": "Upload image to TinEye",
+                "type": "upload_search",
+                "instructions": "Upload the image to search for matches",
+            }
+        )
 
         # Yandex Images (supports URL-based search)
         if image_url:
             yandex_url = f"https://yandex.com/images/search?url={quote(image_url)}&rpt=imageview"
-            search_urls.append({
-                "engine": "Yandex Images",
-                "url": yandex_url,
-                "icon": "globe",
-                "description": "Search with Yandex Images (URL-based)",
-                "type": "url_search",
-            })
+            search_urls.append(
+                {
+                    "engine": "Yandex Images",
+                    "url": yandex_url,
+                    "icon": "globe",
+                    "description": "Search with Yandex Images (URL-based)",
+                    "type": "url_search",
+                }
+            )
 
         # Yandex upload page (always available)
-        search_urls.append({
-            "engine": "Yandex Images",
-            "url": "https://yandex.com/images/",
-            "icon": "globe",
-            "description": "Upload image to Yandex Images",
-            "type": "upload_search",
-            "instructions": "Click the camera icon and upload the image",
-        })
+        search_urls.append(
+            {
+                "engine": "Yandex Images",
+                "url": "https://yandex.com/images/",
+                "icon": "globe",
+                "description": "Upload image to Yandex Images",
+                "type": "upload_search",
+                "instructions": "Click the camera icon and upload the image",
+            }
+        )
 
         # Bing Visual Search (URL-based)
         if image_url:
             bing_url = f"https://www.bing.com/images/search?view=detailv2&iss=sbi&q=imgurl:{quote(image_url)}"
-            search_urls.append({
-                "engine": "Bing Visual Search",
-                "url": bing_url,
-                "icon": "search",
-                "description": "Search with Bing Visual Search (URL-based)",
-                "type": "url_search",
-            })
+            search_urls.append(
+                {
+                    "engine": "Bing Visual Search",
+                    "url": bing_url,
+                    "icon": "search",
+                    "description": "Search with Bing Visual Search (URL-based)",
+                    "type": "url_search",
+                }
+            )
 
         return search_urls
 
-    async def _serpapi_search(
-        self, analysis_id: str, base_url: str, api_key: str
-    ) -> List[Dict[str, Any]]:
+    async def _serpapi_search(self, analysis_id: str, base_url: str, api_key: str) -> List[Dict[str, Any]]:
         """Search using SerpAPI Google Reverse Image Search."""
         try:
             import aiohttp
@@ -1207,26 +1214,30 @@ class MediaForensicsShard(ArkhamShard):
 
                         # Process image results
                         for match in data.get("image_results", [])[:10]:
-                            results.append({
-                                "url": match.get("link"),
-                                "domain": match.get("source"),
-                                "title": match.get("title", "SerpAPI Match"),
-                                "thumbnail_url": match.get("thumbnail"),
-                                "similarity_score": 0.75,
-                                "source": "serpapi",
-                            })
-
-                        # Process inline images
-                        for match in data.get("inline_images", [])[:5]:
-                            if match.get("link"):
-                                results.append({
+                            results.append(
+                                {
                                     "url": match.get("link"),
                                     "domain": match.get("source"),
                                     "title": match.get("title", "SerpAPI Match"),
                                     "thumbnail_url": match.get("thumbnail"),
-                                    "similarity_score": 0.7,
+                                    "similarity_score": 0.75,
                                     "source": "serpapi",
-                                })
+                                }
+                            )
+
+                        # Process inline images
+                        for match in data.get("inline_images", [])[:5]:
+                            if match.get("link"):
+                                results.append(
+                                    {
+                                        "url": match.get("link"),
+                                        "domain": match.get("source"),
+                                        "title": match.get("title", "SerpAPI Match"),
+                                        "thumbnail_url": match.get("thumbnail"),
+                                        "similarity_score": 0.7,
+                                        "source": "serpapi",
+                                    }
+                                )
 
                         return results
                     else:
@@ -1238,8 +1249,9 @@ class MediaForensicsShard(ArkhamShard):
     async def _tineye_search(self, file_path: str, api_key: str) -> List[Dict[str, Any]]:
         """Search TinEye for matching images."""
         try:
-            import aiohttp
             import base64
+
+            import aiohttp
 
             # Read and encode image
             with open(file_path, "rb") as f:
@@ -1256,14 +1268,16 @@ class MediaForensicsShard(ArkhamShard):
                         data = await resp.json()
                         results = []
                         for match in data.get("matches", [])[:10]:
-                            results.append({
-                                "url": match.get("backlinks", [{}])[0].get("url"),
-                                "domain": match.get("domain"),
-                                "title": match.get("backlinks", [{}])[0].get("page_title", "TinEye Match"),
-                                "thumbnail_url": match.get("image_url"),
-                                "similarity_score": match.get("score", 50) / 100,
-                                "source": "tineye",
-                            })
+                            results.append(
+                                {
+                                    "url": match.get("backlinks", [{}])[0].get("url"),
+                                    "domain": match.get("domain"),
+                                    "title": match.get("backlinks", [{}])[0].get("page_title", "TinEye Match"),
+                                    "thumbnail_url": match.get("image_url"),
+                                    "similarity_score": match.get("score", 50) / 100,
+                                    "source": "tineye",
+                                }
+                            )
                         return results
         except Exception as e:
             logger.warning(f"TinEye search failed: {e}")
@@ -1272,8 +1286,9 @@ class MediaForensicsShard(ArkhamShard):
     async def _google_vision_search(self, file_path: str, api_key: str) -> List[Dict[str, Any]]:
         """Search Google Vision for web detection."""
         try:
-            import aiohttp
             import base64
+
+            import aiohttp
 
             # Read and encode image
             with open(file_path, "rb") as f:
@@ -1283,10 +1298,12 @@ class MediaForensicsShard(ArkhamShard):
                 async with session.post(
                     f"https://vision.googleapis.com/v1/images:annotate?key={api_key}",
                     json={
-                        "requests": [{
-                            "image": {"content": image_data},
-                            "features": [{"type": "WEB_DETECTION", "maxResults": 10}],
-                        }]
+                        "requests": [
+                            {
+                                "image": {"content": image_data},
+                                "features": [{"type": "WEB_DETECTION", "maxResults": 10}],
+                            }
+                        ]
                     },
                     timeout=aiohttp.ClientTimeout(total=30),
                 ) as resp:
@@ -1297,15 +1314,18 @@ class MediaForensicsShard(ArkhamShard):
 
                         # Pages with matching images
                         for page in web_detection.get("pagesWithMatchingImages", [])[:10]:
-                            results.append({
-                                "url": page.get("url"),
-                                "domain": page.get("url", "").split("/")[2] if page.get("url") else None,
-                                "title": page.get("pageTitle", "Google Vision Match"),
-                                "thumbnail_url": page.get("fullMatchingImages", [{}])[0].get("url")
-                                    if page.get("fullMatchingImages") else None,
-                                "similarity_score": 0.8,  # Google doesn't provide score
-                                "source": "google_vision",
-                            })
+                            results.append(
+                                {
+                                    "url": page.get("url"),
+                                    "domain": page.get("url", "").split("/")[2] if page.get("url") else None,
+                                    "title": page.get("pageTitle", "Google Vision Match"),
+                                    "thumbnail_url": page.get("fullMatchingImages", [{}])[0].get("url")
+                                    if page.get("fullMatchingImages")
+                                    else None,
+                                    "similarity_score": 0.8,  # Google doesn't provide score
+                                    "source": "google_vision",
+                                }
+                            )
                         return results
         except Exception as e:
             logger.warning(f"Google Vision search failed: {e}")
@@ -1371,7 +1391,7 @@ class MediaForensicsShard(ArkhamShard):
                     "verification_status": "calculated",
                     "notes": result.get("interpretation"),
                     "created_at": datetime.utcnow().isoformat(),
-                }
+                },
             )
 
         return result
@@ -1419,9 +1439,7 @@ class MediaForensicsShard(ArkhamShard):
 
         try:
             # Total count
-            total_row = await self._db.fetch_one(
-                "SELECT COUNT(*) as count FROM arkham_media_analyses"
-            )
+            total_row = await self._db.fetch_one("SELECT COUNT(*) as count FROM arkham_media_analyses")
             total = total_row["count"] if total_row else 0
             stats["total_analyses"] = total
             # All records in DB are completed
@@ -1542,18 +1560,22 @@ class MediaForensicsShard(ArkhamShard):
                 elif warning.startswith("GPS_"):
                     category = "exif"
 
-                findings.append({
-                    "id": f"{row['id']}_warning_{i}",
-                    "category": category,
-                    "severity": severity,
-                    "title": warning.split(":")[0] if ":" in warning else warning[:50],
-                    "description": warning,
-                    "evidence": {},
-                    "recommendation": None,
-                    "confidence": 0.7,
-                    "auto_detected": True,
-                    "detected_at": row["created_at"].isoformat() if row.get("created_at") else datetime.utcnow().isoformat(),
-                })
+                findings.append(
+                    {
+                        "id": f"{row['id']}_warning_{i}",
+                        "category": category,
+                        "severity": severity,
+                        "title": warning.split(":")[0] if ":" in warning else warning[:50],
+                        "description": warning,
+                        "evidence": {},
+                        "recommendation": None,
+                        "confidence": 0.7,
+                        "auto_detected": True,
+                        "detected_at": row["created_at"].isoformat()
+                        if row.get("created_at")
+                        else datetime.utcnow().isoformat(),
+                    }
+                )
             elif isinstance(warning, dict):
                 # Already a finding object
                 findings.append(warning)
@@ -1731,7 +1753,9 @@ class MediaForensicsShard(ArkhamShard):
         timestamps = {
             "datetime_original": row.get("datetime_original") or raw_exif.get("EXIF DateTimeOriginal"),
             "datetime_digitized": row.get("datetime_digitized") or raw_exif.get("EXIF DateTimeDigitized"),
-            "datetime_modified": row.get("datetime_modified") or raw_exif.get("DateTime") or raw_exif.get("Image DateTime"),
+            "datetime_modified": row.get("datetime_modified")
+            or raw_exif.get("DateTime")
+            or raw_exif.get("Image DateTime"),
             "timezone_offset": raw_exif.get("EXIF OffsetTime") or raw_exif.get("OffsetTime"),
         }
 
@@ -1843,31 +1867,37 @@ class MediaForensicsShard(ArkhamShard):
         # Transform actions
         for action in raw_c2pa.get("actions", []):
             if isinstance(action, dict):
-                manifest["actions"].append({
-                    "action": action.get("action", "unknown"),
-                    "when": action.get("when"),
-                    "software_agent": action.get("softwareAgent"),
-                    "parameters": action.get("parameters", {}),
-                })
+                manifest["actions"].append(
+                    {
+                        "action": action.get("action", "unknown"),
+                        "when": action.get("when"),
+                        "software_agent": action.get("softwareAgent"),
+                        "parameters": action.get("parameters", {}),
+                    }
+                )
             elif isinstance(action, str):
-                manifest["actions"].append({
-                    "action": action,
-                    "when": None,
-                    "software_agent": None,
-                    "parameters": {},
-                })
+                manifest["actions"].append(
+                    {
+                        "action": action,
+                        "when": None,
+                        "software_agent": None,
+                        "parameters": {},
+                    }
+                )
 
         # Transform ingredients
         for ingredient in raw_c2pa.get("ingredients", []):
             if isinstance(ingredient, dict):
-                manifest["ingredients"].append({
-                    "title": ingredient.get("title"),
-                    "format": ingredient.get("format"),
-                    "document_id": ingredient.get("document_id"),
-                    "instance_id": ingredient.get("instance_id"),
-                    "relationship": ingredient.get("relationship", "componentOf"),
-                    "thumbnail": ingredient.get("thumbnail"),
-                })
+                manifest["ingredients"].append(
+                    {
+                        "title": ingredient.get("title"),
+                        "format": ingredient.get("format"),
+                        "document_id": ingredient.get("document_id"),
+                        "instance_id": ingredient.get("instance_id"),
+                        "relationship": ingredient.get("relationship", "componentOf"),
+                        "thumbnail": ingredient.get("thumbnail"),
+                    }
+                )
 
         # Try to get more details from raw_manifest if available
         if raw_manifest_store and "manifests" in raw_manifest_store and active_manifest_id:
@@ -1882,11 +1912,13 @@ class MediaForensicsShard(ArkhamShard):
 
                 # Get assertions
                 for assertion in full_manifest.get("assertions", []):
-                    manifest["assertions"].append({
-                        "label": assertion.get("label", ""),
-                        "data": assertion.get("data", {}),
-                        "instance": assertion.get("instance"),
-                    })
+                    manifest["assertions"].append(
+                        {
+                            "label": assertion.get("label", ""),
+                            "data": assertion.get("data", {}),
+                            "instance": assertion.get("instance"),
+                        }
+                    )
 
                 # Get signature info
                 if "signature_info" in full_manifest:

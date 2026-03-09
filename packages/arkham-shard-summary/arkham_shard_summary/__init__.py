@@ -4,18 +4,18 @@ Summary Shard - Auto-summarization for ArkhamFrame
 Provides LLM-powered summarization of documents, collections, and analysis results.
 """
 
-from .shard import SummaryShard
 from .models import (
-    Summary,
-    SummaryType,
-    SummaryStatus,
     SourceType,
+    Summary,
+    SummaryFilter,
     SummaryLength,
     SummaryRequest,
     SummaryResult,
-    SummaryFilter,
     SummaryStatistics,
+    SummaryStatus,
+    SummaryType,
 )
+from .shard import SummaryShard
 
 __version__ = "0.1.0"
 

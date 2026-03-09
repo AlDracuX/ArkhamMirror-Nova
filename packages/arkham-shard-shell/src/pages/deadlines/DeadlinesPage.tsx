@@ -53,18 +53,40 @@ export const DeadlinesPage: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
   };
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '24px',
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h1
+            style={{
+              fontSize: '24px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
             <Clock size={24} /> Deadlines
           </h1>
           <p style={{ color: '#6b7280', marginTop: '4px' }}>
@@ -74,18 +96,31 @@ export const DeadlinesPage: React.FC = () => {
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '8px 16px', background: '#f3f4f6', color: '#374151',
-              border: '1px solid #e5e7eb', borderRadius: '6px', cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              background: '#f3f4f6',
+              color: '#374151',
+              border: '1px solid #e5e7eb',
+              borderRadius: '6px',
+              cursor: 'pointer',
             }}
           >
             <Calendar size={16} /> Export ICS
           </button>
           <button
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '8px 16px', background: '#3b82f6', color: 'white',
-              border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 500,
             }}
           >
             <Plus size={16} /> Add Deadline
@@ -94,17 +129,29 @@ export const DeadlinesPage: React.FC = () => {
       </div>
 
       {stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '12px',
+            marginBottom: '24px',
+          }}
+        >
           {[
             { label: 'Total', value: stats.total, color: '#6b7280' },
             { label: 'Pending', value: stats.pending, color: '#3b82f6' },
             { label: 'Breached', value: stats.breached, color: '#dc2626' },
             { label: 'Completed', value: stats.completed, color: '#16a34a' },
-          ].map(s => (
-            <div key={s.label} style={{
-              padding: '16px', borderRadius: '8px', border: '1px solid #e5e7eb',
-              background: 'var(--bg-primary, white)',
-            }}>
+          ].map((s) => (
+            <div
+              key={s.label}
+              style={{
+                padding: '16px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb',
+                background: 'var(--bg-primary, white)',
+              }}
+            >
               <div style={{ fontSize: '13px', color: '#6b7280' }}>{s.label}</div>
               <div style={{ fontSize: '28px', fontWeight: 700, color: s.color }}>{s.value}</div>
             </div>
@@ -113,7 +160,9 @@ export const DeadlinesPage: React.FC = () => {
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>Loading deadlines...</div>
+        <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>
+          Loading deadlines...
+        </div>
       ) : deadlines.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>
           <Clock size={48} style={{ marginBottom: '12px', opacity: 0.3 }} />
@@ -121,16 +170,21 @@ export const DeadlinesPage: React.FC = () => {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {deadlines.map(dl => {
+          {deadlines.map((dl) => {
             const urg = URGENCY_CONFIG[dl.urgency] || URGENCY_CONFIG.future;
             return (
               <div
                 key={dl.id}
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '12px 16px', border: `1px solid ${urg.color}30`, borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 16px',
+                  border: `1px solid ${urg.color}30`,
+                  borderRadius: '8px',
                   borderLeft: `4px solid ${urg.color}`,
-                  background: 'var(--bg-primary, white)', cursor: 'pointer',
+                  background: 'var(--bg-primary, white)',
+                  cursor: 'pointer',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
@@ -150,7 +204,9 @@ export const DeadlinesPage: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 600, fontSize: '14px' }}>{formatDate(dl.deadline_date)}</div>
+                    <div style={{ fontWeight: 600, fontSize: '14px' }}>
+                      {formatDate(dl.deadline_date)}
+                    </div>
                     <div style={{ fontSize: '12px', color: urg.color, fontWeight: 600 }}>
                       {dl.days_remaining !== null && dl.days_remaining >= 0
                         ? `${dl.days_remaining} day${dl.days_remaining !== 1 ? 's' : ''} left`
@@ -159,10 +215,16 @@ export const DeadlinesPage: React.FC = () => {
                           : ''}
                     </div>
                   </div>
-                  <span style={{
-                    padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-                    background: urg.bg, color: urg.color,
-                  }}>
+                  <span
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      background: urg.bg,
+                      color: urg.color,
+                    }}
+                  >
                     {urg.label}
                   </span>
                   <ChevronRight size={16} style={{ color: '#9ca3af' }} />

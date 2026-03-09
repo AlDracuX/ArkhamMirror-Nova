@@ -4,25 +4,25 @@ Contradictions Shard - Model Tests
 Tests for all dataclasses and enums in the models module.
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_contradictions.models import (
-    ContradictionStatus,
-    Severity,
-    ContradictionType,
-    Contradiction,
-    Claim,
-    ContradictionChain,
+    AddNotesRequest,
     AnalyzeRequest,
     BatchAnalyzeRequest,
-    ClaimsRequest,
-    UpdateStatusRequest,
-    AddNotesRequest,
-    ContradictionResult,
-    ContradictionList,
-    StatsResponse,
+    Claim,
     ClaimExtractionResult,
+    ClaimsRequest,
+    Contradiction,
+    ContradictionChain,
+    ContradictionList,
+    ContradictionResult,
+    ContradictionStatus,
+    ContradictionType,
+    Severity,
+    StatsResponse,
+    UpdateStatusRequest,
 )
 
 

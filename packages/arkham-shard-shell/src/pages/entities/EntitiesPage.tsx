@@ -84,7 +84,7 @@ export function EntitiesPage() {
   }, [location.pathname]);
 
   // Handle tab click - navigate to route
-  const handleTabClick = (tab: typeof TABS[number]) => {
+  const handleTabClick = (tab: (typeof TABS)[number]) => {
     navigate(tab.route);
   };
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,21 +93,21 @@ export function EntitiesPage() {
   const [viewingMentions, setViewingMentions] = useState(false);
 
   // Fetch entity count/stats
-  const { data: stats, refetch: refetchStats } = useFetch<{ count: number }>(
-    '/api/entities/count'
-  );
+  const { data: stats, refetch: refetchStats } = useFetch<{ count: number }>('/api/entities/count');
 
   // Fetch entities with pagination
-  const { items: entities, loading, error, refetch } = usePaginatedFetch<Entity>(
-    '/api/entities/items',
-    {
-      params: {
-        ...(searchQuery && { q: searchQuery }),
-        ...(typeFilter && { filter: typeFilter }),
-      },
-      syncToUrl: false,
-    }
-  );
+  const {
+    items: entities,
+    loading,
+    error,
+    refetch,
+  } = usePaginatedFetch<Entity>('/api/entities/items', {
+    params: {
+      ...(searchQuery && { q: searchQuery }),
+      ...(typeFilter && { filter: typeFilter }),
+    },
+    syncToUrl: false,
+  });
 
   // Fetch mentions for selected entity
   const { data: mentions, loading: loadingMentions } = useFetch<Mention[]>(
@@ -135,12 +135,12 @@ export function EntitiesPage() {
   };
 
   const getEntityIcon = (entityType: string) => {
-    const typeInfo = ENTITY_TYPES.find(t => t.value === entityType);
+    const typeInfo = ENTITY_TYPES.find((t) => t.value === entityType);
     return typeInfo?.icon || 'Tag';
   };
 
   const getEntityTypeLabel = (entityType: string) => {
-    const typeInfo = ENTITY_TYPES.find(t => t.value === entityType);
+    const typeInfo = ENTITY_TYPES.find((t) => t.value === entityType);
     return typeInfo?.label || entityType;
   };
 
@@ -176,7 +176,7 @@ export function EntitiesPage() {
 
       {/* Tabs */}
       <div className="entities-tabs">
-        {TABS.map(tab => (
+        {TABS.map((tab) => (
           <button
             key={tab.id}
             className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
@@ -191,10 +191,12 @@ export function EntitiesPage() {
       {/* Tab Content */}
       {activeTab === 'relationships' ? (
         <div className="entities-layout">
-          <Relationships onRelationshipCreated={() => {
-            refetch();
-            refetchStats();
-          }} />
+          <Relationships
+            onRelationshipCreated={() => {
+              refetch();
+              refetchStats();
+            }}
+          />
         </div>
       ) : activeTab === 'browse' ? (
         <div className="entities-layout">
@@ -215,7 +217,7 @@ export function EntitiesPage() {
               onChange={(e) => setTypeFilter(e.target.value)}
               className="type-filter"
             >
-              {ENTITY_TYPES.map(type => (
+              {ENTITY_TYPES.map((type) => (
                 <option key={type.value} value={type.value}>
                   {type.label}
                 </option>
@@ -242,7 +244,7 @@ export function EntitiesPage() {
                 </div>
               ) : entities && entities.length > 0 ? (
                 <div className="entity-items">
-                  {entities.map(entity => (
+                  {entities.map((entity) => (
                     <div
                       key={entity.id}
                       className={`entity-card ${selectedEntity?.id === entity.id ? 'selected' : ''}`}
@@ -307,7 +309,9 @@ export function EntitiesPage() {
                     <div className="detail-grid">
                       <div className="detail-item">
                         <label>Type</label>
-                        <span className={`entity-type type-${selectedEntity.entity_type.toLowerCase()}`}>
+                        <span
+                          className={`entity-type type-${selectedEntity.entity_type.toLowerCase()}`}
+                        >
                           <Icon name={getEntityIcon(selectedEntity.entity_type)} size={14} />
                           {getEntityTypeLabel(selectedEntity.entity_type)}
                         </span>
@@ -321,7 +325,9 @@ export function EntitiesPage() {
                           <label>Aliases</label>
                           <div className="aliases-list">
                             {selectedEntity.aliases.map((alias, idx) => (
-                              <span key={idx} className="alias-badge">{alias}</span>
+                              <span key={idx} className="alias-badge">
+                                {alias}
+                              </span>
                             ))}
                           </div>
                         </div>
@@ -331,10 +337,7 @@ export function EntitiesPage() {
 
                   {!viewingMentions ? (
                     <div className="detail-actions">
-                      <button
-                        className="btn btn-primary"
-                        onClick={handleViewMentions}
-                      >
+                      <button className="btn btn-primary" onClick={handleViewMentions}>
                         <Icon name="MessageSquare" size={16} />
                         View Mentions
                       </button>
@@ -349,7 +352,7 @@ export function EntitiesPage() {
                         </div>
                       ) : mentions && mentions.length > 0 ? (
                         <div className="mentions-list">
-                          {mentions.map(mention => (
+                          {mentions.map((mention) => (
                             <div key={mention.id} className="mention-card">
                               <div className="mention-header">
                                 <Icon name="FileText" size={14} />

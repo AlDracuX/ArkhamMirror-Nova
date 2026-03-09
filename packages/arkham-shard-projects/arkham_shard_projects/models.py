@@ -9,26 +9,29 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-
 # === Enums ===
+
 
 class ProjectStatus(str, Enum):
     """Status of a project in its lifecycle."""
-    ACTIVE = "active"           # Currently in progress
-    ARCHIVED = "archived"       # Completed or inactive
-    COMPLETED = "completed"     # Successfully finished
-    ON_HOLD = "on_hold"         # Temporarily paused
+
+    ACTIVE = "active"  # Currently in progress
+    ARCHIVED = "archived"  # Completed or inactive
+    COMPLETED = "completed"  # Successfully finished
+    ON_HOLD = "on_hold"  # Temporarily paused
 
 
 class ProjectRole(str, Enum):
     """Role of a member within a project."""
-    OWNER = "owner"             # Full control over project
-    ADMIN = "admin"             # Manage members and settings
-    EDITOR = "editor"           # Add/edit content
-    VIEWER = "viewer"           # Read-only access
+
+    OWNER = "owner"  # Full control over project
+    ADMIN = "admin"  # Manage members and settings
+    EDITOR = "editor"  # Add/edit content
+    VIEWER = "viewer"  # Read-only access
 
 
 # === Dataclasses ===
+
 
 @dataclass
 class Project:
@@ -37,6 +40,7 @@ class Project:
 
     Projects provide organizational structure and access control.
     """
+
     id: str
     name: str
     description: str = ""
@@ -63,6 +67,7 @@ class ProjectMember:
 
     Members have role-based access to project resources.
     """
+
     id: str
     project_id: str
     user_id: str
@@ -80,6 +85,7 @@ class ProjectDocument:
 
     Tracks when and by whom documents were added to projects.
     """
+
     id: str
     project_id: str
     document_id: str
@@ -96,13 +102,14 @@ class ProjectActivity:
 
     Tracks all changes and actions within a project.
     """
+
     id: str
     project_id: str
-    action: str                          # e.g., "created", "member_added"
-    actor_id: str                        # User who performed the action
+    action: str  # e.g., "created", "member_added"
+    actor_id: str  # User who performed the action
 
     # Target of the action
-    target_type: str = "project"         # project, member, document, etc.
+    target_type: str = "project"  # project, member, document, etc.
     target_id: str = ""
 
     # Timestamp and details
@@ -115,6 +122,7 @@ class ProjectStatistics:
     """
     Statistics about projects in the system.
     """
+
     total_projects: int = 0
     by_status: Dict[str, int] = field(default_factory=dict)
     by_owner: Dict[str, int] = field(default_factory=dict)
@@ -134,6 +142,7 @@ class ProjectFilter:
     """
     Filter criteria for project queries.
     """
+
     status: Optional[ProjectStatus] = None
     owner_id: Optional[str] = None
     member_id: Optional[str] = None

@@ -256,9 +256,7 @@ class QwenWorker(BaseWorker):
                         {"type": "text", "text": prompt},
                         {
                             "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{mime_type};base64,{image_b64}"
-                            },
+                            "image_url": {"url": f"data:{mime_type};base64,{image_b64}"},
                         },
                     ],
                 },
@@ -275,8 +273,7 @@ class QwenWorker(BaseWorker):
             response.raise_for_status()
         except httpx.ConnectError:
             raise ConnectionError(
-                f"Failed to connect to VLM endpoint: {endpoint}. "
-                f"Make sure LM Studio/Ollama/vLLM is running."
+                f"Failed to connect to VLM endpoint: {endpoint}. Make sure LM Studio/Ollama/vLLM is running."
             )
         except httpx.HTTPStatusError as e:
             raise RuntimeError(f"VLM API error: {e.response.status_code} - {e.response.text}")
@@ -355,9 +352,7 @@ Only output the JSON, nothing else."""
                         {"type": "text", "text": table_prompt},
                         {
                             "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{mime_type};base64,{image_b64}"
-                            },
+                            "image_url": {"url": f"data:{mime_type};base64,{image_b64}"},
                         },
                     ],
                 },
@@ -422,6 +417,7 @@ def run_qwen_worker(database_url: str = None, worker_id: str = None):
         VLM_ENDPOINT=http://localhost:11434/v1 VLM_MODEL=llava python -m arkham_shard_ocr.workers.qwen_worker
     """
     import asyncio
+
     worker = QwenWorker(database_url=database_url, worker_id=worker_id)
     asyncio.run(worker.run())
 

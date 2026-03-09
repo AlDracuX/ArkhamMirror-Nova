@@ -9,11 +9,9 @@ Run with:
 """
 
 import pytest
+from arkham_shard_documents.api import router
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
-from arkham_shard_documents.api import router
-
 
 # =============================================================================
 # Fixtures
@@ -197,11 +195,7 @@ class TestUpdateDocument:
 
     def test_update_document_all_fields(self, client):
         """Test updating all allowed fields."""
-        payload = {
-            "title": "Updated Title",
-            "tags": ["tag1", "tag2"],
-            "custom_metadata": {"key": "value"}
-        }
+        payload = {"title": "Updated Title", "tags": ["tag1", "tag2"], "custom_metadata": {"key": "value"}}
         response = client.patch("/api/documents/items/doc-123", json=payload)
         assert response.status_code == 404
 
@@ -414,11 +408,7 @@ class TestBatchOperations:
 
     def test_batch_update_tags(self, client):
         """Test batch updating tags."""
-        payload = {
-            "document_ids": ["doc-1", "doc-2", "doc-3"],
-            "add_tags": ["important"],
-            "remove_tags": ["obsolete"]
-        }
+        payload = {"document_ids": ["doc-1", "doc-2", "doc-3"], "add_tags": ["important"], "remove_tags": ["obsolete"]}
         response = client.post("/api/documents/batch/update-tags", json=payload)
         assert response.status_code == 200
 
@@ -430,36 +420,25 @@ class TestBatchOperations:
 
     def test_batch_update_tags_add_only(self, client):
         """Test batch adding tags."""
-        payload = {
-            "document_ids": ["doc-1", "doc-2"],
-            "add_tags": ["new-tag"]
-        }
+        payload = {"document_ids": ["doc-1", "doc-2"], "add_tags": ["new-tag"]}
         response = client.post("/api/documents/batch/update-tags", json=payload)
         assert response.status_code == 200
 
     def test_batch_update_tags_remove_only(self, client):
         """Test batch removing tags."""
-        payload = {
-            "document_ids": ["doc-1", "doc-2"],
-            "remove_tags": ["old-tag"]
-        }
+        payload = {"document_ids": ["doc-1", "doc-2"], "remove_tags": ["old-tag"]}
         response = client.post("/api/documents/batch/update-tags", json=payload)
         assert response.status_code == 200
 
     def test_batch_update_tags_empty_list(self, client):
         """Test batch update with empty document list."""
-        payload = {
-            "document_ids": [],
-            "add_tags": ["tag"]
-        }
+        payload = {"document_ids": [], "add_tags": ["tag"]}
         response = client.post("/api/documents/batch/update-tags", json=payload)
         assert response.status_code == 200
 
     def test_batch_delete_documents(self, client):
         """Test batch deleting documents."""
-        payload = {
-            "document_ids": ["doc-1", "doc-2", "doc-3"]
-        }
+        payload = {"document_ids": ["doc-1", "doc-2", "doc-3"]}
         response = client.post("/api/documents/batch/delete", json=payload)
         assert response.status_code == 200
 
@@ -471,9 +450,7 @@ class TestBatchOperations:
 
     def test_batch_delete_empty_list(self, client):
         """Test batch delete with empty list."""
-        payload = {
-            "document_ids": []
-        }
+        payload = {"document_ids": []}
         response = client.post("/api/documents/batch/delete", json=payload)
         assert response.status_code == 200
 
@@ -495,9 +472,7 @@ class TestRequestValidation:
     def test_update_document_invalid_json(self, client):
         """Test update with invalid JSON."""
         response = client.patch(
-            "/api/documents/items/doc-123",
-            data="invalid json",
-            headers={"Content-Type": "application/json"}
+            "/api/documents/items/doc-123", data="invalid json", headers={"Content-Type": "application/json"}
         )
         assert response.status_code == 422
 

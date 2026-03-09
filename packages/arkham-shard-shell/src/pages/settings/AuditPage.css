@@ -119,7 +119,7 @@
   color: var(--text-secondary);
 }
 
-.date-filter input[type="date"] {
+.date-filter input[type='date'] {
   border: none;
   background: transparent;
   color: var(--text-primary);
@@ -196,8 +196,12 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .audit-error svg,

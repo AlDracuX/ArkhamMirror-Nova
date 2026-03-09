@@ -28,11 +28,7 @@ class VectorStore:
         self.vectors_service = vectors_service
 
     async def create_collection(
-        self,
-        collection_name: str,
-        vector_size: int,
-        distance: str = "Cosine",
-        recreate: bool = False
+        self, collection_name: str, vector_size: int, distance: str = "Cosine", recreate: bool = False
     ) -> bool:
         """
         Create a collection for storing embeddings.
@@ -56,10 +52,7 @@ class VectorStore:
                 distance=distance,
             )
 
-            logger.info(
-                f"Created collection '{collection_name}' "
-                f"(size={vector_size}, distance={distance})"
-            )
+            logger.info(f"Created collection '{collection_name}' (size={vector_size}, distance={distance})")
             return True
 
         except Exception as e:
@@ -89,7 +82,7 @@ class VectorStore:
         collection_name: str,
         vector: list[float],
         payload: dict[str, Any] | None = None,
-        vector_id: str | None = None
+        vector_id: str | None = None,
     ) -> str | None:
         """
         Insert or update a single vector in the collection.
@@ -108,12 +101,7 @@ class VectorStore:
 
         try:
             await self.vectors_service.upsert(
-                collection_name=collection_name,
-                points=[{
-                    "id": vector_id,
-                    "vector": vector,
-                    "payload": payload or {}
-                }]
+                collection_name=collection_name, points=[{"id": vector_id, "vector": vector, "payload": payload or {}}]
             )
 
             logger.debug(f"Upserted vector {vector_id} to '{collection_name}'")
@@ -128,7 +116,7 @@ class VectorStore:
         collection_name: str,
         vectors: list[list[float]],
         payloads: list[dict[str, Any]] | None = None,
-        vector_ids: list[str] | None = None
+        vector_ids: list[str] | None = None,
     ) -> list[str] | None:
         """
         Insert or update multiple vectors in batch.
@@ -160,18 +148,10 @@ class VectorStore:
 
         try:
             points = [
-                {
-                    "id": vid,
-                    "vector": vec,
-                    "payload": pay
-                }
-                for vid, vec, pay in zip(vector_ids, vectors, payloads)
+                {"id": vid, "vector": vec, "payload": pay} for vid, vec, pay in zip(vector_ids, vectors, payloads)
             ]
 
-            await self.vectors_service.upsert(
-                collection_name=collection_name,
-                points=points
-            )
+            await self.vectors_service.upsert(collection_name=collection_name, points=points)
 
             logger.info(f"Upserted {len(vectors)} vectors to '{collection_name}'")
             return vector_ids
@@ -186,7 +166,7 @@ class VectorStore:
         query_vector: list[float],
         limit: int = 10,
         score_threshold: float | None = None,
-        filters: dict[str, Any] | None = None
+        filters: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """
         Search for similar vectors in the collection.
@@ -207,13 +187,10 @@ class VectorStore:
                 query_vector=query_vector,
                 limit=limit,
                 score_threshold=score_threshold,
-                filter=filters
+                filter=filters,
             )
 
-            logger.debug(
-                f"Found {len(results)} results in '{collection_name}' "
-                f"(limit={limit})"
-            )
+            logger.debug(f"Found {len(results)} results in '{collection_name}' (limit={limit})")
 
             return results
 
@@ -221,11 +198,7 @@ class VectorStore:
             logger.error(f"Search failed in '{collection_name}': {e}")
             return []
 
-    async def delete_vectors(
-        self,
-        collection_name: str,
-        vector_ids: list[str]
-    ) -> bool:
+    async def delete_vectors(self, collection_name: str, vector_ids: list[str]) -> bool:
         """
         Delete vectors by their IDs.
 
@@ -240,10 +213,7 @@ class VectorStore:
             return True
 
         try:
-            await self.vectors_service.delete(
-                collection_name=collection_name,
-                ids=vector_ids
-            )
+            await self.vectors_service.delete(collection_name=collection_name, ids=vector_ids)
 
             logger.info(f"Deleted {len(vector_ids)} vectors from '{collection_name}'")
             return True
@@ -252,11 +222,7 @@ class VectorStore:
             logger.error(f"Failed to delete vectors from '{collection_name}': {e}")
             return False
 
-    async def delete_by_filter(
-        self,
-        collection_name: str,
-        filters: dict[str, Any]
-    ) -> bool:
+    async def delete_by_filter(self, collection_name: str, filters: dict[str, Any]) -> bool:
         """
         Delete vectors matching a filter condition.
 
@@ -268,10 +234,7 @@ class VectorStore:
             True if successful, False otherwise
         """
         try:
-            await self.vectors_service.delete(
-                collection_name=collection_name,
-                filter=filters
-            )
+            await self.vectors_service.delete(collection_name=collection_name, filter=filters)
 
             logger.info(f"Deleted vectors from '{collection_name}' with filter")
             return True

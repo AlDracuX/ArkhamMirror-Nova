@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime
 
-from .models import ACHMatrix, HypothesisScore, ConsistencyRating
+from .models import ACHMatrix, ConsistencyRating, HypothesisScore
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +68,7 @@ class ACHScorer:
             return HypothesisScore(hypothesis_id=hypothesis_id)
 
         # Get all ratings for this hypothesis
-        hypothesis_ratings = [
-            r for r in matrix.ratings if r.hypothesis_id == hypothesis_id
-        ]
+        hypothesis_ratings = [r for r in matrix.ratings if r.hypothesis_id == hypothesis_id]
 
         if not hypothesis_ratings:
             return HypothesisScore(
@@ -145,9 +143,7 @@ class ACHScorer:
 
         for evidence in matrix.evidence:
             # Get all ratings for this evidence
-            evidence_ratings = [
-                r for r in matrix.ratings if r.evidence_id == evidence.id
-            ]
+            evidence_ratings = [r for r in matrix.ratings if r.evidence_id == evidence.id]
 
             if len(evidence_ratings) < 2:
                 continue
@@ -197,9 +193,7 @@ class ACHScorer:
         original_scores = {s.hypothesis_id: s.rank for s in matrix.scores}
 
         # Identify low-credibility evidence
-        uncertain_evidence = [
-            e for e in matrix.evidence if e.credibility < 0.7 or e.relevance < 0.7
-        ]
+        uncertain_evidence = [e for e in matrix.evidence if e.credibility < 0.7 or e.relevance < 0.7]
 
         if not uncertain_evidence:
             return {
@@ -212,9 +206,7 @@ class ACHScorer:
         original_ratings = matrix.ratings.copy()
         uncertain_ids = {e.id for e in uncertain_evidence}
 
-        matrix.ratings = [
-            r for r in matrix.ratings if r.evidence_id not in uncertain_ids
-        ]
+        matrix.ratings = [r for r in matrix.ratings if r.evidence_id not in uncertain_ids]
 
         # Recalculate scores
         new_scores = ACHScorer.calculate_scores(matrix)

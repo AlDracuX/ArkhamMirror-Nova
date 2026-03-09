@@ -21,11 +21,7 @@ const BadgeContext = createContext<BadgeContextValue | null>(null);
 export function BadgeProvider({ children }: { children: ReactNode }) {
   const badgeState = useBadges();
 
-  return (
-    <BadgeContext.Provider value={badgeState}>
-      {children}
-    </BadgeContext.Provider>
-  );
+  return <BadgeContext.Provider value={badgeState}>{children}</BadgeContext.Provider>;
 }
 
 export function useBadgeContext() {

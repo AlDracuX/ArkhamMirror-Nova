@@ -1,18 +1,21 @@
 """OCR Shard data models."""
 
-from pydantic import BaseModel
-from typing import List, Optional
 from enum import Enum
+from typing import List, Optional
+
+from pydantic import BaseModel
 
 
 class OCREngine(str, Enum):
     """Available OCR engines."""
+
     PADDLE = "paddle"
     QWEN = "qwen"
 
 
 class BoundingBox(BaseModel):
     """Bounding box for detected text."""
+
     x: int
     y: int
     width: int
@@ -22,6 +25,7 @@ class BoundingBox(BaseModel):
 
 class TextBlock(BaseModel):
     """A block of detected text with position."""
+
     text: str
     bbox: BoundingBox
     line_number: int = 0
@@ -30,6 +34,7 @@ class TextBlock(BaseModel):
 
 class PageOCRResult(BaseModel):
     """OCR result for a single page."""
+
     page_number: int
     text: str
     blocks: List[TextBlock] = []
@@ -41,6 +46,7 @@ class PageOCRResult(BaseModel):
 
 class DocumentOCRResult(BaseModel):
     """OCR result for a full document."""
+
     document_id: str
     pages: List[PageOCRResult] = []
     total_text: str = ""

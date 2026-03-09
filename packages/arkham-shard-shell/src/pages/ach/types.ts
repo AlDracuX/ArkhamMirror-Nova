@@ -8,7 +8,13 @@
 export type ConsistencyRating = '++' | '+' | 'N' | '-' | '--' | 'N/A';
 
 // Evidence type classification
-export type EvidenceType = 'fact' | 'testimony' | 'document' | 'physical' | 'circumstantial' | 'inference';
+export type EvidenceType =
+  | 'fact'
+  | 'testimony'
+  | 'document'
+  | 'physical'
+  | 'circumstantial'
+  | 'inference';
 
 // Matrix status
 export type MatrixStatus = 'draft' | 'active' | 'completed' | 'archived';
@@ -35,7 +41,7 @@ export interface Evidence {
   source: string;
   evidence_type: EvidenceType;
   credibility: number; // 0.0 to 1.0
-  relevance: number;   // 0.0 to 1.0
+  relevance: number; // 0.0 to 1.0
   row_index: number;
   created_at: string;
   updated_at: string;
@@ -131,7 +137,7 @@ export interface AIStatusResponse {
 export const RATING_LABELS: Record<ConsistencyRating, string> = {
   '++': 'Highly Consistent',
   '+': 'Consistent',
-  'N': 'Neutral',
+  N: 'Neutral',
   '-': 'Inconsistent',
   '--': 'Highly Inconsistent',
   'N/A': 'Not Applicable',
@@ -140,7 +146,7 @@ export const RATING_LABELS: Record<ConsistencyRating, string> = {
 export const RATING_COLORS: Record<ConsistencyRating, string> = {
   '++': 'var(--arkham-success)',
   '+': 'rgba(74, 222, 128, 0.6)',
-  'N': 'var(--arkham-text-muted)',
+  N: 'var(--arkham-text-muted)',
   '-': 'rgba(248, 113, 113, 0.6)',
   '--': 'var(--arkham-error)',
   'N/A': 'var(--arkham-bg-tertiary)',

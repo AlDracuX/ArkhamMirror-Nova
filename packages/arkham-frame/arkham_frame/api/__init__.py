@@ -2,7 +2,7 @@
 ArkhamFrame API Routes.
 """
 
-from . import health, documents, entities, projects, shards, events, frame
+from . import documents, entities, events, frame, health, projects, shards
 
 __all__ = [
     "health",

@@ -110,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const user = await userRes.json();
       const tenant = tenantRes.ok ? await tenantRes.json() : null;
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         user,
         tenant,
@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Token invalid or expired
       localStorage.removeItem(TOKEN_KEY);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         user: null,
         tenant: null,
@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const setupRequired = await checkSetupRequired();
 
       if (setupRequired) {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           setupRequired: true,
           isLoading: false,
@@ -156,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (token) {
         await fetchUser(token);
       } else {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           isLoading: false,
         }));

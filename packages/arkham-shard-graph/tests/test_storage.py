@@ -1,11 +1,11 @@
 """Tests for graph storage."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 import pytest_asyncio
-from unittest.mock import MagicMock, AsyncMock
-
+from arkham_shard_graph.models import Graph, GraphEdge, GraphNode
 from arkham_shard_graph.storage import GraphStorage
-from arkham_shard_graph.models import Graph, GraphNode, GraphEdge
 
 
 class TestGraphStorageCreation:
@@ -210,10 +210,7 @@ class TestMultipleGraphs:
         await storage.save_graph(graph1)
 
         # Overwrite with different graph
-        graph2 = Graph(
-            project_id="proj1",
-            nodes=[GraphNode(id="n1", entity_id="e1", label="E1", entity_type="person")]
-        )
+        graph2 = Graph(project_id="proj1", nodes=[GraphNode(id="n1", entity_id="e1", label="E1", entity_type="person")])
         await storage.save_graph(graph2)
 
         loaded = await storage.load_graph("proj1")

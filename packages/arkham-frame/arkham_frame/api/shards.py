@@ -5,10 +5,11 @@ Returns full v5 manifests for Shell integration.
 Supports dynamic shard activation/deactivation without restart.
 """
 
+import logging
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
-import logging
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -22,12 +23,14 @@ _available_shards: Dict[str, Any] = {}
 
 class LoadShardRequest(BaseModel):
     """Request body for loading a shard."""
+
     name: str
     path: Optional[str] = None
 
 
 class ShardStateRequest(BaseModel):
     """Request to change shard enabled state."""
+
     enabled: bool
 
 
@@ -97,13 +100,15 @@ async def list_shards() -> Dict[str, Any]:
     # Add available but not loaded shards (disabled ones)
     for name in available:
         if name not in frame.shards:
-            shards.append({
-                "name": name,
-                "version": "unknown",
-                "description": "Shard available but not loaded",
-                "loaded": False,
-                "enabled": False,
-            })
+            shards.append(
+                {
+                    "name": name,
+                    "version": "unknown",
+                    "description": "Shard available but not loaded",
+                    "loaded": False,
+                    "enabled": False,
+                }
+            )
 
     # Sort by navigation.order if available
     def get_order(s: Dict) -> int:
@@ -216,10 +221,7 @@ async def unload_shard(shard_name: str) -> Dict[str, Any]:
     # Prevent unloading critical shards
     protected_shards = {"dashboard", "settings"}
     if shard_name in protected_shards:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot unload protected shard '{shard_name}'"
-        )
+        raise HTTPException(status_code=400, detail=f"Cannot unload protected shard '{shard_name}'")
 
     try:
         shard = frame.shards[shard_name]

@@ -12,10 +12,11 @@ Run with:
 import asyncio
 import json
 import os
-import pytest
-import pytest_asyncio
 import time
 from datetime import datetime, timedelta
+
+import pytest
+import pytest_asyncio
 
 # Test configuration
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/arkham")
@@ -37,12 +38,8 @@ async def db_pool():
 
     # Cleanup test jobs
     async with pool.acquire() as conn:
-        await conn.execute(
-            "DELETE FROM arkham_jobs.jobs WHERE id LIKE 'test-%'"
-        )
-        await conn.execute(
-            "DELETE FROM arkham_jobs.workers WHERE id LIKE 'test-%'"
-        )
+        await conn.execute("DELETE FROM arkham_jobs.jobs WHERE id LIKE 'test-%'")
+        await conn.execute("DELETE FROM arkham_jobs.workers WHERE id LIKE 'test-%'")
 
     await pool.close()
 
@@ -54,10 +51,7 @@ async def wait_for_worker_registration(pool, worker_id: str, timeout: float = 2.
     while elapsed < timeout:
         await asyncio.sleep(interval)
         async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT 1 FROM arkham_jobs.workers WHERE id = $1",
-                worker_id
-            )
+            row = await conn.fetchrow("SELECT 1 FROM arkham_jobs.workers WHERE id = $1", worker_id)
             if row:
                 return True
         elapsed += interval
@@ -67,17 +61,14 @@ async def wait_for_worker_registration(pool, worker_id: str, timeout: float = 2.
 async def cleanup_test_queues(pool):
     """Clean up test jobs and workers."""
     async with pool.acquire() as conn:
-        await conn.execute(
-            "DELETE FROM arkham_jobs.jobs WHERE id LIKE 'test-%'"
-        )
-        await conn.execute(
-            "DELETE FROM arkham_jobs.workers WHERE id LIKE 'test-%' OR id LIKE 'smoke-test-%'"
-        )
+        await conn.execute("DELETE FROM arkham_jobs.jobs WHERE id LIKE 'test-%'")
+        await conn.execute("DELETE FROM arkham_jobs.workers WHERE id LIKE 'test-%' OR id LIKE 'smoke-test-%'")
 
 
 # =============================================================================
 # Test 1: Basic Lifecycle
 # =============================================================================
+
 
 class TestWorkerLifecycle:
     """Test worker start/stop/register/deregister."""
@@ -101,10 +92,7 @@ class TestWorkerLifecycle:
 
         # Check database registration
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT pool, state FROM arkham_jobs.workers WHERE id = $1",
-                worker.worker_id
-            )
+            row = await conn.fetchrow("SELECT pool, state FROM arkham_jobs.workers WHERE id = $1", worker.worker_id)
             assert row["pool"] == "cpu-light"
             assert row["state"] in ["idle", "starting"]
 
@@ -132,20 +120,14 @@ class TestWorkerLifecycle:
 
         # Get initial heartbeat
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT last_heartbeat FROM arkham_jobs.workers WHERE id = $1",
-                worker.worker_id
-            )
+            row = await conn.fetchrow("SELECT last_heartbeat FROM arkham_jobs.workers WHERE id = $1", worker.worker_id)
             hb1 = row["last_heartbeat"] if row else None
 
         # Wait for another heartbeat
         await asyncio.sleep(1.0)
 
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT last_heartbeat FROM arkham_jobs.workers WHERE id = $1",
-                worker.worker_id
-            )
+            row = await conn.fetchrow("SELECT last_heartbeat FROM arkham_jobs.workers WHERE id = $1", worker.worker_id)
             hb2 = row["last_heartbeat"] if row else None
 
         # Heartbeat should have updated
@@ -176,10 +158,7 @@ class TestWorkerLifecycle:
 
         # Verify registered
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT 1 FROM arkham_jobs.workers WHERE id = $1",
-                worker.worker_id
-            )
+            row = await conn.fetchrow("SELECT 1 FROM arkham_jobs.workers WHERE id = $1", worker.worker_id)
             assert row is not None
 
         # Stop worker
@@ -188,10 +167,7 @@ class TestWorkerLifecycle:
 
         # Verify deregistered
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT 1 FROM arkham_jobs.workers WHERE id = $1",
-                worker.worker_id
-            )
+            row = await conn.fetchrow("SELECT 1 FROM arkham_jobs.workers WHERE id = $1", worker.worker_id)
             assert row is None, "Worker should be deregistered from database"
 
         await cleanup_test_queues(db_pool)
@@ -200,6 +176,7 @@ class TestWorkerLifecycle:
 # =============================================================================
 # Test 2: Job Processing (EchoWorker)
 # =============================================================================
+
 
 class TestJobProcessing:
     """Test job processing with EchoWorker."""
@@ -215,10 +192,16 @@ class TestJobProcessing:
         job_id = "test-job-1"
 
         async with db_pool.acquire() as conn:
-            await conn.execute("""
+            await conn.execute(
+                """
                 INSERT INTO arkham_jobs.jobs (id, pool, payload, priority, status)
                 VALUES ($1, $2, $3, $4, 'pending')
-            """, job_id, "cpu-light", json.dumps({"message": "Hello!", "delay": 0.1}), 1)
+            """,
+                job_id,
+                "cpu-light",
+                json.dumps({"message": "Hello!", "delay": 0.1}),
+                1,
+            )
 
         # Start worker
         worker = EchoWorker(database_url=DATABASE_URL, worker_id="test-process-1")
@@ -230,20 +213,14 @@ class TestJobProcessing:
         # Wait for job to complete
         for _ in range(30):
             async with db_pool.acquire() as conn:
-                row = await conn.fetchrow(
-                    "SELECT status FROM arkham_jobs.jobs WHERE id = $1",
-                    job_id
-                )
+                row = await conn.fetchrow("SELECT status FROM arkham_jobs.jobs WHERE id = $1", job_id)
                 if row and row["status"] == "completed":
                     break
             await asyncio.sleep(0.2)
 
         # Verify completion
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT status, result FROM arkham_jobs.jobs WHERE id = $1",
-                job_id
-            )
+            row = await conn.fetchrow("SELECT status, result FROM arkham_jobs.jobs WHERE id = $1", job_id)
             assert row["status"] == "completed", f"Job should be completed, got {row['status']}"
 
             # Check result (asyncpg returns JSONB as string)
@@ -270,10 +247,16 @@ class TestJobProcessing:
 
         async with db_pool.acquire() as conn:
             for job_id in job_ids:
-                await conn.execute("""
+                await conn.execute(
+                    """
                     INSERT INTO arkham_jobs.jobs (id, pool, payload, priority, status)
                     VALUES ($1, $2, $3, $4, 'pending')
-                """, job_id, "cpu-light", json.dumps({"message": f"Job {job_id}", "delay": 0.05}), 1)
+                """,
+                    job_id,
+                    "cpu-light",
+                    json.dumps({"message": f"Job {job_id}", "delay": 0.05}),
+                    1,
+                )
 
         # Start worker
         worker = EchoWorker(database_url=DATABASE_URL, worker_id="test-multi-1")
@@ -287,10 +270,7 @@ class TestJobProcessing:
             completed = 0
             async with db_pool.acquire() as conn:
                 for job_id in job_ids:
-                    row = await conn.fetchrow(
-                        "SELECT status FROM arkham_jobs.jobs WHERE id = $1",
-                        job_id
-                    )
+                    row = await conn.fetchrow("SELECT status FROM arkham_jobs.jobs WHERE id = $1", job_id)
                     if row and row["status"] == "completed":
                         completed += 1
             if completed == len(job_ids):
@@ -300,10 +280,7 @@ class TestJobProcessing:
         # Verify all completed
         async with db_pool.acquire() as conn:
             for job_id in job_ids:
-                row = await conn.fetchrow(
-                    "SELECT status FROM arkham_jobs.jobs WHERE id = $1",
-                    job_id
-                )
+                row = await conn.fetchrow("SELECT status FROM arkham_jobs.jobs WHERE id = $1", job_id)
                 assert row["status"] == "completed", f"Job {job_id} should be completed"
 
         # Check metrics
@@ -319,6 +296,7 @@ class TestJobProcessing:
 # Test 3: Failure Handling (FailWorker)
 # =============================================================================
 
+
 class TestFailureHandling:
     """Test job failure and retry logic."""
 
@@ -333,10 +311,16 @@ class TestFailureHandling:
         job_id = "test-fail-1"
 
         async with db_pool.acquire() as conn:
-            await conn.execute("""
+            await conn.execute(
+                """
                 INSERT INTO arkham_jobs.jobs (id, pool, payload, priority, status, retry_count)
                 VALUES ($1, $2, $3, $4, 'pending', 0)
-            """, job_id, "cpu-light", json.dumps({"fail_after": 0.05}), 1)
+            """,
+                job_id,
+                "cpu-light",
+                json.dumps({"fail_after": 0.05}),
+                1,
+            )
 
         # Start worker (max_retries=2)
         worker = FailWorker(database_url=DATABASE_URL, worker_id="test-fail-worker-1")
@@ -349,20 +333,14 @@ class TestFailureHandling:
         # Wait for retries to exhaust
         for _ in range(40):
             async with db_pool.acquire() as conn:
-                row = await conn.fetchrow(
-                    "SELECT status FROM arkham_jobs.jobs WHERE id = $1",
-                    job_id
-                )
+                row = await conn.fetchrow("SELECT status FROM arkham_jobs.jobs WHERE id = $1", job_id)
                 if row and row["status"] == "failed":
                     break
             await asyncio.sleep(0.2)
 
         # Job should eventually fail permanently
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT status FROM arkham_jobs.jobs WHERE id = $1",
-                job_id
-            )
+            row = await conn.fetchrow("SELECT status FROM arkham_jobs.jobs WHERE id = $1", job_id)
             assert row["status"] == "failed", "Job should be marked as failed after retries"
 
         # Worker should still be alive
@@ -398,10 +376,16 @@ class TestFailureHandling:
         # Create two jobs
         async with db_pool.acquire() as conn:
             for i, job_id in enumerate(["test-failonce-1", "test-failonce-2"]):
-                await conn.execute("""
+                await conn.execute(
+                    """
                     INSERT INTO arkham_jobs.jobs (id, pool, payload, priority, status)
                     VALUES ($1, $2, $3, $4, 'pending')
-                """, job_id, "cpu-light", json.dumps({"num": i}), i + 1)
+                """,
+                    job_id,
+                    "cpu-light",
+                    json.dumps({"num": i}),
+                    i + 1,
+                )
 
         worker = FailOnceWorker(database_url=DATABASE_URL, worker_id="test-failonce-worker")
         worker.idle_timeout = 10.0
@@ -416,21 +400,17 @@ class TestFailureHandling:
         # Poll for second job to complete
         for _ in range(50):  # 5 seconds max
             async with db_pool.acquire() as conn:
-                row = await conn.fetchrow(
-                    "SELECT status FROM arkham_jobs.jobs WHERE id = $1",
-                    "test-failonce-2"
-                )
+                row = await conn.fetchrow("SELECT status FROM arkham_jobs.jobs WHERE id = $1", "test-failonce-2")
                 if row and row["status"] == "completed":
                     break
             await asyncio.sleep(0.1)
 
         # Second job should have completed
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT status FROM arkham_jobs.jobs WHERE id = $1",
-                "test-failonce-2"
+            row = await conn.fetchrow("SELECT status FROM arkham_jobs.jobs WHERE id = $1", "test-failonce-2")
+            assert row["status"] == "completed", (
+                f"Second job should complete even after first fails, got {row['status']}"
             )
-            assert row["status"] == "completed", f"Second job should complete even after first fails, got {row['status']}"
 
         assert worker._metrics.jobs_failed == 1
         assert worker._metrics.jobs_completed == 1
@@ -444,6 +424,7 @@ class TestFailureHandling:
 # =============================================================================
 # Test 4: Stuck Detection (SlowWorker)
 # =============================================================================
+
 
 class TestStuckDetection:
     """Test stuck worker detection and handling."""
@@ -459,10 +440,16 @@ class TestStuckDetection:
         job_id = "test-slow-1"
 
         async with db_pool.acquire() as conn:
-            await conn.execute("""
+            await conn.execute(
+                """
                 INSERT INTO arkham_jobs.jobs (id, pool, payload, priority, status)
                 VALUES ($1, $2, $3, $4, 'pending')
-            """, job_id, "cpu-heavy", json.dumps({"sleep": 30}), 1)
+            """,
+                job_id,
+                "cpu-heavy",
+                json.dumps({"sleep": 30}),
+                1,
+            )
 
         # Worker with short timeout
         worker = SlowWorker(database_url=DATABASE_URL, worker_id="test-slow-worker-1")
@@ -479,20 +466,14 @@ class TestStuckDetection:
         # Poll for job status to change from "active" (after timeout it should be requeued or failed)
         for _ in range(50):  # 5 seconds max
             async with db_pool.acquire() as conn:
-                row = await conn.fetchrow(
-                    "SELECT status FROM arkham_jobs.jobs WHERE id = $1",
-                    job_id
-                )
+                row = await conn.fetchrow("SELECT status FROM arkham_jobs.jobs WHERE id = $1", job_id)
                 if row and row["status"] in ["pending", "failed"]:
                     break
             await asyncio.sleep(0.1)
 
         # Job should be requeued or failed
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT status FROM arkham_jobs.jobs WHERE id = $1",
-                job_id
-            )
+            row = await conn.fetchrow("SELECT status FROM arkham_jobs.jobs WHERE id = $1", job_id)
             assert row["status"] in ["pending", "failed"], f"Job should be requeued or failed, got {row['status']}"
 
         # Worker should have recorded the failure
@@ -507,6 +488,7 @@ class TestStuckDetection:
 # =============================================================================
 # Test 5: Worker Registry
 # =============================================================================
+
 
 class TestWorkerRegistry:
     """Test WorkerRegistry functionality."""
@@ -565,10 +547,19 @@ class TestWorkerRegistry:
         old_time = datetime.utcnow() - timedelta(hours=1)
 
         async with db_pool.acquire() as conn:
-            await conn.execute("""
+            await conn.execute(
+                """
                 INSERT INTO arkham_jobs.workers (id, pool, name, state, pid, started_at, last_heartbeat)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
-            """, worker_id, "cpu-light", "DeadWorker", "processing", 99999, old_time, old_time)
+            """,
+                worker_id,
+                "cpu-light",
+                "DeadWorker",
+                "processing",
+                99999,
+                old_time,
+                old_time,
+            )
 
         registry = WorkerRegistry(database_url=DATABASE_URL)
         await registry.connect(db_pool)
@@ -584,10 +575,7 @@ class TestWorkerRegistry:
 
         # Worker should be gone
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT 1 FROM arkham_jobs.workers WHERE id = $1",
-                worker_id
-            )
+            row = await conn.fetchrow("SELECT 1 FROM arkham_jobs.workers WHERE id = $1", worker_id)
             assert row is None, "Dead worker should be removed"
 
         await cleanup_test_queues(db_pool)
@@ -596,6 +584,7 @@ class TestWorkerRegistry:
 # =============================================================================
 # Quick Smoke Test (run without pytest)
 # =============================================================================
+
 
 async def smoke_test():
     """Quick smoke test - can run directly."""
@@ -611,7 +600,7 @@ async def smoke_test():
         pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=3)
         async with pool.acquire() as conn:
             await conn.fetchval("SELECT 1")
-        print(f"   OK - Connected to PostgreSQL")
+        print("   OK - Connected to PostgreSQL")
     except Exception as e:
         print(f"   FAILED - {e}")
         print("   Make sure PostgreSQL is running!")
@@ -631,10 +620,7 @@ async def smoke_test():
     for _ in range(20):
         await asyncio.sleep(0.1)
         async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT 1 FROM arkham_jobs.workers WHERE id = $1",
-                worker.worker_id
-            )
+            row = await conn.fetchrow("SELECT 1 FROM arkham_jobs.workers WHERE id = $1", worker.worker_id)
             if row:
                 registered = True
                 break
@@ -655,20 +641,23 @@ async def smoke_test():
     print("\n3. Testing job processing...")
     job_id = "smoke-test-job"
     async with pool.acquire() as conn:
-        await conn.execute("""
+        await conn.execute(
+            """
             INSERT INTO arkham_jobs.jobs (id, pool, payload, priority, status)
             VALUES ($1, $2, $3, $4, 'pending')
             ON CONFLICT (id) DO UPDATE SET status = 'pending', payload = EXCLUDED.payload
-        """, job_id, "cpu-light", json.dumps({"message": "Smoke test!", "delay": 0.1}), 1)
+        """,
+            job_id,
+            "cpu-light",
+            json.dumps({"message": "Smoke test!", "delay": 0.1}),
+            1,
+        )
 
     # Wait for completion
     status = None
     for _ in range(20):
         async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT status, result FROM arkham_jobs.jobs WHERE id = $1",
-                job_id
-            )
+            row = await conn.fetchrow("SELECT status, result FROM arkham_jobs.jobs WHERE id = $1", job_id)
             if row and row["status"] == "completed":
                 status = "completed"
                 result = row["result"]
@@ -690,10 +679,7 @@ async def smoke_test():
 
     # Check deregistered
     async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT 1 FROM arkham_jobs.workers WHERE id = $1",
-            worker.worker_id
-        )
+        row = await conn.fetchrow("SELECT 1 FROM arkham_jobs.workers WHERE id = $1", worker.worker_id)
         if row is None:
             print("   OK - Worker deregistered")
         else:

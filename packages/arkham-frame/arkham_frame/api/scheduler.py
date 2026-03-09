@@ -5,15 +5,17 @@ Provides REST API for scheduled job management.
 """
 
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Optional
 
 router = APIRouter()
 
 
 class CronJobRequest(BaseModel):
     """Request body for scheduling a cron job."""
+
     name: str = Field(..., description="Job name")
     func_name: str = Field(..., description="Registered function name")
     cron_expression: Optional[str] = Field(None, description="Cron expression (e.g., '0 * * * *')")
@@ -26,6 +28,7 @@ class CronJobRequest(BaseModel):
 
 class IntervalJobRequest(BaseModel):
     """Request body for scheduling an interval job."""
+
     name: str = Field(..., description="Job name")
     func_name: str = Field(..., description="Registered function name")
     weeks: int = Field(0, ge=0, description="Weeks between runs")
@@ -40,6 +43,7 @@ class IntervalJobRequest(BaseModel):
 
 class OnceJobRequest(BaseModel):
     """Request body for scheduling a one-time job."""
+
     name: str = Field(..., description="Job name")
     func_name: str = Field(..., description="Registered function name")
     run_date: datetime = Field(..., description="When to run the job")

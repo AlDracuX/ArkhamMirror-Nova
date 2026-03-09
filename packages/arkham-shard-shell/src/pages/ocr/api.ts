@@ -4,11 +4,7 @@
  * API client for the OCR shard backend.
  */
 
-import type {
-  OCRResponse,
-  OCRHealthResponse,
-  OCREngine,
-} from './types';
+import type { OCRResponse, OCRHealthResponse, OCREngine } from './types';
 
 const API_PREFIX = '/api/ocr';
 
@@ -89,13 +85,10 @@ export async function ocrUpload(
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(
-    `${API_PREFIX}/upload?engine=${engine}&language=${language}`,
-    {
-      method: 'POST',
-      body: formData,
-    }
-  );
+  const response = await fetch(`${API_PREFIX}/upload?engine=${engine}&language=${language}`, {
+    method: 'POST',
+    body: formData,
+  });
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: response.statusText }));
@@ -119,12 +112,20 @@ export async function getDocumentsForOCR(): Promise<DocumentInfo[]> {
 
   const data = await response.json();
   // Filter to image-based documents (by file_type or mime pattern)
-  const ocrableTypes = ['image', 'pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'application/pdf'];
+  const ocrableTypes = [
+    'image',
+    'pdf',
+    'image/png',
+    'image/jpeg',
+    'image/jpg',
+    'image/webp',
+    'application/pdf',
+  ];
 
   return (data.items || [])
     .filter((doc: any) => {
       const fileType = (doc.file_type || '').toLowerCase();
-      return ocrableTypes.some(t => fileType.includes(t)) || fileType.startsWith('image/');
+      return ocrableTypes.some((t) => fileType.includes(t)) || fileType.startsWith('image/');
     })
     .map((doc: any) => ({
       id: doc.id,

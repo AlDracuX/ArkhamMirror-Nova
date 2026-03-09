@@ -5,7 +5,15 @@
  */
 
 // Entity types
-export type EntityType = 'PERSON' | 'ORG' | 'LOCATION' | 'DATE' | 'MONEY' | 'GPE' | 'EVENT' | 'PRODUCT';
+export type EntityType =
+  | 'PERSON'
+  | 'ORG'
+  | 'LOCATION'
+  | 'DATE'
+  | 'MONEY'
+  | 'GPE'
+  | 'EVENT'
+  | 'PRODUCT';
 
 // Entity mention
 export interface EntityMention {

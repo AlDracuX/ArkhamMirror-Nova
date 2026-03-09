@@ -4,13 +4,13 @@ Parse Shard - API Tests
 Tests for all FastAPI endpoints.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from fastapi.testclient import TestClient
-from fastapi import FastAPI
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from arkham_shard_parse.api import router, init_api
-from arkham_shard_parse.models import EntityMention, EntityType, DateMention, EntityLinkingResult
+import pytest
+from arkham_shard_parse.api import init_api, router
+from arkham_shard_parse.models import DateMention, EntityLinkingResult, EntityMention, EntityType
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture

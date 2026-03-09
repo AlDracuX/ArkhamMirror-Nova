@@ -4,23 +4,23 @@ Parse Shard - Model Tests
 Tests for all enums, dataclasses, and data models.
 """
 
-import pytest
-from datetime import datetime
 from dataclasses import fields
+from datetime import datetime
 
+import pytest
 from arkham_shard_parse.models import (
-    # Enums
-    EntityType,
+    DateMention,
+    Entity,
     EntityConfidence,
+    EntityLinkingResult,
     # Dataclasses
     EntityMention,
-    Entity,
     EntityRelationship,
-    DateMention,
+    # Enums
+    EntityType,
     LocationMention,
-    TextChunk,
     ParseResult,
-    EntityLinkingResult,
+    TextChunk,
 )
 
 

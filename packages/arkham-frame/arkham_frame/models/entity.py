@@ -7,10 +7,7 @@ These models define the schema for arkham_frame entities and relationships.
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, Float,
-    ForeignKey
-)
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from arkham_frame.models.base import Base, TimestampMixin
@@ -22,6 +19,7 @@ class CanonicalEntity(Base, TimestampMixin):
 
     Multiple entity mentions may refer to the same canonical entity.
     """
+
     __tablename__ = "canonical_entities"
     __table_args__ = {"schema": "arkham_frame"}
 
@@ -48,6 +46,7 @@ class Entity(Base):
 
     Links to canonical entity for deduplication.
     """
+
     __tablename__ = "entities"
     __table_args__ = {"schema": "arkham_frame"}
 
@@ -73,6 +72,7 @@ class EntityRelationship(Base, TimestampMixin):
 
     Based on co-occurrence or explicit relationship extraction.
     """
+
     __tablename__ = "entity_relationships"
     __table_args__ = {"schema": "arkham_frame"}
 

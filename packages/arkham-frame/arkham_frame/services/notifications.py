@@ -38,18 +38,22 @@ def _secure_clear_string(s: str) -> None:
     # The best we can do is remove references and hope GC clears it.
     pass
 
+
 # Try to import optional dependencies
 try:
     import aiohttp
+
     AIOHTTP_AVAILABLE = True
 except ImportError:
     AIOHTTP_AVAILABLE = False
     logger.warning("aiohttp not installed - webhook notifications disabled")
 
 try:
-    import aiosmtplib
-    from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    import aiosmtplib
+
     SMTP_AVAILABLE = True
 except ImportError:
     SMTP_AVAILABLE = False
@@ -60,23 +64,28 @@ except ImportError:
 # Exceptions
 # ============================================
 
+
 class NotificationError(Exception):
     """Base exception for notification errors."""
+
     pass
 
 
 class DeliveryError(NotificationError):
     """Failed to deliver notification."""
+
     pass
 
 
 class ConfigurationError(NotificationError):
     """Invalid notification configuration."""
+
     pass
 
 
 class ChannelNotFoundError(NotificationError):
     """Notification channel not found."""
+
     pass
 
 
@@ -84,8 +93,10 @@ class ChannelNotFoundError(NotificationError):
 # Enums and Types
 # ============================================
 
+
 class NotificationType(str, Enum):
     """Types of notifications."""
+
     INFO = "info"
     SUCCESS = "success"
     WARNING = "warning"
@@ -95,6 +106,7 @@ class NotificationType(str, Enum):
 
 class ChannelType(str, Enum):
     """Notification channel types."""
+
     EMAIL = "email"
     WEBHOOK = "webhook"
     LOG = "log"
@@ -102,6 +114,7 @@ class ChannelType(str, Enum):
 
 class DeliveryStatus(str, Enum):
     """Notification delivery status."""
+
     PENDING = "pending"
     SENT = "sent"
     DELIVERED = "delivered"
@@ -112,6 +125,7 @@ class DeliveryStatus(str, Enum):
 @dataclass
 class Notification:
     """A notification to be sent."""
+
     id: str
     type: NotificationType
     title: str
@@ -129,6 +143,7 @@ class Notification:
 @dataclass
 class ChannelConfig:
     """Configuration for a notification channel."""
+
     name: str
     type: ChannelType
     enabled: bool = True
@@ -138,6 +153,7 @@ class ChannelConfig:
 @dataclass
 class EmailConfig:
     """Email channel configuration."""
+
     smtp_host: str
     smtp_port: int = 587
     username: Optional[str] = None
@@ -151,6 +167,7 @@ class EmailConfig:
 @dataclass
 class WebhookConfig:
     """Webhook channel configuration."""
+
     url: str
     method: str = "POST"
     headers: Dict[str, str] = field(default_factory=dict)
@@ -162,6 +179,7 @@ class WebhookConfig:
 # ============================================
 # Channel Handlers
 # ============================================
+
 
 class NotificationChannel(ABC):
     """Abstract base class for notification channels."""
@@ -212,8 +230,7 @@ class LogChannel(NotificationChannel):
 
         logger.log(
             log_level,
-            f"[NOTIFICATION] {notification.title}: {notification.message} "
-            f"(recipient: {notification.recipient})"
+            f"[NOTIFICATION] {notification.title}: {notification.message} (recipient: {notification.recipient})",
         )
         return True
 
@@ -221,7 +238,7 @@ class LogChannel(NotificationChannel):
 class EmailChannel(NotificationChannel):
     """Send notifications via email."""
 
-    __slots__ = ('config',)
+    __slots__ = ("config",)
 
     def __init__(self, config: EmailConfig):
         self.config = config
@@ -301,7 +318,7 @@ class EmailChannel(NotificationChannel):
 class WebhookChannel(NotificationChannel):
     """Send notifications via webhook."""
 
-    __slots__ = ('config',)
+    __slots__ = ("config",)
 
     def __init__(self, config: WebhookConfig):
         self.config = config
@@ -360,9 +377,7 @@ class WebhookChannel(NotificationChannel):
                         safe_text = text[:MAX_ERROR_MESSAGE_LENGTH]
                         if len(text) > MAX_ERROR_MESSAGE_LENGTH:
                             safe_text += "... [truncated]"
-                        raise DeliveryError(
-                            f"Webhook returned {response.status}: {safe_text}"
-                        )
+                        raise DeliveryError(f"Webhook returned {response.status}: {safe_text}")
 
             logger.info(f"Webhook sent to {self.config.url}")
             return True
@@ -375,6 +390,7 @@ class WebhookChannel(NotificationChannel):
 # ============================================
 # Notification Service
 # ============================================
+
 
 class NotificationService:
     """
@@ -392,13 +408,13 @@ class NotificationService:
     """
 
     __slots__ = (
-        '_event_bus',
-        '_templates',
-        '_max_history',
-        '_channels',
-        '_history',
-        '_notification_counter',
-        '_event_subscriptions',
+        "_event_bus",
+        "_templates",
+        "_max_history",
+        "_channels",
+        "_history",
+        "_notification_counter",
+        "_event_subscriptions",
     )
 
     def __init__(
@@ -528,7 +544,7 @@ class NotificationService:
         if name in self._channels:
             channel = self._channels[name]
             # Securely clear credentials before removal
-            if hasattr(channel, 'clear_credentials'):
+            if hasattr(channel, "clear_credentials"):
                 channel.clear_credentials()
             del self._channels[name]
             logger.info(f"Removed channel: {name}, credentials cleared")
@@ -595,7 +611,7 @@ class NotificationService:
                 else:
                     notification.status = DeliveryStatus.RETRYING
                     logger.warning(f"Notification delivery failed, retry {notification.retry_count}")
-                    await asyncio.sleep(2 ** notification.retry_count)  # Exponential backoff
+                    await asyncio.sleep(2**notification.retry_count)  # Exponential backoff
 
         # Add to history
         self._history.append(notification)
@@ -611,7 +627,7 @@ class NotificationService:
                     "type": notification.type.value,
                     "status": notification.status.value,
                     "channel": channel,
-                }
+                },
             )
 
         return notification

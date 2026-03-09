@@ -48,7 +48,7 @@ interface TimeSliderProps {
   onPlay?: () => void;
   onPause?: () => void;
   isPlaying: boolean;
-  playbackSpeed: number;  // ms between frames
+  playbackSpeed: number; // ms between frames
   onSpeedChange?: (speed: number) => void;
   temporalRange?: TemporalRange;
   evolutionMetrics?: EvolutionMetrics;
@@ -141,12 +141,12 @@ export function TimeSlider({
   }
 
   const currentSnapshot = snapshots[currentIndex];
-  const hasChanges = currentSnapshot && (
-    currentSnapshot.added_nodes.length > 0 ||
-    currentSnapshot.removed_nodes.length > 0 ||
-    currentSnapshot.added_edges.length > 0 ||
-    currentSnapshot.removed_edges.length > 0
-  );
+  const hasChanges =
+    currentSnapshot &&
+    (currentSnapshot.added_nodes.length > 0 ||
+      currentSnapshot.removed_nodes.length > 0 ||
+      currentSnapshot.added_edges.length > 0 ||
+      currentSnapshot.removed_edges.length > 0);
 
   return (
     <div className="time-slider-container">
@@ -216,8 +216,10 @@ export function TimeSlider({
             onChange={(e) => onSpeedChange?.(Number(e.target.value))}
             title="Playback speed"
           >
-            {SPEED_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {SPEED_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
         </div>
@@ -238,7 +240,8 @@ export function TimeSlider({
         <div className="time-slider-markers">
           {snapshots.map((snapshot, idx) => {
             const hasAdditions = snapshot.added_nodes.length > 0 || snapshot.added_edges.length > 0;
-            const hasRemovals = snapshot.removed_nodes.length > 0 || snapshot.removed_edges.length > 0;
+            const hasRemovals =
+              snapshot.removed_nodes.length > 0 || snapshot.removed_edges.length > 0;
             const position = (idx / (snapshots.length - 1)) * 100;
 
             if (!hasAdditions && !hasRemovals) return null;
@@ -324,9 +327,7 @@ export function TimeSlider({
             </div>
           </div>
           {evolutionMetrics.peak_timestamp && (
-            <div className="peak-info">
-              Peak at {formatDate(evolutionMetrics.peak_timestamp)}
-            </div>
+            <div className="peak-info">Peak at {formatDate(evolutionMetrics.peak_timestamp)}</div>
           )}
         </div>
       )}

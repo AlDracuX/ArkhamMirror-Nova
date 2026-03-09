@@ -36,15 +36,10 @@ MAX_CONTEXT_TOKENS = int(os.environ.get("LLM_MAX_CONTEXT", "4000"))
 # System prompts for different operations
 SYSTEM_PROMPTS = {
     "summarize": """You are a professional summarization engine. Your job is to create concise, accurate summaries that capture the essential information and main points of the text.""",
-
     "extract_keywords": """You are a keyword extraction engine. Identify the most important terms, concepts, and phrases from the text. Return results as JSON array.""",
-
     "extract_metadata": """You are a metadata extraction engine. Analyze the text and extract structured metadata fields. Return results as JSON object.""",
-
     "classify": """You are a document classification engine. Analyze the text and determine its category/type. Return results as JSON object.""",
-
     "extract_entities": """You are an entity extraction engine. Identify people, organizations, locations, dates, monetary values, and other named entities. Return results as JSON array.""",
-
     "generate_questions": """You are a question generation engine. Create insightful questions that this document answers or relates to.""",
 }
 
@@ -156,9 +151,7 @@ class EnrichWorker(BaseWorker):
         else:
             raise ValueError(f"Unknown operation: {operation}")
 
-    async def _summarize(
-        self, job_id: str, text: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _summarize(self, job_id: str, text: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate document summary.
 
@@ -201,9 +194,7 @@ class EnrichWorker(BaseWorker):
             "success": True,
         }
 
-    async def _extract_keywords(
-        self, job_id: str, text: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _extract_keywords(self, job_id: str, text: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract keywords and key phrases.
 
@@ -253,9 +244,7 @@ Text:
             "success": True,
         }
 
-    async def _extract_metadata(
-        self, job_id: str, text: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _extract_metadata(self, job_id: str, text: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract structured metadata.
 
@@ -270,7 +259,7 @@ Text:
         fields = payload.get("fields", ["title", "author", "date", "type", "language"])
 
         user_prompt = f"""Extract the following metadata fields from this text:
-{', '.join(fields)}
+{", ".join(fields)}
 
 Return as JSON object:
 {{
@@ -312,9 +301,7 @@ Text:
             "success": True,
         }
 
-    async def _classify(
-        self, job_id: str, text: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _classify(self, job_id: str, text: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Classify document type/topic.
 
@@ -343,7 +330,7 @@ Text:
 {text}"""
         else:
             user_prompt = f"""Classify this text into one of these categories:
-{', '.join(categories)}
+{", ".join(categories)}
 
 Return as JSON object:
 {{
@@ -378,9 +365,7 @@ Text:
             "success": True,
         }
 
-    async def _extract_entities(
-        self, job_id: str, text: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _extract_entities(self, job_id: str, text: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract named entities.
 
@@ -392,12 +377,10 @@ Text:
         Returns:
             Entities result dict
         """
-        entity_types = payload.get(
-            "entity_types", ["person", "org", "location", "date", "money"]
-        )
+        entity_types = payload.get("entity_types", ["person", "org", "location", "date", "money"])
 
         user_prompt = f"""Extract named entities from this text.
-Types to extract: {', '.join(entity_types)}
+Types to extract: {", ".join(entity_types)}
 
 Return as JSON array:
 [
@@ -430,9 +413,7 @@ Text:
             "success": True,
         }
 
-    async def _generate_questions(
-        self, job_id: str, text: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _generate_questions(self, job_id: str, text: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate questions that the document answers.
 
@@ -466,11 +447,7 @@ Text:
         )
 
         # Parse questions (one per line)
-        questions = [
-            q.strip().lstrip("0123456789.-) ")
-            for q in response.strip().split("\n")
-            if q.strip()
-        ]
+        questions = [q.strip().lstrip("0123456789.-) ") for q in response.strip().split("\n") if q.strip()]
 
         return {
             "questions": questions[:max_questions],
@@ -478,9 +455,7 @@ Text:
             "success": True,
         }
 
-    async def _enrich_pipeline(
-        self, job_id: str, text: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _enrich_pipeline(self, job_id: str, text: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Run multiple enrichment operations in sequence.
 
@@ -564,7 +539,7 @@ Text:
         # Truncate text if needed (rough estimate: 4 chars per token)
         if len(user_prompt) > MAX_CONTEXT_TOKENS * 4:
             logger.warning(f"Job {job_id}: Text truncated to fit context window")
-            user_prompt = user_prompt[:MAX_CONTEXT_TOKENS * 4] + "\n\n[Text truncated...]"
+            user_prompt = user_prompt[: MAX_CONTEXT_TOKENS * 4] + "\n\n[Text truncated...]"
 
         api_url = f"{endpoint.rstrip('/')}/chat/completions"
 
@@ -585,13 +560,10 @@ Text:
             response.raise_for_status()
         except httpx.ConnectError:
             raise ConnectionError(
-                f"Failed to connect to LLM endpoint: {endpoint}. "
-                f"Make sure LM Studio/Ollama/vLLM is running."
+                f"Failed to connect to LLM endpoint: {endpoint}. Make sure LM Studio/Ollama/vLLM is running."
             )
         except httpx.HTTPStatusError as e:
-            raise RuntimeError(
-                f"LLM API error: {e.response.status_code} - {e.response.text}"
-            )
+            raise RuntimeError(f"LLM API error: {e.response.status_code} - {e.response.text}")
 
         result = response.json()
 
@@ -658,6 +630,7 @@ def run_enrich_worker(database_url: str = None, worker_id: str = None):
         LLM_ENDPOINT=http://localhost:11434/v1 LLM_MODEL=qwen2.5 python -m arkham_frame.workers.enrich_worker
     """
     import asyncio
+
     worker = EnrichWorker(database_url=database_url, worker_id=worker_id)
     asyncio.run(worker.run())
 

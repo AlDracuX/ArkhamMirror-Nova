@@ -30,7 +30,10 @@ const FAILURE_MODE_ICONS: Record<FailureModeType, string> = {
   alternative_explanation: 'GitBranch',
 };
 
-const LIKELIHOOD_COLORS: Record<'low' | 'medium' | 'high', { bg: string; border: string; text: string }> = {
+const LIKELIHOOD_COLORS: Record<
+  'low' | 'medium' | 'high',
+  { bg: string; border: string; text: string }
+> = {
   low: { bg: '#166534', border: '#22c55e', text: '#86efac' },
   medium: { bg: '#854d0e', border: '#eab308', text: '#fde047' },
   high: { bg: '#991b1b', border: '#ef4444', text: '#fca5a5' },
@@ -106,8 +109,8 @@ export function PremortemSection({
       </div>
 
       <p className="section-description">
-        Assume your hypothesis is WRONG. What would have caused this failure?
-        Premortem analysis helps identify blind spots and hidden assumptions.
+        Assume your hypothesis is WRONG. What would have caused this failure? Premortem analysis
+        helps identify blind spots and hidden assumptions.
       </p>
 
       {/* Premortems List */}
@@ -145,9 +148,7 @@ export function PremortemSection({
                         size={16}
                         className="icon-muted"
                       />
-                      <span className="premortem-hypothesis">
-                        {premortem.hypothesis_title}
-                      </span>
+                      <span className="premortem-hypothesis">{premortem.hypothesis_title}</span>
                       <span
                         className="vulnerability-badge"
                         style={{
@@ -405,14 +406,18 @@ function FailureModeCard({
       {failureMode.early_warning_indicator && (
         <div className="fm-indicator">
           <Icon name="Eye" size={12} />
-          <span><strong>Watch for:</strong> {failureMode.early_warning_indicator}</span>
+          <span>
+            <strong>Watch for:</strong> {failureMode.early_warning_indicator}
+          </span>
         </div>
       )}
 
       {failureMode.mitigation_action && (
         <div className="fm-mitigation">
           <Icon name="Shield" size={12} />
-          <span><strong>Mitigation:</strong> {failureMode.mitigation_action}</span>
+          <span>
+            <strong>Mitigation:</strong> {failureMode.mitigation_action}
+          </span>
         </div>
       )}
 

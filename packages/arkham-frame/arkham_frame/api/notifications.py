@@ -4,15 +4,17 @@ Notification API endpoints.
 Provides REST API for sending notifications and managing channels.
 """
 
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Optional
 
 router = APIRouter()
 
 
 class SendNotificationRequest(BaseModel):
     """Request body for sending a notification."""
+
     title: str = Field(..., description="Notification title")
     message: str = Field(..., description="Notification message")
     recipient: str = Field(..., description="Recipient identifier")
@@ -23,12 +25,14 @@ class SendNotificationRequest(BaseModel):
 
 class BatchNotificationRequest(BaseModel):
     """Request body for batch notifications."""
+
     notifications: List[Dict[str, Any]] = Field(..., description="List of notifications")
     default_channel: str = Field("log", description="Default channel if not specified")
 
 
 class ConfigureEmailRequest(BaseModel):
     """Request body for configuring email channel."""
+
     name: str = Field(..., description="Channel name")
     smtp_host: str = Field(..., description="SMTP server hostname")
     smtp_port: int = Field(587, description="SMTP server port")
@@ -41,6 +45,7 @@ class ConfigureEmailRequest(BaseModel):
 
 class ConfigureWebhookRequest(BaseModel):
     """Request body for configuring webhook channel."""
+
     name: str = Field(..., description="Channel name")
     url: str = Field(..., description="Webhook URL")
     method: str = Field("POST", description="HTTP method")
@@ -156,9 +161,9 @@ async def send_notification(request: SendNotificationRequest) -> Dict[str, Any]:
     """Send a notification."""
     from ..main import get_frame
     from ..services.notifications import (
-        NotificationType,
         ChannelNotFoundError,
         DeliveryError,
+        NotificationType,
     )
 
     frame = get_frame()

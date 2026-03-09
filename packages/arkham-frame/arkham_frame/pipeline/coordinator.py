@@ -2,11 +2,11 @@
 Pipeline Coordinator - Orchestrates pipeline execution.
 """
 
-from typing import Dict, Any, List, Optional
-from datetime import datetime
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from .base import PipelineStage, StageResult, StageStatus, PipelineError
+from .base import PipelineError, PipelineStage, StageResult, StageStatus
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +33,10 @@ class PipelineCoordinator:
 
     async def initialize(self) -> None:
         """Initialize the coordinator with default stages."""
+        from .embed import EmbedStage
         from .ingest import IngestStage
         from .ocr import OCRStage
         from .parse import ParseStage
-        from .embed import EmbedStage
 
         self.stages = [
             IngestStage(frame=self.frame),

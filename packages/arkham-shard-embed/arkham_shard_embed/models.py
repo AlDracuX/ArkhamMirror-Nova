@@ -8,6 +8,7 @@ from typing import Any
 
 class EmbedStatus(Enum):
     """Status of embedding operations."""
+
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -17,6 +18,7 @@ class EmbedStatus(Enum):
 @dataclass
 class EmbedRequest:
     """Request to embed a single text."""
+
     text: str
     doc_id: str | None = None
     chunk_id: str | None = None
@@ -26,6 +28,7 @@ class EmbedRequest:
 @dataclass
 class BatchEmbedRequest:
     """Request to embed multiple texts."""
+
     texts: list[str]
     doc_ids: list[str] | None = None
     chunk_ids: list[str] | None = None
@@ -35,6 +38,7 @@ class BatchEmbedRequest:
 @dataclass
 class EmbedResult:
     """Result of a single text embedding."""
+
     embedding: list[float]
     dimensions: int
     model: str
@@ -48,6 +52,7 @@ class EmbedResult:
 @dataclass
 class BatchEmbedResult:
     """Result of batch text embedding."""
+
     embeddings: list[list[float]]
     dimensions: int
     model: str
@@ -59,6 +64,7 @@ class BatchEmbedResult:
 @dataclass
 class SimilarityRequest:
     """Request to calculate similarity between texts."""
+
     text1: str
     text2: str
     method: str = "cosine"  # "cosine", "euclidean", "dot"
@@ -67,6 +73,7 @@ class SimilarityRequest:
 @dataclass
 class SimilarityResult:
     """Result of similarity calculation."""
+
     similarity: float
     method: str
     success: bool = True
@@ -76,6 +83,7 @@ class SimilarityResult:
 @dataclass
 class NearestRequest:
     """Request to find nearest neighbors in vector space."""
+
     query: str | list[float]  # Text or pre-computed embedding
     limit: int = 10
     min_similarity: float = 0.5
@@ -86,6 +94,7 @@ class NearestRequest:
 @dataclass
 class NearestResult:
     """Result of nearest neighbor search."""
+
     neighbors: list[dict[str, Any]]
     total: int
     query_dimensions: int
@@ -96,6 +105,7 @@ class NearestResult:
 @dataclass
 class EmbedConfig:
     """Configuration for embedding operations."""
+
     model: str
     device: str  # "cpu", "cuda", "auto"
     batch_size: int = 32
@@ -107,6 +117,7 @@ class EmbedConfig:
 @dataclass
 class ModelInfo:
     """Information about an embedding model."""
+
     name: str
     dimensions: int
     max_length: int
@@ -119,6 +130,7 @@ class ModelInfo:
 @dataclass
 class DocumentEmbedRequest:
     """Request to embed all chunks of a document."""
+
     doc_id: str
     force: bool = False  # Re-embed even if already embedded
     chunk_size: int = 512

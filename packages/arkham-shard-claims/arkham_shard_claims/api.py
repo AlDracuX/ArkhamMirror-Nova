@@ -26,6 +26,7 @@ router = APIRouter(prefix="/api/claims", tags=["claims"])
 
 class ClaimCreate(BaseModel):
     """Request model for creating a claim."""
+
     text: str = Field(..., description="The claim text")
     claim_type: ClaimType = Field(default=ClaimType.FACTUAL)
     source_document_id: Optional[str] = None
@@ -39,6 +40,7 @@ class ClaimCreate(BaseModel):
 
 class ClaimResponse(BaseModel):
     """Response model for a claim."""
+
     id: str
     text: str
     claim_type: str
@@ -62,6 +64,7 @@ class ClaimResponse(BaseModel):
 
 class ClaimListResponse(BaseModel):
     """Response model for listing claims."""
+
     items: List[ClaimResponse]
     total: int
     page: int
@@ -70,12 +73,14 @@ class ClaimListResponse(BaseModel):
 
 class StatusUpdateRequest(BaseModel):
     """Request model for updating claim status."""
+
     status: ClaimStatus
     notes: Optional[str] = None
 
 
 class EvidenceCreate(BaseModel):
     """Request model for adding evidence."""
+
     evidence_type: EvidenceType
     reference_id: str
     relationship: EvidenceRelationship = EvidenceRelationship.SUPPORTS
@@ -87,6 +92,7 @@ class EvidenceCreate(BaseModel):
 
 class EvidenceResponse(BaseModel):
     """Response model for evidence."""
+
     id: str
     claim_id: str
     evidence_type: str
@@ -103,6 +109,7 @@ class EvidenceResponse(BaseModel):
 
 class ExtractionRequest(BaseModel):
     """Request model for claim extraction."""
+
     text: str = Field(..., description="Text to extract claims from")
     document_id: Optional[str] = None
     extraction_model: Optional[str] = None
@@ -110,6 +117,7 @@ class ExtractionRequest(BaseModel):
 
 class ExtractionResponse(BaseModel):
     """Response model for extraction results."""
+
     claims: List[ClaimResponse]
     source_document_id: Optional[str]
     extraction_method: str
@@ -121,12 +129,14 @@ class ExtractionResponse(BaseModel):
 
 class SimilarityRequest(BaseModel):
     """Request model for finding similar claims."""
+
     threshold: float = Field(default=0.8, ge=0.0, le=1.0)
     limit: int = Field(default=10, ge=1, le=100)
 
 
 class ClaimMatchResponse(BaseModel):
     """Response model for claim matches."""
+
     claim_id: str
     matched_claim_id: str
     similarity_score: float
@@ -136,11 +146,13 @@ class ClaimMatchResponse(BaseModel):
 
 class MergeRequest(BaseModel):
     """Request model for merging claims."""
+
     claim_ids_to_merge: List[str]
 
 
 class MergeResponse(BaseModel):
     """Response model for merge results."""
+
     primary_claim_id: str
     merged_claim_ids: List[str]
     evidence_transferred: int
@@ -149,6 +161,7 @@ class MergeResponse(BaseModel):
 
 class StatisticsResponse(BaseModel):
     """Response model for claim statistics."""
+
     total_claims: int
     by_status: Dict[str, int]
     by_type: Dict[str, int]
@@ -164,6 +177,7 @@ class StatisticsResponse(BaseModel):
 
 class CountResponse(BaseModel):
     """Response model for count endpoint."""
+
     count: int
 
 
@@ -431,7 +445,7 @@ async def extract_claims_from_document(request: Request, document_id: str):
         """SELECT text FROM arkham_frame.chunks
            WHERE document_id = :doc_id
            ORDER BY chunk_index""",
-        {"doc_id": document_id}
+        {"doc_id": document_id},
     )
 
     if not chunks:
@@ -754,7 +768,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     if not frame or not getattr(frame, "ai_analyst", None):
         raise HTTPException(status_code=503, detail="AI Analyst service not available")
 
-    from arkham_frame.services import AnalysisRequest, AnalysisDepth, AnalystMessage
+    from arkham_frame.services import AnalysisDepth, AnalysisRequest, AnalystMessage
 
     # Map depth string to enum
     depth_map = {
@@ -768,10 +782,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     # Build conversation history
     history = None
     if body.conversation_history:
-        history = [
-            AnalystMessage(role=m["role"], content=m["content"])
-            for m in body.conversation_history
-        ]
+        history = [AnalystMessage(role=m["role"], content=m["content"]) for m in body.conversation_history]
 
     # Create analysis request
     analysis_request = AnalysisRequest(

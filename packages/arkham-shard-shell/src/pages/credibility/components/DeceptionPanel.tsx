@@ -48,7 +48,9 @@ export function DeceptionPanel({
   const { toast } = useToast();
   const [assessment, setAssessment] = useState<DeceptionAssessment | null>(null);
   const [sourceInfo, setSourceInfo] = useState<SourceInfo | null>(null);
-  const [standardIndicators, setStandardIndicators] = useState<Record<DeceptionChecklistType, StandardIndicator[]>>({
+  const [standardIndicators, setStandardIndicators] = useState<
+    Record<DeceptionChecklistType, StandardIndicator[]>
+  >({
     mom: [],
     pop: [],
     moses: [],
@@ -118,8 +120,8 @@ export function DeceptionPanel({
         await fetchSourceInfo();
 
         // Fetch standard indicators for all checklist types
-        const indicatorPromises = CHECKLIST_TYPES.map(type =>
-          fetch(`/api/credibility/deception/indicators/${type}`).then(r => r.json())
+        const indicatorPromises = CHECKLIST_TYPES.map((type) =>
+          fetch(`/api/credibility/deception/indicators/${type}`).then((r) => r.json())
         );
         const indicatorResults = await Promise.all(indicatorPromises);
         const indicators: Record<DeceptionChecklistType, StandardIndicator[]> = {
@@ -186,58 +188,60 @@ export function DeceptionPanel({
   };
 
   // Update indicator
-  const handleUpdateIndicator = useCallback(async (
-    checklistType: DeceptionChecklistType,
-    indicator: DeceptionIndicator
-  ) => {
-    if (!assessment) return;
+  const handleUpdateIndicator = useCallback(
+    async (checklistType: DeceptionChecklistType, indicator: DeceptionIndicator) => {
+      if (!assessment) return;
 
-    const checklistKey = `${checklistType}_checklist` as keyof DeceptionAssessment;
-    const currentChecklist = assessment[checklistKey] as DeceptionAssessment['mom_checklist'];
-    const indicators = currentChecklist?.indicators || standardIndicators[checklistType].map(std => ({
-      id: std.id,
-      checklist: checklistType,
-      question: std.question,
-      answer: null,
-      strength: 'none' as const,
-      confidence: 0,
-      evidence_ids: [],
-      notes: null,
-    }));
+      const checklistKey = `${checklistType}_checklist` as keyof DeceptionAssessment;
+      const currentChecklist = assessment[checklistKey] as DeceptionAssessment['mom_checklist'];
+      const indicators =
+        currentChecklist?.indicators ||
+        standardIndicators[checklistType].map((std) => ({
+          id: std.id,
+          checklist: checklistType,
+          question: std.question,
+          answer: null,
+          strength: 'none' as const,
+          confidence: 0,
+          evidence_ids: [],
+          notes: null,
+        }));
 
-    const updatedIndicators = indicators.map(ind =>
-      ind.id === indicator.id ? indicator : ind
-    );
-
-    setSaving(true);
-    try {
-      const response = await fetch(
-        `/api/credibility/deception/${assessment.id}/checklist/${checklistType}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            indicators: updatedIndicators,
-          }),
-        }
+      const updatedIndicators = indicators.map((ind) =>
+        ind.id === indicator.id ? indicator : ind
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to update checklist');
-      }
+      setSaving(true);
+      try {
+        const response = await fetch(
+          `/api/credibility/deception/${assessment.id}/checklist/${checklistType}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              indicators: updatedIndicators,
+            }),
+          }
+        );
 
-      const data = await response.json();
-      setAssessment(data);
+        if (!response.ok) {
+          throw new Error('Failed to update checklist');
+        }
 
-      if (onRiskChange && data.risk_level !== assessment.risk_level) {
-        onRiskChange(data.risk_level);
+        const data = await response.json();
+        setAssessment(data);
+
+        if (onRiskChange && data.risk_level !== assessment.risk_level) {
+          onRiskChange(data.risk_level);
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to update indicator');
+      } finally {
+        setSaving(false);
       }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update indicator');
-    } finally {
-      setSaving(false);
-    }
-  }, [assessment, standardIndicators, onRiskChange, toast]);
+    },
+    [assessment, standardIndicators, onRiskChange, toast]
+  );
 
   // Fetch comprehensive source context for LLM analysis
   const fetchSourceContext = async (): Promise<string> => {
@@ -258,7 +262,8 @@ export function DeceptionPanel({
           if (doc.title) contextParts.push(`Title: ${doc.title}`);
           if (doc.filename) contextParts.push(`Filename: ${doc.filename}`);
           if (doc.file_type) contextParts.push(`File Type: ${doc.file_type}`);
-          if (doc.created_at) contextParts.push(`Ingested: ${new Date(doc.created_at).toLocaleString()}`);
+          if (doc.created_at)
+            contextParts.push(`Ingested: ${new Date(doc.created_at).toLocaleString()}`);
           if (doc.page_count) contextParts.push(`Pages: ${doc.page_count}`);
           if (doc.tags?.length) contextParts.push(`Tags: ${doc.tags.join(', ')}`);
 
@@ -268,14 +273,26 @@ export function DeceptionPanel({
             const meta = doc.custom_metadata;
             if (meta.author) contextParts.push(`Author: ${meta.author}`);
             if (meta.publisher) contextParts.push(`Publisher: ${meta.publisher}`);
-            if (meta.publication_date) contextParts.push(`Publication Date: ${meta.publication_date}`);
+            if (meta.publication_date)
+              contextParts.push(`Publication Date: ${meta.publication_date}`);
             if (meta.source_url) contextParts.push(`Source URL: ${meta.source_url}`);
             if (meta.organization) contextParts.push(`Organization: ${meta.organization}`);
             if (meta.classification) contextParts.push(`Classification: ${meta.classification}`);
-            if (meta.reliability_rating) contextParts.push(`Previous Reliability Rating: ${meta.reliability_rating}`);
+            if (meta.reliability_rating)
+              contextParts.push(`Previous Reliability Rating: ${meta.reliability_rating}`);
             // Include any other custom fields
             for (const [key, value] of Object.entries(meta)) {
-              if (!['author', 'publisher', 'publication_date', 'source_url', 'organization', 'classification', 'reliability_rating'].includes(key)) {
+              if (
+                ![
+                  'author',
+                  'publisher',
+                  'publication_date',
+                  'source_url',
+                  'organization',
+                  'classification',
+                  'reliability_rating',
+                ].includes(key)
+              ) {
                 contextParts.push(`${key}: ${value}`);
               }
             }
@@ -297,11 +314,15 @@ export function DeceptionPanel({
                 byType[type].push(e.text);
               }
               for (const [type, names] of Object.entries(byType)) {
-                contextParts.push(`${type}: ${names.slice(0, 10).join(', ')}${names.length > 10 ? ` (+${names.length - 10} more)` : ''}`);
+                contextParts.push(
+                  `${type}: ${names.slice(0, 10).join(', ')}${names.length > 10 ? ` (+${names.length - 10} more)` : ''}`
+                );
               }
             }
           }
-        } catch { /* ignore entity fetch errors */ }
+        } catch {
+          /* ignore entity fetch errors */
+        }
 
         // Fetch claims made in this document
         try {
@@ -320,24 +341,31 @@ export function DeceptionPanel({
               }
             }
           }
-        } catch { /* ignore claims fetch errors */ }
+        } catch {
+          /* ignore claims fetch errors */
+        }
 
         // Fetch contradictions involving this document
         try {
           const contradictionsRes = await fetch(`/api/contradictions/by-document/${sourceId}`);
           if (contradictionsRes.ok) {
             const contradictionsData = await contradictionsRes.json();
-            const contradictions = contradictionsData.contradictions || contradictionsData.items || [];
+            const contradictions =
+              contradictionsData.contradictions || contradictionsData.items || [];
             if (contradictions.length > 0) {
               contextParts.push(`\n=== KNOWN CONTRADICTIONS ===`);
-              contextParts.push(`WARNING: This document contains ${contradictions.length} known contradiction(s) with other sources.`);
+              contextParts.push(
+                `WARNING: This document contains ${contradictions.length} known contradiction(s) with other sources.`
+              );
               for (const c of contradictions.slice(0, 5)) {
                 const severity = c.severity ? ` [${c.severity}]` : '';
                 contextParts.push(`- ${c.description || c.claim_1 || 'Contradiction'}${severity}`);
               }
             }
           }
-        } catch { /* ignore contradictions fetch errors */ }
+        } catch {
+          /* ignore contradictions fetch errors */
+        }
 
         // Fetch document content preview
         try {
@@ -346,15 +374,19 @@ export function DeceptionPanel({
             const chunks = await contentRes.json();
             const items = chunks.items || [];
             if (items.length > 0) {
-              const textPreview = items.slice(0, 5).map((c: { content?: string; text?: string }) => c.content || c.text || '').join('\n\n');
+              const textPreview = items
+                .slice(0, 5)
+                .map((c: { content?: string; text?: string }) => c.content || c.text || '')
+                .join('\n\n');
               if (textPreview) {
                 contextParts.push(`\n=== DOCUMENT CONTENT PREVIEW ===`);
                 contextParts.push(textPreview.substring(0, 3000));
               }
             }
           }
-        } catch { /* ignore content fetch errors */ }
-
+        } catch {
+          /* ignore content fetch errors */
+        }
       } else if (sourceType === 'entity') {
         const entityRes = await fetch(`/api/entities/${sourceId}`);
         if (entityRes.ok) {
@@ -363,7 +395,8 @@ export function DeceptionPanel({
           if (entity.name) contextParts.push(`Name: ${entity.name}`);
           if (entity.entity_type) contextParts.push(`Type: ${entity.entity_type}`);
           if (entity.description) contextParts.push(`Description: ${entity.description}`);
-          if (entity.aliases?.length) contextParts.push(`Also known as: ${entity.aliases.join(', ')}`);
+          if (entity.aliases?.length)
+            contextParts.push(`Also known as: ${entity.aliases.join(', ')}`);
           if (entity.attributes) {
             for (const [key, value] of Object.entries(entity.attributes)) {
               contextParts.push(`${key}: ${value}`);
@@ -382,10 +415,13 @@ export function DeceptionPanel({
           contextParts.push(`\n=== CLAIM DETAILS ===`);
           if (claim.statement) contextParts.push(`Statement: "${claim.statement}"`);
           if (claim.source_text) contextParts.push(`Source Context: ${claim.source_text}`);
-          if (claim.source_document_id) contextParts.push(`Source Document ID: ${claim.source_document_id}`);
+          if (claim.source_document_id)
+            contextParts.push(`Source Document ID: ${claim.source_document_id}`);
           if (claim.claim_type) contextParts.push(`Claim Type: ${claim.claim_type}`);
-          if (claim.verification_status) contextParts.push(`Verification Status: ${claim.verification_status}`);
-          if (claim.confidence) contextParts.push(`Extraction Confidence: ${(claim.confidence * 100).toFixed(0)}%`);
+          if (claim.verification_status)
+            contextParts.push(`Verification Status: ${claim.verification_status}`);
+          if (claim.confidence)
+            contextParts.push(`Extraction Confidence: ${(claim.confidence * 100).toFixed(0)}%`);
 
           // Check for contradictions with this claim
           try {
@@ -394,10 +430,14 @@ export function DeceptionPanel({
               const data = await contradictionsRes.json();
               const contradictions = data.contradictions || data.items || [];
               if (contradictions.length > 0) {
-                contextParts.push(`\nWARNING: This claim has ${contradictions.length} known contradiction(s).`);
+                contextParts.push(
+                  `\nWARNING: This claim has ${contradictions.length} known contradiction(s).`
+                );
               }
             }
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
       }
     } catch (err) {
@@ -405,8 +445,12 @@ export function DeceptionPanel({
     }
 
     contextParts.push(`\n=== ANALYSIS GUIDANCE ===`);
-    contextParts.push(`Consider the source's potential motives, access to deception channels, and capability to deceive.`);
-    contextParts.push(`Look for internal inconsistencies, unusual patterns, or information that contradicts known facts.`);
+    contextParts.push(
+      `Consider the source's potential motives, access to deception channels, and capability to deceive.`
+    );
+    contextParts.push(
+      `Look for internal inconsistencies, unusual patterns, or information that contradicts known facts.`
+    );
     contextParts.push(`Evaluate whether the source could have been manipulated or compromised.`);
 
     return contextParts.join('\n');
@@ -463,10 +507,9 @@ export function DeceptionPanel({
 
     setSaving(true);
     try {
-      const response = await fetch(
-        `/api/credibility/deception/${assessment.id}/recalculate`,
-        { method: 'POST' }
-      );
+      const response = await fetch(`/api/credibility/deception/${assessment.id}/recalculate`, {
+        method: 'POST',
+      });
 
       if (!response.ok) {
         throw new Error('Failed to recalculate');
@@ -522,7 +565,7 @@ export function DeceptionPanel({
       return { assessed: 0, total: totalIndicators, score: 0 };
     }
 
-    const assessed = checklist.indicators.filter(i => i.strength !== 'none').length;
+    const assessed = checklist.indicators.filter((i) => i.strength !== 'none').length;
     return { assessed, total: totalIndicators, score: checklist.overall_score };
   };
 
@@ -547,15 +590,8 @@ export function DeceptionPanel({
               <span className="source-name">{sourceInfo.name}</span>
             </div>
           )}
-          <p>
-            Use the MOM/POP/MOSES/EVE framework to evaluate potential deception
-            by this source.
-          </p>
-          <button
-            className="btn btn-primary"
-            onClick={handleCreateAssessment}
-            disabled={saving}
-          >
+          <p>Use the MOM/POP/MOSES/EVE framework to evaluate potential deception by this source.</p>
+          <button className="btn btn-primary" onClick={handleCreateAssessment} disabled={saving}>
             {saving ? (
               <>
                 <Icon name="Loader2" size={16} className="spin" />
@@ -584,13 +620,22 @@ export function DeceptionPanel({
       {sourceInfo && (
         <div className="source-header">
           <div className="source-header-info">
-            <Icon name={sourceType === 'document' ? 'FileText' : sourceType === 'entity' ? 'User' : sourceType === 'claim' ? 'MessageSquare' : 'Database'} size={16} />
+            <Icon
+              name={
+                sourceType === 'document'
+                  ? 'FileText'
+                  : sourceType === 'entity'
+                    ? 'User'
+                    : sourceType === 'claim'
+                      ? 'MessageSquare'
+                      : 'Database'
+              }
+              size={16}
+            />
             <span className="source-type-label">{sourceInfo.type}</span>
             <span className="source-name-label">{sourceInfo.name}</span>
           </div>
-          {sourceInfo.detail && (
-            <div className="source-detail">{sourceInfo.detail}</div>
-          )}
+          {sourceInfo.detail && <div className="source-detail">{sourceInfo.detail}</div>}
         </div>
       )}
 
@@ -643,34 +688,34 @@ export function DeceptionPanel({
             <h4>Scoring Criteria</h4>
             <div className="scoring-legend">
               <div className="legend-item">
-                <span className="legend-color" style={{background: '#6b7280'}}></span>
+                <span className="legend-color" style={{ background: '#6b7280' }}></span>
                 <span className="legend-label">None (0)</span>
                 <span className="legend-desc">No deception indicator present</span>
               </div>
               <div className="legend-item">
-                <span className="legend-color" style={{background: '#22c55e'}}></span>
+                <span className="legend-color" style={{ background: '#22c55e' }}></span>
                 <span className="legend-label">Weak (25)</span>
                 <span className="legend-desc">Minor/circumstantial indicator</span>
               </div>
               <div className="legend-item">
-                <span className="legend-color" style={{background: '#eab308'}}></span>
+                <span className="legend-color" style={{ background: '#eab308' }}></span>
                 <span className="legend-label">Moderate (50)</span>
                 <span className="legend-desc">Notable deception indicator</span>
               </div>
               <div className="legend-item">
-                <span className="legend-color" style={{background: '#f97316'}}></span>
+                <span className="legend-color" style={{ background: '#f97316' }}></span>
                 <span className="legend-label">Strong (75)</span>
                 <span className="legend-desc">Clear deception indicator</span>
               </div>
               <div className="legend-item">
-                <span className="legend-color" style={{background: '#ef4444'}}></span>
+                <span className="legend-color" style={{ background: '#ef4444' }}></span>
                 <span className="legend-label">Conclusive (100)</span>
                 <span className="legend-desc">Definitive evidence of deception</span>
               </div>
             </div>
             <p className="scoring-note">
-              Higher scores = more deception indicators = higher risk.
-              Weights: MOM 35%, EVE 25%, MOSES 25%, POP 15%
+              Higher scores = more deception indicators = higher risk. Weights: MOM 35%, EVE 25%,
+              MOSES 25%, POP 15%
             </p>
           </div>
         )}
@@ -685,7 +730,7 @@ export function DeceptionPanel({
 
       {/* Checklist Tabs - Compact Grid Layout */}
       <div className="checklist-tabs-grid">
-        {CHECKLIST_TYPES.map(type => {
+        {CHECKLIST_TYPES.map((type) => {
           const info = CHECKLIST_INFO[type];
           const stats = getChecklistStats(type);
           const isActive = activeChecklist === type;
@@ -704,9 +749,13 @@ export function DeceptionPanel({
                 <span className="tab-name">{info.name}</span>
               </div>
               <div className="tab-stats">
-                <span className="tab-progress">{stats.assessed}/{stats.total}</span>
+                <span className="tab-progress">
+                  {stats.assessed}/{stats.total}
+                </span>
                 {stats.score > 0 && (
-                  <span className="tab-score" style={{ color: info.color }}>{stats.score}</span>
+                  <span className="tab-score" style={{ color: info.color }}>
+                    {stats.score}
+                  </span>
                 )}
               </div>
             </button>
@@ -737,8 +786,8 @@ export function DeceptionPanel({
         <div className="credibility-impact">
           <Icon name="Link" size={14} />
           <span>
-            This assessment affects credibility scoring
-            (weight: {(assessment.credibility_weight * 100).toFixed(0)}%)
+            This assessment affects credibility scoring (weight:{' '}
+            {(assessment.credibility_weight * 100).toFixed(0)}%)
           </span>
         </div>
       )}

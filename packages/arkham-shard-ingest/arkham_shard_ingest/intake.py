@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 class ValidationError(Exception):
     """Raised when file validation fails."""
+
     pass
 
 
@@ -69,7 +70,9 @@ class IntakeManager:
         self.enable_downscale = enable_downscale
         self.skip_blank_pages = skip_blank_pages
         self.min_file_size = min_file_size if min_file_size is not None else self.DEFAULT_MIN_SIZE_BYTES
-        self.max_file_size = (max_file_size_mb if max_file_size_mb is not None else self.DEFAULT_MAX_SIZE_MB) * 1024 * 1024
+        self.max_file_size = (
+            (max_file_size_mb if max_file_size_mb is not None else self.DEFAULT_MAX_SIZE_MB) * 1024 * 1024
+        )
 
         # Shard reference for database persistence
         self._shard = shard
@@ -173,9 +176,7 @@ class IntakeManager:
                 if existing_job:
                     # Clean up temp file and return existing job
                     temp_file.unlink(missing_ok=True)
-                    logger.info(
-                        f"Duplicate detected: {filename} matches existing job {existing_job_id}"
-                    )
+                    logger.info(f"Duplicate detected: {filename} matches existing job {existing_job_id}")
                     return existing_job
 
         # Get extension for validation
@@ -233,10 +234,7 @@ class IntakeManager:
             except Exception as e:
                 logger.error(f"Failed to persist job {job_id} to database: {e}")
 
-        logger.info(
-            f"Received file: {filename} -> job {job_id} "
-            f"(category={file_info.category.value}, route={route})"
-        )
+        logger.info(f"Received file: {filename} -> job {job_id} (category={file_info.category.value}, route={route})")
 
         return job
 
@@ -425,39 +423,39 @@ class IntakeManager:
             return "unnamed"
 
         # Normalize unicode (NFC form)
-        safe = unicodedata.normalize('NFC', filename)
+        safe = unicodedata.normalize("NFC", filename)
 
         # Replace path separators
-        safe = re.sub(r'[/\\]', '_', safe)
+        safe = re.sub(r"[/\\]", "_", safe)
 
         # Block directory traversal patterns
-        safe = re.sub(r'\.\.+', '_', safe)
+        safe = re.sub(r"\.\.+", "_", safe)
 
         # Remove control characters (U+0000-U+001F and U+007F-U+009F)
-        safe = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', safe)
+        safe = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", safe)
 
         # Replace Windows-forbidden characters
-        safe = re.sub(r'[<>:"|?*]', '_', safe)
+        safe = re.sub(r'[<>:"|?*]', "_", safe)
 
         # Collapse multiple underscores
-        safe = re.sub(r'_+', '_', safe)
+        safe = re.sub(r"_+", "_", safe)
 
         # Strip leading/trailing dots, spaces, and underscores
-        safe = safe.strip('. \t_')
+        safe = safe.strip(". \t_")
 
         # Block Windows reserved names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
-        reserved = {'CON', 'PRN', 'AUX', 'NUL'} | {f'COM{i}' for i in range(1, 10)} | {f'LPT{i}' for i in range(1, 10)}
-        name_part = safe.split('.')[0].upper() if '.' in safe else safe.upper()
+        reserved = {"CON", "PRN", "AUX", "NUL"} | {f"COM{i}" for i in range(1, 10)} | {f"LPT{i}" for i in range(1, 10)}
+        name_part = safe.split(".")[0].upper() if "." in safe else safe.upper()
         if name_part in reserved:
             safe = f"file_{safe}"
 
         # Limit length while preserving extension
         if len(safe) > 200:
-            if '.' in safe:
-                name, ext = safe.rsplit('.', 1)
+            if "." in safe:
+                name, ext = safe.rsplit(".", 1)
                 # Limit extension to 10 chars
                 ext = ext[:10]
-                safe = f"{name[:200-len(ext)-1]}.{ext}"
+                safe = f"{name[: 200 - len(ext) - 1]}.{ext}"
             else:
                 safe = safe[:200]
 
@@ -477,14 +475,10 @@ class IntakeManager:
 
         # Size checks
         if size < self.min_file_size:
-            raise ValidationError(
-                f"File too small ({size} bytes). Minimum is {self.min_file_size} bytes."
-            )
+            raise ValidationError(f"File too small ({size} bytes). Minimum is {self.min_file_size} bytes.")
         if size > self.max_file_size:
             max_mb = self.max_file_size / (1024 * 1024)
-            raise ValidationError(
-                f"File too large ({size / (1024*1024):.1f}MB). Maximum is {max_mb:.0f}MB."
-            )
+            raise ValidationError(f"File too large ({size / (1024 * 1024):.1f}MB). Maximum is {max_mb:.0f}MB.")
 
         # Format-specific validation
         ext = extension.lower()
@@ -493,6 +487,7 @@ class IntakeManager:
         if ext in (".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp", ".webp"):
             try:
                 from PIL import Image
+
                 with Image.open(path) as img:
                     img.verify()  # Verify it's a valid image
             except Exception as e:
@@ -502,6 +497,7 @@ class IntakeManager:
         elif ext == ".pdf":
             try:
                 from pypdf import PdfReader
+
                 reader = PdfReader(path)
                 page_count = len(reader.pages)
                 if page_count == 0:

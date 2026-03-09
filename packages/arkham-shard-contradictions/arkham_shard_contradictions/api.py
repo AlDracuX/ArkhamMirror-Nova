@@ -1,7 +1,7 @@
 """Contradictions Shard API endpoints."""
 
 import logging
-from typing import Annotated, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -11,17 +11,17 @@ if TYPE_CHECKING:
     from .shard import ContradictionsShard
 
 from .models import (
+    AddNotesRequest,
     AnalyzeRequest,
     BatchAnalyzeRequest,
-    ClaimsRequest,
-    UpdateStatusRequest,
-    AddNotesRequest,
-    ContradictionResult,
-    ContradictionList,
-    StatsResponse,
     ClaimExtractionResult,
+    ClaimsRequest,
+    ContradictionList,
+    ContradictionResult,
     ContradictionStatus,
     Severity,
+    StatsResponse,
+    UpdateStatusRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,8 +80,7 @@ async def _get_document_content(doc_id: str) -> dict | None:
     try:
         # Get document metadata
         doc_result = await _db.fetch_one(
-            "SELECT id, filename FROM arkham_frame.documents WHERE id = :id",
-            {"id": doc_id}
+            "SELECT id, filename FROM arkham_frame.documents WHERE id = :id", {"id": doc_id}
         )
 
         if not doc_result:
@@ -93,7 +92,7 @@ async def _get_document_content(doc_id: str) -> dict | None:
             """SELECT text FROM arkham_frame.chunks
                WHERE document_id = :id
                ORDER BY chunk_index""",
-            {"id": doc_id}
+            {"id": doc_id},
         )
 
         # Combine chunk text
@@ -103,11 +102,7 @@ async def _get_document_content(doc_id: str) -> dict | None:
             logger.warning(f"Document {doc_id} has no chunk content")
             return None
 
-        return {
-            "id": doc_id,
-            "content": content,
-            "title": doc_result.get("filename", f"Document {doc_id}")
-        }
+        return {"id": doc_id, "content": content, "title": doc_result.get("filename", f"Document {doc_id}")}
 
     except Exception as e:
         logger.error(f"Failed to fetch document {doc_id}: {e}")
@@ -167,7 +162,9 @@ async def analyze_documents(request: AnalyzeRequest):
     doc_a_text = doc_a["content"]
     doc_b_text = doc_b["content"]
 
-    logger.info(f"Fetched documents: {doc_a.get('title')} ({len(doc_a_text)} chars) vs {doc_b.get('title')} ({len(doc_b_text)} chars)")
+    logger.info(
+        f"Fetched documents: {doc_a.get('title')} ({len(doc_a_text)} chars) vs {doc_b.get('title')} ({len(doc_b_text)} chars)"
+    )
 
     # Extract claims
     if request.use_llm:
@@ -178,9 +175,7 @@ async def analyze_documents(request: AnalyzeRequest):
         claims_b = _detector.extract_claims_simple(doc_b_text, request.doc_b_id)
 
     # Find similar claim pairs
-    similar_pairs = await _detector.find_similar_claims(
-        claims_a, claims_b, threshold=request.threshold
-    )
+    similar_pairs = await _detector.find_similar_claims(claims_a, claims_b, threshold=request.threshold)
 
     # Verify contradictions
     contradictions = []
@@ -231,10 +226,7 @@ async def batch_analyze(request: BatchAnalyzeRequest):
     # Async mode: use llm-analysis worker for background processing
     if request.async_mode:
         if not _worker_service:
-            raise HTTPException(
-                status_code=503,
-                detail="Worker service not available for async mode"
-            )
+            raise HTTPException(status_code=503, detail="Worker service not available for async mode")
 
         job_ids = []
         for doc_a_id, doc_b_id in request.document_pairs:
@@ -265,11 +257,13 @@ async def batch_analyze(request: BatchAnalyzeRequest):
                     },
                     priority=5,
                 )
-                job_ids.append({
-                    "job_id": job_id,
-                    "doc_a_id": doc_a_id,
-                    "doc_b_id": doc_b_id,
-                })
+                job_ids.append(
+                    {
+                        "job_id": job_id,
+                        "doc_a_id": doc_a_id,
+                        "doc_b_id": doc_b_id,
+                    }
+                )
             except Exception as e:
                 logger.error(f"Failed to enqueue {doc_a_id} vs {doc_b_id}: {e}")
 
@@ -433,17 +427,15 @@ async def detect_chains():
     contradictions = await _storage.search(
         status=None  # All statuses except dismissed
     )
-    contradictions = [
-        c for c in contradictions
-        if c.status != ContradictionStatus.DISMISSED
-    ]
+    contradictions = [c for c in contradictions if c.status != ContradictionStatus.DISMISSED]
 
     # Detect chains
     chains = _chain_detector.detect_chains(contradictions)
 
     # Create chain objects
-    from .models import ContradictionChain
     import uuid
+
+    from .models import ContradictionChain
 
     created_chains = []
     for chain_ids in chains:
@@ -618,9 +610,7 @@ async def update_status(contradiction_id: str, request: UpdateStatusRequest):
         raise HTTPException(status_code=400, detail=f"Invalid status: {request.status}")
 
     # Update
-    contradiction = await _storage.update_status(
-        contradiction_id, status, analyst_id=request.analyst_id
-    )
+    contradiction = await _storage.update_status(contradiction_id, status, analyst_id=request.analyst_id)
 
     if not contradiction:
         raise HTTPException(status_code=404, detail=f"Contradiction not found: {contradiction_id}")
@@ -664,9 +654,7 @@ async def add_notes(contradiction_id: str, request: AddNotesRequest):
     if not _storage:
         raise HTTPException(status_code=503, detail="Contradiction service not initialized")
 
-    contradiction = await _storage.add_note(
-        contradiction_id, request.notes, analyst_id=request.analyst_id
-    )
+    contradiction = await _storage.add_note(contradiction_id, request.notes, analyst_id=request.analyst_id)
 
     if not contradiction:
         raise HTTPException(status_code=404, detail=f"Contradiction not found: {contradiction_id}")
@@ -689,6 +677,7 @@ async def delete_contradiction(contradiction_id: str):
 
 class BulkStatusRequest(BaseModel):
     """Request model for bulk status update."""
+
     contradiction_ids: list[str]
     status: str
     analyst_id: str | None = None
@@ -716,9 +705,7 @@ async def bulk_update_status(request: BulkStatusRequest):
 
     for contradiction_id in request.contradiction_ids:
         try:
-            contradiction = await _storage.update_status(
-                contradiction_id, status, analyst_id=request.analyst_id
-            )
+            contradiction = await _storage.update_status(contradiction_id, status, analyst_id=request.analyst_id)
             if contradiction:
                 if request.notes:
                     await _storage.add_note(contradiction_id, request.notes, request.analyst_id)
@@ -754,6 +741,7 @@ async def bulk_update_status(request: BulkStatusRequest):
 
 class AIJuniorAnalystRequest(BaseModel):
     """Request for AI Junior Analyst analysis."""
+
     target_id: str
     context: dict[str, Any] = {}
     depth: str = "quick"
@@ -778,13 +766,10 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     frame = shard._frame
 
     if not frame or not getattr(frame, "ai_analyst", None):
-        raise HTTPException(
-            status_code=503,
-            detail="AI Analyst service not available"
-        )
+        raise HTTPException(status_code=503, detail="AI Analyst service not available")
 
     # Build context from request
-    from arkham_frame.services import AnalysisRequest, AnalysisDepth, AnalystMessage
+    from arkham_frame.services import AnalysisDepth, AnalysisRequest, AnalystMessage
 
     # Parse depth
     try:
@@ -795,10 +780,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     # Build conversation history
     history = None
     if body.conversation_history:
-        history = [
-            AnalystMessage(role=msg["role"], content=msg["content"])
-            for msg in body.conversation_history
-        ]
+        history = [AnalystMessage(role=msg["role"], content=msg["content"]) for msg in body.conversation_history]
 
     analysis_request = AnalysisRequest(
         shard="contradictions",

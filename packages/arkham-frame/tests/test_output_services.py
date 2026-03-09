@@ -14,17 +14,18 @@ Run with:
 
 import asyncio
 import json
-import pytest
-import pytest_asyncio
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-import tempfile
 
+import pytest
+import pytest_asyncio
 
 # =============================================================================
 # Test 1: ExportService
 # =============================================================================
+
 
 class TestExportService:
     """Test ExportService multi-format export capabilities."""
@@ -33,6 +34,7 @@ class TestExportService:
     def export_service(self):
         """Create ExportService instance for testing."""
         from arkham_frame.services.export import ExportService
+
         return ExportService()
 
     @pytest.fixture
@@ -43,7 +45,7 @@ class TestExportService:
             "title": "Test Document",
             "content": "This is test content",
             "created_at": "2025-01-15",
-            "tags": ["test", "sample"]
+            "tags": ["test", "sample"],
         }
 
     @pytest.fixture
@@ -52,7 +54,7 @@ class TestExportService:
         return [
             {"name": "Alice", "age": 30, "city": "NYC"},
             {"name": "Bob", "age": 25, "city": "SF"},
-            {"name": "Charlie", "age": 35, "city": "LA"}
+            {"name": "Charlie", "age": 35, "city": "LA"},
         ]
 
     def test_json_export_with_metadata(self, export_service, sample_data):
@@ -60,10 +62,7 @@ class TestExportService:
         from arkham_frame.services.export import ExportFormat, ExportOptions
 
         options = ExportOptions(
-            format=ExportFormat.JSON,
-            include_metadata=True,
-            title="Test Export",
-            author="Test User"
+            format=ExportFormat.JSON, include_metadata=True, title="Test Export", author="Test User"
         )
 
         result = export_service.export(sample_data, ExportFormat.JSON, options)
@@ -85,10 +84,7 @@ class TestExportService:
         """Test JSON export without metadata."""
         from arkham_frame.services.export import ExportFormat, ExportOptions
 
-        options = ExportOptions(
-            format=ExportFormat.JSON,
-            include_metadata=False
-        )
+        options = ExportOptions(format=ExportFormat.JSON, include_metadata=False)
 
         result = export_service.export(sample_data, ExportFormat.JSON, options)
         content = json.loads(result.content)
@@ -148,10 +144,7 @@ class TestExportService:
         from arkham_frame.services.export import ExportFormat, ExportOptions
 
         options = ExportOptions(
-            format=ExportFormat.MARKDOWN,
-            title="Test Report",
-            author="Test User",
-            include_metadata=True
+            format=ExportFormat.MARKDOWN, title="Test Report", author="Test User", include_metadata=True
         )
 
         result = export_service.export(sample_data, ExportFormat.MARKDOWN, options)
@@ -183,10 +176,7 @@ class TestExportService:
         from arkham_frame.services.export import ExportFormat, ExportOptions
 
         options = ExportOptions(
-            format=ExportFormat.HTML,
-            title="Test Report",
-            author="Test User",
-            include_metadata=True
+            format=ExportFormat.HTML, title="Test Report", author="Test User", include_metadata=True
         )
 
         result = export_service.export(sample_data, ExportFormat.HTML, options)
@@ -220,10 +210,7 @@ class TestExportService:
         from arkham_frame.services.export import ExportFormat, ExportOptions
 
         options = ExportOptions(
-            format=ExportFormat.TEXT,
-            title="Test Report",
-            author="Test User",
-            include_metadata=True
+            format=ExportFormat.TEXT, title="Test Report", author="Test User", include_metadata=True
         )
 
         result = export_service.export(sample_data, ExportFormat.TEXT, options)
@@ -290,10 +277,7 @@ class TestExportService:
         from arkham_frame.services.export import ExportFormat, ExportOptions
 
         options = ExportOptions(
-            format=ExportFormat.JSON,
-            title="Custom Title",
-            author="Custom Author",
-            include_metadata=True
+            format=ExportFormat.JSON, title="Custom Title", author="Custom Author", include_metadata=True
         )
 
         result = export_service.export(sample_data, ExportFormat.JSON, options)
@@ -308,6 +292,7 @@ class TestExportService:
 # Test 2: TemplateService
 # =============================================================================
 
+
 class TestTemplateService:
     """Test TemplateService template management and rendering."""
 
@@ -315,15 +300,13 @@ class TestTemplateService:
     def template_service(self):
         """Create TemplateService instance for testing."""
         from arkham_frame.services.templates import TemplateService
+
         return TemplateService()
 
     def test_register_template(self, template_service):
         """Test template registration."""
         template = template_service.register(
-            name="test_template",
-            content="Hello {{ name }}!",
-            description="Test template",
-            category="test"
+            name="test_template", content="Hello {{ name }}!", description="Test template", category="test"
         )
 
         assert template.name == "test_template"
@@ -332,11 +315,7 @@ class TestTemplateService:
 
     def test_get_template(self, template_service):
         """Test retrieving a template."""
-        template_service.register(
-            name="test_get",
-            content="Content here",
-            category="test"
-        )
+        template_service.register(name="test_get", content="Content here", category="test")
 
         template = template_service.get("test_get")
         assert template is not None
@@ -380,15 +359,9 @@ class TestTemplateService:
 
     def test_render_template(self, template_service):
         """Test template rendering with variables."""
-        template_service.register(
-            "greeting",
-            "Hello {{ name }}, welcome to {{ place }}!"
-        )
+        template_service.register("greeting", "Hello {{ name }}, welcome to {{ place }}!")
 
-        result = template_service.render(
-            "greeting",
-            {"name": "Alice", "place": "Wonderland"}
-        )
+        result = template_service.render("greeting", {"name": "Alice", "place": "Wonderland"})
 
         assert result.content == "Hello Alice, welcome to Wonderland!"
         assert result.template_name == "greeting"
@@ -412,10 +385,7 @@ class TestTemplateService:
 
     def test_variable_extraction(self, template_service):
         """Test automatic variable extraction from template content."""
-        template = template_service.register(
-            "complex",
-            "{{ user.name }} is {{ age }} years old. Lives in {{ city }}."
-        )
+        template = template_service.register("complex", "{{ user.name }} is {{ age }} years old. Lives in {{ city }}.")
 
         # Should extract root variable names
         assert "user" in template.variables
@@ -443,12 +413,7 @@ class TestTemplateService:
     def test_default_report_basic_rendering(self, template_service):
         """Test rendering the default report_basic template."""
         result = template_service.render(
-            "report_basic",
-            {
-                "title": "Test Report",
-                "author": "Test User",
-                "content": "This is the report content."
-            }
+            "report_basic", {"title": "Test Report", "author": "Test User", "content": "This is the report content."}
         )
 
         assert "Test Report" in result.content
@@ -508,6 +473,7 @@ class TestTemplateService:
 # Test 3: NotificationService
 # =============================================================================
 
+
 class TestNotificationService:
     """Test NotificationService multi-channel notification capabilities."""
 
@@ -515,6 +481,7 @@ class TestNotificationService:
     async def notification_service(self):
         """Create NotificationService instance for testing."""
         from arkham_frame.services.notifications import NotificationService
+
         service = NotificationService()
         yield service
         service.clear_history()
@@ -535,7 +502,7 @@ class TestNotificationService:
             message="This is a test info message",
             recipient="system",
             channel="log",
-            type=NotificationType.INFO
+            type=NotificationType.INFO,
         )
 
         assert notification.type == NotificationType.INFO
@@ -553,7 +520,7 @@ class TestNotificationService:
             NotificationType.SUCCESS,
             NotificationType.WARNING,
             NotificationType.ERROR,
-            NotificationType.ALERT
+            NotificationType.ALERT,
         ]
 
         for notif_type in types:
@@ -562,7 +529,7 @@ class TestNotificationService:
                 message=f"Testing {notif_type.value} notification",
                 recipient="system",
                 channel="log",
-                type=notif_type
+                type=notif_type,
             )
 
             assert notification.type == notif_type
@@ -572,10 +539,7 @@ class TestNotificationService:
     async def test_configure_webhook_channel(self, notification_service):
         """Test configuring a webhook channel."""
         notification_service.configure_webhook(
-            name="test_webhook",
-            url="https://example.com/webhook",
-            method="POST",
-            headers={"X-Custom": "header"}
+            name="test_webhook", url="https://example.com/webhook", method="POST", headers={"X-Custom": "header"}
         )
 
         channels = notification_service.list_channels()
@@ -587,13 +551,10 @@ class TestNotificationService:
         from arkham_frame.services.notifications import NotificationType
 
         # Configure webhook
-        notification_service.configure_webhook(
-            name="mock_webhook",
-            url="https://example.com/webhook"
-        )
+        notification_service.configure_webhook(name="mock_webhook", url="https://example.com/webhook")
 
         # Mock aiohttp to avoid real HTTP calls
-        with patch('arkham_frame.services.notifications.aiohttp.ClientSession') as mock_session:
+        with patch("arkham_frame.services.notifications.aiohttp.ClientSession") as mock_session:
             mock_response = AsyncMock()
             mock_response.status = 200
             mock_response.text = AsyncMock(return_value="OK")
@@ -611,7 +572,7 @@ class TestNotificationService:
                 message="Test message",
                 recipient="webhook-receiver",
                 channel="mock_webhook",
-                type=NotificationType.INFO
+                type=NotificationType.INFO,
             )
 
             assert notification.status.value == "sent"
@@ -680,21 +641,13 @@ class TestNotificationService:
         from arkham_frame.services.notifications import ChannelNotFoundError
 
         with pytest.raises(ChannelNotFoundError):
-            await notification_service.send(
-                "Test",
-                "Message",
-                "user",
-                channel="nonexistent_channel"
-            )
+            await notification_service.send("Test", "Message", "user", channel="nonexistent_channel")
 
     @pytest.mark.asyncio
     async def test_remove_channel(self, notification_service):
         """Test removing a notification channel."""
         # Configure a channel
-        notification_service.configure_webhook(
-            name="removable",
-            url="https://example.com/hook"
-        )
+        notification_service.configure_webhook(name="removable", url="https://example.com/hook")
 
         assert "removable" in notification_service.list_channels()
 
@@ -721,6 +674,7 @@ class TestNotificationService:
 # Test 4: SchedulerService
 # =============================================================================
 
+
 class TestSchedulerService:
     """Test SchedulerService job scheduling capabilities."""
 
@@ -728,6 +682,7 @@ class TestSchedulerService:
     async def scheduler_service(self):
         """Create SchedulerService instance for testing."""
         from arkham_frame.services.scheduler import SchedulerService
+
         service = SchedulerService()
         await service.start()
         yield service
@@ -736,6 +691,7 @@ class TestSchedulerService:
     @pytest.fixture
     def execution_tracker(self):
         """Create a tracker to count job executions."""
+
         class Tracker:
             def __init__(self):
                 self.count = 0
@@ -755,6 +711,7 @@ class TestSchedulerService:
     @pytest.mark.asyncio
     async def test_register_job_function(self, scheduler_service):
         """Test registering a job function."""
+
         async def test_func():
             return "test_result"
 
@@ -771,7 +728,7 @@ class TestSchedulerService:
         job = scheduler_service.schedule_interval(
             name="Test Interval Job",
             func_name="interval_job",
-            seconds=1  # Run every second
+            seconds=1,  # Run every second
         )
 
         assert job.name == "Test Interval Job"
@@ -790,11 +747,7 @@ class TestSchedulerService:
         scheduler_service.register_job("once_job", execution_tracker.increment)
 
         run_date = datetime.utcnow() + timedelta(seconds=1)
-        job = scheduler_service.schedule_once(
-            name="One-Time Job",
-            func_name="once_job",
-            run_date=run_date
-        )
+        job = scheduler_service.schedule_once(name="One-Time Job", func_name="once_job", run_date=run_date)
 
         assert job.trigger_type.value == "date"
         assert execution_tracker.count == 0
@@ -808,18 +761,14 @@ class TestSchedulerService:
     @pytest.mark.asyncio
     async def test_schedule_cron_job(self, scheduler_service):
         """Test scheduling a cron-style job."""
+
         async def cron_func():
             return "cron_executed"
 
         scheduler_service.register_job("cron_job", cron_func)
 
         # Schedule to run every minute (won't actually run in test)
-        job = scheduler_service.schedule_cron(
-            name="Cron Job",
-            func_name="cron_job",
-            minute="*",
-            hour="*"
-        )
+        job = scheduler_service.schedule_cron(name="Cron Job", func_name="cron_job", minute="*", hour="*")
 
         assert job.trigger_type.value == "cron"
         assert job.name == "Cron Job"
@@ -827,6 +776,7 @@ class TestSchedulerService:
     @pytest.mark.asyncio
     async def test_list_jobs(self, scheduler_service):
         """Test listing scheduled jobs."""
+
         async def dummy():
             pass
 
@@ -848,11 +798,7 @@ class TestSchedulerService:
         """Test pausing and resuming a job."""
         scheduler_service.register_job("pausable", execution_tracker.increment)
 
-        job = scheduler_service.schedule_interval(
-            name="Pausable Job",
-            func_name="pausable",
-            seconds=1
-        )
+        job = scheduler_service.schedule_interval(name="Pausable Job", func_name="pausable", seconds=1)
 
         # Let it run once
         await asyncio.sleep(1.5)
@@ -881,6 +827,7 @@ class TestSchedulerService:
     @pytest.mark.asyncio
     async def test_remove_job(self, scheduler_service):
         """Test removing a scheduled job."""
+
         async def removable():
             pass
 
@@ -904,6 +851,7 @@ class TestSchedulerService:
     @pytest.mark.asyncio
     async def test_get_job(self, scheduler_service):
         """Test retrieving a specific job by ID."""
+
         async def test_func():
             pass
 
@@ -925,11 +873,7 @@ class TestSchedulerService:
         """Test job execution history tracking."""
         scheduler_service.register_job("tracked", execution_tracker.increment)
 
-        job = scheduler_service.schedule_interval(
-            name="Tracked Job",
-            func_name="tracked",
-            seconds=1
-        )
+        job = scheduler_service.schedule_interval(name="Tracked Job", func_name="tracked", seconds=1)
 
         # Wait for some executions
         await asyncio.sleep(3)
@@ -950,11 +894,7 @@ class TestSchedulerService:
         """Test scheduler statistics."""
         scheduler_service.register_job("stats_job", execution_tracker.increment)
 
-        job = scheduler_service.schedule_interval(
-            name="Stats Job",
-            func_name="stats_job",
-            seconds=1
-        )
+        job = scheduler_service.schedule_interval(name="Stats Job", func_name="stats_job", seconds=1)
 
         # Wait for executions
         await asyncio.sleep(2.5)
@@ -970,16 +910,13 @@ class TestSchedulerService:
     @pytest.mark.asyncio
     async def test_job_failure_tracking(self, scheduler_service):
         """Test that job failures are tracked properly."""
+
         async def failing_job():
             raise ValueError("Intentional failure")
 
         scheduler_service.register_job("failing", failing_job)
 
-        job = scheduler_service.schedule_interval(
-            name="Failing Job",
-            func_name="failing",
-            seconds=1
-        )
+        job = scheduler_service.schedule_interval(name="Failing Job", func_name="failing", seconds=1)
 
         # Wait for failure
         await asyncio.sleep(2)
@@ -1025,30 +962,27 @@ class TestSchedulerService:
 # Integration Test: Cross-Service Usage
 # =============================================================================
 
+
 class TestOutputServicesIntegration:
     """Test integration between multiple output services."""
 
     @pytest.mark.asyncio
     async def test_template_with_export(self):
         """Test using TemplateService to generate content for ExportService."""
+        from arkham_frame.services.export import ExportFormat, ExportService
         from arkham_frame.services.templates import TemplateService
-        from arkham_frame.services.export import ExportService, ExportFormat
 
         # Create services
         templates = TemplateService()
         exports = ExportService()
 
         # Register a custom template
-        templates.register(
-            "report",
-            "# {{ title }}\n\n{{ content }}\n\nGenerated at: {{ now }}"
-        )
+        templates.register("report", "# {{ title }}\n\n{{ content }}\n\nGenerated at: {{ now }}")
 
         # Render template
-        rendered = templates.render("report", {
-            "title": "Integration Test Report",
-            "content": "This report was generated using templates."
-        })
+        rendered = templates.render(
+            "report", {"title": "Integration Test Report", "content": "This report was generated using templates."}
+        )
 
         # Export the rendered content
         result = exports.export(rendered.content, ExportFormat.MARKDOWN)
@@ -1059,8 +993,8 @@ class TestOutputServicesIntegration:
     @pytest.mark.asyncio
     async def test_scheduler_with_notifications(self):
         """Test SchedulerService triggering NotificationService."""
-        from arkham_frame.services.scheduler import SchedulerService
         from arkham_frame.services.notifications import NotificationService, NotificationType
+        from arkham_frame.services.scheduler import SchedulerService
 
         # Create services
         scheduler = SchedulerService()
@@ -1076,26 +1010,19 @@ class TestOutputServicesIntegration:
                 message="This notification was sent by a scheduled job",
                 recipient="system",
                 channel="log",
-                type=NotificationType.SUCCESS
+                type=NotificationType.SUCCESS,
             )
 
         # Register and schedule the job
         scheduler.register_job("notify_job", notification_job)
-        scheduler.schedule_interval(
-            name="Notification Job",
-            func_name="notify_job",
-            seconds=1
-        )
+        scheduler.schedule_interval(name="Notification Job", func_name="notify_job", seconds=1)
 
         # Wait for execution
         await asyncio.sleep(2)
 
         # Check that notification was sent
         history = notifications.get_history()
-        scheduled_notifications = [
-            n for n in history
-            if n.title == "Scheduled Job Executed"
-        ]
+        scheduled_notifications = [n for n in history if n.title == "Scheduled Job Executed"]
         assert len(scheduled_notifications) >= 1
 
         await scheduler.stop()

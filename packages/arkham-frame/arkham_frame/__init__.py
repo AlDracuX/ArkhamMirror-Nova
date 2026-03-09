@@ -8,57 +8,55 @@ Provides services that shards consume through a unified API.
 __version__ = "0.1.0"
 
 # Shard interface
-from .shard_interface import ArkhamShard, ShardManifest
-
 # Frame class
 from .frame import ArkhamFrame, get_frame
 
-# Services
-from .services import ConfigService
-
-# Exceptions
-from .services import (
-    # Database
-    DatabaseError,
-    SchemaNotFoundError,
-    SchemaExistsError,
-    QueryExecutionError,
-    # Documents
-    DocumentNotFoundError,
-    # Entities
-    EntityNotFoundError,
-    # Projects
-    ProjectNotFoundError,
-    ProjectExistsError,
-    # Vectors
-    VectorServiceError,
-    VectorStoreUnavailableError,
-    EmbeddingError,
-    # LLM
-    LLMError,
-    LLMUnavailableError,
-    LLMRequestError,
-    JSONExtractionError,
-    # Events
-    EventValidationError,
-    EventDeliveryError,
-    # Workers
-    WorkerError,
-    WorkerNotFoundError,
-    QueueUnavailableError,
-)
-
 # Pipeline
 from .pipeline import (
-    PipelineStage,
-    PipelineError,
-    StageResult,
+    EmbedStage,
     IngestStage,
     OCRStage,
     ParseStage,
-    EmbedStage,
     PipelineCoordinator,
+    PipelineError,
+    PipelineStage,
+    StageResult,
 )
+
+# Services
+# Exceptions
+from .services import (
+    ConfigService,
+    # Database
+    DatabaseError,
+    # Documents
+    DocumentNotFoundError,
+    EmbeddingError,
+    # Entities
+    EntityNotFoundError,
+    EventDeliveryError,
+    # Events
+    EventValidationError,
+    JSONExtractionError,
+    # LLM
+    LLMError,
+    LLMRequestError,
+    LLMUnavailableError,
+    ProjectExistsError,
+    # Projects
+    ProjectNotFoundError,
+    QueryExecutionError,
+    QueueUnavailableError,
+    SchemaExistsError,
+    SchemaNotFoundError,
+    # Vectors
+    VectorServiceError,
+    VectorStoreUnavailableError,
+    # Workers
+    WorkerError,
+    WorkerNotFoundError,
+)
+from .shard_interface import ArkhamShard, ShardManifest
 
 __all__ = [
     # Version

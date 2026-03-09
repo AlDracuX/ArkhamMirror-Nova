@@ -526,10 +526,7 @@ class DocumentsShard(ArkhamShard):
             doc_ids = [row["id"] for row in rows]
             entity_counts = await self._get_entity_counts_for_documents(doc_ids)
 
-            return [
-                self._frame_row_to_document(row, entity_counts.get(row["id"], 0))
-                for row in rows
-            ]
+            return [self._frame_row_to_document(row, entity_counts.get(row["id"], 0)) for row in rows]
         except Exception as e:
             logger.error(f"Failed to list documents: {e}")
             # Return empty list on error instead of crashing
@@ -626,11 +623,15 @@ class DocumentsShard(ArkhamShard):
 
         # Emit event
         if self._events:
-            await self._events.emit("documents.metadata.updated", {
-                "document_id": document_id,
-                "title": title,
-                "tags": tags,
-            }, source="documents-shard")
+            await self._events.emit(
+                "documents.metadata.updated",
+                {
+                    "document_id": document_id,
+                    "title": title,
+                    "tags": tags,
+                },
+                source="documents-shard",
+            )
 
         # Return updated document
         return await self.get_document(document_id)
@@ -654,17 +655,18 @@ class DocumentsShard(ArkhamShard):
             return False
 
         # Delete from Frame's arkham_frame.documents table (cascade will handle chunks/pages)
-        await self._db.execute(
-            "DELETE FROM arkham_frame.documents WHERE id = :id",
-            {"id": document_id}
-        )
+        await self._db.execute("DELETE FROM arkham_frame.documents WHERE id = :id", {"id": document_id})
 
         # Emit event
         if self._events:
-            await self._events.emit("documents.selection.changed", {
-                "document_id": None,
-                "action": "deleted",
-            }, source="documents-shard")
+            await self._events.emit(
+                "documents.selection.changed",
+                {
+                    "document_id": None,
+                    "action": "deleted",
+                },
+                source="documents-shard",
+            )
 
         return True
 
@@ -736,13 +738,10 @@ class DocumentsShard(ArkhamShard):
         try:
             if status:
                 row = await self._db.fetch_one(
-                    "SELECT COUNT(*) as count FROM arkham_frame.documents WHERE status = :status",
-                    {"status": status}
+                    "SELECT COUNT(*) as count FROM arkham_frame.documents WHERE status = :status", {"status": status}
                 )
             else:
-                row = await self._db.fetch_one(
-                    "SELECT COUNT(*) as count FROM arkham_frame.documents"
-                )
+                row = await self._db.fetch_one("SELECT COUNT(*) as count FROM arkham_frame.documents")
 
             return row["count"] if row else 0
         except Exception as e:
@@ -778,18 +777,22 @@ class DocumentsShard(ArkhamShard):
                     SET status = :status, processing_error = :error, updated_at = CURRENT_TIMESTAMP
                     WHERE id = :id
                     """,
-                    {"id": document_id, "status": status or "processed", "error": error}
+                    {"id": document_id, "status": status or "processed", "error": error},
                 )
             except Exception as e:
                 logger.warning(f"Could not update document status: {e}")
 
         # Publish status changed event for UI
         if self._events:
-            await self._events.emit("documents.status.changed", {
-                "document_id": document_id,
-                "status": status,
-                "error": error,
-            }, source="documents-shard")
+            await self._events.emit(
+                "documents.status.changed",
+                {
+                    "document_id": document_id,
+                    "status": status,
+                    "error": error,
+                },
+                source="documents-shard",
+            )
 
     async def _on_document_deleted(self, event: dict):
         """
@@ -811,19 +814,22 @@ class DocumentsShard(ArkhamShard):
         if self._db:
             try:
                 await self._db.execute(
-                    "DELETE FROM arkham_document_views WHERE document_id = :document_id",
-                    {"document_id": document_id}
+                    "DELETE FROM arkham_document_views WHERE document_id = :document_id", {"document_id": document_id}
                 )
             except Exception as e:
                 logger.warning(f"Could not clean up document views: {e}")
 
         # Publish selection changed event
         if self._events:
-            await self._events.emit("documents.selection.changed", {
-                "document_id": None,
-                "action": "deleted",
-                "deleted_id": document_id,
-            }, source="documents-shard")
+            await self._events.emit(
+                "documents.selection.changed",
+                {
+                    "document_id": None,
+                    "action": "deleted",
+                    "deleted_id": document_id,
+                },
+                source="documents-shard",
+            )
 
     # --- Public API for other shards (via Frame) ---
 
@@ -844,7 +850,7 @@ class DocumentsShard(ArkhamShard):
 
         row = await self._db.fetch_one(
             "SELECT COUNT(*) as count FROM arkham_document_views WHERE document_id = :document_id",
-            {"document_id": document_id}
+            {"document_id": document_id},
         )
 
         return row["count"] if row else 0
@@ -931,7 +937,7 @@ class DocumentsShard(ArkhamShard):
                     "user_id": user_id,
                     "view_mode": view_mode,
                     "page_number": page_number,
-                }
+                },
             )
         except Exception as e:
             # Don't crash if view tracking fails (e.g., FK constraint issues)
@@ -940,12 +946,16 @@ class DocumentsShard(ArkhamShard):
 
         # Emit event
         if self._events:
-            await self._events.emit("documents.view.opened", {
-                "document_id": document_id,
-                "user_id": user_id,
-                "view_mode": view_mode,
-                "page_number": page_number,
-            }, source="documents-shard")
+            await self._events.emit(
+                "documents.view.opened",
+                {
+                    "document_id": document_id,
+                    "user_id": user_id,
+                    "view_mode": view_mode,
+                    "page_number": page_number,
+                },
+                source="documents-shard",
+            )
 
     async def get_document_content(
         self,
@@ -976,7 +986,7 @@ class DocumentsShard(ArkhamShard):
                     SELECT text, page_number FROM arkham_frame.pages
                     WHERE document_id = :document_id AND page_number = :page_number
                     """,
-                    {"document_id": document_id, "page_number": page_number}
+                    {"document_id": document_id, "page_number": page_number},
                 )
 
                 if not row:
@@ -985,7 +995,7 @@ class DocumentsShard(ArkhamShard):
                 # Get total pages
                 total_row = await self._db.fetch_one(
                     "SELECT COUNT(*) as total FROM arkham_frame.pages WHERE document_id = :document_id",
-                    {"document_id": document_id}
+                    {"document_id": document_id},
                 )
 
                 return {
@@ -1002,7 +1012,7 @@ class DocumentsShard(ArkhamShard):
                     WHERE document_id = :document_id
                     ORDER BY page_number
                     """,
-                    {"document_id": document_id}
+                    {"document_id": document_id},
                 )
 
                 if not rows:
@@ -1074,7 +1084,7 @@ class DocumentsShard(ArkhamShard):
             # Get total count
             count_row = await self._db.fetch_one(
                 "SELECT COUNT(*) as count FROM arkham_frame.chunks WHERE document_id = :document_id",
-                {"document_id": document_id}
+                {"document_id": document_id},
             )
             total = count_row["count"] if count_row else 0
 
@@ -1087,7 +1097,7 @@ class DocumentsShard(ArkhamShard):
                 ORDER BY chunk_index
                 LIMIT :limit OFFSET :offset
                 """,
-                {"document_id": document_id, "limit": page_size, "offset": offset}
+                {"document_id": document_id, "limit": page_size, "offset": offset},
             )
 
             chunks = [
@@ -1174,16 +1184,18 @@ class DocumentsShard(ArkhamShard):
                 if metadata.get("sentence"):
                     context.append(metadata["sentence"])
 
-                entities.append({
-                    "id": f"{document_id}:{row['text']}",  # Composite ID for UI
-                    "document_id": document_id,
-                    "entity_type": row["entity_type"],
-                    "text": row["text"],
-                    "confidence": row["confidence"] or 0.0,
-                    "occurrences": row["occurrence_count"] or 1,
-                    "context": context,
-                    "canonical_id": row["canonical_id"],
-                })
+                entities.append(
+                    {
+                        "id": f"{document_id}:{row['text']}",  # Composite ID for UI
+                        "document_id": document_id,
+                        "entity_type": row["entity_type"],
+                        "text": row["text"],
+                        "confidence": row["confidence"] or 0.0,
+                        "occurrences": row["occurrence_count"] or 1,
+                        "context": context,
+                        "canonical_id": row["canonical_id"],
+                    }
+                )
 
             return {"items": entities, "total": len(entities)}
 

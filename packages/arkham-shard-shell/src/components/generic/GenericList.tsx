@@ -60,7 +60,7 @@ export function GenericList({ apiPrefix, ui }: GenericListProps) {
     const sortParam = searchParams.get('sort');
     if (!sortParam) {
       // Check for default sort from columns
-      const defaultSortCol = ui.list_columns?.find(c => c.default_sort);
+      const defaultSortCol = ui.list_columns?.find((c) => c.default_sort);
       if (defaultSortCol) {
         return { field: defaultSortCol.field, direction: defaultSortCol.default_sort || 'asc' };
       }
@@ -87,7 +87,7 @@ export function GenericList({ apiPrefix, ui }: GenericListProps) {
     }
 
     // Add filters from URL
-    ui.list_filters?.forEach(filter => {
+    ui.list_filters?.forEach((filter) => {
       const paramName = filter.param || filter.name;
       const value = searchParams.get(paramName);
       if (value) {
@@ -124,57 +124,69 @@ export function GenericList({ apiPrefix, ui }: GenericListProps) {
   }, [data]);
 
   // Update URL params
-  const updateParams = useCallback((updates: Record<string, string | null>) => {
-    const newParams = new URLSearchParams(searchParams);
-    Object.entries(updates).forEach(([key, value]) => {
-      if (value === null || value === '') {
-        newParams.delete(key);
-      } else {
-        newParams.set(key, value);
-      }
-    });
-    setSearchParams(newParams);
-  }, [searchParams, setSearchParams]);
+  const updateParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      const newParams = new URLSearchParams(searchParams);
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === null || value === '') {
+          newParams.delete(key);
+        } else {
+          newParams.set(key, value);
+        }
+      });
+      setSearchParams(newParams);
+    },
+    [searchParams, setSearchParams]
+  );
 
   // Handlers
-  const handleSort = useCallback((field: string) => {
-    const column = ui.list_columns?.find(c => c.field === field);
-    if (!column?.sortable) return;
+  const handleSort = useCallback(
+    (field: string) => {
+      const column = ui.list_columns?.find((c) => c.field === field);
+      if (!column?.sortable) return;
 
-    let newDirection: SortDirection;
-    if (sortState.field !== field) {
-      newDirection = 'asc';
-    } else if (sortState.direction === 'asc') {
-      newDirection = 'desc';
-    } else {
-      newDirection = null;
-    }
+      let newDirection: SortDirection;
+      if (sortState.field !== field) {
+        newDirection = 'asc';
+      } else if (sortState.direction === 'asc') {
+        newDirection = 'desc';
+      } else {
+        newDirection = null;
+      }
 
-    if (newDirection) {
-      updateParams({
-        sort: newDirection === 'desc' ? `-${field}` : field,
-        page: '1', // Reset to first page on sort change
-      });
-    } else {
-      updateParams({ sort: null, page: '1' });
-    }
-  }, [sortState, ui.list_columns, updateParams]);
+      if (newDirection) {
+        updateParams({
+          sort: newDirection === 'desc' ? `-${field}` : field,
+          page: '1', // Reset to first page on sort change
+        });
+      } else {
+        updateParams({ sort: null, page: '1' });
+      }
+    },
+    [sortState, ui.list_columns, updateParams]
+  );
 
-  const handlePageChange = useCallback((newPage: number) => {
-    updateParams({ page: String(newPage) });
-  }, [updateParams]);
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      updateParams({ page: String(newPage) });
+    },
+    [updateParams]
+  );
 
-  const handleSelectAll = useCallback((checked: boolean) => {
-    if (checked && data?.items) {
-      const idField = ui.id_field || 'id';
-      setSelectedIds(new Set(data.items.map(item => String(item[idField]))));
-    } else {
-      setSelectedIds(new Set());
-    }
-  }, [data, ui.id_field]);
+  const handleSelectAll = useCallback(
+    (checked: boolean) => {
+      if (checked && data?.items) {
+        const idField = ui.id_field || 'id';
+        setSelectedIds(new Set(data.items.map((item) => String(item[idField]))));
+      } else {
+        setSelectedIds(new Set());
+      }
+    },
+    [data, ui.id_field]
+  );
 
   const handleSelectRow = useCallback((id: string, checked: boolean) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       if (checked) {
         next.add(id);
@@ -185,86 +197,96 @@ export function GenericList({ apiPrefix, ui }: GenericListProps) {
     });
   }, []);
 
-  const handleBulkAction = useCallback(async (action: BulkAction) => {
-    if (selectedIds.size === 0) {
-      toast.warning('No items selected');
-      return;
-    }
-
-    if (action.confirm) {
-      const confirmed = await confirm({
-        title: action.label,
-        message: action.confirm_message || `Are you sure you want to ${action.label.toLowerCase()} ${selectedIds.size} item(s)?`,
-        variant: action.style === 'danger' ? 'danger' : 'default',
-      });
-      if (!confirmed) return;
-    }
-
-    setBulkLoading(true);
-    try {
-      const response = await fetch(`${apiPrefix}${action.endpoint}`, {
-        method: action.method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: Array.from(selectedIds) }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.detail || result.message || 'Bulk action failed');
+  const handleBulkAction = useCallback(
+    async (action: BulkAction) => {
+      if (selectedIds.size === 0) {
+        toast.warning('No items selected');
+        return;
       }
 
-      toast.success(result.message || `${action.label} completed`);
-      setSelectedIds(new Set());
-      refetch();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Bulk action failed');
-    } finally {
-      setBulkLoading(false);
-    }
-  }, [selectedIds, apiPrefix, toast, confirm, refetch]);
-
-  const handleRowAction = useCallback(async (action: RowAction, item: Record<string, unknown>) => {
-    const idField = ui.id_field || 'id';
-    const itemId = String(item[idField]);
-
-    if (action.type === 'link' && action.route) {
-      // Navigate to route, replacing {id} placeholder
-      const route = action.route.replace('{id}', itemId);
-      navigate(route);
-      return;
-    }
-
-    if (action.type === 'api' && action.endpoint) {
       if (action.confirm) {
         const confirmed = await confirm({
           title: action.label,
-          message: action.confirm_message || `Are you sure you want to ${action.label.toLowerCase()} this item?`,
+          message:
+            action.confirm_message ||
+            `Are you sure you want to ${action.label.toLowerCase()} ${selectedIds.size} item(s)?`,
           variant: action.style === 'danger' ? 'danger' : 'default',
         });
         if (!confirmed) return;
       }
 
+      setBulkLoading(true);
       try {
-        const endpoint = action.endpoint.replace('{id}', itemId);
-        const response = await fetch(`${apiPrefix}${endpoint}`, {
-          method: action.method || 'POST',
+        const response = await fetch(`${apiPrefix}${action.endpoint}`, {
+          method: action.method,
           headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: Array.from(selectedIds) }),
         });
 
         const result = await response.json();
 
         if (!response.ok) {
-          throw new Error(result.detail || result.message || 'Action failed');
+          throw new Error(result.detail || result.message || 'Bulk action failed');
         }
 
         toast.success(result.message || `${action.label} completed`);
+        setSelectedIds(new Set());
         refetch();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Action failed');
+        toast.error(err instanceof Error ? err.message : 'Bulk action failed');
+      } finally {
+        setBulkLoading(false);
       }
-    }
-  }, [apiPrefix, ui.id_field, navigate, toast, confirm, refetch]);
+    },
+    [selectedIds, apiPrefix, toast, confirm, refetch]
+  );
+
+  const handleRowAction = useCallback(
+    async (action: RowAction, item: Record<string, unknown>) => {
+      const idField = ui.id_field || 'id';
+      const itemId = String(item[idField]);
+
+      if (action.type === 'link' && action.route) {
+        // Navigate to route, replacing {id} placeholder
+        const route = action.route.replace('{id}', itemId);
+        navigate(route);
+        return;
+      }
+
+      if (action.type === 'api' && action.endpoint) {
+        if (action.confirm) {
+          const confirmed = await confirm({
+            title: action.label,
+            message:
+              action.confirm_message ||
+              `Are you sure you want to ${action.label.toLowerCase()} this item?`,
+            variant: action.style === 'danger' ? 'danger' : 'default',
+          });
+          if (!confirmed) return;
+        }
+
+        try {
+          const endpoint = action.endpoint.replace('{id}', itemId);
+          const response = await fetch(`${apiPrefix}${endpoint}`, {
+            method: action.method || 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.detail || result.message || 'Action failed');
+          }
+
+          toast.success(result.message || `${action.label} completed`);
+          refetch();
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : 'Action failed');
+        }
+      }
+    },
+    [apiPrefix, ui.id_field, navigate, toast, confirm, refetch]
+  );
 
   // Render loading state
   if (loading && !data) {
@@ -307,9 +329,7 @@ export function GenericList({ apiPrefix, ui }: GenericListProps) {
       <div className="generic-list-toolbar">
         <div className="toolbar-left">
           {selectable && selectedIds.size > 0 && (
-            <span className="selection-count">
-              {selectedIds.size} selected
-            </span>
+            <span className="selection-count">{selectedIds.size} selected</span>
           )}
 
           {/* Bulk Actions */}
@@ -341,7 +361,11 @@ export function GenericList({ apiPrefix, ui }: GenericListProps) {
             disabled={loading}
             title="Refresh"
           >
-            <Icon name={loading ? 'Loader2' : 'RefreshCw'} size={16} className={loading ? 'spin' : undefined} />
+            <Icon
+              name={loading ? 'Loader2' : 'RefreshCw'}
+              size={16}
+              className={loading ? 'spin' : undefined}
+            />
           </button>
         </div>
       </div>
@@ -361,7 +385,7 @@ export function GenericList({ apiPrefix, ui }: GenericListProps) {
                   />
                 </th>
               )}
-              {ui.list_columns?.map(column => (
+              {ui.list_columns?.map((column) => (
                 <th
                   key={column.field}
                   className={`col-${column.type} ${column.sortable ? 'sortable' : ''}`}
@@ -399,7 +423,7 @@ export function GenericList({ apiPrefix, ui }: GenericListProps) {
                 </td>
               </tr>
             ) : (
-              items.map(item => {
+              items.map((item) => {
                 const itemId = String(item[idField]);
                 return (
                   <tr key={itemId} className={selectedIds.has(itemId) ? 'selected' : ''}>
@@ -413,7 +437,7 @@ export function GenericList({ apiPrefix, ui }: GenericListProps) {
                         />
                       </td>
                     )}
-                    {ui.list_columns?.map(column => (
+                    {ui.list_columns?.map((column) => (
                       <td key={column.field} className={`col-${column.type}`}>
                         <CellRenderer column={column} value={item[column.field]} item={item} />
                       </td>
@@ -499,12 +523,14 @@ interface GenericListFiltersProps {
 function GenericListFilters({ filters, searchParams, onFilterChange }: GenericListFiltersProps) {
   return (
     <div className="generic-list-filters">
-      {filters.map(filter => (
+      {filters.map((filter) => (
         <FilterInput
           key={filter.name}
           filter={filter}
           value={searchParams.get(filter.param || filter.name) || ''}
-          onChange={(value) => onFilterChange({ [filter.param || filter.name]: value || null, page: '1' })}
+          onChange={(value) =>
+            onFilterChange({ [filter.param || filter.name]: value || null, page: '1' })
+          }
         />
       ))}
     </div>
@@ -546,8 +572,10 @@ function FilterInput({ filter, value, onChange }: FilterInputProps) {
             aria-label={filter.label}
           >
             <option value="">{filter.label}</option>
-            {filter.options?.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {filter.options?.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
         </div>
@@ -624,7 +652,9 @@ function CellRenderer({ column, value, item }: CellRendererProps) {
       }
 
     case 'badge':
-      return <span className={`cell-badge badge-${String(value).toLowerCase()}`}>{String(value)}</span>;
+      return (
+        <span className={`cell-badge badge-${String(value).toLowerCase()}`}>{String(value)}</span>
+      );
 
     case 'boolean':
       return (

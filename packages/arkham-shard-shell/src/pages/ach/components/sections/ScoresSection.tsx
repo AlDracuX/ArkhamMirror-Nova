@@ -26,7 +26,7 @@ export function ScoresSection({
   // Helper to get hypothesis title - prefer from score, fallback to hypotheses list
   const getHypothesisTitle = (score: HypothesisScore): string => {
     if (score.hypothesis_title) return score.hypothesis_title;
-    const hyp = hypotheses.find(h => h.id === score.hypothesis_id);
+    const hyp = hypotheses.find((h) => h.id === score.hypothesis_id);
     return hyp?.title || `Hypothesis ${score.rank}`;
   };
 
@@ -49,8 +49,7 @@ export function ScoresSection({
           {sortedScores.map((score) => {
             // Score bar percentage (capped at 100)
             const pct = Math.min(score.inconsistency_count * 20, 100);
-            const colorClass =
-              pct < 30 ? 'success' : pct < 60 ? 'warning' : 'danger';
+            const colorClass = pct < 30 ? 'success' : pct < 60 ? 'warning' : 'danger';
 
             const title = getHypothesisTitle(score);
             return (
@@ -70,12 +69,13 @@ export function ScoresSection({
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <span className="score-value" title={`${score.inconsistency_count} inconsistencies with the evidence`}>
+                <span
+                  className="score-value"
+                  title={`${score.inconsistency_count} inconsistencies with the evidence`}
+                >
                   {score.inconsistency_count}
                 </span>
-                <span className="score-description truncate">
-                  inconsistencies
-                </span>
+                <span className="score-description truncate">inconsistencies</span>
               </div>
             );
           })}

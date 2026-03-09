@@ -1,7 +1,7 @@
 """Entities Shard API endpoints."""
 
 import logging
-from typing import Annotated, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -144,7 +144,7 @@ def entity_to_response(entity) -> EntityResponse:
         canonical_id=entity.canonical_id,
         aliases=entity.aliases,
         metadata=entity.metadata,
-        mention_count=getattr(entity, 'mention_count', 0),
+        mention_count=getattr(entity, "mention_count", 0),
         created_at=entity.created_at.isoformat() if entity.created_at else "",
         updated_at=entity.updated_at.isoformat() if entity.updated_at else "",
     )
@@ -196,19 +196,11 @@ async def list_entities(
 
     # Get entities from shard
     entities = await shard.list_entities(
-        search=q,
-        entity_type=filter,
-        limit=page_size,
-        offset=offset,
-        show_merged=show_merged
+        search=q, entity_type=filter, limit=page_size, offset=offset, show_merged=show_merged
     )
 
     # Get total count for accurate pagination
-    total = await shard.count_entities(
-        search=q,
-        entity_type=filter,
-        show_merged=show_merged
-    )
+    total = await shard.count_entities(search=q, entity_type=filter, show_merged=show_merged)
 
     return EntityListResponse(
         items=[entity_to_response(e) for e in entities],
@@ -277,7 +269,9 @@ async def update_entity(entity_id: str, update_request: UpdateEntityRequest, req
         return EntityResponse(
             id=updated.id,
             name=updated.text,
-            entity_type=updated.entity_type.value if hasattr(updated.entity_type, 'value') else str(updated.entity_type),
+            entity_type=updated.entity_type.value
+            if hasattr(updated.entity_type, "value")
+            else str(updated.entity_type),
             canonical_id=updated.canonical_id,
             aliases=[],
             metadata=updated.metadata or {},
@@ -391,7 +385,7 @@ async def get_duplicates(
         seen_pairs = set()
 
         for i, entity_a in enumerate(entities):
-            for entity_b in entities[i + 1:]:
+            for entity_b in entities[i + 1 :]:
                 # Skip if different types (unless no type filter)
                 if entity_a.entity_type != entity_b.entity_type:
                     continue
@@ -406,22 +400,28 @@ async def get_duplicates(
                 similarity = _calculate_similarity(entity_a.name, entity_b.name)
 
                 if similarity >= threshold:
-                    candidates.append(MergeCandidateResponse(
-                        entity_a={
-                            "id": entity_a.id,
-                            "name": entity_a.name,
-                            "entity_type": entity_a.entity_type.value if hasattr(entity_a.entity_type, 'value') else str(entity_a.entity_type),
-                        },
-                        entity_b={
-                            "id": entity_b.id,
-                            "name": entity_b.name,
-                            "entity_type": entity_b.entity_type.value if hasattr(entity_b.entity_type, 'value') else str(entity_b.entity_type),
-                        },
-                        similarity_score=similarity,
-                        reason=_get_similarity_reason(entity_a.name, entity_b.name, similarity),
-                        common_mentions=0,
-                        common_documents=0,
-                    ))
+                    candidates.append(
+                        MergeCandidateResponse(
+                            entity_a={
+                                "id": entity_a.id,
+                                "name": entity_a.name,
+                                "entity_type": entity_a.entity_type.value
+                                if hasattr(entity_a.entity_type, "value")
+                                else str(entity_a.entity_type),
+                            },
+                            entity_b={
+                                "id": entity_b.id,
+                                "name": entity_b.name,
+                                "entity_type": entity_b.entity_type.value
+                                if hasattr(entity_b.entity_type, "value")
+                                else str(entity_b.entity_type),
+                            },
+                            similarity_score=similarity,
+                            reason=_get_similarity_reason(entity_a.name, entity_b.name, similarity),
+                            common_mentions=0,
+                            common_documents=0,
+                        )
+                    )
 
                     if len(candidates) >= limit:
                         break
@@ -541,7 +541,9 @@ async def get_merge_suggestions(
 
             # Get entities of same type
             entities = await shard.list_entities(
-                entity_type=target_entity.entity_type.value if hasattr(target_entity.entity_type, 'value') else str(target_entity.entity_type),
+                entity_type=target_entity.entity_type.value
+                if hasattr(target_entity.entity_type, "value")
+                else str(target_entity.entity_type),
                 limit=200,
                 show_merged=False,
             )
@@ -555,31 +557,35 @@ async def get_merge_suggestions(
                 # Use vector similarity if available
                 if _vectors_service:
                     try:
-                        similarity = await _get_vector_similarity(
-                            target_entity.name, entity.name
-                        )
+                        similarity = await _get_vector_similarity(target_entity.name, entity.name)
                     except Exception:
                         similarity = _calculate_similarity(target_entity.name, entity.name)
                 else:
                     similarity = _calculate_similarity(target_entity.name, entity.name)
 
                 if similarity >= 0.7:  # Lower threshold for suggestions
-                    candidates.append(MergeCandidateResponse(
-                        entity_a={
-                            "id": target_entity.id,
-                            "name": target_entity.name,
-                            "entity_type": target_entity.entity_type.value if hasattr(target_entity.entity_type, 'value') else str(target_entity.entity_type),
-                        },
-                        entity_b={
-                            "id": entity.id,
-                            "name": entity.name,
-                            "entity_type": entity.entity_type.value if hasattr(entity.entity_type, 'value') else str(entity.entity_type),
-                        },
-                        similarity_score=similarity,
-                        reason="Vector similarity" if _vectors_service else "Name similarity",
-                        common_mentions=0,
-                        common_documents=0,
-                    ))
+                    candidates.append(
+                        MergeCandidateResponse(
+                            entity_a={
+                                "id": target_entity.id,
+                                "name": target_entity.name,
+                                "entity_type": target_entity.entity_type.value
+                                if hasattr(target_entity.entity_type, "value")
+                                else str(target_entity.entity_type),
+                            },
+                            entity_b={
+                                "id": entity.id,
+                                "name": entity.name,
+                                "entity_type": entity.entity_type.value
+                                if hasattr(entity.entity_type, "value")
+                                else str(entity.entity_type),
+                            },
+                            similarity_score=similarity,
+                            reason="Vector similarity" if _vectors_service else "Name similarity",
+                            common_mentions=0,
+                            common_documents=0,
+                        )
+                    )
 
             candidates.sort(key=lambda x: x.similarity_score, reverse=True)
             return candidates[:limit]
@@ -595,7 +601,7 @@ async def get_merge_suggestions(
         seen_pairs = set()
 
         for i, entity_a in enumerate(entities):
-            for entity_b in entities[i + 1:]:
+            for entity_b in entities[i + 1 :]:
                 if entity_a.entity_type != entity_b.entity_type:
                     continue
 
@@ -607,22 +613,28 @@ async def get_merge_suggestions(
                 similarity = _calculate_similarity(entity_a.name, entity_b.name)
 
                 if similarity >= 0.75:
-                    candidates.append(MergeCandidateResponse(
-                        entity_a={
-                            "id": entity_a.id,
-                            "name": entity_a.name,
-                            "entity_type": entity_a.entity_type.value if hasattr(entity_a.entity_type, 'value') else str(entity_a.entity_type),
-                        },
-                        entity_b={
-                            "id": entity_b.id,
-                            "name": entity_b.name,
-                            "entity_type": entity_b.entity_type.value if hasattr(entity_b.entity_type, 'value') else str(entity_b.entity_type),
-                        },
-                        similarity_score=similarity,
-                        reason=_get_similarity_reason(entity_a.name, entity_b.name, similarity),
-                        common_mentions=0,
-                        common_documents=0,
-                    ))
+                    candidates.append(
+                        MergeCandidateResponse(
+                            entity_a={
+                                "id": entity_a.id,
+                                "name": entity_a.name,
+                                "entity_type": entity_a.entity_type.value
+                                if hasattr(entity_a.entity_type, "value")
+                                else str(entity_a.entity_type),
+                            },
+                            entity_b={
+                                "id": entity_b.id,
+                                "name": entity_b.name,
+                                "entity_type": entity_b.entity_type.value
+                                if hasattr(entity_b.entity_type, "value")
+                                else str(entity_b.entity_type),
+                            },
+                            similarity_score=similarity,
+                            reason=_get_similarity_reason(entity_a.name, entity_b.name, similarity),
+                            common_mentions=0,
+                            common_documents=0,
+                        )
+                    )
 
                     if len(candidates) >= limit * 2:
                         break
@@ -653,6 +665,7 @@ async def _get_vector_similarity(text1: str, text2: str) -> float:
 
         # Calculate cosine similarity
         import math
+
         vec1, vec2 = embeddings[0], embeddings[1]
 
         dot_product = sum(a * b for a, b in zip(vec1, vec2))
@@ -707,9 +720,7 @@ async def list_relationships(
     page: int = 1,
     page_size: int = 50,
     entity_id: Annotated[str | None, Query(description="Filter by entity")] = None,
-    relationship_type: Annotated[
-        str | None, Query(description="Filter by relationship type")
-    ] = None,
+    relationship_type: Annotated[str | None, Query(description="Filter by relationship type")] = None,
 ):
     """
     List entity relationships from shard's arkham_entity_relationships table.
@@ -842,7 +853,9 @@ async def create_relationship(rel_request: CreateRelationshipRequest):
             id=relationship.id,
             source_id=relationship.source_id,
             target_id=relationship.target_id,
-            relationship_type=relationship.relationship_type.value if hasattr(relationship.relationship_type, 'value') else str(relationship.relationship_type),
+            relationship_type=relationship.relationship_type.value
+            if hasattr(relationship.relationship_type, "value")
+            else str(relationship.relationship_type),
             confidence=relationship.confidence,
             metadata=relationship.metadata or {},
             created_at=relationship.created_at.isoformat() if relationship.created_at else "",
@@ -957,16 +970,18 @@ async def get_entity_mentions(
     # Convert to response models
     mentions = []
     for mention in mentions_data:
-        mentions.append(MentionResponse(
-            id=mention["id"],
-            entity_id=mention["entity_id"],
-            document_id=mention["document_id"],
-            mention_text=mention["mention_text"],
-            confidence=mention["confidence"],
-            start_offset=mention["start_offset"],
-            end_offset=mention["end_offset"],
-            created_at=mention["created_at"] or "",
-        ))
+        mentions.append(
+            MentionResponse(
+                id=mention["id"],
+                entity_id=mention["entity_id"],
+                document_id=mention["document_id"],
+                mention_text=mention["mention_text"],
+                confidence=mention["confidence"],
+                start_offset=mention["start_offset"],
+                end_offset=mention["end_offset"],
+                created_at=mention["created_at"] or "",
+            )
+        )
 
     # Simple pagination
     start = (page - 1) * page_size
@@ -1029,7 +1044,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     if not frame or not getattr(frame, "ai_analyst", None):
         raise HTTPException(status_code=503, detail="AI Analyst service not available")
 
-    from arkham_frame.services import AnalysisRequest, AnalysisDepth, AnalystMessage
+    from arkham_frame.services import AnalysisDepth, AnalysisRequest, AnalystMessage
 
     # Map depth string to enum
     depth_map = {
@@ -1043,10 +1058,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     # Build conversation history
     history = None
     if body.conversation_history:
-        history = [
-            AnalystMessage(role=m["role"], content=m["content"])
-            for m in body.conversation_history
-        ]
+        history = [AnalystMessage(role=m["role"], content=m["content"]) for m in body.conversation_history]
 
     # Create analysis request
     analysis_request = AnalysisRequest(

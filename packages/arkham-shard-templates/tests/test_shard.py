@@ -2,18 +2,18 @@
 Tests for Templates Shard Implementation
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from arkham_shard_templates import TemplatesShard
 from arkham_shard_templates.models import (
-    Template,
-    TemplateCreate,
-    TemplateType,
-    TemplatePlaceholder,
-    TemplateRenderRequest,
     OutputFormat,
     PlaceholderDataType,
+    Template,
+    TemplateCreate,
+    TemplatePlaceholder,
+    TemplateRenderRequest,
+    TemplateType,
 )
 
 
@@ -21,11 +21,13 @@ from arkham_shard_templates.models import (
 def mock_frame():
     """Create a mock ArkhamFrame."""
     frame = MagicMock()
-    frame.get_service = MagicMock(side_effect=lambda name: {
-        "database": MagicMock(),
-        "events": AsyncMock(),
-        "storage": None,  # Optional
-    }.get(name))
+    frame.get_service = MagicMock(
+        side_effect=lambda name: {
+            "database": MagicMock(),
+            "events": AsyncMock(),
+            "storage": None,  # Optional
+        }.get(name)
+    )
     return frame
 
 
@@ -82,9 +84,7 @@ class TestTemplateCRUD:
             template_type=TemplateType.LETTER,
             description="A test template",
             content="Dear {{ name }},\n\nHello!",
-            placeholders=[
-                TemplatePlaceholder(name="name", required=True)
-            ],
+            placeholders=[TemplatePlaceholder(name="name", required=True)],
         )
 
         template = await shard.create_template(template_data)
@@ -153,11 +153,13 @@ class TestTemplateCRUD:
         """Test listing templates."""
         # Create multiple templates
         for i in range(5):
-            await shard.create_template(TemplateCreate(
-                name=f"Template {i}",
-                template_type=TemplateType.REPORT,
-                content=f"Content {i}",
-            ))
+            await shard.create_template(
+                TemplateCreate(
+                    name=f"Template {i}",
+                    template_type=TemplateType.REPORT,
+                    content=f"Content {i}",
+                )
+            )
 
         # List templates
         templates, total = await shard.list_templates(page=1, page_size=10)
@@ -170,11 +172,13 @@ class TestTemplateCRUD:
         """Test template pagination."""
         # Create 10 templates
         for i in range(10):
-            await shard.create_template(TemplateCreate(
-                name=f"Template {i}",
-                template_type=TemplateType.REPORT,
-                content=f"Content {i}",
-            ))
+            await shard.create_template(
+                TemplateCreate(
+                    name=f"Template {i}",
+                    template_type=TemplateType.REPORT,
+                    content=f"Content {i}",
+                )
+            )
 
         # Get page 1
         page1, total = await shard.list_templates(page=1, page_size=3)
@@ -203,6 +207,7 @@ class TestTemplateCRUD:
 
         # Update template
         from arkham_shard_templates.models import TemplateUpdate
+
         update_data = TemplateUpdate(
             name="Updated Name",
             description="Updated description",
@@ -286,6 +291,7 @@ class TestTemplateVersioning:
 
         # Update content
         from arkham_shard_templates.models import TemplateUpdate
+
         update_data = TemplateUpdate(content="Updated content")
         await shard.update_template(template.id, update_data, create_version=True)
 
@@ -308,10 +314,8 @@ class TestTemplateVersioning:
 
         # Update to version 2
         from arkham_shard_templates.models import TemplateUpdate
-        await shard.update_template(
-            template.id,
-            TemplateUpdate(content="Version 2 content")
-        )
+
+        await shard.update_template(template.id, TemplateUpdate(content="Version 2 content"))
 
         # Restore version 1
         restored = await shard.restore_version(template.id, version1_id)
@@ -330,9 +334,7 @@ class TestTemplateRendering:
             name="Render Test",
             template_type=TemplateType.LETTER,
             content="Hello {{ name }}!",
-            placeholders=[
-                TemplatePlaceholder(name="name", required=True)
-            ],
+            placeholders=[TemplatePlaceholder(name="name", required=True)],
         )
         template = await shard.create_template(template_data)
 
@@ -355,9 +357,7 @@ class TestTemplateRendering:
             name="Required Test",
             template_type=TemplateType.LETTER,
             content="Hello {{ name }}!",
-            placeholders=[
-                TemplatePlaceholder(name="name", required=True)
-            ],
+            placeholders=[TemplatePlaceholder(name="name", required=True)],
         )
         template = await shard.create_template(template_data)
 
@@ -381,13 +381,7 @@ class TestTemplateRendering:
             name="Default Test",
             template_type=TemplateType.LETTER,
             content="Hello {{ name }}!",
-            placeholders=[
-                TemplatePlaceholder(
-                    name="name",
-                    default_value="User",
-                    required=False
-                )
-            ],
+            placeholders=[TemplatePlaceholder(name="name", default_value="User", required=False)],
         )
         template = await shard.create_template(template_data)
 
@@ -405,12 +399,7 @@ class TestTemplateRendering:
             name="Preview Test",
             template_type=TemplateType.LETTER,
             content="Hello {{ name }}!",
-            placeholders=[
-                TemplatePlaceholder(
-                    name="name",
-                    example="Example User"
-                )
-            ],
+            placeholders=[TemplatePlaceholder(name="name", example="Example User")],
         )
         template = await shard.create_template(template_data)
 
@@ -428,22 +417,28 @@ class TestTemplateStatistics:
     async def test_get_statistics(self, shard):
         """Test getting template statistics."""
         # Create various templates
-        await shard.create_template(TemplateCreate(
-            name="Report 1",
-            template_type=TemplateType.REPORT,
-            content="Content",
-        ))
-        await shard.create_template(TemplateCreate(
-            name="Letter 1",
-            template_type=TemplateType.LETTER,
-            content="Content",
-        ))
-        await shard.create_template(TemplateCreate(
-            name="Inactive",
-            template_type=TemplateType.EXPORT,
-            content="Content",
-            is_active=False,
-        ))
+        await shard.create_template(
+            TemplateCreate(
+                name="Report 1",
+                template_type=TemplateType.REPORT,
+                content="Content",
+            )
+        )
+        await shard.create_template(
+            TemplateCreate(
+                name="Letter 1",
+                template_type=TemplateType.LETTER,
+                content="Content",
+            )
+        )
+        await shard.create_template(
+            TemplateCreate(
+                name="Inactive",
+                template_type=TemplateType.EXPORT,
+                content="Content",
+                is_active=False,
+            )
+        )
 
         # Get statistics
         stats = await shard.get_statistics()
@@ -459,18 +454,22 @@ class TestTemplateStatistics:
     async def test_get_count(self, shard):
         """Test getting template count."""
         # Create templates
-        await shard.create_template(TemplateCreate(
-            name="Active",
-            template_type=TemplateType.REPORT,
-            content="Content",
-            is_active=True,
-        ))
-        await shard.create_template(TemplateCreate(
-            name="Inactive",
-            template_type=TemplateType.LETTER,
-            content="Content",
-            is_active=False,
-        ))
+        await shard.create_template(
+            TemplateCreate(
+                name="Active",
+                template_type=TemplateType.REPORT,
+                content="Content",
+                is_active=True,
+            )
+        )
+        await shard.create_template(
+            TemplateCreate(
+                name="Inactive",
+                template_type=TemplateType.LETTER,
+                content="Content",
+                is_active=False,
+            )
+        )
 
         # Get total count
         total = await shard.get_count(active_only=False)

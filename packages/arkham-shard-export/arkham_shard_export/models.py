@@ -9,11 +9,12 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-
 # === Enums ===
+
 
 class ExportFormat(str, Enum):
     """Supported export formats."""
+
     JSON = "json"
     CSV = "csv"
     PDF = "pdf"
@@ -23,44 +24,48 @@ class ExportFormat(str, Enum):
 
 class ExportStatus(str, Enum):
     """Status of an export job."""
-    PENDING = "pending"           # Job created, not yet started
-    PROCESSING = "processing"     # Job in progress
-    COMPLETED = "completed"       # Job finished successfully
-    FAILED = "failed"             # Job failed with error
-    CANCELLED = "cancelled"       # Job cancelled by user
+
+    PENDING = "pending"  # Job created, not yet started
+    PROCESSING = "processing"  # Job in progress
+    COMPLETED = "completed"  # Job finished successfully
+    FAILED = "failed"  # Job failed with error
+    CANCELLED = "cancelled"  # Job cancelled by user
 
 
 class ExportTarget(str, Enum):
     """Type of data to export."""
-    DOCUMENTS = "documents"       # Document records
-    ENTITIES = "entities"         # Extracted entities
-    CLAIMS = "claims"             # Claims with evidence
-    TIMELINE = "timeline"         # Timeline events
-    GRAPH = "graph"               # Graph nodes and edges
-    MATRIX = "matrix"             # ACH matrix data
-    CUSTOM = "custom"             # Custom query result
+
+    DOCUMENTS = "documents"  # Document records
+    ENTITIES = "entities"  # Extracted entities
+    CLAIMS = "claims"  # Claims with evidence
+    TIMELINE = "timeline"  # Timeline events
+    GRAPH = "graph"  # Graph nodes and edges
+    MATRIX = "matrix"  # ACH matrix data
+    CUSTOM = "custom"  # Custom query result
 
 
 # === Dataclasses ===
+
 
 @dataclass
 class ExportOptions:
     """
     Options for customizing export output.
     """
-    include_metadata: bool = True                    # Include system metadata
-    include_relationships: bool = True               # Include related entities
-    date_range_start: Optional[datetime] = None      # Filter start date
-    date_range_end: Optional[datetime] = None        # Filter end date
-    entity_types: Optional[List[str]] = None         # Filter by entity types
-    flatten: bool = False                            # Flatten nested structures (CSV)
-    max_records: Optional[int] = None                # Limit number of records
-    sort_by: Optional[str] = None                    # Sort field
-    sort_order: str = "asc"                          # asc or desc
+
+    include_metadata: bool = True  # Include system metadata
+    include_relationships: bool = True  # Include related entities
+    date_range_start: Optional[datetime] = None  # Filter start date
+    date_range_end: Optional[datetime] = None  # Filter end date
+    entity_types: Optional[List[str]] = None  # Filter by entity types
+    flatten: bool = False  # Flatten nested structures (CSV)
+    max_records: Optional[int] = None  # Limit number of records
+    sort_by: Optional[str] = None  # Sort field
+    sort_order: str = "asc"  # asc or desc
     # Timeline-specific options
-    include_conflicts: bool = False                  # Include timeline conflicts
-    include_gaps: bool = False                       # Include timeline gaps
-    group_by: Optional[str] = None                   # Group by: day/week/month/entity
+    include_conflicts: bool = False  # Include timeline conflicts
+    include_gaps: bool = False  # Include timeline gaps
+    group_by: Optional[str] = None  # Group by: day/week/month/entity
 
 
 @dataclass
@@ -68,6 +73,7 @@ class ExportJob:
     """
     An export job that generates a file.
     """
+
     id: str
     format: ExportFormat
     target: ExportTarget
@@ -79,19 +85,19 @@ class ExportJob:
     completed_at: Optional[datetime] = None
 
     # File information
-    file_path: Optional[str] = None                  # Server file path
-    file_size: Optional[int] = None                  # Size in bytes
-    download_url: Optional[str] = None               # Download URL
-    expires_at: Optional[datetime] = None            # File expiration time
+    file_path: Optional[str] = None  # Server file path
+    file_size: Optional[int] = None  # Size in bytes
+    download_url: Optional[str] = None  # Download URL
+    expires_at: Optional[datetime] = None  # File expiration time
 
     # Job details
-    error: Optional[str] = None                      # Error message if failed
+    error: Optional[str] = None  # Error message if failed
     filters: Dict[str, Any] = field(default_factory=dict)
     options: Optional[ExportOptions] = None
 
     # Metadata
-    record_count: int = 0                            # Number of records exported
-    processing_time_ms: float = 0                    # Processing time
+    record_count: int = 0  # Number of records exported
+    processing_time_ms: float = 0  # Processing time
     created_by: str = "system"
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -101,6 +107,7 @@ class ExportResult:
     """
     Result of an export operation.
     """
+
     job_id: str
     success: bool
     file_path: Optional[str] = None
@@ -117,6 +124,7 @@ class ExportStatistics:
     """
     Statistics about export operations.
     """
+
     total_jobs: int = 0
     by_status: Dict[str, int] = field(default_factory=dict)
     by_format: Dict[str, int] = field(default_factory=dict)
@@ -139,6 +147,7 @@ class ExportFilter:
     """
     Filter criteria for export job queries.
     """
+
     status: Optional[ExportStatus] = None
     format: Optional[ExportFormat] = None
     target: Optional[ExportTarget] = None
@@ -152,6 +161,7 @@ class FormatInfo:
     """
     Information about an export format.
     """
+
     format: ExportFormat
     name: str
     description: str
@@ -160,7 +170,7 @@ class FormatInfo:
     supports_flatten: bool = False
     supports_metadata: bool = True
     max_records: Optional[int] = None
-    placeholder: bool = False                        # True if not fully implemented
+    placeholder: bool = False  # True if not fully implemented
 
 
 @dataclass
@@ -168,6 +178,7 @@ class TargetInfo:
     """
     Information about an export target.
     """
+
     target: ExportTarget
     name: str
     description: str

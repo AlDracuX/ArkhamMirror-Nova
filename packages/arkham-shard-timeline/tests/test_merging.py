@@ -4,16 +4,16 @@ Timeline Shard - Merging Tests
 Tests for the TimelineMerger class.
 """
 
-import pytest
 from datetime import datetime, timedelta
 
+import pytest
 from arkham_shard_timeline.merging import TimelineMerger
 from arkham_shard_timeline.models import (
-    TimelineEvent,
-    MergeStrategy,
     DatePrecision,
-    EventType,
     DateRange,
+    EventType,
+    MergeStrategy,
+    TimelineEvent,
 )
 
 

@@ -55,13 +55,16 @@ export interface StandardIndicator {
   weight: number;
 }
 
-export const CHECKLIST_INFO: Record<DeceptionChecklistType, {
-  name: string;
-  fullName: string;
-  description: string;
-  icon: string;
-  color: string;
-}> = {
+export const CHECKLIST_INFO: Record<
+  DeceptionChecklistType,
+  {
+    name: string;
+    fullName: string;
+    description: string;
+    icon: string;
+    color: string;
+  }
+> = {
   mom: {
     name: 'MOM',
     fullName: 'Motive, Opportunity, Means',
@@ -94,16 +97,16 @@ export const CHECKLIST_INFO: Record<DeceptionChecklistType, {
 
 export const RISK_COLORS: Record<DeceptionRisk, string> = {
   minimal: '#10b981', // emerald
-  low: '#22c55e',     // green
+  low: '#22c55e', // green
   moderate: '#eab308', // yellow
-  high: '#f97316',    // orange
+  high: '#f97316', // orange
   critical: '#ef4444', // red
 };
 
 export const STRENGTH_COLORS: Record<IndicatorStrength, string> = {
-  none: '#6b7280',      // gray
-  weak: '#22c55e',      // green (weak deception indicator = good)
-  moderate: '#eab308',   // yellow
-  strong: '#f97316',     // orange
+  none: '#6b7280', // gray
+  weak: '#22c55e', // green (weak deception indicator = good)
+  moderate: '#eab308', // yellow
+  strong: '#f97316', // orange
   conclusive: '#ef4444', // red (strong deception indicator = bad)
 };

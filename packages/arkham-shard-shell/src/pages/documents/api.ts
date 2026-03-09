@@ -162,9 +162,7 @@ export async function getDocumentChunks(
   page: number = 1,
   pageSize: number = 50
 ): Promise<ChunkListResponse> {
-  return fetchAPI<ChunkListResponse>(
-    `/${documentId}/chunks?page=${page}&page_size=${pageSize}`
-  );
+  return fetchAPI<ChunkListResponse>(`/${documentId}/chunks?page=${page}&page_size=${pageSize}`);
 }
 
 export async function getDocumentEntities(
@@ -175,9 +173,7 @@ export async function getDocumentEntities(
   return fetchAPI<EntityListResponse>(`/${documentId}/entities${query}`);
 }
 
-export async function getRecentlyViewed(
-  limit: number = 10
-): Promise<RecentlyViewedResponse> {
+export async function getRecentlyViewed(limit: number = 10): Promise<RecentlyViewedResponse> {
   return fetchAPI<RecentlyViewedResponse>(`/recently-viewed?limit=${limit}`);
 }
 
@@ -247,14 +243,11 @@ export async function scanForDuplicates(
   projectId: string,
   similarityThreshold: number = 0.8
 ): Promise<DuplicateResult[]> {
-  return fetchAPI<DuplicateResult[]>(
-    `/deduplication/scan?project_id=${projectId}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ similarity_threshold: similarityThreshold }),
-    }
-  );
+  return fetchAPI<DuplicateResult[]>(`/deduplication/scan?project_id=${projectId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ similarity_threshold: similarityThreshold }),
+  });
 }
 
 export async function mergeDuplicates(request: MergeRequest): Promise<BatchResult> {

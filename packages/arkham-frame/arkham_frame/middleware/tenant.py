@@ -8,9 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 # Context variable to store current tenant ID
-_current_tenant_id: contextvars.ContextVar[Optional[UUID]] = contextvars.ContextVar(
-    "current_tenant_id", default=None
-)
+_current_tenant_id: contextvars.ContextVar[Optional[UUID]] = contextvars.ContextVar("current_tenant_id", default=None)
 
 
 def get_current_tenant_id() -> Optional[UUID]:

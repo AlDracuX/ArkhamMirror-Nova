@@ -5,9 +5,9 @@ Extracts flow data from graphs for visualization of resource,
 information, or relationship flows between entities.
 """
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
-from collections import defaultdict
 
 from .models import Graph
 
@@ -15,6 +15,7 @@ from .models import Graph
 @dataclass
 class FlowLink:
     """A flow between two nodes."""
+
     source: str
     target: str
     value: float
@@ -25,6 +26,7 @@ class FlowLink:
 @dataclass
 class FlowNode:
     """A node in the flow diagram."""
+
     id: str
     label: str
     entity_type: str
@@ -35,6 +37,7 @@ class FlowNode:
 @dataclass
 class FlowData:
     """Data for Sankey diagram."""
+
     nodes: list[FlowNode] = field(default_factory=list)
     links: list[FlowLink] = field(default_factory=list)
     total_flow: float = 0.0
@@ -139,13 +142,15 @@ class FlowAnalyzer:
             if source_layer == target_layer:
                 continue
 
-            flow_links.append(FlowLink(
-                source=source_id,
-                target=target_id,
-                value=edge.weight,
-                category=edge_type,
-                relationship_type=edge_type,
-            ))
+            flow_links.append(
+                FlowLink(
+                    source=source_id,
+                    target=target_id,
+                    value=edge.weight,
+                    category=edge_type,
+                    relationship_type=edge_type,
+                )
+            )
 
             # Track flow values for nodes
             node_values[source_id] += edge.weight
@@ -162,13 +167,15 @@ class FlowAnalyzer:
         for node_id in included_nodes:
             node = node_map.get(node_id)
             if node:
-                flow_nodes.append(FlowNode(
-                    id=node_id,
-                    label=node.label or node_id,
-                    entity_type=(node.entity_type or node.type or "unknown").lower(),
-                    layer=node_layers.get(node_id, 0),
-                    value=node_values.get(node_id, 0),
-                ))
+                flow_nodes.append(
+                    FlowNode(
+                        id=node_id,
+                        label=node.label or node_id,
+                        entity_type=(node.entity_type or node.type or "unknown").lower(),
+                        layer=node_layers.get(node_id, 0),
+                        value=node_values.get(node_id, 0),
+                    )
+                )
 
         # Sort nodes by layer then by value
         flow_nodes.sort(key=lambda n: (n.layer, -n.value))
@@ -276,13 +283,15 @@ class FlowAnalyzer:
                 type_node_ids[source_type] = source_id
                 type_node_ids[target_type] = target_id
 
-                flow_links.append(FlowLink(
-                    source=source_id,
-                    target=target_id,
-                    value=value,
-                    category=rel_type,
-                    relationship_type=rel_type,
-                ))
+                flow_links.append(
+                    FlowLink(
+                        source=source_id,
+                        target=target_id,
+                        value=value,
+                        category=rel_type,
+                        relationship_type=rel_type,
+                    )
+                )
 
                 node_values[source_id] += value
                 node_values[target_id] += value
@@ -301,13 +310,15 @@ class FlowAnalyzer:
                 else:
                     layer = 1
 
-                flow_nodes.append(FlowNode(
-                    id=node_id,
-                    label=entity_type.title(),
-                    entity_type=entity_type,
-                    layer=layer,
-                    value=node_values.get(node_id, 0),
-                ))
+                flow_nodes.append(
+                    FlowNode(
+                        id=node_id,
+                        label=entity_type.title(),
+                        entity_type=entity_type,
+                        layer=layer,
+                        value=node_values.get(node_id, 0),
+                    )
+                )
         else:
             # Individual node flows
             for edge in graph.edges:
@@ -326,13 +337,15 @@ class FlowAnalyzer:
                 if source_layer > target_layer:
                     source_id, target_id = target_id, source_id
 
-                flow_links.append(FlowLink(
-                    source=source_id,
-                    target=target_id,
-                    value=edge.weight,
-                    category=edge_type,
-                    relationship_type=edge_type,
-                ))
+                flow_links.append(
+                    FlowLink(
+                        source=source_id,
+                        target=target_id,
+                        value=edge.weight,
+                        category=edge_type,
+                        relationship_type=edge_type,
+                    )
+                )
 
                 node_values[source_id] += edge.weight
                 node_values[target_id] += edge.weight
@@ -347,13 +360,15 @@ class FlowAnalyzer:
             for node_id in included_nodes:
                 node = node_map.get(node_id)
                 if node:
-                    flow_nodes.append(FlowNode(
-                        id=node_id,
-                        label=node.label or node_id,
-                        entity_type=(node.entity_type or node.type or "unknown").lower(),
-                        layer=node_layers.get(node_id, 1),
-                        value=node_values.get(node_id, 0),
-                    ))
+                    flow_nodes.append(
+                        FlowNode(
+                            id=node_id,
+                            label=node.label or node_id,
+                            entity_type=(node.entity_type or node.type or "unknown").lower(),
+                            layer=node_layers.get(node_id, 1),
+                            value=node_values.get(node_id, 0),
+                        )
+                    )
 
         # Sort and calculate totals
         flow_nodes.sort(key=lambda n: (n.layer, -n.value))
@@ -416,28 +431,34 @@ class FlowAnalyzer:
 
                 # Add other nodes if not already present
                 if not any(n.id == source_id for n in other_nodes):
-                    other_nodes.append(FlowNode(
-                        id=source_id,
-                        label="Other",
-                        entity_type="other",
-                        layer=source_layer,
-                        value=value,
-                    ))
+                    other_nodes.append(
+                        FlowNode(
+                            id=source_id,
+                            label="Other",
+                            entity_type="other",
+                            layer=source_layer,
+                            value=value,
+                        )
+                    )
                 if not any(n.id == target_id for n in other_nodes):
-                    other_nodes.append(FlowNode(
-                        id=target_id,
-                        label="Other",
-                        entity_type="other",
-                        layer=target_layer,
-                        value=value,
-                    ))
+                    other_nodes.append(
+                        FlowNode(
+                            id=target_id,
+                            label="Other",
+                            entity_type="other",
+                            layer=target_layer,
+                            value=value,
+                        )
+                    )
 
-                other_links.append(FlowLink(
-                    source=source_id,
-                    target=target_id,
-                    value=value,
-                    category="aggregated",
-                ))
+                other_links.append(
+                    FlowLink(
+                        source=source_id,
+                        target=target_id,
+                        value=value,
+                        category="aggregated",
+                    )
+                )
 
         # Combine kept nodes with other nodes
         kept_node_ids = set()

@@ -1,19 +1,19 @@
 """Tests for Summary Shard API endpoints."""
 
-import pytest
 from unittest.mock import AsyncMock, Mock, patch
-from fastapi.testclient import TestClient
 
+import pytest
 from arkham_shard_summary import SummaryShard
-from arkham_shard_summary.api import router, init_api
+from arkham_shard_summary.api import init_api, router
 from arkham_shard_summary.models import (
-    Summary,
-    SummaryType,
-    SummaryStatus,
     SourceType,
+    Summary,
     SummaryLength,
     SummaryResult,
+    SummaryStatus,
+    SummaryType,
 )
+from fastapi.testclient import TestClient
 
 
 class MockFrame:

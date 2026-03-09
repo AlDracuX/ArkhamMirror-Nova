@@ -15,9 +15,7 @@ interface SimilarImagesPanelProps {
 
 export function SimilarImagesPanel({ analysis, onSearch }: SimilarImagesPanelProps) {
   const { toast } = useToast();
-  const [result, setResult] = useState<SimilarImagesResult | null>(
-    analysis.similar_images_result
-  );
+  const [result, setResult] = useState<SimilarImagesResult | null>(analysis.similar_images_result);
   const [searching, setSearching] = useState(false);
   const [searchType, setSearchType] = useState<'internal' | 'external' | 'both'>('internal');
   const [selectedImage, setSelectedImage] = useState<SimilarImage | null>(null);
@@ -208,10 +206,11 @@ export function SimilarImagesPanel({ analysis, onSearch }: SimilarImagesPanelPro
               </a>
             ))}
           </div>
-          {result.search_urls.some(u => u.type === 'upload_search') && (
+          {result.search_urls.some((u) => u.type === 'upload_search') && (
             <p className="search-url-note">
               <Icon name="Info" size={12} />
-              For "Upload Required" links, download the image first, then upload it to the search engine.
+              For "Upload Required" links, download the image first, then upload it to the search
+              engine.
             </p>
           )}
         </div>
@@ -231,7 +230,9 @@ export function SimilarImagesPanel({ analysis, onSearch }: SimilarImagesPanelPro
       {result.similar_images.length === 0 && (result.search_urls?.length ?? 0) > 0 && (
         <div className="panel-info">
           <Icon name="Info" size={16} />
-          <p>No automatic results found. Use the reverse image search links above to search manually.</p>
+          <p>
+            No automatic results found. Use the reverse image search links above to search manually.
+          </p>
         </div>
       )}
 
@@ -357,11 +358,7 @@ export function SimilarImagesPanel({ analysis, onSearch }: SimilarImagesPanelPro
             <option value="both">Both</option>
           </select>
         </div>
-        <button
-          className="btn btn-secondary btn-sm"
-          onClick={handleSearch}
-          disabled={searching}
-        >
+        <button className="btn btn-secondary btn-sm" onClick={handleSearch} disabled={searching}>
           {searching ? (
             <>
               <Icon name="Loader2" size={14} className="spin" />

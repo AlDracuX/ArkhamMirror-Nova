@@ -1,21 +1,22 @@
 """Tests for Provenance Shard models."""
 
-import pytest
 from datetime import datetime
+
+import pytest
 from arkham_shard_provenance.models import (
-    ChainStatus,
-    LinkType,
     ArtifactType,
+    AuditRecord,
+    ChainExport,
+    ChainStatus,
     EventType,
     EvidenceChain,
-    ProvenanceLink,
-    TrackedArtifact,
-    AuditRecord,
-    LineageNode,
     LineageEdge,
     LineageGraph,
+    LineageNode,
+    LinkType,
+    ProvenanceLink,
+    TrackedArtifact,
     VerificationResult,
-    ChainExport,
 )
 
 

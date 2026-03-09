@@ -108,10 +108,7 @@ export const AGGRESSIVE_PERFORMANCE_SETTINGS: PerformanceModeSettings = {
  * }
  * ```
  */
-export function usePerformanceMode(
-  cy: Core | null,
-  nodeCount: number
-): UsePerformanceModeReturn {
+export function usePerformanceMode(cy: Core | null, nodeCount: number): UsePerformanceModeReturn {
   const [performanceMode, setPerformanceModeState] = useState<PerformanceModeSettings>(
     DEFAULT_PERFORMANCE_SETTINGS
   );
@@ -215,9 +212,7 @@ export function usePerformanceMode(
     setPerformanceModeState((prev) => ({
       ...prev,
       ...updates,
-      settings: updates.settings
-        ? { ...prev.settings, ...updates.settings }
-        : prev.settings,
+      settings: updates.settings ? { ...prev.settings, ...updates.settings } : prev.settings,
     }));
   }, []);
 
@@ -268,7 +263,7 @@ export function getPerformanceModeStylesheet() {
     {
       selector: 'node.performance-no-label',
       style: {
-        'label': '',
+        label: '',
         'text-opacity': 0,
       },
     },
@@ -277,7 +272,7 @@ export function getPerformanceModeStylesheet() {
     {
       selector: 'edge.performance-no-label',
       style: {
-        'label': '',
+        label: '',
         'text-opacity': 0,
       },
     },

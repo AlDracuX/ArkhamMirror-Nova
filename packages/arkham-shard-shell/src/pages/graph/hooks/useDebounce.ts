@@ -84,8 +84,8 @@ export function useDebouncedSlider<T>(
 
   const handleChange = useCallback(
     (value: T) => {
-      setLocalValue(value);  // Immediate update for visual feedback
-      debouncedOnChange(value);  // Debounced update to parent
+      setLocalValue(value); // Immediate update for visual feedback
+      debouncedOnChange(value); // Debounced update to parent
     },
     [debouncedOnChange]
   );

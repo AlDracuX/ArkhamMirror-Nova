@@ -25,7 +25,7 @@ class BurdenOfProof(str, Enum):
     CLAIMANT = "claimant"
     RESPONDENT = "respondent"
     SHARED = "shared"
-    REVERSE = "reverse"         # Statutory reverse (e.g. discrimination EA 2010 s.136)
+    REVERSE = "reverse"  # Statutory reverse (e.g. discrimination EA 2010 s.136)
 
 
 class EvidenceStrength(str, Enum):
@@ -33,7 +33,7 @@ class EvidenceStrength(str, Enum):
     MODERATE = "moderate"
     WEAK = "weak"
     NEUTRAL = "neutral"
-    ADVERSE = "adverse"         # Evidence hurts this element
+    ADVERSE = "adverse"  # Evidence hurts this element
 
 
 class ElementStatus(str, Enum):
@@ -62,7 +62,7 @@ class LegalTheory:
     statutory_basis: str = ""
     respondent_ids: List[str] = field(default_factory=list)
     status: TheoryStatus = TheoryStatus.ACTIVE
-    overall_strength: int = 0   # 0-100 calculated
+    overall_strength: int = 0  # 0-100 calculated
     notes: str = ""
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
@@ -106,7 +106,7 @@ class StrengthAssessment:
     proven_count: int = 0
     contested_count: int = 0
     unproven_count: int = 0
-    overall_score: int = 0      # 0-100
+    overall_score: int = 0  # 0-100
     gaps: List[str] = field(default_factory=list)
     weaknesses: List[str] = field(default_factory=list)
     strengths: List[str] = field(default_factory=list)
@@ -124,44 +124,184 @@ class TheoryFilter:
 # Pre-defined element templates for common UK employment claims
 CLAIM_ELEMENT_TEMPLATES: Dict[str, List[Dict[str, Any]]] = {
     "unfair_dismissal": [
-        {"title": "Employee with 2+ years continuous service", "burden": "claimant", "statutory_reference": "ERA 1996 s.108", "required": True},
+        {
+            "title": "Employee with 2+ years continuous service",
+            "burden": "claimant",
+            "statutory_reference": "ERA 1996 s.108",
+            "required": True,
+        },
         {"title": "Dismissal occurred", "burden": "claimant", "statutory_reference": "ERA 1996 s.95", "required": True},
-        {"title": "Reason for dismissal identified", "burden": "respondent", "statutory_reference": "ERA 1996 s.98(1)", "required": True},
-        {"title": "Reason is potentially fair", "burden": "respondent", "statutory_reference": "ERA 1996 s.98(2)", "required": True},
-        {"title": "Fair procedure followed", "burden": "shared", "statutory_reference": "ERA 1996 s.98(4) / ACAS Code", "required": True},
-        {"title": "Decision within range of reasonable responses", "burden": "shared", "statutory_reference": "ERA 1996 s.98(4)", "required": True},
+        {
+            "title": "Reason for dismissal identified",
+            "burden": "respondent",
+            "statutory_reference": "ERA 1996 s.98(1)",
+            "required": True,
+        },
+        {
+            "title": "Reason is potentially fair",
+            "burden": "respondent",
+            "statutory_reference": "ERA 1996 s.98(2)",
+            "required": True,
+        },
+        {
+            "title": "Fair procedure followed",
+            "burden": "shared",
+            "statutory_reference": "ERA 1996 s.98(4) / ACAS Code",
+            "required": True,
+        },
+        {
+            "title": "Decision within range of reasonable responses",
+            "burden": "shared",
+            "statutory_reference": "ERA 1996 s.98(4)",
+            "required": True,
+        },
     ],
     "constructive_dismissal": [
-        {"title": "Fundamental breach of contract by employer", "burden": "claimant", "statutory_reference": "ERA 1996 s.95(1)(c)", "required": True},
-        {"title": "Breach was sufficiently serious", "burden": "claimant", "statutory_reference": "Western Excavating v Sharp", "required": True},
-        {"title": "Employee resigned in response to breach", "burden": "claimant", "statutory_reference": "ERA 1996 s.95(1)(c)", "required": True},
-        {"title": "Employee did not delay or affirm contract", "burden": "claimant", "statutory_reference": "WE Cox Toner v Crook", "required": True},
-        {"title": "Last straw (if series of acts)", "burden": "claimant", "statutory_reference": "Omilaju v Waltham Forest", "required": False},
+        {
+            "title": "Fundamental breach of contract by employer",
+            "burden": "claimant",
+            "statutory_reference": "ERA 1996 s.95(1)(c)",
+            "required": True,
+        },
+        {
+            "title": "Breach was sufficiently serious",
+            "burden": "claimant",
+            "statutory_reference": "Western Excavating v Sharp",
+            "required": True,
+        },
+        {
+            "title": "Employee resigned in response to breach",
+            "burden": "claimant",
+            "statutory_reference": "ERA 1996 s.95(1)(c)",
+            "required": True,
+        },
+        {
+            "title": "Employee did not delay or affirm contract",
+            "burden": "claimant",
+            "statutory_reference": "WE Cox Toner v Crook",
+            "required": True,
+        },
+        {
+            "title": "Last straw (if series of acts)",
+            "burden": "claimant",
+            "statutory_reference": "Omilaju v Waltham Forest",
+            "required": False,
+        },
     ],
     "discrimination": [
-        {"title": "Protected characteristic exists", "burden": "claimant", "statutory_reference": "EA 2010 s.4", "required": True},
-        {"title": "Less favourable treatment occurred", "burden": "claimant", "statutory_reference": "EA 2010 s.13", "required": True},
-        {"title": "Comparator identified (actual or hypothetical)", "burden": "claimant", "statutory_reference": "EA 2010 s.23", "required": True},
-        {"title": "Treatment because of protected characteristic", "burden": "reverse", "statutory_reference": "EA 2010 s.136", "required": True},
-        {"title": "No legitimate justification", "burden": "respondent", "statutory_reference": "EA 2010 s.13(2)", "required": True},
+        {
+            "title": "Protected characteristic exists",
+            "burden": "claimant",
+            "statutory_reference": "EA 2010 s.4",
+            "required": True,
+        },
+        {
+            "title": "Less favourable treatment occurred",
+            "burden": "claimant",
+            "statutory_reference": "EA 2010 s.13",
+            "required": True,
+        },
+        {
+            "title": "Comparator identified (actual or hypothetical)",
+            "burden": "claimant",
+            "statutory_reference": "EA 2010 s.23",
+            "required": True,
+        },
+        {
+            "title": "Treatment because of protected characteristic",
+            "burden": "reverse",
+            "statutory_reference": "EA 2010 s.136",
+            "required": True,
+        },
+        {
+            "title": "No legitimate justification",
+            "burden": "respondent",
+            "statutory_reference": "EA 2010 s.13(2)",
+            "required": True,
+        },
     ],
     "whistleblowing": [
-        {"title": "Qualifying disclosure made", "burden": "claimant", "statutory_reference": "ERA 1996 s.43B", "required": True},
-        {"title": "Disclosure of information (not opinion)", "burden": "claimant", "statutory_reference": "Cavendish Munro v Geduld", "required": True},
-        {"title": "Reasonable belief in truth of disclosure", "burden": "claimant", "statutory_reference": "ERA 1996 s.43B(1)", "required": True},
-        {"title": "Disclosure in public interest", "burden": "claimant", "statutory_reference": "ERA 1996 s.43B(1)", "required": True},
-        {"title": "Detriment suffered", "burden": "claimant", "statutory_reference": "ERA 1996 s.47B", "required": True},
-        {"title": "Causal connection (done on ground of disclosure)", "burden": "reverse", "statutory_reference": "ERA 1996 s.48(2)", "required": True},
+        {
+            "title": "Qualifying disclosure made",
+            "burden": "claimant",
+            "statutory_reference": "ERA 1996 s.43B",
+            "required": True,
+        },
+        {
+            "title": "Disclosure of information (not opinion)",
+            "burden": "claimant",
+            "statutory_reference": "Cavendish Munro v Geduld",
+            "required": True,
+        },
+        {
+            "title": "Reasonable belief in truth of disclosure",
+            "burden": "claimant",
+            "statutory_reference": "ERA 1996 s.43B(1)",
+            "required": True,
+        },
+        {
+            "title": "Disclosure in public interest",
+            "burden": "claimant",
+            "statutory_reference": "ERA 1996 s.43B(1)",
+            "required": True,
+        },
+        {
+            "title": "Detriment suffered",
+            "burden": "claimant",
+            "statutory_reference": "ERA 1996 s.47B",
+            "required": True,
+        },
+        {
+            "title": "Causal connection (done on ground of disclosure)",
+            "burden": "reverse",
+            "statutory_reference": "ERA 1996 s.48(2)",
+            "required": True,
+        },
     ],
     "harassment": [
-        {"title": "Unwanted conduct occurred", "burden": "claimant", "statutory_reference": "EA 2010 s.26(1)", "required": True},
-        {"title": "Related to protected characteristic", "burden": "claimant", "statutory_reference": "EA 2010 s.26(1)(a)", "required": True},
-        {"title": "Purpose or effect of violating dignity", "burden": "shared", "statutory_reference": "EA 2010 s.26(1)(b)", "required": True},
-        {"title": "Reasonable for conduct to have that effect", "burden": "shared", "statutory_reference": "EA 2010 s.26(4)", "required": True},
+        {
+            "title": "Unwanted conduct occurred",
+            "burden": "claimant",
+            "statutory_reference": "EA 2010 s.26(1)",
+            "required": True,
+        },
+        {
+            "title": "Related to protected characteristic",
+            "burden": "claimant",
+            "statutory_reference": "EA 2010 s.26(1)(a)",
+            "required": True,
+        },
+        {
+            "title": "Purpose or effect of violating dignity",
+            "burden": "shared",
+            "statutory_reference": "EA 2010 s.26(1)(b)",
+            "required": True,
+        },
+        {
+            "title": "Reasonable for conduct to have that effect",
+            "burden": "shared",
+            "statutory_reference": "EA 2010 s.26(4)",
+            "required": True,
+        },
     ],
     "victimisation": [
-        {"title": "Protected act done", "burden": "claimant", "statutory_reference": "EA 2010 s.27(2)", "required": True},
-        {"title": "Detriment suffered", "burden": "claimant", "statutory_reference": "EA 2010 s.27(1)", "required": True},
-        {"title": "Detriment because of the protected act", "burden": "reverse", "statutory_reference": "EA 2010 s.136", "required": True},
+        {
+            "title": "Protected act done",
+            "burden": "claimant",
+            "statutory_reference": "EA 2010 s.27(2)",
+            "required": True,
+        },
+        {
+            "title": "Detriment suffered",
+            "burden": "claimant",
+            "statutory_reference": "EA 2010 s.27(1)",
+            "required": True,
+        },
+        {
+            "title": "Detriment because of the protected act",
+            "burden": "reverse",
+            "statutory_reference": "EA 2010 s.136",
+            "required": True,
+        },
     ],
 }

@@ -129,7 +129,11 @@ export function TimelinePage() {
   const [filterApplied, setFilterApplied] = useState(false);
   const [extracting, setExtracting] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{ type: 'event' | 'document' | 'all'; id?: string; name?: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    type: 'event' | 'document' | 'all';
+    id?: string;
+    name?: string;
+  } | null>(null);
 
   // Edit modal state
   const [editingEvent, setEditingEvent] = useState<EditingEvent | null>(null);
@@ -162,13 +166,26 @@ export function TimelinePage() {
   }, [startDate, endDate, filterApplied]);
 
   // Fetch events
-  const { data: eventsData, loading: eventsLoading, error: eventsError, refetch: refetchEvents } = useFetch<EventsResponse>(buildQuery());
+  const {
+    data: eventsData,
+    loading: eventsLoading,
+    error: eventsError,
+    refetch: refetchEvents,
+  } = useFetch<EventsResponse>(buildQuery());
 
   // Fetch stats
-  const { data: statsData, loading: statsLoading, refetch: refetchStats } = useFetch<StatsResponse>('/api/timeline/stats');
+  const {
+    data: statsData,
+    loading: statsLoading,
+    refetch: refetchStats,
+  } = useFetch<StatsResponse>('/api/timeline/stats');
 
   // Fetch documents for extraction
-  const { data: docsData, loading: docsLoading, refetch: refetchDocs } = useFetch<{ documents: Document[]; count: number }>('/api/timeline/documents');
+  const {
+    data: docsData,
+    loading: docsLoading,
+    refetch: refetchDocs,
+  } = useFetch<{ documents: Document[]; count: number }>('/api/timeline/documents');
 
   // Fetch entities with timeline events
   const { data: entitiesData } = useFetch<EntitiesResponse>('/api/timeline/entities?limit=100');
@@ -246,7 +263,9 @@ export function TimelinePage() {
   const deleteDocumentEvents = async (documentId: string) => {
     setDeleting(documentId);
     try {
-      const response = await fetch(`/api/timeline/document/${documentId}/events`, { method: 'DELETE' });
+      const response = await fetch(`/api/timeline/document/${documentId}/events`, {
+        method: 'DELETE',
+      });
       if (response.ok) {
         const result = await response.json();
         toast.success(`Deleted ${result.deleted} events`);
@@ -395,7 +414,7 @@ export function TimelinePage() {
       });
 
       if (response.ok) {
-        setNotes(notes.filter(n => n.id !== noteId));
+        setNotes(notes.filter((n) => n.id !== noteId));
         toast.success('Note deleted');
       } else {
         const error = await response.json();
@@ -443,11 +462,16 @@ export function TimelinePage() {
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return 'var(--error-color)';
-      case 'high': return '#ef4444';
-      case 'medium': return '#f59e0b';
-      case 'low': return '#22c55e';
-      default: return 'var(--text-muted)';
+      case 'critical':
+        return 'var(--error-color)';
+      case 'high':
+        return '#ef4444';
+      case 'medium':
+        return '#f59e0b';
+      case 'low':
+        return '#22c55e';
+      default:
+        return 'var(--text-muted)';
     }
   };
 
@@ -481,23 +505,35 @@ export function TimelinePage() {
 
   const getPrecisionIcon = (precision: string) => {
     switch (precision) {
-      case 'exact': return 'Target';
-      case 'day': return 'Calendar';
-      case 'month': return 'CalendarDays';
-      case 'year': return 'CalendarRange';
-      case 'quarter': return 'CalendarDays';
-      case 'decade': return 'CalendarRange';
-      default: return 'Clock';
+      case 'exact':
+        return 'Target';
+      case 'day':
+        return 'Calendar';
+      case 'month':
+        return 'CalendarDays';
+      case 'year':
+        return 'CalendarRange';
+      case 'quarter':
+        return 'CalendarDays';
+      case 'decade':
+        return 'CalendarRange';
+      default:
+        return 'Clock';
     }
   };
 
   const getEventTypeColor = (eventType: string) => {
     switch (eventType) {
-      case 'occurrence': return 'var(--accent-color)';
-      case 'reference': return 'var(--info-color)';
-      case 'deadline': return 'var(--warning-color)';
-      case 'period': return 'var(--success-color)';
-      default: return 'var(--text-muted)';
+      case 'occurrence':
+        return 'var(--accent-color)';
+      case 'reference':
+        return 'var(--info-color)';
+      case 'deadline':
+        return 'var(--warning-color)';
+      case 'period':
+        return 'var(--success-color)';
+      default:
+        return 'var(--text-muted)';
     }
   };
 
@@ -510,13 +546,13 @@ export function TimelinePage() {
     // Filter events by selected entity if any
     let filteredEvents = eventsData.events;
     if (selectedEntityId) {
-      filteredEvents = eventsData.events.filter(event =>
-        event.entities && event.entities.includes(selectedEntityId)
+      filteredEvents = eventsData.events.filter(
+        (event) => event.entities && event.entities.includes(selectedEntityId)
       );
     }
 
     const groups = new Map<string, TimelineEvent[]>();
-    filteredEvents.forEach(event => {
+    filteredEvents.forEach((event) => {
       if (!event?.date_start) return;
       const dateKey = event.date_start.split('T')[0];
       if (!groups.has(dateKey)) {
@@ -600,7 +636,7 @@ export function TimelinePage() {
                     id="start-date"
                     type="date"
                     value={startDate}
-                    onChange={e => setStartDate(e.target.value)}
+                    onChange={(e) => setStartDate(e.target.value)}
                     className="date-input"
                   />
                 </div>
@@ -610,7 +646,7 @@ export function TimelinePage() {
                     id="end-date"
                     type="date"
                     value={endDate}
-                    onChange={e => setEndDate(e.target.value)}
+                    onChange={(e) => setEndDate(e.target.value)}
                     className="date-input"
                   />
                 </div>
@@ -619,11 +655,11 @@ export function TimelinePage() {
                   <select
                     id="entity-filter"
                     value={selectedEntityId}
-                    onChange={e => setSelectedEntityId(e.target.value)}
+                    onChange={(e) => setSelectedEntityId(e.target.value)}
                     className="entity-select"
                   >
                     <option value="">All Entities</option>
-                    {entitiesData?.entities?.map(entity => (
+                    {entitiesData?.entities?.map((entity) => (
                       <option key={entity.entity_id} value={entity.entity_id}>
                         {entity.name} ({entity.event_count})
                       </option>
@@ -655,7 +691,9 @@ export function TimelinePage() {
                     if (filterApplied && startDate) params.set('start_date', startDate);
                     if (filterApplied && endDate) params.set('end_date', endDate);
                     navigate(`/graph?${params.toString()}`);
-                    toast.info('Opening Graph with Timeline Events. Enable "Timeline Events" in Data Sources and click Build Graph.');
+                    toast.info(
+                      'Opening Graph with Timeline Events. Enable "Timeline Events" in Data Sources and click Build Graph.'
+                    );
                   }}
                   disabled={!eventsData?.events || eventsData.events.length === 0}
                   title="Visualize timeline events in the Graph view"
@@ -689,10 +727,12 @@ export function TimelinePage() {
                         <Icon name="Calendar" size={14} />
                         {formatDateOnly(dateKey)}
                       </div>
-                      <div className="date-count">{events.length} event{events.length !== 1 ? 's' : ''}</div>
+                      <div className="date-count">
+                        {events.length} event{events.length !== 1 ? 's' : ''}
+                      </div>
                     </div>
                     <div className="timeline-events">
-                      {events.map(event => (
+                      {events.map((event) => (
                         <div key={event.id} className="timeline-event">
                           <div className="event-timeline-marker">
                             <div
@@ -705,16 +745,24 @@ export function TimelinePage() {
                             <div className="event-header">
                               <div className="event-date-time">
                                 <Icon name="Clock" size={14} />
-                                <span className="event-time">{formatDate(event.date_start).split(',')[1]?.trim() || formatDate(event.date_start)}</span>
+                                <span className="event-time">
+                                  {formatDate(event.date_start).split(',')[1]?.trim() ||
+                                    formatDate(event.date_start)}
+                                </span>
                                 {event.date_end && (
                                   <>
                                     <Icon name="ArrowRight" size={14} />
-                                    <span className="event-date">{formatDateOnly(event.date_end)}</span>
+                                    <span className="event-date">
+                                      {formatDateOnly(event.date_end)}
+                                    </span>
                                   </>
                                 )}
                               </div>
                               <div className="event-metadata">
-                                <span className="event-type" style={{ color: getEventTypeColor(event.event_type) }}>
+                                <span
+                                  className="event-type"
+                                  style={{ color: getEventTypeColor(event.event_type) }}
+                                >
                                   {event.event_type}
                                 </span>
                                 <span className="event-precision">
@@ -733,13 +781,16 @@ export function TimelinePage() {
                                 <div className="entity-tags">
                                   {event.entities.slice(0, 5).map((entityId, idx) => {
                                     const entity = entityLookup[entityId];
-                                    const displayName = entity?.name || entityId.slice(0, 12) + '...';
+                                    const displayName =
+                                      entity?.name || entityId.slice(0, 12) + '...';
                                     const isSelected = selectedEntityId === entityId;
                                     return (
                                       <button
                                         key={idx}
                                         className={`entity-tag clickable ${isSelected ? 'selected' : ''}`}
-                                        onClick={() => setSelectedEntityId(isSelected ? '' : entityId)}
+                                        onClick={() =>
+                                          setSelectedEntityId(isSelected ? '' : entityId)
+                                        }
                                         title={`${entity?.name || entityId} (${entity?.entity_type || 'entity'}) - Click to filter`}
                                       >
                                         {displayName}
@@ -747,7 +798,9 @@ export function TimelinePage() {
                                     );
                                   })}
                                   {event.entities.length > 5 && (
-                                    <span className="entity-tag more">+{event.entities.length - 5}</span>
+                                    <span className="entity-tag more">
+                                      +{event.entities.length - 5}
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -841,7 +894,9 @@ export function TimelinePage() {
                       <Icon name="Target" size={24} />
                     </div>
                     <div className="stat-info">
-                      <span className="stat-value">{Math.round(statsData.avg_confidence * 100)}%</span>
+                      <span className="stat-value">
+                        {Math.round(statsData.avg_confidence * 100)}%
+                      </span>
                       <span className="stat-label">Avg Confidence</span>
                     </div>
                   </div>
@@ -881,13 +936,15 @@ export function TimelinePage() {
                     <div className="stats-bars">
                       {Object.entries(statsData.by_type).map(([type, count]) => (
                         <div key={type} className="stat-bar-row">
-                          <span className="bar-label" style={{ color: getEventTypeColor(type) }}>{type}</span>
+                          <span className="bar-label" style={{ color: getEventTypeColor(type) }}>
+                            {type}
+                          </span>
                           <div className="bar-container">
                             <div
                               className="bar-fill"
                               style={{
                                 width: `${statsData.total_events > 0 ? (count / statsData.total_events) * 100 : 0}%`,
-                                backgroundColor: getEventTypeColor(type)
+                                backgroundColor: getEventTypeColor(type),
                               }}
                             />
                           </div>
@@ -912,7 +969,9 @@ export function TimelinePage() {
                           <div className="bar-container">
                             <div
                               className="bar-fill"
-                              style={{ width: `${statsData.total_events > 0 ? (count / statsData.total_events) * 100 : 0}%` }}
+                              style={{
+                                width: `${statsData.total_events > 0 ? (count / statsData.total_events) * 100 : 0}%`,
+                              }}
                             />
                           </div>
                           <span className="bar-count">{count}</span>
@@ -964,7 +1023,10 @@ export function TimelinePage() {
                         <div className="gap-list">
                           {gapsData.gaps.slice(0, 5).map((gap, idx) => (
                             <div key={idx} className="gap-item">
-                              <div className="gap-severity" style={{ backgroundColor: getSeverityColor(gap.severity) }} />
+                              <div
+                                className="gap-severity"
+                                style={{ backgroundColor: getSeverityColor(gap.severity) }}
+                              />
                               <div className="gap-info">
                                 <span className="gap-days">{gap.gap_days} days</span>
                                 <span className="gap-dates">
@@ -980,7 +1042,9 @@ export function TimelinePage() {
                       )}
                     </div>
                   ) : (
-                    <p className="analysis-hint">Click "Analyze Gaps" to detect timeline gaps (&gt;30 days)</p>
+                    <p className="analysis-hint">
+                      Click "Analyze Gaps" to detect timeline gaps (&gt;30 days)
+                    </p>
                   )}
                 </div>
 
@@ -1015,7 +1079,12 @@ export function TimelinePage() {
                         </div>
                         {Object.entries(conflictsData.by_severity).map(([severity, count]) => (
                           <div key={severity} className="summary-item">
-                            <span className="summary-value" style={{ color: getSeverityColor(severity) }}>{count}</span>
+                            <span
+                              className="summary-value"
+                              style={{ color: getSeverityColor(severity) }}
+                            >
+                              {count}
+                            </span>
                             <span className="summary-label">{severity}</span>
                           </div>
                         ))}
@@ -1024,7 +1093,10 @@ export function TimelinePage() {
                         <div className="conflict-list">
                           {conflictsData.conflicts.slice(0, 5).map((conflict) => (
                             <div key={conflict.id} className="conflict-item">
-                              <div className="conflict-severity" style={{ backgroundColor: getSeverityColor(conflict.severity) }} />
+                              <div
+                                className="conflict-severity"
+                                style={{ backgroundColor: getSeverityColor(conflict.severity) }}
+                              />
                               <div className="conflict-info">
                                 <span className="conflict-type">{conflict.type}</span>
                                 <span className="conflict-desc">{conflict.description}</span>
@@ -1038,13 +1110,17 @@ export function TimelinePage() {
                             </div>
                           ))}
                           {conflictsData.conflicts.length > 5 && (
-                            <div className="conflict-more">+{conflictsData.conflicts.length - 5} more conflicts</div>
+                            <div className="conflict-more">
+                              +{conflictsData.conflicts.length - 5} more conflicts
+                            </div>
                           )}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <p className="analysis-hint">Click "Analyze Conflicts" to detect temporal inconsistencies</p>
+                    <p className="analysis-hint">
+                      Click "Analyze Conflicts" to detect temporal inconsistencies
+                    </p>
                   )}
                 </div>
               </>
@@ -1072,7 +1148,7 @@ export function TimelinePage() {
               </div>
             ) : docsData?.documents && docsData.documents.length > 0 ? (
               <div className="document-list">
-                {docsData.documents.map(doc => (
+                {docsData.documents.map((doc) => (
                   <div key={doc.id} className="document-item">
                     <div className="doc-icon">
                       <Icon name="FileText" size={20} />
@@ -1111,7 +1187,13 @@ export function TimelinePage() {
                       {doc.event_count > 0 && (
                         <button
                           className="btn btn-danger btn-sm"
-                          onClick={() => setConfirmDelete({ type: 'document', id: doc.id, name: doc.filename || doc.id })}
+                          onClick={() =>
+                            setConfirmDelete({
+                              type: 'document',
+                              id: doc.id,
+                              name: doc.filename || doc.id,
+                            })
+                          }
                           disabled={deleting === doc.id}
                         >
                           {deleting === doc.id ? (
@@ -1139,27 +1221,26 @@ export function TimelinePage() {
       {/* Confirmation Dialog */}
       {confirmDelete && (
         <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
-          <div className="modal-dialog" onClick={e => e.stopPropagation()}>
+          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <Icon name="AlertTriangle" size={24} className="text-warning" />
               <h3>Confirm Delete</h3>
             </div>
             <div className="modal-body">
-              {confirmDelete.type === 'event' && (
-                <p>Are you sure you want to delete this event?</p>
-              )}
+              {confirmDelete.type === 'event' && <p>Are you sure you want to delete this event?</p>}
               {confirmDelete.type === 'document' && (
-                <p>Delete all events from <strong>{confirmDelete.name}</strong>?</p>
+                <p>
+                  Delete all events from <strong>{confirmDelete.name}</strong>?
+                </p>
               )}
               {confirmDelete.type === 'all' && (
-                <p>Delete <strong>all</strong> timeline events? This cannot be undone.</p>
+                <p>
+                  Delete <strong>all</strong> timeline events? This cannot be undone.
+                </p>
               )}
             </div>
             <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setConfirmDelete(null)}
-              >
+              <button className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
                 Cancel
               </button>
               <button
@@ -1187,7 +1268,7 @@ export function TimelinePage() {
       {/* Edit Event Modal */}
       {editingEvent && (
         <div className="modal-overlay" onClick={() => setEditingEvent(null)}>
-          <div className="modal-dialog modal-lg" onClick={e => e.stopPropagation()}>
+          <div className="modal-dialog modal-lg" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <Icon name="Edit2" size={24} />
               <h3>Edit Event</h3>
@@ -1203,7 +1284,7 @@ export function TimelinePage() {
                   className="form-input"
                   rows={4}
                   value={editingEvent.text}
-                  onChange={e => setEditingEvent({ ...editingEvent, text: e.target.value })}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, text: e.target.value })}
                 />
               </div>
               <div className="form-row">
@@ -1214,7 +1295,9 @@ export function TimelinePage() {
                     type="date"
                     className="form-input"
                     value={editingEvent.date_start}
-                    onChange={e => setEditingEvent({ ...editingEvent, date_start: e.target.value })}
+                    onChange={(e) =>
+                      setEditingEvent({ ...editingEvent, date_start: e.target.value })
+                    }
                   />
                 </div>
                 <div className="form-group">
@@ -1224,7 +1307,7 @@ export function TimelinePage() {
                     type="date"
                     className="form-input"
                     value={editingEvent.date_end}
-                    onChange={e => setEditingEvent({ ...editingEvent, date_end: e.target.value })}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, date_end: e.target.value })}
                   />
                 </div>
               </div>
@@ -1235,7 +1318,9 @@ export function TimelinePage() {
                     id="edit-type"
                     className="form-input"
                     value={editingEvent.event_type}
-                    onChange={e => setEditingEvent({ ...editingEvent, event_type: e.target.value })}
+                    onChange={(e) =>
+                      setEditingEvent({ ...editingEvent, event_type: e.target.value })
+                    }
                   >
                     <option value="historical">Historical</option>
                     <option value="biographical">Biographical</option>
@@ -1253,7 +1338,9 @@ export function TimelinePage() {
                     id="edit-precision"
                     className="form-input"
                     value={editingEvent.precision}
-                    onChange={e => setEditingEvent({ ...editingEvent, precision: e.target.value })}
+                    onChange={(e) =>
+                      setEditingEvent({ ...editingEvent, precision: e.target.value })
+                    }
                   >
                     <option value="day">Day</option>
                     <option value="week">Week</option>
@@ -1293,12 +1380,26 @@ export function TimelinePage() {
 
       {/* Notes Panel */}
       {showNotesFor && (
-        <div className="modal-overlay" onClick={() => { setShowNotesFor(null); setNotes([]); setNewNote(''); }}>
-          <div className="modal-dialog modal-md" onClick={e => e.stopPropagation()}>
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setShowNotesFor(null);
+            setNotes([]);
+            setNewNote('');
+          }}
+        >
+          <div className="modal-dialog modal-md" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <Icon name="MessageSquare" size={24} />
               <h3>Event Notes</h3>
-              <button className="btn-icon" onClick={() => { setShowNotesFor(null); setNotes([]); setNewNote(''); }}>
+              <button
+                className="btn-icon"
+                onClick={() => {
+                  setShowNotesFor(null);
+                  setNotes([]);
+                  setNewNote('');
+                }}
+              >
                 <Icon name="X" size={20} />
               </button>
             </div>
@@ -1309,18 +1410,14 @@ export function TimelinePage() {
                   rows={3}
                   placeholder="Add a note..."
                   value={newNote}
-                  onChange={e => setNewNote(e.target.value)}
-                  onKeyDown={e => {
+                  onChange={(e) => setNewNote(e.target.value)}
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter' && e.ctrlKey) {
                       addNote();
                     }
                   }}
                 />
-                <button
-                  className="btn btn-primary"
-                  onClick={addNote}
-                  disabled={!newNote.trim()}
-                >
+                <button className="btn btn-primary" onClick={addNote} disabled={!newNote.trim()}>
                   <Icon name="Plus" size={14} />
                   Add Note
                 </button>
@@ -1337,16 +1434,12 @@ export function TimelinePage() {
                     <span>No notes yet</span>
                   </div>
                 ) : (
-                  notes.map(note => (
+                  notes.map((note) => (
                     <div key={note.id} className="note-item">
                       <div className="note-content">{note.note}</div>
                       <div className="note-footer">
-                        <span className="note-date">
-                          {formatDate(note.created_at)}
-                        </span>
-                        {note.author && (
-                          <span className="note-author">{note.author}</span>
-                        )}
+                        <span className="note-date">{formatDate(note.created_at)}</span>
+                        {note.author && <span className="note-author">{note.author}</span>}
                         <button
                           className="btn-icon btn-delete"
                           onClick={() => deleteNote(note.id)}

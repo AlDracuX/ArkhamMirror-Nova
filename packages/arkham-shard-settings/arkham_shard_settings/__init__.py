@@ -5,16 +5,16 @@ Provides centralized settings management for ArkhamFrame including
 system settings, user preferences, and shard configurations.
 """
 
-from .shard import SettingsShard
 from .models import (
-    SettingCategory,
-    SettingType,
     Setting,
-    SettingValue,
-    SettingsProfile,
+    SettingCategory,
     SettingsBackup,
+    SettingsProfile,
+    SettingType,
+    SettingValue,
     ShardSettings,
 )
+from .shard import SettingsShard
 
 __all__ = [
     "SettingsShard",

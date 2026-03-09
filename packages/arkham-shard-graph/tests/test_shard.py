@@ -1,11 +1,11 @@
 """Tests for the Graph shard."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 import pytest_asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
-
+from arkham_shard_graph.models import Graph, GraphEdge, GraphNode
 from arkham_shard_graph.shard import GraphShard
-from arkham_shard_graph.models import Graph, GraphNode, GraphEdge
 
 
 class TestGraphShardMetadata:

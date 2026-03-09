@@ -4,17 +4,17 @@ Packets Shard - FastAPI Routes
 REST API endpoints for packet management.
 """
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from .models import (
     ContentType,
+    ExportFormat,
     PacketStatus,
     PacketVisibility,
     SharePermission,
-    ExportFormat,
 )
 
 if TYPE_CHECKING:
@@ -27,6 +27,7 @@ router = APIRouter(prefix="/api/packets", tags=["packets"])
 
 class PacketCreate(BaseModel):
     """Request model for creating a packet."""
+
     name: str = Field(..., description="Packet name")
     description: str = Field(default="")
     visibility: PacketVisibility = Field(default=PacketVisibility.PRIVATE)
@@ -35,6 +36,7 @@ class PacketCreate(BaseModel):
 
 class PacketUpdate(BaseModel):
     """Request model for updating a packet."""
+
     name: Optional[str] = None
     description: Optional[str] = None
     visibility: Optional[PacketVisibility] = None
@@ -43,6 +45,7 @@ class PacketUpdate(BaseModel):
 
 class PacketResponse(BaseModel):
     """Response model for a packet."""
+
     id: str
     name: str
     description: str
@@ -60,6 +63,7 @@ class PacketResponse(BaseModel):
 
 class PacketListResponse(BaseModel):
     """Response model for listing packets."""
+
     items: List[PacketResponse]
     total: int
     limit: int
@@ -68,6 +72,7 @@ class PacketListResponse(BaseModel):
 
 class ContentCreate(BaseModel):
     """Request model for adding content."""
+
     content_type: ContentType
     content_id: str
     content_title: str
@@ -76,6 +81,7 @@ class ContentCreate(BaseModel):
 
 class ContentResponse(BaseModel):
     """Response model for packet content."""
+
     id: str
     packet_id: str
     content_type: str
@@ -88,6 +94,7 @@ class ContentResponse(BaseModel):
 
 class ShareCreate(BaseModel):
     """Request model for creating a share."""
+
     shared_with: str = Field(..., description="User ID or 'public'")
     permissions: SharePermission = Field(default=SharePermission.VIEW)
     expires_at: Optional[str] = None
@@ -95,6 +102,7 @@ class ShareCreate(BaseModel):
 
 class ShareResponse(BaseModel):
     """Response model for a share."""
+
     id: str
     packet_id: str
     shared_with: str
@@ -106,11 +114,13 @@ class ShareResponse(BaseModel):
 
 class ExportRequest(BaseModel):
     """Request model for exporting a packet."""
+
     format: ExportFormat = Field(default=ExportFormat.ZIP)
 
 
 class ExportResponse(BaseModel):
     """Response model for export results."""
+
     packet_id: str
     export_format: str
     file_path: str
@@ -122,12 +132,14 @@ class ExportResponse(BaseModel):
 
 class ImportRequest(BaseModel):
     """Request model for importing a packet."""
+
     file_path: str
     merge_mode: str = Field(default="replace", pattern="^(replace|merge|skip)$")
 
 
 class ImportResponse(BaseModel):
     """Response model for import results."""
+
     packet_id: str
     import_source: str
     imported_at: str
@@ -138,6 +150,7 @@ class ImportResponse(BaseModel):
 
 class VersionResponse(BaseModel):
     """Response model for a version."""
+
     id: str
     packet_id: str
     version_number: int
@@ -148,6 +161,7 @@ class VersionResponse(BaseModel):
 
 class StatisticsResponse(BaseModel):
     """Response model for packet statistics."""
+
     total_packets: int
     by_status: Dict[str, int]
     by_visibility: Dict[str, int]
@@ -163,11 +177,13 @@ class StatisticsResponse(BaseModel):
 
 class CountResponse(BaseModel):
     """Response model for count endpoint."""
+
     count: int
 
 
 class HealthResponse(BaseModel):
     """Response model for health check."""
+
     status: str
     shard: str
     version: str
@@ -433,10 +449,7 @@ async def remove_packet_content(packet_id: str, content_id: str, request: Reques
     success = await shard.remove_content(packet_id, content_id)
 
     if not success:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot remove content (packet not found or not in draft status)"
-        )
+        raise HTTPException(status_code=400, detail="Cannot remove content (packet not found or not in draft status)")
 
 
 # === Share Endpoints ===

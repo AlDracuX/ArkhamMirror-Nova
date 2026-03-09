@@ -12,26 +12,26 @@ Run with:
     pytest tests/test_shard_loading.py -v
 """
 
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
 import pytest_asyncio
 import yaml
-from pathlib import Path
-from dataclasses import dataclass
-from typing import Optional, List, Dict, Any
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
 # Import shard interface components
 from arkham_frame.shard_interface import (
     ArkhamShard,
-    ShardManifest,
-    NavigationConfig,
     DependencyConfig,
     EventConfig,
+    NavigationConfig,
+    ShardManifest,
     StateConfig,
     UIConfig,
     load_manifest_from_yaml,
 )
-
 
 # =============================================================================
 # Test Data
@@ -62,6 +62,7 @@ VALID_STATE_STRATEGIES = ["url", "local", "session", "none"]
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def packages_dir() -> Path:
@@ -140,6 +141,7 @@ ui:
 # =============================================================================
 # Test 1: Manifest Loading
 # =============================================================================
+
 
 class TestManifestLoading:
     """Tests for loading and parsing shard.yaml files."""
@@ -258,6 +260,7 @@ class TestManifestLoading:
 # Test 2: V5 Manifest Compliance
 # =============================================================================
 
+
 class TestManifestCompliance:
     """Tests that all shard.yaml files comply with v5 schema."""
 
@@ -288,10 +291,10 @@ class TestManifestCompliance:
         manifest = load_manifest_from_yaml(shard_yaml_paths[shard_name])
 
         assert manifest.navigation is not None, f"{shard_name}: navigation is required for v5"
-        assert manifest.navigation.category in VALID_CATEGORIES, \
+        assert manifest.navigation.category in VALID_CATEGORIES, (
             f"{shard_name}: invalid category '{manifest.navigation.category}'"
-        assert isinstance(manifest.navigation.order, int), \
-            f"{shard_name}: order must be integer"
+        )
+        assert isinstance(manifest.navigation.order, int), f"{shard_name}: order must be integer"
         assert manifest.navigation.icon, f"{shard_name}: icon is required"
         assert manifest.navigation.label, f"{shard_name}: label is required"
         assert manifest.navigation.route, f"{shard_name}: route is required"
@@ -306,13 +309,12 @@ class TestManifestCompliance:
 
         # Dependencies are optional but if present should have correct structure
         if manifest.dependencies:
-            assert isinstance(manifest.dependencies.services, list), \
-                f"{shard_name}: services must be a list"
-            assert isinstance(manifest.dependencies.optional, list), \
-                f"{shard_name}: optional must be a list"
+            assert isinstance(manifest.dependencies.services, list), f"{shard_name}: services must be a list"
+            assert isinstance(manifest.dependencies.optional, list), f"{shard_name}: optional must be a list"
             # Shards should NOT depend on other shards
-            assert manifest.dependencies.shards == [], \
+            assert manifest.dependencies.shards == [], (
                 f"{shard_name}: shards dependency list must be empty (no shard dependencies allowed)"
+            )
 
     @pytest.mark.parametrize("shard_name", EXPECTED_SHARDS)
     def test_manifest_state_strategy_valid(self, shard_yaml_paths, shard_name):
@@ -323,8 +325,9 @@ class TestManifestCompliance:
         manifest = load_manifest_from_yaml(shard_yaml_paths[shard_name])
 
         if manifest.state:
-            assert manifest.state.strategy in VALID_STATE_STRATEGIES, \
+            assert manifest.state.strategy in VALID_STATE_STRATEGIES, (
                 f"{shard_name}: invalid state strategy '{manifest.state.strategy}'"
+            )
 
     @pytest.mark.parametrize("shard_name", EXPECTED_SHARDS)
     def test_manifest_api_prefix_format(self, shard_yaml_paths, shard_name):
@@ -334,8 +337,7 @@ class TestManifestCompliance:
 
         manifest = load_manifest_from_yaml(shard_yaml_paths[shard_name])
 
-        assert manifest.api_prefix.startswith("/api/"), \
-            f"{shard_name}: api_prefix should start with /api/"
+        assert manifest.api_prefix.startswith("/api/"), f"{shard_name}: api_prefix should start with /api/"
 
     @pytest.mark.parametrize("shard_name", EXPECTED_SHARDS)
     def test_manifest_entry_point_format(self, shard_yaml_paths, shard_name):
@@ -345,13 +347,13 @@ class TestManifestCompliance:
 
         manifest = load_manifest_from_yaml(shard_yaml_paths[shard_name])
 
-        assert ":" in manifest.entry_point, \
-            f"{shard_name}: entry_point should be 'module:ClassName' format"
+        assert ":" in manifest.entry_point, f"{shard_name}: entry_point should be 'module:ClassName' format"
 
 
 # =============================================================================
 # Test 3: Shard Base Class
 # =============================================================================
+
 
 class TestShardBaseClass:
     """Tests for the ArkhamShard abstract base class."""
@@ -359,6 +361,7 @@ class TestShardBaseClass:
     def test_shard_requires_initialize(self):
         """Shard subclasses must implement initialize."""
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
+
             class IncompleteShardNoInit(ArkhamShard):
                 async def shutdown(self):
                     pass
@@ -368,6 +371,7 @@ class TestShardBaseClass:
     def test_shard_requires_shutdown(self):
         """Shard subclasses must implement shutdown."""
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
+
             class IncompleteShardNoShutdown(ArkhamShard):
                 async def initialize(self, frame):
                     pass
@@ -376,6 +380,7 @@ class TestShardBaseClass:
 
     def test_complete_shard_instantiates(self):
         """A properly implemented shard can be instantiated."""
+
         class CompleteShard(ArkhamShard):
             name = "complete"
             version = "1.0.0"
@@ -394,6 +399,7 @@ class TestShardBaseClass:
 
     def test_shard_has_fallback_manifest(self):
         """Shard creates minimal manifest from class attributes if no yaml."""
+
         class MinimalShard(ArkhamShard):
             name = "minimal"
             version = "0.5.0"
@@ -412,6 +418,7 @@ class TestShardBaseClass:
 
     def test_get_routes_returns_none_by_default(self):
         """Default get_routes() returns None."""
+
         class NoRoutesShard(ArkhamShard):
             name = "no-routes"
             version = "1.0.0"
@@ -432,12 +439,14 @@ class TestShardBaseClass:
 # Test 4: Shard Lifecycle
 # =============================================================================
 
+
 class TestShardLifecycle:
     """Tests for shard initialization and shutdown."""
 
     @pytest.mark.asyncio
     async def test_shard_initialize_receives_frame(self):
         """Shard.initialize() receives frame reference."""
+
         class TrackingInitShard(ArkhamShard):
             name = "tracking"
             version = "1.0.0"
@@ -465,6 +474,7 @@ class TestShardLifecycle:
     @pytest.mark.asyncio
     async def test_shard_shutdown_called(self):
         """Shard.shutdown() is properly called."""
+
         class TrackingShutdownShard(ArkhamShard):
             name = "tracking-shutdown"
             version = "1.0.0"
@@ -486,6 +496,7 @@ class TestShardLifecycle:
     @pytest.mark.asyncio
     async def test_shard_can_register_workers(self):
         """Shard can register workers during initialize."""
+
         class WorkerRegisteringShard(ArkhamShard):
             name = "worker-registering"
             version = "1.0.0"
@@ -516,6 +527,7 @@ class TestShardLifecycle:
     @pytest.mark.asyncio
     async def test_shard_can_subscribe_to_events(self):
         """Shard can subscribe to events during initialize."""
+
         class EventSubscribingShard(ArkhamShard):
             name = "event-subscribing"
             version = "1.0.0"
@@ -548,6 +560,7 @@ class TestShardLifecycle:
 # =============================================================================
 # Test 5: API Route Integration
 # =============================================================================
+
 
 class TestAPIRouteIntegration:
     """Tests for shard API route mounting."""
@@ -588,6 +601,7 @@ class TestAPIRouteIntegration:
 # Test 6: Shard Discovery (Mocked Entry Points)
 # =============================================================================
 
+
 class TestShardDiscovery:
     """Tests for shard discovery via entry_points."""
 
@@ -610,10 +624,8 @@ class TestShardDiscovery:
 
         for shard_name, entry_point in expected_format.items():
             module, classname = entry_point.split(":")
-            assert module.startswith("arkham_shard_"), \
-                f"{shard_name}: module should start with arkham_shard_"
-            assert classname.endswith("Shard"), \
-                f"{shard_name}: class should end with Shard"
+            assert module.startswith("arkham_shard_"), f"{shard_name}: module should start with arkham_shard_"
+            assert classname.endswith("Shard"), f"{shard_name}: class should end with Shard"
 
     @patch("importlib.metadata.entry_points")
     def test_discover_shards_via_entry_points(self, mock_entry_points):
@@ -631,6 +643,7 @@ class TestShardDiscovery:
         mock_entry_points.return_value = {"arkham.shards": [mock_ep1, mock_ep2]}
 
         from importlib.metadata import entry_points
+
         eps = entry_points()
 
         if "arkham.shards" in eps:

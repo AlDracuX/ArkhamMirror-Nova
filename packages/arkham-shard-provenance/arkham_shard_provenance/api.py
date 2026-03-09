@@ -1,7 +1,7 @@
 """Provenance Shard API endpoints."""
 
 import logging
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -49,6 +49,7 @@ def get_shard(request: Request) -> "ProvenanceShard":
 
 class ProvenanceRecordResponse(BaseModel):
     """Provenance record response."""
+
     id: str
     entity_type: str
     entity_id: str
@@ -63,6 +64,7 @@ class ProvenanceRecordResponse(BaseModel):
 
 class TransformationResponse(BaseModel):
     """Transformation response."""
+
     id: str
     record_id: str
     transformation_type: str
@@ -76,6 +78,7 @@ class TransformationResponse(BaseModel):
 
 class AuditRecordResponse(BaseModel):
     """Audit record response."""
+
     id: str
     record_id: str
     action: str
@@ -86,6 +89,7 @@ class AuditRecordResponse(BaseModel):
 
 class CreateChainRequest(BaseModel):
     """Request to create a new evidence chain."""
+
     title: str
     description: str = ""
     project_id: Optional[str] = None
@@ -94,6 +98,7 @@ class CreateChainRequest(BaseModel):
 
 class UpdateChainRequest(BaseModel):
     """Request to update chain metadata."""
+
     title: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
@@ -101,6 +106,7 @@ class UpdateChainRequest(BaseModel):
 
 class AddLinkRequest(BaseModel):
     """Request to add a link to a chain."""
+
     source_artifact_id: str
     target_artifact_id: str
     link_type: str
@@ -110,12 +116,14 @@ class AddLinkRequest(BaseModel):
 
 class VerifyLinkRequest(BaseModel):
     """Request to verify a link."""
+
     verified_by: str
     notes: str = ""
 
 
 class ChainResponse(BaseModel):
     """Evidence chain response."""
+
     id: str
     title: str
     description: Optional[str] = None
@@ -132,6 +140,7 @@ class ChainResponse(BaseModel):
 
 class LinkResponse(BaseModel):
     """Provenance link response."""
+
     id: str
     chain_id: str
     source_artifact_id: str
@@ -152,6 +161,7 @@ class LinkResponse(BaseModel):
 
 class ArtifactResponse(BaseModel):
     """Tracked artifact response."""
+
     id: str
     artifact_type: str
     entity_id: str
@@ -164,6 +174,7 @@ class ArtifactResponse(BaseModel):
 
 class CreateArtifactRequest(BaseModel):
     """Request to create a new artifact."""
+
     artifact_type: str
     entity_id: str
     entity_table: str
@@ -174,6 +185,7 @@ class CreateArtifactRequest(BaseModel):
 
 class LineageNode(BaseModel):
     """Node in lineage graph."""
+
     id: str
     title: Optional[str] = None
     type: Optional[str] = None
@@ -183,6 +195,7 @@ class LineageNode(BaseModel):
 
 class LineageEdge(BaseModel):
     """Edge in lineage graph."""
+
     id: str
     source: str
     target: str
@@ -192,6 +205,7 @@ class LineageEdge(BaseModel):
 
 class LineageGraphResponse(BaseModel):
     """Lineage graph response."""
+
     nodes: List[LineageNode]
     edges: List[LineageEdge]
     root: Optional[str] = None
@@ -201,6 +215,7 @@ class LineageGraphResponse(BaseModel):
 
 class AuditRecord(BaseModel):
     """Audit log record."""
+
     id: str
     chain_id: Optional[str] = None
     event_type: str
@@ -212,6 +227,7 @@ class AuditRecord(BaseModel):
 
 class ChainListResponse(BaseModel):
     """Paginated list of chains."""
+
     items: List[ChainResponse]
     total: int
     page: int
@@ -220,6 +236,7 @@ class ChainListResponse(BaseModel):
 
 class AuditListResponse(BaseModel):
     """Paginated list of audit records."""
+
     items: List[AuditRecord]
     total: int
     page: int
@@ -232,11 +249,7 @@ class AuditListResponse(BaseModel):
 @router.get("/health")
 async def health():
     """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "shard": "provenance",
-        "version": "0.1.0"
-    }
+    return {"status": "healthy", "shard": "provenance", "version": "0.1.0"}
 
 
 @router.get("/count")
@@ -686,22 +699,21 @@ async def export_audit(
     shard = get_shard(request)
 
     if not _storage:
-        raise HTTPException(
-            status_code=503,
-            detail="Storage service unavailable - export disabled"
-        )
+        raise HTTPException(status_code=503, detail="Storage service unavailable - export disabled")
 
     try:
         export_data = await shard.export_audit_records(chain_id=chain_id, export_format=format)
 
         if format == "json":
             import json
+
             content = json.dumps(export_data, indent=2)
             media_type = "application/json"
             filename = f"audit_export_{chain_id or 'all'}.json"
         else:  # csv
             import csv
             import io
+
             output = io.StringIO()
             if export_data["records"]:
                 # Collect all possible field names from all records
@@ -713,7 +725,7 @@ async def export_audit(
                 data_fields = sorted([f for f in all_fields if f.startswith("data_")])
                 fieldnames = [f for f in base_fields if f in all_fields] + data_fields
 
-                writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction='ignore')
+                writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
                 writer.writeheader()
                 writer.writerows(export_data["records"])
             content = output.getvalue()
@@ -721,10 +733,9 @@ async def export_audit(
             filename = f"audit_export_{chain_id or 'all'}.csv"
 
         from fastapi.responses import Response
+
         return Response(
-            content=content,
-            media_type=media_type,
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            content=content, media_type=media_type, headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
     except Exception as e:
         logger.error(f"Error exporting audit: {e}")
@@ -1011,7 +1022,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     if not frame or not getattr(frame, "ai_analyst", None):
         raise HTTPException(status_code=503, detail="AI Analyst service not available")
 
-    from arkham_frame.services import AnalysisRequest, AnalysisDepth, AnalystMessage
+    from arkham_frame.services import AnalysisDepth, AnalysisRequest, AnalystMessage
 
     # Map depth string to enum
     depth_map = {
@@ -1025,10 +1036,7 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
     # Build conversation history
     history = None
     if body.conversation_history:
-        history = [
-            AnalystMessage(role=m["role"], content=m["content"])
-            for m in body.conversation_history
-        ]
+        history = [AnalystMessage(role=m["role"], content=m["content"]) for m in body.conversation_history]
 
     # Create analysis request
     analysis_request = AnalysisRequest(
@@ -1060,22 +1068,26 @@ async def ai_junior_analyst(request: Request, body: AIJuniorAnalystRequest):
 
 class ForensicScanRequest(BaseModel):
     """Request to perform forensic scan on a document."""
+
     doc_id: str
 
 
 class ForensicCompareRequest(BaseModel):
     """Request to compare metadata between documents."""
+
     source_doc_id: str
     target_doc_id: str
 
 
 class ForensicScanResponse(BaseModel):
     """Response from forensic scan."""
+
     scan: dict
 
 
 class ForensicStatsResponse(BaseModel):
     """Forensic statistics response."""
+
     stats: dict
 
 
@@ -1107,10 +1119,7 @@ async def scan_forensics(
     shard = get_shard(request)
 
     if not shard.forensic_analyzer:
-        raise HTTPException(
-            status_code=503,
-            detail="Forensic analyzer not available"
-        )
+        raise HTTPException(status_code=503, detail="Forensic analyzer not available")
 
     if not shard._db:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -1119,7 +1128,7 @@ async def scan_forensics(
     doc_row = await shard._db.fetch_one(
         """SELECT id, filename, storage_id, mime_type, file_size, metadata
            FROM arkham_frame.documents WHERE id = :doc_id""",
-        {"doc_id": body.doc_id}
+        {"doc_id": body.doc_id},
     )
 
     if not doc_row:
@@ -1130,6 +1139,7 @@ async def scan_forensics(
     metadata = doc_row.get("metadata") or {}
     if isinstance(metadata, str):
         import json
+
         try:
             metadata = json.loads(metadata)
         except json.JSONDecodeError:
@@ -1137,10 +1147,7 @@ async def scan_forensics(
 
     storage_path = metadata.get("storage_path")
     if not storage_id and not storage_path:
-        raise HTTPException(
-            status_code=400,
-            detail="Document has no associated file storage"
-        )
+        raise HTTPException(status_code=400, detail="Document has no associated file storage")
 
     # Read file content using storage service
     try:
@@ -1148,14 +1155,12 @@ async def scan_forensics(
             file_data = (await _storage.retrieve(storage_id))[0]
         elif storage_path:
             from pathlib import Path
+
             file_data = Path(storage_path).read_bytes()
         else:
             raise ValueError("No storage path available")
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to read file: {e}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to read file: {e}")
 
     mime_type = doc_row.get("mime_type", "")
 
@@ -1197,29 +1202,43 @@ async def scan_forensics(
             "make": scan_result.exif_data.make,
             "model": scan_result.exif_data.model,
             "serial_number": scan_result.exif_data.serial_number,
-            "datetime_original": scan_result.exif_data.datetime_original.isoformat() if scan_result.exif_data.datetime_original else None,
-            "datetime_digitized": scan_result.exif_data.datetime_digitized.isoformat() if scan_result.exif_data.datetime_digitized else None,
-            "datetime_modified": scan_result.exif_data.datetime_modified.isoformat() if scan_result.exif_data.datetime_modified else None,
+            "datetime_original": scan_result.exif_data.datetime_original.isoformat()
+            if scan_result.exif_data.datetime_original
+            else None,
+            "datetime_digitized": scan_result.exif_data.datetime_digitized.isoformat()
+            if scan_result.exif_data.datetime_digitized
+            else None,
+            "datetime_modified": scan_result.exif_data.datetime_modified.isoformat()
+            if scan_result.exif_data.datetime_modified
+            else None,
             "gps_latitude": scan_result.exif_data.gps_latitude,
             "gps_longitude": scan_result.exif_data.gps_longitude,
             "gps_altitude": scan_result.exif_data.gps_altitude,
             "software": scan_result.exif_data.software,
             "width": scan_result.exif_data.width,
             "height": scan_result.exif_data.height,
-        } if scan_result.exif_data else None,
+        }
+        if scan_result.exif_data
+        else None,
         "pdf_metadata": {
             "title": scan_result.pdf_metadata.title,
             "author": scan_result.pdf_metadata.author,
             "subject": scan_result.pdf_metadata.subject,
             "creator": scan_result.pdf_metadata.creator,
             "producer": scan_result.pdf_metadata.producer,
-            "creation_date": scan_result.pdf_metadata.creation_date.isoformat() if scan_result.pdf_metadata.creation_date else None,
-            "modification_date": scan_result.pdf_metadata.modification_date.isoformat() if scan_result.pdf_metadata.modification_date else None,
+            "creation_date": scan_result.pdf_metadata.creation_date.isoformat()
+            if scan_result.pdf_metadata.creation_date
+            else None,
+            "modification_date": scan_result.pdf_metadata.modification_date.isoformat()
+            if scan_result.pdf_metadata.modification_date
+            else None,
             "keywords": scan_result.pdf_metadata.keywords,
             "page_count": scan_result.pdf_metadata.page_count,
             "pdf_version": scan_result.pdf_metadata.pdf_version,
             "is_encrypted": scan_result.pdf_metadata.is_encrypted,
-        } if scan_result.pdf_metadata else None,
+        }
+        if scan_result.pdf_metadata
+        else None,
         "office_metadata": {
             "title": scan_result.office_metadata.title,
             "author": scan_result.office_metadata.author,
@@ -1227,12 +1246,16 @@ async def scan_forensics(
             "company": scan_result.office_metadata.company,
             "manager": scan_result.office_metadata.manager,
             "created": scan_result.office_metadata.created.isoformat() if scan_result.office_metadata.created else None,
-            "modified": scan_result.office_metadata.modified.isoformat() if scan_result.office_metadata.modified else None,
+            "modified": scan_result.office_metadata.modified.isoformat()
+            if scan_result.office_metadata.modified
+            else None,
             "last_modified_by": scan_result.office_metadata.last_modified_by,
             "revision": scan_result.office_metadata.revision,
             "keywords": scan_result.office_metadata.keywords,
             "category": scan_result.office_metadata.category,
-        } if scan_result.office_metadata else None,
+        }
+        if scan_result.office_metadata
+        else None,
         "findings": [
             {
                 "finding_type": f.finding_type,
@@ -1295,10 +1318,7 @@ async def compare_forensics(
     shard = get_shard(request)
 
     if not shard.forensic_analyzer:
-        raise HTTPException(
-            status_code=503,
-            detail="Forensic analyzer not available"
-        )
+        raise HTTPException(status_code=503, detail="Forensic analyzer not available")
 
     # Get existing scans for both documents
     source_scans = await shard.get_document_forensic_scans(body.source_doc_id)
@@ -1307,13 +1327,13 @@ async def compare_forensics(
     if not source_scans:
         raise HTTPException(
             status_code=400,
-            detail=f"No forensic scan found for source document {body.source_doc_id}. Run /forensics/scan first."
+            detail=f"No forensic scan found for source document {body.source_doc_id}. Run /forensics/scan first.",
         )
 
     if not target_scans:
         raise HTTPException(
             status_code=400,
-            detail=f"No forensic scan found for target document {body.target_doc_id}. Run /forensics/scan first."
+            detail=f"No forensic scan found for target document {body.target_doc_id}. Run /forensics/scan first.",
         )
 
     # Use most recent scans
@@ -1321,11 +1341,16 @@ async def compare_forensics(
     target_scan = target_scans[0]
 
     # Build MetadataForensicScan objects from stored data
-    from .models import (
-        MetadataForensicScan, ForensicScanStatus, IntegrityStatus,
-        ExifData, PdfMetadata, OfficeMetadata,
-    )
     from datetime import datetime
+
+    from .models import (
+        ExifData,
+        ForensicScanStatus,
+        IntegrityStatus,
+        MetadataForensicScan,
+        OfficeMetadata,
+        PdfMetadata,
+    )
 
     def build_scan_from_dict(scan_dict: dict) -> MetadataForensicScan:
         scan = MetadataForensicScan(
@@ -1380,6 +1405,7 @@ async def compare_forensics(
     # Store comparison result
     if shard._db:
         import json
+
         tenant_id = shard.get_tenant_id_or_none()
         await shard._db.execute(
             """
@@ -1403,10 +1429,12 @@ async def compare_forensics(
                 "similarities": json.dumps(comparison.similarities),
                 "relationship_type": comparison.relationship_type.value if comparison.relationship_type else None,
                 "confidence": comparison.confidence,
-                "created_at": comparison.created_at.isoformat() if comparison.created_at else datetime.utcnow().isoformat(),
+                "created_at": comparison.created_at.isoformat()
+                if comparison.created_at
+                else datetime.utcnow().isoformat(),
                 "metadata": json.dumps(comparison.metadata),
                 "tenant_id": str(tenant_id) if tenant_id else None,
-            }
+            },
         )
 
     return {

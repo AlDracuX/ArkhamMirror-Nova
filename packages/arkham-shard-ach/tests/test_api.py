@@ -4,25 +4,24 @@ ACH Shard - API Tests
 Tests for FastAPI endpoints using TestClient.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi.testclient import TestClient
-from fastapi import FastAPI
 
-from arkham_shard_ach.api import router, init_api
+import pytest
+from arkham_shard_ach.api import init_api, router
 from arkham_shard_ach.models import (
     ACHMatrix,
-    Hypothesis,
-    Evidence,
-    Rating,
-    HypothesisScore,
     ConsistencyRating,
+    Evidence,
     EvidenceType,
-    MatrixStatus,
+    Hypothesis,
+    HypothesisScore,
     MatrixExport,
+    MatrixStatus,
+    Rating,
 )
-
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 # === Test Setup ===
 

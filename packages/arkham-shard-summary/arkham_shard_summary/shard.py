@@ -8,22 +8,22 @@ import logging
 import time
 import uuid
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from arkham_frame.shard_interface import ArkhamShard
 
 from .models import (
-    Summary,
-    SummaryType,
-    SummaryStatus,
+    BatchSummaryRequest,
+    BatchSummaryResult,
     SourceType,
+    Summary,
+    SummaryFilter,
     SummaryLength,
     SummaryRequest,
     SummaryResult,
-    SummaryFilter,
     SummaryStatistics,
-    BatchSummaryRequest,
-    BatchSummaryResult,
+    SummaryStatus,
+    SummaryType,
 )
 
 logger = logging.getLogger(__name__)
@@ -149,6 +149,7 @@ class SummaryShard(ArkhamShard):
     def get_routes(self):
         """Return FastAPI router for this shard."""
         from .api import router
+
         return router
 
     # === Core Summarization Methods ===
@@ -342,11 +343,13 @@ class SummaryShard(ArkhamShard):
                         },
                         priority=5,
                     )
-                    job_ids.append({
-                        "job_id": job_id,
-                        "source_type": req.source_type.value,
-                        "source_ids": req.source_ids,
-                    })
+                    job_ids.append(
+                        {
+                            "job_id": job_id,
+                            "source_type": req.source_type.value,
+                            "source_ids": req.source_ids,
+                        }
+                    )
                 except Exception as e:
                     logger.error(f"Failed to enqueue summary request: {e}")
 
@@ -438,13 +441,10 @@ class SummaryShard(ArkhamShard):
         if tenant_id:
             row = await self._db.fetch_one(
                 "SELECT * FROM arkham_summaries WHERE id = :id AND tenant_id = :tenant_id",
-                {"id": summary_id, "tenant_id": str(tenant_id)}
+                {"id": summary_id, "tenant_id": str(tenant_id)},
             )
         else:
-            row = await self._db.fetch_one(
-                "SELECT * FROM arkham_summaries WHERE id = :id",
-                {"id": summary_id}
-            )
+            row = await self._db.fetch_one("SELECT * FROM arkham_summaries WHERE id = :id", {"id": summary_id})
 
         if row:
             summary = self._row_to_summary(row)
@@ -483,6 +483,7 @@ class SummaryShard(ArkhamShard):
             if filter.source_id:
                 query += " AND source_ids @> :source_id"
                 import json
+
                 params["source_id"] = json.dumps([filter.source_id])
             if filter.status:
                 query += " AND status = :status"
@@ -513,13 +514,10 @@ class SummaryShard(ArkhamShard):
         if tenant_id:
             await self._db.execute(
                 "DELETE FROM arkham_summaries WHERE id = :id AND tenant_id = :tenant_id",
-                {"id": summary_id, "tenant_id": str(tenant_id)}
+                {"id": summary_id, "tenant_id": str(tenant_id)},
             )
         else:
-            await self._db.execute(
-                "DELETE FROM arkham_summaries WHERE id = :id",
-                {"id": summary_id}
-            )
+            await self._db.execute("DELETE FROM arkham_summaries WHERE id = :id", {"id": summary_id})
 
         # Remove from cache
         if summary_id in self._summaries:
@@ -544,7 +542,7 @@ class SummaryShard(ArkhamShard):
         if tenant_id:
             row = await self._db.fetch_one(
                 "SELECT COUNT(*) as count FROM arkham_summaries WHERE tenant_id = :tenant_id",
-                {"tenant_id": str(tenant_id)}
+                {"tenant_id": str(tenant_id)},
             )
         else:
             row = await self._db.fetch_one("SELECT COUNT(*) as count FROM arkham_summaries")
@@ -560,7 +558,9 @@ class SummaryShard(ArkhamShard):
             stats.total_summaries = len(summaries)
             for summary in summaries:
                 stats.by_type[summary.summary_type.value] = stats.by_type.get(summary.summary_type.value, 0) + 1
-                stats.by_source_type[summary.source_type.value] = stats.by_source_type.get(summary.source_type.value, 0) + 1
+                stats.by_source_type[summary.source_type.value] = (
+                    stats.by_source_type.get(summary.source_type.value, 0) + 1
+                )
                 stats.by_status[summary.status.value] = stats.by_status.get(summary.status.value, 0) + 1
             if summaries:
                 stats.avg_confidence = sum(s.confidence for s in summaries) / len(summaries)
@@ -577,15 +577,14 @@ class SummaryShard(ArkhamShard):
         try:
             # Get total count
             total_row = await self._db.fetch_one(
-                f"SELECT COUNT(*) as count FROM arkham_summaries{tenant_filter}",
-                params
+                f"SELECT COUNT(*) as count FROM arkham_summaries{tenant_filter}", params
             )
             stats.total_summaries = total_row["count"] if total_row else 0
 
             # Get counts by type
             type_rows = await self._db.fetch_all(
                 f"SELECT summary_type, COUNT(*) as count FROM arkham_summaries{tenant_filter} GROUP BY summary_type",
-                params
+                params,
             )
             for row in type_rows:
                 stats.by_type[row["summary_type"]] = row["count"]
@@ -593,15 +592,14 @@ class SummaryShard(ArkhamShard):
             # Get counts by source type
             source_rows = await self._db.fetch_all(
                 f"SELECT source_type, COUNT(*) as count FROM arkham_summaries{tenant_filter} GROUP BY source_type",
-                params
+                params,
             )
             for row in source_rows:
                 stats.by_source_type[row["source_type"]] = row["count"]
 
             # Get counts by status
             status_rows = await self._db.fetch_all(
-                f"SELECT status, COUNT(*) as count FROM arkham_summaries{tenant_filter} GROUP BY status",
-                params
+                f"SELECT status, COUNT(*) as count FROM arkham_summaries{tenant_filter} GROUP BY status", params
             )
             for row in status_rows:
                 stats.by_status[row["status"]] = row["count"]
@@ -609,7 +607,7 @@ class SummaryShard(ArkhamShard):
             # Get counts by model
             model_rows = await self._db.fetch_all(
                 f"SELECT model_used, COUNT(*) as count FROM arkham_summaries WHERE model_used IS NOT NULL{tenant_filter_and} GROUP BY model_used",
-                params
+                params,
             )
             for row in model_rows:
                 stats.by_model[row["model_used"]] = row["count"]
@@ -627,7 +625,7 @@ class SummaryShard(ArkhamShard):
                 FROM arkham_summaries
                 WHERE status = 'completed'{tenant_filter_and}
                 """,
-                params
+                params,
             )
             if avg_row:
                 stats.avg_confidence = float(avg_row["avg_confidence"] or 0)
@@ -646,7 +644,7 @@ class SummaryShard(ArkhamShard):
                 FROM arkham_summaries
                 WHERE created_at >= NOW() - INTERVAL '24 hours'{tenant_filter_and}
                 """,
-                params
+                params,
             )
             if recent_row:
                 stats.generated_last_24h = int(recent_row["generated"] or 0)
@@ -668,7 +666,7 @@ class SummaryShard(ArkhamShard):
 
         try:
             # Check if LLM service has required methods
-            return hasattr(self._llm, 'generate') or hasattr(self._llm, 'complete')
+            return hasattr(self._llm, "generate") or hasattr(self._llm, "complete")
         except Exception as e:
             logger.error(f"LLM availability check failed: {e}")
             return False
@@ -679,9 +677,9 @@ class SummaryShard(ArkhamShard):
             return "unknown"
 
         try:
-            if hasattr(self._llm, 'model_name'):
+            if hasattr(self._llm, "model_name"):
                 return self._llm.model_name
-            if hasattr(self._llm, 'get_model_name'):
+            if hasattr(self._llm, "get_model_name"):
                 return await self._llm.get_model_name()
         except Exception:
             pass
@@ -707,18 +705,18 @@ class SummaryShard(ArkhamShard):
 
         try:
             # Call LLM
-            if hasattr(self._llm, 'generate'):
+            if hasattr(self._llm, "generate"):
                 response = await self._llm.generate(prompt)
-            elif hasattr(self._llm, 'complete'):
+            elif hasattr(self._llm, "complete"):
                 response = await self._llm.complete(prompt)
             else:
                 raise RuntimeError("LLM service has no generate/complete method")
 
             # Extract text from LLMResponse object
-            if hasattr(response, 'text'):
+            if hasattr(response, "text"):
                 response_text = response.text
-            elif isinstance(response, dict) and 'text' in response:
-                response_text = response['text']
+            elif isinstance(response, dict) and "text" in response:
+                response_text = response["text"]
             elif isinstance(response, str):
                 response_text = response
             else:
@@ -789,7 +787,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
             Tuple of (content, key_points, title)
         """
         # Simple parsing - in production would be more sophisticated
-        lines = response.strip().split('\n')
+        lines = response.strip().split("\n")
 
         content = response.strip()
         key_points = []
@@ -798,15 +796,15 @@ Length: {length_map.get(request.target_length, "medium-length")}
         # Try to extract title (look for first line that looks like a title)
         if request.include_title and lines:
             first_line = lines[0].strip()
-            if len(first_line) < 100 and not first_line.endswith('.'):
-                title = first_line.strip('#').strip()
-                content = '\n'.join(lines[1:]).strip()
+            if len(first_line) < 100 and not first_line.endswith("."):
+                title = first_line.strip("#").strip()
+                content = "\n".join(lines[1:]).strip()
 
         # Try to extract key points (look for bullet points)
         if request.include_key_points:
             for line in lines:
                 line = line.strip()
-                if line.startswith('- ') or line.startswith('* ') or line.startswith('• '):
+                if line.startswith("- ") or line.startswith("* ") or line.startswith("• "):
                     key_points.append(line[2:].strip())
 
         return content, key_points, title
@@ -829,7 +827,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
             Tuple of (summary_content, key_points, title)
         """
         # Simple extractive summarization
-        sentences = text.split('. ')
+        sentences = text.split(". ")
 
         # Target sentence count based on length
         target_sentences = {
@@ -847,11 +845,11 @@ Length: {length_map.get(request.target_length, "medium-length")}
 
         # Take first N sentences (simple but effective baseline)
         summary_sentences = sentences[:num_sentences]
-        content = '. '.join(summary_sentences)
+        content = ". ".join(summary_sentences)
 
         # Extract key points (first sentence of each paragraph)
-        paragraphs = text.split('\n\n')
-        key_points = [p.split('. ')[0] for p in paragraphs[:5] if p.strip()]
+        paragraphs = text.split("\n\n")
+        key_points = [p.split(". ")[0] for p in paragraphs[:5] if p.strip()]
 
         # Generate simple title
         title = None
@@ -880,6 +878,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
             # Try to parse as JSON first (for complex values)
             try:
                 import json
+
                 return json.loads(value)
             except json.JSONDecodeError:
                 # If it's not valid JSON, it's already the string value
@@ -1033,7 +1032,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                 FROM arkham_frame.documents
                 WHERE id = :id
                 """,
-                {"id": doc_id}
+                {"id": doc_id},
             )
             if row:
                 filename = row.get("filename", "Document")
@@ -1060,7 +1059,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                 FROM arkham_frame.documents
                 WHERE id = :id
                 """,
-                {"id": doc_id}
+                {"id": doc_id},
             )
             if row:
                 filename = row.get("file_name") or "Document"
@@ -1094,7 +1093,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                 WHERE document_id = :doc_id
                 ORDER BY chunk_index
                 """,
-                {"doc_id": doc_id}
+                {"doc_id": doc_id},
             )
             if rows:
                 chunks = [row.get("text", "") for row in rows]
@@ -1124,7 +1123,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                 FROM arkham_entities
                 WHERE id = :id
                 """,
-                {"id": entity_id}
+                {"id": entity_id},
             )
             if row:
                 name = row.get("name", "Unknown")
@@ -1174,7 +1173,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                 FROM arkham_projects
                 WHERE id = :id
                 """,
-                {"id": project_id}
+                {"id": project_id},
             )
             if row:
                 name = row.get("name", "Unknown Project")
@@ -1199,7 +1198,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                     WHERE project_id = :project_id
                     LIMIT 10
                     """,
-                    {"project_id": project_id}
+                    {"project_id": project_id},
                 )
 
                 if doc_rows:
@@ -1237,7 +1236,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                 FROM arkham_claims
                 WHERE id = :id
                 """,
-                {"id": claim_id}
+                {"id": claim_id},
             )
             if row:
                 claim_text = row.get("text", "")
@@ -1253,7 +1252,9 @@ Length: {length_map.get(request.target_length, "medium-length")}
                 content_parts.append(f"**Statement:** {claim_text}")
                 content_parts.append(f"**Status:** {status}")
                 content_parts.append(f"**Confidence:** {confidence * 100:.0f}%")
-                content_parts.append(f"**Evidence:** {evidence_count} total ({supporting} supporting, {refuting} refuting)")
+                content_parts.append(
+                    f"**Evidence:** {evidence_count} total ({supporting} supporting, {refuting} refuting)"
+                )
 
                 if source_context:
                     content_parts.append(f"\n**Context:**\n{source_context}")
@@ -1266,7 +1267,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                     WHERE claim_id = :claim_id
                     LIMIT 10
                     """,
-                    {"claim_id": claim_id}
+                    {"claim_id": claim_id},
                 )
 
                 if evidence_rows:
@@ -1308,7 +1309,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                 FROM arkham_timeline_events
                 WHERE id = :id
                 """,
-                {"id": event_id}
+                {"id": event_id},
             )
             if row:
                 text = row.get("text", "")
@@ -1368,7 +1369,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                 FROM arkham_patterns
                 WHERE id = :id
                 """,
-                {"id": analysis_id}
+                {"id": analysis_id},
             )
             if row:
                 name = row.get("name", "Pattern")
@@ -1395,7 +1396,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                 FROM arkham_anomalies
                 WHERE id = :id
                 """,
-                {"id": analysis_id}
+                {"id": analysis_id},
             )
             if row:
                 anomaly_type = row.get("anomaly_type", "unknown")
@@ -1422,7 +1423,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                 FROM arkham_contradictions
                 WHERE id = :id
                 """,
-                {"id": analysis_id}
+                {"id": analysis_id},
             )
             if row:
                 contradiction_type = row.get("contradiction_type", "unknown")
@@ -1450,6 +1451,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
 
         if self._db:
             import json
+
             # Include tenant_id for multi-tenancy
             tenant_id = self.get_tenant_id_or_none()
             await self._db.execute(
@@ -1500,7 +1502,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                     "metadata": json.dumps(summary.metadata),
                     "tags": json.dumps(summary.tags),
                     "tenant_id": str(tenant_id) if tenant_id else None,
-                }
+                },
             )
 
     async def _create_schema(self) -> None:
@@ -1710,6 +1712,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
 
         try:
             import json
+
             # Filter by tenant_id for multi-tenancy
             tenant_id = self.get_tenant_id_or_none()
             if tenant_id:
@@ -1724,8 +1727,8 @@ Length: {length_map.get(request.target_length, "medium-length")}
                     {
                         "source_type": source_type.value,
                         "source_id": json.dumps([source_id]),
-                        "tenant_id": str(tenant_id)
-                    }
+                        "tenant_id": str(tenant_id),
+                    },
                 )
             else:
                 row = await self._db.fetch_one(
@@ -1735,10 +1738,7 @@ Length: {length_map.get(request.target_length, "medium-length")}
                     AND source_ids @> :source_id
                     LIMIT 1
                     """,
-                    {
-                        "source_type": source_type.value,
-                        "source_id": json.dumps([source_id])
-                    }
+                    {"source_type": source_type.value, "source_id": json.dumps([source_id])},
                 )
             return row is not None
         except Exception as e:

@@ -87,6 +87,7 @@ class LettersShard(ArkhamShard):
     def get_routes(self):
         """Return FastAPI router for this shard."""
         from .api import router
+
         return router
 
     # === Database Schema ===
@@ -435,9 +436,7 @@ class LettersShard(ArkhamShard):
                     [str(tenant_id)],
                 )
             else:
-                result = await self._db.fetch_one(
-                    "SELECT COUNT(*) as count FROM arkham_letters"
-                )
+                result = await self._db.fetch_one("SELECT COUNT(*) as count FROM arkham_letters")
 
         return result["count"] if result else 0
 
@@ -669,6 +668,7 @@ class LettersShard(ArkhamShard):
     ) -> LetterExportResult:
         """Export a letter to a file format."""
         import time
+
         start_time = time.time()
 
         letter = await self.get_letter(letter_id)
@@ -689,7 +689,7 @@ class LettersShard(ArkhamShard):
             file_path = os.path.join(self._letters_dir, file_name)
 
             # Write file
-            with open(file_path, 'wb') as f:
+            with open(file_path, "wb") as f:
                 f.write(file_content)
 
             # Update letter with export info
@@ -804,7 +804,7 @@ class LettersShard(ArkhamShard):
     def _extract_placeholders(self, template: str) -> set:
         """Extract placeholder variables from template string."""
         # Find all {{placeholder}} patterns
-        pattern = r'\{\{(\w+)\}\}'
+        pattern = r"\{\{(\w+)\}\}"
         matches = re.findall(pattern, template)
         return set(matches)
 
@@ -824,7 +824,7 @@ class LettersShard(ArkhamShard):
 
         # Export based on format
         if export_format == ExportFormat.TXT:
-            return full_text.encode('utf-8')
+            return full_text.encode("utf-8")
         elif export_format == ExportFormat.MARKDOWN:
             return self._generate_markdown(letter, letter_data)
         elif export_format == ExportFormat.HTML:
@@ -834,7 +834,7 @@ class LettersShard(ArkhamShard):
         elif export_format == ExportFormat.DOCX:
             return self._generate_docx(letter, letter_data)
         else:
-            return full_text.encode('utf-8')
+            return full_text.encode("utf-8")
 
     def _build_letter_data(self, letter: Letter) -> Dict[str, Any]:
         """Build structured letter data for rendering."""
@@ -912,10 +912,10 @@ class LettersShard(ArkhamShard):
 
     def _generate_markdown(self, letter: Letter, data: Dict[str, Any]) -> bytes:
         """Generate Markdown formatted letter."""
-        md = f"""# {data['title']}
+        md = f"""# {data["title"]}
 
-**Date:** {data['date']}
-**Type:** {data['letter_type'].replace('_', ' ').title()}
+**Date:** {data["date"]}
+**Type:** {data["letter_type"].replace("_", " ").title()}
 
 ---
 
@@ -951,7 +951,7 @@ class LettersShard(ArkhamShard):
         if data["sender_name"]:
             md += data["sender_name"]
 
-        return md.encode('utf-8')
+        return md.encode("utf-8")
 
     def _generate_html(self, letter: Letter, data: Dict[str, Any]) -> bytes:
         """Generate HTML formatted letter."""
@@ -959,7 +959,7 @@ class LettersShard(ArkhamShard):
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>{data['title']}</title>
+    <title>{data["title"]}</title>
     <style>
         body {{ font-family: 'Times New Roman', serif; max-width: 800px; margin: 40px auto; padding: 20px; }}
         .header {{ margin-bottom: 30px; }}
@@ -983,7 +983,7 @@ class LettersShard(ArkhamShard):
             html += f"        <div>{data['sender_email']}</div>\n"
 
         html += f"""    </div>
-    <div class="date">{data['date']}</div>
+    <div class="date">{data["date"]}</div>
     <div class="recipient">
 """
         if data["recipient_name"]:
@@ -1002,7 +1002,7 @@ class LettersShard(ArkhamShard):
 
         salutation = f"Dear {data['recipient_name']}:" if data["recipient_name"] else "Dear Sir/Madam:"
         html += f"""    <div class="salutation">{salutation}</div>
-    <div class="body">{data['content']}</div>
+    <div class="body">{data["content"]}</div>
     <div class="closing">Sincerely,</div>
 """
         if data["sender_name"]:
@@ -1010,47 +1010,53 @@ class LettersShard(ArkhamShard):
 
         html += "</body>\n</html>"
 
-        return html.encode('utf-8')
+        return html.encode("utf-8")
 
     def _generate_pdf(self, letter: Letter, data: Dict[str, Any]) -> bytes:
         """Generate PDF formatted letter using reportlab."""
         try:
+            from io import BytesIO
+
             from reportlab.lib import colors
             from reportlab.lib.pagesizes import letter as LETTER_SIZE
-            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
             from reportlab.lib.units import inch
-            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-            from io import BytesIO
+            from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
         except ImportError:
             logger.error("reportlab not installed - returning text fallback")
-            return self._format_letter_text(data).encode('utf-8')
+            return self._format_letter_text(data).encode("utf-8")
 
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=LETTER_SIZE,
-                                leftMargin=1*inch, rightMargin=1*inch,
-                                topMargin=1*inch, bottomMargin=1*inch)
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=LETTER_SIZE,
+            leftMargin=1 * inch,
+            rightMargin=1 * inch,
+            topMargin=1 * inch,
+            bottomMargin=1 * inch,
+        )
         styles = getSampleStyleSheet()
         story = []
 
         # Define styles
         normal_style = ParagraphStyle(
-            'LetterNormal',
-            parent=styles['Normal'],
-            fontName='Times-Roman',
+            "LetterNormal",
+            parent=styles["Normal"],
+            fontName="Times-Roman",
             fontSize=12,
             leading=16,
         )
         bold_style = ParagraphStyle(
-            'LetterBold',
+            "LetterBold",
             parent=normal_style,
-            fontName='Times-Bold',
+            fontName="Times-Bold",
         )
 
         # Sender header
         if data["sender_name"]:
             story.append(Paragraph(data["sender_name"], bold_style))
         if data["sender_address"]:
-            for line in data["sender_address"].split('\n'):
+            for line in data["sender_address"].split("\n"):
                 story.append(Paragraph(line, normal_style))
         if data["sender_email"]:
             story.append(Paragraph(data["sender_email"], normal_style))
@@ -1065,7 +1071,7 @@ class LettersShard(ArkhamShard):
         if data["recipient_name"]:
             story.append(Paragraph(data["recipient_name"], normal_style))
         if data["recipient_address"]:
-            for line in data["recipient_address"].split('\n'):
+            for line in data["recipient_address"].split("\n"):
                 story.append(Paragraph(line, normal_style))
 
         story.append(Spacer(1, 24))
@@ -1087,9 +1093,9 @@ class LettersShard(ArkhamShard):
         story.append(Spacer(1, 12))
 
         # Body - handle paragraphs
-        for para in data["content"].split('\n\n'):
+        for para in data["content"].split("\n\n"):
             if para.strip():
-                story.append(Paragraph(para.replace('\n', '<br/>'), normal_style))
+                story.append(Paragraph(para.replace("\n", "<br/>"), normal_style))
                 story.append(Spacer(1, 12))
 
         # Closing
@@ -1105,13 +1111,14 @@ class LettersShard(ArkhamShard):
     def _generate_docx(self, letter: Letter, data: Dict[str, Any]) -> bytes:
         """Generate DOCX formatted letter using python-docx."""
         try:
-            from docx import Document
-            from docx.shared import Pt, Inches
-            from docx.enum.text import WD_ALIGN_PARAGRAPH
             from io import BytesIO
+
+            from docx import Document
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
+            from docx.shared import Inches, Pt
         except ImportError:
             logger.error("python-docx not installed - returning text fallback")
-            return self._format_letter_text(data).encode('utf-8')
+            return self._format_letter_text(data).encode("utf-8")
 
         document = Document()
 
@@ -1130,7 +1137,7 @@ class LettersShard(ArkhamShard):
             run.font.size = Pt(12)
 
         if data["sender_address"]:
-            for line in data["sender_address"].split('\n'):
+            for line in data["sender_address"].split("\n"):
                 p = document.add_paragraph(line)
                 p.paragraph_format.space_after = Pt(0)
 
@@ -1151,7 +1158,7 @@ class LettersShard(ArkhamShard):
         if data["recipient_name"]:
             document.add_paragraph(data["recipient_name"])
         if data["recipient_address"]:
-            for line in data["recipient_address"].split('\n'):
+            for line in data["recipient_address"].split("\n"):
                 p = document.add_paragraph(line)
                 p.paragraph_format.space_after = Pt(0)
 
@@ -1185,7 +1192,7 @@ class LettersShard(ArkhamShard):
         document.add_paragraph()
 
         # Body
-        for para in data["content"].split('\n\n'):
+        for para in data["content"].split("\n\n"):
             if para.strip():
                 p = document.add_paragraph(para.strip())
                 p.paragraph_format.space_after = Pt(12)
@@ -1210,6 +1217,7 @@ class LettersShard(ArkhamShard):
             return
 
         import json
+
         tenant_id = self.get_tenant_id_or_none()
         data = (
             letter.id,
@@ -1240,7 +1248,8 @@ class LettersShard(ArkhamShard):
 
         if update:
             if tenant_id:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_letters SET
                         title=?, letter_type=?, status=?, content=?, template_id=?,
                         recipient_name=?, recipient_address=?, recipient_email=?,
@@ -1250,9 +1259,12 @@ class LettersShard(ArkhamShard):
                         last_export_format=?, last_export_path=?, last_exported_at=?,
                         metadata=?, tenant_id=?
                     WHERE id=? AND tenant_id=?
-                """, data[1:] + (letter.id, str(tenant_id)))
+                """,
+                    data[1:] + (letter.id, str(tenant_id)),
+                )
             else:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_letters SET
                         title=?, letter_type=?, status=?, content=?, template_id=?,
                         recipient_name=?, recipient_address=?, recipient_email=?,
@@ -1262,9 +1274,12 @@ class LettersShard(ArkhamShard):
                         last_export_format=?, last_export_path=?, last_exported_at=?,
                         metadata=?
                     WHERE id=?
-                """, data[1:-1] + (letter.id,))
+                """,
+                    data[1:-1] + (letter.id,),
+                )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_letters (
                     id, title, letter_type, status, content, template_id,
                     recipient_name, recipient_address, recipient_email,
@@ -1274,7 +1289,9 @@ class LettersShard(ArkhamShard):
                     last_export_format, last_export_path, last_exported_at,
                     metadata, tenant_id
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, data)
+            """,
+                data,
+            )
 
     async def _save_template(self, template: LetterTemplate, update: bool = False) -> None:
         """Save a template to the database."""
@@ -1282,6 +1299,7 @@ class LettersShard(ArkhamShard):
             return
 
         import json
+
         tenant_id = self.get_tenant_id_or_none()
         data = (
             template.id,
@@ -1303,7 +1321,8 @@ class LettersShard(ArkhamShard):
 
         if update:
             if tenant_id:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_letter_templates SET
                         name=?, letter_type=?, description=?,
                         content_template=?, subject_template=?,
@@ -1311,9 +1330,12 @@ class LettersShard(ArkhamShard):
                         default_sender_name=?, default_sender_address=?, default_sender_email=?,
                         created_at=?, updated_at=?, metadata=?, tenant_id=?
                     WHERE id=? AND tenant_id=?
-                """, data[1:] + (template.id, str(tenant_id)))
+                """,
+                    data[1:] + (template.id, str(tenant_id)),
+                )
             else:
-                await self._db.execute("""
+                await self._db.execute(
+                    """
                     UPDATE arkham_letter_templates SET
                         name=?, letter_type=?, description=?,
                         content_template=?, subject_template=?,
@@ -1321,9 +1343,12 @@ class LettersShard(ArkhamShard):
                         default_sender_name=?, default_sender_address=?, default_sender_email=?,
                         created_at=?, updated_at=?, metadata=?
                     WHERE id=?
-                """, data[1:-1] + (template.id,))
+                """,
+                    data[1:-1] + (template.id,),
+                )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_letter_templates (
                     id, name, letter_type, description,
                     content_template, subject_template,
@@ -1331,11 +1356,14 @@ class LettersShard(ArkhamShard):
                     default_sender_name, default_sender_address, default_sender_email,
                     created_at, updated_at, metadata, tenant_id
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, data)
+            """,
+                data,
+            )
 
     def _row_to_letter(self, row: Dict[str, Any]) -> Letter:
         """Convert database row to Letter object."""
         import json
+
         return Letter(
             id=row["id"],
             title=row["title"],
@@ -1365,6 +1393,7 @@ class LettersShard(ArkhamShard):
     def _row_to_template(self, row: Dict[str, Any]) -> LetterTemplate:
         """Convert database row to LetterTemplate object."""
         import json
+
         return LetterTemplate(
             id=row["id"],
             name=row["name"],

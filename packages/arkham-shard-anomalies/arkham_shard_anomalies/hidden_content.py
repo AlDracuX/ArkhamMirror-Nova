@@ -52,6 +52,7 @@ class HiddenContentDetector:
         if self._magic is None:
             try:
                 import magic
+
                 self._magic = magic.Magic(mime=True)
             except ImportError:
                 logger.warning("python-magic not available - file type detection disabled")
@@ -89,11 +90,7 @@ class HiddenContentDetector:
 
         return entropy
 
-    def analyze_entropy_regions(
-        self,
-        data: bytes,
-        chunk_size: int | None = None
-    ) -> list[EntropyRegion]:
+    def analyze_entropy_regions(self, data: bytes, chunk_size: int | None = None) -> list[EntropyRegion]:
         """
         Analyze entropy in chunks to find high-entropy regions.
 
@@ -115,7 +112,7 @@ class HiddenContentDetector:
         threshold = self.config.entropy_threshold_suspicious
 
         for i in range(0, len(data), chunk_size):
-            chunk = data[i:i + chunk_size]
+            chunk = data[i : i + chunk_size]
             if len(chunk) < 64:  # Skip tiny trailing chunks
                 continue
 
@@ -128,13 +125,15 @@ class HiddenContentDetector:
             elif entropy >= threshold:
                 description = "Elevated entropy (suspicious region)"
 
-            regions.append(EntropyRegion(
-                start_offset=i,
-                end_offset=min(i + chunk_size, len(data)),
-                entropy_value=entropy,
-                is_anomalous=is_anomalous,
-                description=description,
-            ))
+            regions.append(
+                EntropyRegion(
+                    start_offset=i,
+                    end_offset=min(i + chunk_size, len(data)),
+                    entropy_value=entropy,
+                    is_anomalous=is_anomalous,
+                    description=description,
+                )
+            )
 
         return regions
 
@@ -160,8 +159,8 @@ class HiddenContentDetector:
 
         try:
             with Image.open(image_path) as img:
-                if img.mode not in ('RGB', 'RGBA', 'L'):
-                    img = img.convert('RGB')
+                if img.mode not in ("RGB", "RGBA", "L"):
+                    img = img.convert("RGB")
 
                 pixels = list(img.getdata())
                 sample_size = min(len(pixels), self.config.lsb_sample_size)
@@ -195,10 +194,7 @@ class HiddenContentDetector:
                 bit_ratio = ones / len(lsbs)
                 # Very close to 50/50 is suspicious for natural images
                 # Natural images typically have some bias
-                is_suspicious = (
-                    p_value > self.config.chi_square_threshold and
-                    0.48 <= bit_ratio <= 0.52
-                )
+                is_suspicious = p_value > self.config.chi_square_threshold and 0.48 <= bit_ratio <= 0.52
 
                 return LSBAnalysisResult(
                     bit_ratio=bit_ratio,
@@ -213,11 +209,7 @@ class HiddenContentDetector:
             logger.warning(f"LSB analysis failed for {image_path}: {e}")
             return None
 
-    def detect_file_type_mismatch(
-        self,
-        file_path: str,
-        claimed_extension: str
-    ) -> Tuple[bool, str, str]:
+    def detect_file_type_mismatch(self, file_path: str, claimed_extension: str) -> Tuple[bool, str, str]:
         """
         Check if file content matches its extension.
 
@@ -245,41 +237,41 @@ class HiddenContentDetector:
 
         # Mapping of extensions to expected MIME types
         extension_mime_map = {
-            '.jpg': ['image/jpeg'],
-            '.jpeg': ['image/jpeg'],
-            '.png': ['image/png'],
-            '.gif': ['image/gif'],
-            '.bmp': ['image/bmp', 'image/x-ms-bmp'],
-            '.tiff': ['image/tiff'],
-            '.tif': ['image/tiff'],
-            '.webp': ['image/webp'],
-            '.pdf': ['application/pdf'],
-            '.doc': ['application/msword'],
-            '.docx': ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-            '.xls': ['application/vnd.ms-excel'],
-            '.xlsx': ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
-            '.ppt': ['application/vnd.ms-powerpoint'],
-            '.pptx': ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
-            '.txt': ['text/plain'],
-            '.html': ['text/html'],
-            '.htm': ['text/html'],
-            '.xml': ['text/xml', 'application/xml'],
-            '.json': ['application/json', 'text/json'],
-            '.zip': ['application/zip'],
-            '.rar': ['application/x-rar-compressed', 'application/vnd.rar'],
-            '.7z': ['application/x-7z-compressed'],
-            '.tar': ['application/x-tar'],
-            '.gz': ['application/gzip', 'application/x-gzip'],
-            '.mp3': ['audio/mpeg'],
-            '.wav': ['audio/wav', 'audio/x-wav'],
-            '.mp4': ['video/mp4'],
-            '.avi': ['video/x-msvideo'],
+            ".jpg": ["image/jpeg"],
+            ".jpeg": ["image/jpeg"],
+            ".png": ["image/png"],
+            ".gif": ["image/gif"],
+            ".bmp": ["image/bmp", "image/x-ms-bmp"],
+            ".tiff": ["image/tiff"],
+            ".tif": ["image/tiff"],
+            ".webp": ["image/webp"],
+            ".pdf": ["application/pdf"],
+            ".doc": ["application/msword"],
+            ".docx": ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+            ".xls": ["application/vnd.ms-excel"],
+            ".xlsx": ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+            ".ppt": ["application/vnd.ms-powerpoint"],
+            ".pptx": ["application/vnd.openxmlformats-officedocument.presentationml.presentation"],
+            ".txt": ["text/plain"],
+            ".html": ["text/html"],
+            ".htm": ["text/html"],
+            ".xml": ["text/xml", "application/xml"],
+            ".json": ["application/json", "text/json"],
+            ".zip": ["application/zip"],
+            ".rar": ["application/x-rar-compressed", "application/vnd.rar"],
+            ".7z": ["application/x-7z-compressed"],
+            ".tar": ["application/x-tar"],
+            ".gz": ["application/gzip", "application/x-gzip"],
+            ".mp3": ["audio/mpeg"],
+            ".wav": ["audio/wav", "audio/x-wav"],
+            ".mp4": ["video/mp4"],
+            ".avi": ["video/x-msvideo"],
         }
 
         expected_mimes = extension_mime_map.get(claimed_extension.lower(), [])
         is_mismatch = actual_mime not in expected_mimes if expected_mimes else False
 
-        return is_mismatch, ', '.join(expected_mimes) if expected_mimes else 'unknown', actual_mime
+        return is_mismatch, ", ".join(expected_mimes) if expected_mimes else "unknown", actual_mime
 
     def calculate_file_hashes(self, data: bytes) -> dict:
         """
@@ -294,10 +286,11 @@ class HiddenContentDetector:
             Dict with md5, sha256, sha512 hashes
         """
         import hashlib
+
         return {
-            'md5': hashlib.md5(data).hexdigest(),
-            'sha256': hashlib.sha256(data).hexdigest(),
-            'sha512': hashlib.sha512(data).hexdigest(),
+            "md5": hashlib.md5(data).hexdigest(),
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "sha512": hashlib.sha512(data).hexdigest(),
         }
 
     def analyze_histogram(self, image_path: str) -> dict | None:
@@ -321,8 +314,8 @@ class HiddenContentDetector:
 
         try:
             with Image.open(image_path) as img:
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
 
                 # Get histogram for each channel
                 histogram = img.histogram()
@@ -416,43 +409,47 @@ class HiddenContentDetector:
                 high_entropy_regions = [r for r in scan.entropy_regions if r.is_anomalous]
                 if high_entropy_regions:
                     findings.append(f"Found {len(high_entropy_regions)} high-entropy regions")
-                    indicators.append(StegoIndicator(
-                        indicator_type="entropy_spike",
-                        confidence=0.7,
-                        location=f"{len(high_entropy_regions)} regions",
-                        details={"region_count": len(high_entropy_regions)},
-                    ))
+                    indicators.append(
+                        StegoIndicator(
+                            indicator_type="entropy_spike",
+                            confidence=0.7,
+                            location=f"{len(high_entropy_regions)} regions",
+                            details={"region_count": len(high_entropy_regions)},
+                        )
+                    )
 
                 # Check global entropy
                 if scan.entropy_global and scan.entropy_global >= self.config.entropy_threshold_high:
                     findings.append(f"Very high global entropy: {scan.entropy_global:.3f}")
-                    indicators.append(StegoIndicator(
-                        indicator_type="high_global_entropy",
-                        confidence=0.8,
-                        location="global",
-                        details={"entropy": scan.entropy_global},
-                    ))
+                    indicators.append(
+                        StegoIndicator(
+                            indicator_type="high_global_entropy",
+                            confidence=0.8,
+                            location="global",
+                            details={"entropy": scan.entropy_global},
+                        )
+                    )
 
             # 2. File type mismatch detection
             if self.config.detect_magic_mismatch:
-                is_mismatch, expected, actual = self.detect_file_type_mismatch(
-                    file_path, file_extension
-                )
+                is_mismatch, expected, actual = self.detect_file_type_mismatch(file_path, file_extension)
                 scan.magic_expected = expected
                 scan.magic_actual = actual
                 scan.file_mismatch = is_mismatch
 
                 if is_mismatch:
                     findings.append(f"File type mismatch: expected {expected}, found {actual}")
-                    indicators.append(StegoIndicator(
-                        indicator_type="file_type_mismatch",
-                        confidence=0.9,
-                        location="global",
-                        details={"expected": expected, "actual": actual},
-                    ))
+                    indicators.append(
+                        StegoIndicator(
+                            indicator_type="file_type_mismatch",
+                            confidence=0.9,
+                            location="global",
+                            details={"expected": expected, "actual": actual},
+                        )
+                    )
 
             # 3. LSB analysis for images
-            is_image = mime_type and 'image' in mime_type.lower()
+            is_image = mime_type and "image" in mime_type.lower()
             if self.config.detect_lsb and is_image:
                 lsb_result = self.analyze_lsb_image(file_path)
                 if lsb_result:
@@ -463,30 +460,32 @@ class HiddenContentDetector:
                             f"Suspicious LSB pattern: {lsb_result.bit_ratio:.3f} ratio, "
                             f"p-value={lsb_result.chi_square_p_value:.4f}"
                         )
-                        indicators.append(StegoIndicator(
-                            indicator_type="lsb_pattern",
-                            confidence=lsb_result.confidence,
-                            location="pixel_lsbs",
-                            details={
-                                "bit_ratio": lsb_result.bit_ratio,
-                                "chi_square": lsb_result.chi_square_value,
-                                "p_value": lsb_result.chi_square_p_value,
-                            },
-                        ))
+                        indicators.append(
+                            StegoIndicator(
+                                indicator_type="lsb_pattern",
+                                confidence=lsb_result.confidence,
+                                location="pixel_lsbs",
+                                details={
+                                    "bit_ratio": lsb_result.bit_ratio,
+                                    "chi_square": lsb_result.chi_square_value,
+                                    "p_value": lsb_result.chi_square_p_value,
+                                },
+                            )
+                        )
 
             # 4. Histogram analysis for images
             if self.config.detect_histogram and is_image:
                 hist_result = self.analyze_histogram(file_path)
                 if hist_result and hist_result.get("is_suspicious"):
-                    findings.append(
-                        f"Suspicious histogram pattern: pair ratio {hist_result['average_pair_ratio']:.3f}"
+                    findings.append(f"Suspicious histogram pattern: pair ratio {hist_result['average_pair_ratio']:.3f}")
+                    indicators.append(
+                        StegoIndicator(
+                            indicator_type="histogram_anomaly",
+                            confidence=0.6,
+                            location="color_histogram",
+                            details=hist_result,
+                        )
                     )
-                    indicators.append(StegoIndicator(
-                        indicator_type="histogram_anomaly",
-                        confidence=0.6,
-                        location="color_histogram",
-                        details=hist_result,
-                    ))
 
             scan.findings = findings
             scan.stego_indicators = indicators

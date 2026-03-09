@@ -196,7 +196,11 @@ export function useLLMConfig() {
     return res.json();
   };
 
-  const testConnection = async (): Promise<{ success: boolean; response?: { text: string; model?: string } | string; error?: string }> => {
+  const testConnection = async (): Promise<{
+    success: boolean;
+    response?: { text: string; model?: string } | string;
+    error?: string;
+  }> => {
     const res = await fetch('/api/dashboard/llm/test', { method: 'POST' });
     return res.json();
   };
@@ -216,7 +220,10 @@ export function useLLMConfig() {
     refresh();
   }, [refresh]);
 
-  const setFallbackModels = async (models: string[], enabled: boolean = true): Promise<{ success: boolean; error?: string }> => {
+  const setFallbackModels = async (
+    models: string[],
+    enabled: boolean = true
+  ): Promise<{ success: boolean; error?: string }> => {
     const res = await fetch('/api/dashboard/llm/fallback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -229,7 +236,16 @@ export function useLLMConfig() {
     return data;
   };
 
-  return { config, loading, error, refresh, updateConfig, testConnection, resetConfig, setFallbackModels };
+  return {
+    config,
+    loading,
+    error,
+    refresh,
+    updateConfig,
+    testConnection,
+    resetConfig,
+    setFallbackModels,
+  };
 }
 
 // Database hook
@@ -263,7 +279,9 @@ export function useDatabase() {
     return res.json();
   };
 
-  const resetDatabase = async (confirm: boolean): Promise<{ success: boolean; message: string }> => {
+  const resetDatabase = async (
+    confirm: boolean
+  ): Promise<{ success: boolean; message: string }> => {
     const res = await fetch('/api/dashboard/database/reset', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -288,7 +306,17 @@ export function useDatabase() {
     refresh();
   }, [refresh]);
 
-  return { info, stats, loading, error, refresh, runMigrations, resetDatabase, vacuumDatabase, getTableInfo };
+  return {
+    info,
+    stats,
+    loading,
+    error,
+    refresh,
+    runMigrations,
+    resetDatabase,
+    vacuumDatabase,
+    getTableInfo,
+  };
 }
 
 // Queues hook with auto-refresh
@@ -512,7 +540,9 @@ export const workerActions = {
     return res.json();
   },
 
-  start: async (queue: string): Promise<{ success: boolean; worker_id?: string; error?: string }> => {
+  start: async (
+    queue: string
+  ): Promise<{ success: boolean; worker_id?: string; error?: string }> => {
     const res = await fetch('/api/dashboard/workers/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -542,7 +572,10 @@ export const workerActions = {
 
 // Queue management actions
 export const queueActions = {
-  clear: async (pool: string, status?: string): Promise<{ success: boolean; cleared?: number; error?: string }> => {
+  clear: async (
+    pool: string,
+    status?: string
+  ): Promise<{ success: boolean; cleared?: number; error?: string }> => {
     const res = await fetch('/api/dashboard/queues/clear', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -551,7 +584,10 @@ export const queueActions = {
     return res.json();
   },
 
-  retryFailed: async (pool: string, job_ids?: string[]): Promise<{ success: boolean; count?: number; error?: string }> => {
+  retryFailed: async (
+    pool: string,
+    job_ids?: string[]
+  ): Promise<{ success: boolean; count?: number; error?: string }> => {
     const res = await fetch('/api/dashboard/jobs/retry', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

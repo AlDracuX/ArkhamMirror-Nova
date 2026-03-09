@@ -9,8 +9,8 @@ from arkham_frame.shard_interface import ArkhamShard
 from .api import init_api, router
 from .detector import AnomalyDetector
 from .hidden_content import HiddenContentDetector
+from .models import Anomaly, DetectionConfig, HiddenContentConfig, HiddenContentScan
 from .storage import AnomalyStore
-from .models import DetectionConfig, Anomaly, HiddenContentConfig, HiddenContentScan
 
 logger = logging.getLogger(__name__)
 
@@ -395,10 +395,13 @@ class AnomaliesShard(ArkhamShard):
             # Queue deep analysis if workers available
             if self._workers:
                 try:
-                    await self._workers.enqueue("anomaly-detection", {
-                        "doc_id": doc_id,
-                        "detection_types": ["content", "statistical", "metadata"],
-                    })
+                    await self._workers.enqueue(
+                        "anomaly-detection",
+                        {
+                            "doc_id": doc_id,
+                            "detection_types": ["content", "statistical", "metadata"],
+                        },
+                    )
                     logger.debug(f"Queued deep analysis for {doc_id}")
                 except Exception as worker_err:
                     logger.warning(f"Failed to queue deep analysis: {worker_err}")
@@ -458,10 +461,13 @@ class AnomaliesShard(ArkhamShard):
             # Queue deep analysis for metadata-focused detection
             if self._workers:
                 try:
-                    await self._workers.enqueue("anomaly-detection", {
-                        "doc_id": doc_id,
-                        "detection_types": ["metadata", "statistical"],
-                    })
+                    await self._workers.enqueue(
+                        "anomaly-detection",
+                        {
+                            "doc_id": doc_id,
+                            "detection_types": ["metadata", "statistical"],
+                        },
+                    )
                     logger.debug(f"Queued metadata analysis for {doc_id}")
                 except Exception as worker_err:
                     logger.warning(f"Failed to queue metadata analysis: {worker_err}")
@@ -492,7 +498,7 @@ class AnomaliesShard(ArkhamShard):
             doc_row = await self._db_service.fetch_one(
                 """SELECT id, filename, file_size, mime_type, created_at, metadata
                    FROM arkham_frame.documents WHERE id = :doc_id""",
-                {"doc_id": doc_id}
+                {"doc_id": doc_id},
             )
 
             if not doc_row:
@@ -521,7 +527,7 @@ class AnomaliesShard(ArkhamShard):
                 """SELECT text FROM arkham_frame.chunks
                    WHERE document_id = :doc_id
                    ORDER BY chunk_index""",
-                {"doc_id": doc_id}
+                {"doc_id": doc_id},
             )
 
             if not chunk_rows:
@@ -562,17 +568,13 @@ class AnomaliesShard(ArkhamShard):
             # Statistical anomalies - needs corpus stats
             corpus_stats = await self._get_corpus_stats()
             if corpus_stats:
-                stat_anomalies = self.detector.detect_statistical_anomalies(
-                    doc_id, text, corpus_stats
-                )
+                stat_anomalies = self.detector.detect_statistical_anomalies(doc_id, text, corpus_stats)
                 all_anomalies.extend(stat_anomalies)
 
             # Metadata anomalies - needs corpus metadata stats
             corpus_metadata_stats = await self._get_corpus_metadata_stats()
             if corpus_metadata_stats:
-                meta_anomalies = self.detector.detect_metadata_anomalies(
-                    doc_id, metadata, corpus_metadata_stats
-                )
+                meta_anomalies = self.detector.detect_metadata_anomalies(doc_id, metadata, corpus_metadata_stats)
                 all_anomalies.extend(meta_anomalies)
 
             # Content anomalies - needs vector service
@@ -632,13 +634,13 @@ class AnomaliesShard(ArkhamShard):
 
             # Build corpus stats structure
             corpus_stats = {
-                'char_count': {
-                    'mean': float(row.get('avg_char_count') or 0),
-                    'std': float(row.get('avg_char_count', 0) or 0) * 0.5,
+                "char_count": {
+                    "mean": float(row.get("avg_char_count") or 0),
+                    "std": float(row.get("avg_char_count", 0) or 0) * 0.5,
                 },
-                'word_count': {
-                    'mean': float(row.get('avg_word_count') or 0),
-                    'std': float(row.get('avg_word_count', 0) or 0) * 0.5,
+                "word_count": {
+                    "mean": float(row.get("avg_word_count") or 0),
+                    "std": float(row.get("avg_word_count", 0) or 0) * 0.5,
                 },
             }
 
@@ -671,16 +673,16 @@ class AnomaliesShard(ArkhamShard):
             if not row:
                 return {}
 
-            avg_size = float(row.get('avg_size') or 0)
-            min_size = float(row.get('min_size') or 0)
-            max_size = float(row.get('max_size') or 0)
+            avg_size = float(row.get("avg_size") or 0)
+            min_size = float(row.get("min_size") or 0)
+            max_size = float(row.get("max_size") or 0)
 
             estimated_std = (max_size - min_size) / 4 if max_size > min_size else avg_size * 0.5
 
             return {
-                'file_size': {
-                    'mean': avg_size,
-                    'std': estimated_std,
+                "file_size": {
+                    "mean": avg_size,
+                    "std": estimated_std,
                 }
             }
 
@@ -701,6 +703,7 @@ class AnomaliesShard(ArkhamShard):
         """
         import uuid
         from datetime import datetime
+
         from .models import AnomalyType, SeverityLevel
 
         if not self._vector_service or not self.detector:
@@ -708,7 +711,7 @@ class AnomaliesShard(ArkhamShard):
 
         try:
             # Check if vector text search is available (embeds text then searches)
-            if hasattr(self._vector_service, 'search_text'):
+            if hasattr(self._vector_service, "search_text"):
                 # Search for similar documents using text query
                 # search_text handles embedding internally
                 results = await self._vector_service.search_text(
@@ -720,18 +723,22 @@ class AnomaliesShard(ArkhamShard):
                 # If this document is very different from results, it might be anomalous
                 if results and len(results) > 0:
                     # SearchResult is a dataclass with .score attribute
-                    avg_score = sum(r.score if hasattr(r, 'score') else r.get('score', 0) for r in results) / len(results)
+                    avg_score = sum(r.score if hasattr(r, "score") else r.get("score", 0) for r in results) / len(
+                        results
+                    )
                     if avg_score < 0.3:  # Low similarity to corpus
-                        return [Anomaly(
-                            id=str(uuid.uuid4()),
-                            doc_id=doc_id,
-                            anomaly_type=AnomalyType.CONTENT,
-                            score=1.0 - avg_score,
-                            severity=SeverityLevel.MEDIUM,
-                            confidence=0.7,
-                            explanation=f"Document is semantically distant from corpus (avg similarity: {avg_score:.2f})",
-                            details={'avg_similarity': avg_score, 'compared_to': len(results)},
-                        )]
+                        return [
+                            Anomaly(
+                                id=str(uuid.uuid4()),
+                                doc_id=doc_id,
+                                anomaly_type=AnomalyType.CONTENT,
+                                score=1.0 - avg_score,
+                                severity=SeverityLevel.MEDIUM,
+                                confidence=0.7,
+                                explanation=f"Document is semantically distant from corpus (avg similarity: {avg_score:.2f})",
+                                details={"avg_similarity": avg_score, "compared_to": len(results)},
+                            )
+                        ]
 
             return []
 
@@ -804,11 +811,13 @@ class AnomaliesShard(ArkhamShard):
                     all_anomalies.extend(red_flags)
 
                 # Deep analysis
-                if any([
-                    detection_config.detect_statistical,
-                    detection_config.detect_metadata,
-                    detection_config.detect_content
-                ]):
+                if any(
+                    [
+                        detection_config.detect_statistical,
+                        detection_config.detect_metadata,
+                        detection_config.detect_content,
+                    ]
+                ):
                     deep_anomalies = await self._run_deep_analysis(doc_id, text, metadata)
                     # Deep analysis already stores anomalies, just collect them
                     all_anomalies.extend(deep_anomalies)
@@ -865,20 +874,14 @@ class AnomaliesShard(ArkhamShard):
 
         # Statistical checks
         corpus_stats = {}  # Would be fetched from database
-        anomalies.extend(
-            self.detector.detect_statistical_anomalies(doc_id, text, corpus_stats)
-        )
+        anomalies.extend(self.detector.detect_statistical_anomalies(doc_id, text, corpus_stats))
 
         # Red flag checks
-        anomalies.extend(
-            self.detector.detect_red_flags(doc_id, text, metadata)
-        )
+        anomalies.extend(self.detector.detect_red_flags(doc_id, text, metadata))
 
         # Metadata checks
         corpus_metadata_stats = {}  # Would be fetched from database
-        anomalies.extend(
-            self.detector.detect_metadata_anomalies(doc_id, metadata, corpus_metadata_stats)
-        )
+        anomalies.extend(self.detector.detect_metadata_anomalies(doc_id, metadata, corpus_metadata_stats))
 
         # Store detected anomalies
         if self.store:
@@ -944,16 +947,18 @@ class AnomaliesShard(ArkhamShard):
         tenant_id = self.get_tenant_id_or_none()
 
         # Convert complex objects to JSON strings
-        entropy_regions = json.dumps([
-            {
-                "start_offset": r.start_offset,
-                "end_offset": r.end_offset,
-                "entropy_value": r.entropy_value,
-                "is_anomalous": r.is_anomalous,
-                "description": r.description,
-            }
-            for r in scan.entropy_regions
-        ])
+        entropy_regions = json.dumps(
+            [
+                {
+                    "start_offset": r.start_offset,
+                    "end_offset": r.end_offset,
+                    "entropy_value": r.entropy_value,
+                    "is_anomalous": r.is_anomalous,
+                    "description": r.description,
+                }
+                for r in scan.entropy_regions
+            ]
+        )
 
         lsb_analysis = json.dumps(
             {
@@ -963,18 +968,22 @@ class AnomaliesShard(ArkhamShard):
                 "is_suspicious": scan.lsb_result.is_suspicious,
                 "confidence": scan.lsb_result.confidence,
                 "sample_size": scan.lsb_result.sample_size,
-            } if scan.lsb_result else {}
+            }
+            if scan.lsb_result
+            else {}
         )
 
-        stego_indicators = json.dumps([
-            {
-                "indicator_type": i.indicator_type,
-                "confidence": i.confidence,
-                "location": i.location,
-                "details": i.details,
-            }
-            for i in scan.stego_indicators
-        ])
+        stego_indicators = json.dumps(
+            [
+                {
+                    "indicator_type": i.indicator_type,
+                    "confidence": i.confidence,
+                    "location": i.location,
+                    "details": i.details,
+                }
+                for i in scan.stego_indicators
+            ]
+        )
 
         await self._db_service.execute(
             """
@@ -1007,7 +1016,7 @@ class AnomaliesShard(ArkhamShard):
                 "completed_at": scan.completed_at.isoformat() if scan.completed_at else None,
                 "metadata": json.dumps(scan.metadata),
                 "tenant_id": str(tenant_id) if tenant_id else None,
-            }
+            },
         )
 
     async def get_hidden_content_scan(self, scan_id: str) -> Optional[Dict[str, Any]]:
@@ -1082,8 +1091,7 @@ class AnomaliesShard(ArkhamShard):
 
         # Total scans
         total_row = await self._db_service.fetch_one(
-            f"SELECT COUNT(*) as count FROM arkham_anomalies.hidden_content_scans{tenant_filter}",
-            params
+            f"SELECT COUNT(*) as count FROM arkham_anomalies.hidden_content_scans{tenant_filter}", params
         )
         total_scans = total_row.get("count", 0) if total_row else 0
 
@@ -1092,7 +1100,7 @@ class AnomaliesShard(ArkhamShard):
             f"""SELECT scan_type, COUNT(*) as count
                 FROM arkham_anomalies.hidden_content_scans{tenant_filter}
                 GROUP BY scan_type""",
-            params
+            params,
         )
         scans_by_type = {row["scan_type"]: row["count"] for row in type_rows} if type_rows else {}
 
@@ -1100,8 +1108,8 @@ class AnomaliesShard(ArkhamShard):
         findings_row = await self._db_service.fetch_one(
             f"""SELECT COUNT(DISTINCT doc_id) as count
                 FROM arkham_anomalies.hidden_content_scans
-                WHERE findings != '[]'{' AND tenant_id = :tenant_id' if tenant_id else ''}""",
-            params
+                WHERE findings != '[]'{" AND tenant_id = :tenant_id" if tenant_id else ""}""",
+            params,
         )
         docs_with_findings = findings_row.get("count", 0) if findings_row else 0
 
@@ -1109,8 +1117,8 @@ class AnomaliesShard(ArkhamShard):
         entropy_row = await self._db_service.fetch_one(
             f"""SELECT COUNT(*) as count
                 FROM arkham_anomalies.hidden_content_scans
-                WHERE entropy_score >= 7.5{' AND tenant_id = :tenant_id' if tenant_id else ''}""",
-            params
+                WHERE entropy_score >= 7.5{" AND tenant_id = :tenant_id" if tenant_id else ""}""",
+            params,
         )
         high_entropy = entropy_row.get("count", 0) if entropy_row else 0
 
@@ -1118,8 +1126,8 @@ class AnomaliesShard(ArkhamShard):
         stego_row = await self._db_service.fetch_one(
             f"""SELECT COUNT(*) as count
                 FROM arkham_anomalies.hidden_content_scans
-                WHERE stego_confidence >= 0.5{' AND tenant_id = :tenant_id' if tenant_id else ''}""",
-            params
+                WHERE stego_confidence >= 0.5{" AND tenant_id = :tenant_id" if tenant_id else ""}""",
+            params,
         )
         stego_candidates = stego_row.get("count", 0) if stego_row else 0
 

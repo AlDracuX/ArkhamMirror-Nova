@@ -3,9 +3,10 @@ Project API endpoints.
 """
 
 from dataclasses import asdict
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
 
 router = APIRouter()
 
@@ -22,22 +23,24 @@ def _project_to_dict(project) -> Dict[str, Any]:
     if "updated_at" in result and result["updated_at"]:
         result["updated_at"] = result["updated_at"].isoformat()
     # Get status from settings if available
-    settings = result.get('settings') or {}
-    result['status'] = settings.get('status', 'active')
-    result['owner_id'] = settings.get('owner_id', 'system')
+    settings = result.get("settings") or {}
+    result["status"] = settings.get("status", "active")
+    result["owner_id"] = settings.get("owner_id", "system")
     # Add fields expected by UI (with defaults if missing)
-    result.setdefault('member_count', 0)
-    result.setdefault('document_count', 0)
+    result.setdefault("member_count", 0)
+    result.setdefault("document_count", 0)
     return result
 
 
 class SetActiveProjectRequest(BaseModel):
     """Request body for setting active project."""
+
     project_id: Optional[str] = None
 
 
 class CreateProjectRequest(BaseModel):
     """Request body for creating a project."""
+
     name: str
     description: Optional[str] = None
     embedding_model: Optional[str] = None
@@ -46,6 +49,7 @@ class CreateProjectRequest(BaseModel):
 
 class UpdateProjectRequest(BaseModel):
     """Request body for updating a project."""
+
     name: Optional[str] = None
     description: Optional[str] = None
 
@@ -153,18 +157,12 @@ async def set_active_project(request: SetActiveProjectRequest) -> Dict[str, Any]
         try:
             await frame.projects.get_project(request.project_id)
         except ProjectNotFoundError:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Project {request.project_id} not found"
-            )
+            raise HTTPException(status_code=404, detail=f"Project {request.project_id} not found")
 
     # Set active project
     success = await frame.set_active_project(request.project_id)
     if not success:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Failed to set active project {request.project_id}"
-        )
+        raise HTTPException(status_code=400, detail=f"Failed to set active project {request.project_id}")
 
     # Get project details
     project = None
@@ -229,9 +227,8 @@ async def create_project(request: CreateProjectRequest) -> Dict[str, Any]:
                 except Exception as e:
                     # Log but don't fail project creation
                     import logging
-                    logging.getLogger(__name__).warning(
-                        f"Failed to create collection {collection_name}: {e}"
-                    )
+
+                    logging.getLogger(__name__).warning(f"Failed to create collection {collection_name}: {e}")
 
         return _project_to_dict(project)
     except ProjectExistsError:
@@ -243,6 +240,7 @@ async def create_project(request: CreateProjectRequest) -> Dict[str, Any]:
 
 class EmbeddingModelInfo(BaseModel):
     """Information about an embedding model."""
+
     name: str
     dimensions: int
     description: str
@@ -368,7 +366,7 @@ async def archive_project(project_id: str) -> Dict[str, Any]:
         # Update project settings with archived status
         project = await frame.projects.get_project(project_id)
         settings = project.settings or {}
-        settings['status'] = 'archived'
+        settings["status"] = "archived"
         await frame.projects.update_project(project_id=project_id, settings=settings)
         project = await frame.projects.get_project(project_id)
         return _project_to_dict(project)
@@ -391,7 +389,7 @@ async def restore_project(project_id: str) -> Dict[str, Any]:
         # Update project settings with active status
         project = await frame.projects.get_project(project_id)
         settings = project.settings or {}
-        settings['status'] = 'active'
+        settings["status"] = "active"
         await frame.projects.update_project(project_id=project_id, settings=settings)
         project = await frame.projects.get_project(project_id)
         return _project_to_dict(project)
@@ -432,10 +430,7 @@ async def get_project_embedding_model(project_id: str) -> Dict[str, Any]:
         project = await frame.projects.get_project(project_id)
         settings = project.settings or {}
         model = settings.get("embedding_model", DEFAULT_EMBEDDING_MODEL)
-        dimensions = settings.get(
-            "embedding_dimensions",
-            KNOWN_EMBEDDING_MODELS.get(model, {}).get("dimensions", 384)
-        )
+        dimensions = settings.get("embedding_dimensions", KNOWN_EMBEDDING_MODELS.get(model, {}).get("dimensions", 384))
 
         return {
             "project_id": project_id,
@@ -449,6 +444,7 @@ async def get_project_embedding_model(project_id: str) -> Dict[str, Any]:
 
 class EmbeddingModelUpdate(BaseModel):
     """Request to update embedding model."""
+
     model: str
     wipe_collections: bool = False
 

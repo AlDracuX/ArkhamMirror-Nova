@@ -9,6 +9,7 @@ from typing import Any
 
 class FileCategory(Enum):
     """High-level file categories."""
+
     DOCUMENT = "document"
     IMAGE = "image"
     AUDIO = "audio"
@@ -18,20 +19,23 @@ class FileCategory(Enum):
 
 class ImageQuality(Enum):
     """Image quality classification."""
-    CLEAN = "clean"      # Direct to OCR
+
+    CLEAN = "clean"  # Direct to OCR
     FIXABLE = "fixable"  # Light preprocessing needed
-    MESSY = "messy"      # Heavy preprocessing or smart OCR
+    MESSY = "messy"  # Heavy preprocessing or smart OCR
 
 
 class JobPriority(Enum):
     """Job priority levels."""
-    USER = 1      # User-initiated uploads (highest)
-    BATCH = 2     # Batch imports
-    REPROCESS = 3 # Re-processing requests
+
+    USER = 1  # User-initiated uploads (highest)
+    BATCH = 2  # Batch imports
+    REPROCESS = 3  # Re-processing requests
 
 
 class JobStatus(Enum):
     """Job processing status."""
+
     PENDING = "pending"
     QUEUED = "queued"
     PROCESSING = "processing"
@@ -43,6 +47,7 @@ class JobStatus(Enum):
 @dataclass
 class FileInfo:
     """Information about an ingested file."""
+
     path: Path
     original_name: str
     size_bytes: int
@@ -69,8 +74,9 @@ class ImageQualityScore:
     Quality assessment for images.
     Used to route to appropriate OCR worker.
     """
+
     dpi: int
-    skew_angle: float      # degrees
+    skew_angle: float  # degrees
     contrast_ratio: float  # 0.0 - 1.0
     is_grayscale: bool
     compression_ratio: float
@@ -138,6 +144,7 @@ class ImageQualityScore:
 @dataclass
 class IngestJob:
     """A job in the ingest pipeline."""
+
     id: str
     file_info: FileInfo
     priority: JobPriority
@@ -169,6 +176,7 @@ class IngestJob:
 @dataclass
 class IngestBatch:
     """A batch of files being ingested together."""
+
     id: str
     jobs: list[IngestJob] = field(default_factory=list)
     priority: JobPriority = JobPriority.BATCH

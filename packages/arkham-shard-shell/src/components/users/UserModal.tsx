@@ -128,9 +128,7 @@ export function UserModal({ user, onClose, onSave }: UserModalProps) {
                 autoFocus
                 className={errors.email ? 'error' : ''}
               />
-              {errors.email && (
-                <span className="error-message">{errors.email}</span>
-              )}
+              {errors.email && <span className="error-message">{errors.email}</span>}
             </div>
           )}
 
@@ -159,9 +157,7 @@ export function UserModal({ user, onClose, onSave }: UserModalProps) {
                 placeholder="Minimum 8 characters"
                 className={errors.password ? 'error' : ''}
               />
-              {errors.password && (
-                <span className="error-message">{errors.password}</span>
-              )}
+              {errors.password && <span className="error-message">{errors.password}</span>}
             </div>
           )}
 
@@ -175,9 +171,7 @@ export function UserModal({ user, onClose, onSave }: UserModalProps) {
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="John Doe"
             />
-            <span className="form-hint">
-              Optional. If not set, email username will be used.
-            </span>
+            <span className="form-hint">Optional. If not set, email username will be used.</span>
           </div>
 
           {/* Role */}
@@ -212,9 +206,7 @@ export function UserModal({ user, onClose, onSave }: UserModalProps) {
           {isEdit && (
             <div className="form-group">
               <label className="toggle-label">
-                <span className="toggle-text">
-                  Account Status
-                </span>
+                <span className="toggle-text">Account Status</span>
                 <div className="toggle-switch">
                   <input
                     type="checkbox"
@@ -234,19 +226,10 @@ export function UserModal({ user, onClose, onSave }: UserModalProps) {
           )}
 
           <div className="modal-actions">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={onClose}
-              disabled={saving}
-            >
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>
               Cancel
             </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={saving}
-            >
+            <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? (
                 <>
                   <Icon name="Loader2" size={16} className="spin" />

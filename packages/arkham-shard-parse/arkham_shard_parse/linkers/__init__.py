@@ -1,7 +1,7 @@
 """Entity linking and coreference resolution."""
 
-from .entity_linker import EntityLinker
 from .coreference import CoreferenceResolver
+from .entity_linker import EntityLinker
 
 __all__ = [
     "EntityLinker",

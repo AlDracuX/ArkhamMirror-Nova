@@ -6,10 +6,10 @@ from datetime import timedelta
 from typing import Optional
 
 from .models import (
-    TimelineEvent,
-    TemporalConflict,
-    ConflictType,
     ConflictSeverity,
+    ConflictType,
+    TemporalConflict,
+    TimelineEvent,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,9 +36,7 @@ class ConflictDetector:
         self.tolerance_days = tolerance_days
 
     def detect_conflicts(
-        self,
-        events: list[TimelineEvent],
-        conflict_types: Optional[list[ConflictType]] = None
+        self, events: list[TimelineEvent], conflict_types: Optional[list[ConflictType]] = None
     ) -> list[TemporalConflict]:
         """
         Detect all conflicts in a set of events.
@@ -69,10 +67,7 @@ class ConflictDetector:
 
         return conflicts
 
-    def _detect_contradictions(
-        self,
-        events: list[TimelineEvent]
-    ) -> list[TemporalConflict]:
+    def _detect_contradictions(self, events: list[TimelineEvent]) -> list[TemporalConflict]:
         """
         Detect contradictory dates for similar events.
 
@@ -116,21 +111,16 @@ class ConflictDetector:
                                     documents=[event1.document_id, event2.document_id],
                                     suggested_resolution="verify_source",
                                     metadata={
-                                        "date_diff_days": abs(
-                                            (event1.date_start - event2.date_start).days
-                                        ),
+                                        "date_diff_days": abs((event1.date_start - event2.date_start).days),
                                         "text1": event1.text,
                                         "text2": event2.text,
-                                    }
+                                    },
                                 )
                                 conflicts.append(conflict)
 
         return conflicts
 
-    def _detect_inconsistencies(
-        self,
-        events: list[TimelineEvent]
-    ) -> list[TemporalConflict]:
+    def _detect_inconsistencies(self, events: list[TimelineEvent]) -> list[TemporalConflict]:
         """
         Detect logically inconsistent date sequences.
 
@@ -150,10 +140,7 @@ class ConflictDetector:
 
         for doc_id, doc_events in by_document.items():
             # Sort by position in text
-            sorted_events = sorted(
-                [e for e in doc_events if e.span],
-                key=lambda e: e.span[0]
-            )
+            sorted_events = sorted([e for e in doc_events if e.span], key=lambda e: e.span[0])
 
             # Check for temporal markers that indicate sequence
             for i in range(len(sorted_events) - 1):
@@ -191,16 +178,13 @@ class ConflictDetector:
                                 metadata={
                                     "text1": event1.text,
                                     "text2": event2.text,
-                                }
+                                },
                             )
                             conflicts.append(conflict)
 
         return conflicts
 
-    def _detect_gaps(
-        self,
-        events: list[TimelineEvent]
-    ) -> list[TemporalConflict]:
+    def _detect_gaps(self, events: list[TimelineEvent]) -> list[TemporalConflict]:
         """
         Detect unexpected gaps in timeline.
 
@@ -250,16 +234,13 @@ class ConflictDetector:
                     metadata={
                         "gap_days": gap_days,
                         "median_gap": median_gap,
-                    }
+                    },
                 )
                 conflicts.append(conflict)
 
         return conflicts
 
-    def _detect_overlaps(
-        self,
-        events: list[TimelineEvent]
-    ) -> list[TemporalConflict]:
+    def _detect_overlaps(self, events: list[TimelineEvent]) -> list[TemporalConflict]:
         """
         Detect incompatible overlapping events.
 
@@ -312,17 +293,13 @@ class ConflictDetector:
                                 "entity_id": entity_id,
                                 "text1": event1.text,
                                 "text2": event2.text,
-                            }
+                            },
                         )
                         conflicts.append(conflict)
 
         return conflicts
 
-    def _are_similar_events(
-        self,
-        event1: TimelineEvent,
-        event2: TimelineEvent
-    ) -> bool:
+    def _are_similar_events(self, event1: TimelineEvent, event2: TimelineEvent) -> bool:
         """
         Check if two events might refer to the same occurrence.
 
@@ -350,11 +327,7 @@ class ConflictDetector:
 
         return False
 
-    def _dates_match(
-        self,
-        date1,
-        date2
-    ) -> bool:
+    def _dates_match(self, date1, date2) -> bool:
         """
         Check if two dates match within tolerance.
 
@@ -368,11 +341,7 @@ class ConflictDetector:
         diff_days = abs((date1 - date2).days)
         return diff_days <= self.tolerance_days
 
-    def _assess_severity(
-        self,
-        event1: TimelineEvent,
-        event2: TimelineEvent
-    ) -> ConflictSeverity:
+    def _assess_severity(self, event1: TimelineEvent, event2: TimelineEvent) -> ConflictSeverity:
         """
         Assess the severity of a conflict between two events.
 

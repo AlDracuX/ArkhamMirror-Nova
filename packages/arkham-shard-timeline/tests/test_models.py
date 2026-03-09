@@ -4,26 +4,26 @@ Timeline Shard - Model Tests
 Tests for the data models used by the Timeline shard.
 """
 
-import pytest
-from datetime import datetime
 from dataclasses import asdict
+from datetime import datetime
 
+import pytest
 from arkham_shard_timeline.models import (
-    EventType,
-    DatePrecision,
-    ConflictType,
     ConflictSeverity,
-    MergeStrategy,
-    TimelineEvent,
+    ConflictType,
+    DatePrecision,
     DateRange,
+    EntityTimeline,
+    EventType,
     ExtractionContext,
+    ExtractionResult,
+    MergeResult,
+    MergeStrategy,
     NormalizedDate,
     TemporalConflict,
-    TimelineStats,
-    MergeResult,
-    ExtractionResult,
+    TimelineEvent,
     TimelineQuery,
-    EntityTimeline,
+    TimelineStats,
 )
 
 
@@ -486,9 +486,7 @@ class TestTimelineQuery:
 
     def test_with_event_types(self):
         """Test query with event types."""
-        query = TimelineQuery(
-            event_types=[EventType.OCCURRENCE, EventType.DEADLINE]
-        )
+        query = TimelineQuery(event_types=[EventType.OCCURRENCE, EventType.DEADLINE])
         assert len(query.event_types) == 2
 
     def test_with_date_range(self):

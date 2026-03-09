@@ -5,8 +5,8 @@ Extracts named entities from text using spaCy's en_core_web_sm model.
 Returns entity text, type, position, and confidence scores.
 """
 
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
 
 from arkham_frame.workers.base import BaseWorker
 
@@ -99,8 +99,7 @@ class NERWorker(BaseWorker):
 
         except OSError:
             cls._model_error = (
-                "spaCy model 'en_core_web_sm' not found. "
-                "Install with: python -m spacy download en_core_web_sm"
+                "spaCy model 'en_core_web_sm' not found. Install with: python -m spacy download en_core_web_sm"
             )
             logger.error(cls._model_error)
             return None
@@ -165,10 +164,7 @@ class NERWorker(BaseWorker):
 
                 entities.append(entity)
 
-            logger.info(
-                f"Extracted {len(entities)} entities from text "
-                f"(doc_id={doc_id}, chunk_id={chunk_id})"
-            )
+            logger.info(f"Extracted {len(entities)} entities from text (doc_id={doc_id}, chunk_id={chunk_id})")
 
             return {
                 "success": True,

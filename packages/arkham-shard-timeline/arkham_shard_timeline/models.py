@@ -8,35 +8,39 @@ from typing import Any, Optional
 
 class EventType(Enum):
     """Timeline event types."""
+
     OCCURRENCE = "occurrence"  # Event that happened
-    REFERENCE = "reference"    # Reference to a date
-    DEADLINE = "deadline"      # Future deadline or target date
-    PERIOD = "period"          # Time period or range
+    REFERENCE = "reference"  # Reference to a date
+    DEADLINE = "deadline"  # Future deadline or target date
+    PERIOD = "period"  # Time period or range
 
 
 class DatePrecision(Enum):
     """Date precision levels."""
-    EXACT = "exact"          # Exact timestamp
-    DAY = "day"              # Day precision
-    WEEK = "week"            # Week precision
-    MONTH = "month"          # Month precision
-    QUARTER = "quarter"      # Quarter precision
-    YEAR = "year"            # Year precision
-    DECADE = "decade"        # Decade precision
-    CENTURY = "century"      # Century precision
+
+    EXACT = "exact"  # Exact timestamp
+    DAY = "day"  # Day precision
+    WEEK = "week"  # Week precision
+    MONTH = "month"  # Month precision
+    QUARTER = "quarter"  # Quarter precision
+    YEAR = "year"  # Year precision
+    DECADE = "decade"  # Decade precision
+    CENTURY = "century"  # Century precision
     APPROXIMATE = "approximate"  # Approximate/fuzzy
 
 
 class ConflictType(Enum):
     """Types of temporal conflicts."""
-    CONTRADICTION = "contradiction"      # Direct contradiction
-    INCONSISTENCY = "inconsistency"      # Logical inconsistency
-    GAP = "gap"                          # Missing timeline segment
-    OVERLAP = "overlap"                  # Incompatible overlap
+
+    CONTRADICTION = "contradiction"  # Direct contradiction
+    INCONSISTENCY = "inconsistency"  # Logical inconsistency
+    GAP = "gap"  # Missing timeline segment
+    OVERLAP = "overlap"  # Incompatible overlap
 
 
 class ConflictSeverity(Enum):
     """Conflict severity levels."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -45,9 +49,10 @@ class ConflictSeverity(Enum):
 
 class MergeStrategy(Enum):
     """Timeline merge strategies."""
-    CHRONOLOGICAL = "chronological"      # Simple chronological sort
-    DEDUPLICATED = "deduplicated"        # Remove duplicates
-    CONSOLIDATED = "consolidated"        # Merge similar events
+
+    CHRONOLOGICAL = "chronological"  # Simple chronological sort
+    DEDUPLICATED = "deduplicated"  # Remove duplicates
+    CONSOLIDATED = "consolidated"  # Merge similar events
     SOURCE_PRIORITY = "source_priority"  # Prioritize certain sources
 
 
@@ -69,6 +74,7 @@ class TimelineEvent:
         span: Character span in source text (start, end)
         metadata: Additional context and data
     """
+
     id: str
     document_id: str
     text: str
@@ -85,6 +91,7 @@ class TimelineEvent:
 @dataclass
 class DateRange:
     """Date range for filtering."""
+
     start: Optional[datetime] = None
     end: Optional[datetime] = None
 
@@ -92,6 +99,7 @@ class DateRange:
 @dataclass
 class ExtractionContext:
     """Context for date extraction."""
+
     reference_date: Optional[datetime] = None  # Reference for relative dates
     timezone: str = "UTC"
     prefer_future: bool = False  # For ambiguous relative dates
@@ -101,6 +109,7 @@ class ExtractionContext:
 @dataclass
 class NormalizedDate:
     """Result of date normalization."""
+
     original: str
     normalized: datetime
     precision: DatePrecision
@@ -124,6 +133,7 @@ class TemporalConflict:
         suggested_resolution: Suggested way to resolve
         metadata: Additional context
     """
+
     id: str
     type: ConflictType
     severity: ConflictSeverity
@@ -137,6 +147,7 @@ class TemporalConflict:
 @dataclass
 class TimelineStats:
     """Statistics about a timeline."""
+
     total_events: int
     total_documents: int
     date_range: DateRange
@@ -150,6 +161,7 @@ class TimelineStats:
 @dataclass
 class MergeResult:
     """Result of merging timelines."""
+
     events: list[TimelineEvent]
     count: int
     sources: dict[str, int]  # document_id -> event_count
@@ -162,6 +174,7 @@ class MergeResult:
 @dataclass
 class ExtractionResult:
     """Result of event extraction."""
+
     events: list[TimelineEvent]
     count: int
     duration_ms: float = 0.0
@@ -172,6 +185,7 @@ class ExtractionResult:
 @dataclass
 class TimelineQuery:
     """Query parameters for timeline retrieval."""
+
     document_ids: Optional[list[str]] = None
     entity_ids: Optional[list[str]] = None
     event_types: Optional[list[EventType]] = None
@@ -184,6 +198,7 @@ class TimelineQuery:
 @dataclass
 class EntityTimeline:
     """Timeline for a specific entity."""
+
     entity_id: str
     events: list[TimelineEvent]
     count: int

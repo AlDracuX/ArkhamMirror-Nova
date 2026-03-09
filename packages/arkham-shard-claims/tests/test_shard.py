@@ -4,22 +4,21 @@ Claims Shard - Shard Class Tests
 Tests for ClaimsShard with mocked Frame services.
 """
 
-import pytest
+import json
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-import json
 
-from arkham_shard_claims.shard import ClaimsShard
+import pytest
 from arkham_shard_claims.models import (
+    ClaimFilter,
     ClaimStatus,
     ClaimType,
-    EvidenceType,
     EvidenceRelationship,
     EvidenceStrength,
+    EvidenceType,
     ExtractionMethod,
-    ClaimFilter,
 )
-
+from arkham_shard_claims.shard import ClaimsShard
 
 # === Fixtures ===
 
@@ -151,9 +150,7 @@ class TestInitialization:
 
         # Verify subscribe was called
         assert mock_frame.events.subscribe.called
-        subscribed_events = [
-            call[0][0] for call in mock_frame.events.subscribe.call_args_list
-        ]
+        subscribed_events = [call[0][0] for call in mock_frame.events.subscribe.call_args_list]
         assert "document.processed" in subscribed_events
         assert "entity.created" in subscribed_events
 
@@ -390,10 +387,12 @@ class TestExtraction:
     @pytest.mark.asyncio
     async def test_extract_claims_from_text(self, initialized_shard, mock_frame):
         """Test extracting claims from text with LLM."""
-        mock_frame.llm.complete.return_value = json.dumps([
-            {"text": "Claim one", "type": "factual", "confidence": 0.9},
-            {"text": "Claim two", "type": "opinion", "confidence": 0.7},
-        ])
+        mock_frame.llm.complete.return_value = json.dumps(
+            [
+                {"text": "Claim one", "type": "factual", "confidence": 0.9},
+                {"text": "Claim two", "type": "opinion", "confidence": 0.7},
+            ]
+        )
 
         result = await initialized_shard.extract_claims_from_text(
             text="Some text with claims.",
@@ -550,12 +549,12 @@ class TestStatistics:
         # Mock various stat queries
         mock_frame.database.fetch_one.side_effect = [
             {"count": 100},  # total
-            {"count": 75},   # evidence total
-            {"count": 60},   # supporting
-            {"count": 15},   # refuting
-            {"count": 80},   # with evidence
-            {"avg": 0.87},   # avg confidence
-            {"avg": 2.5},    # avg evidence
+            {"count": 75},  # evidence total
+            {"count": 60},  # supporting
+            {"count": 15},  # refuting
+            {"count": 80},  # with evidence
+            {"avg": 0.87},  # avg confidence
+            {"avg": 2.5},  # avg evidence
         ]
         mock_frame.database.fetch_all.side_effect = [
             [{"status": "verified", "count": 50}, {"status": "unverified", "count": 50}],

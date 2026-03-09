@@ -42,7 +42,11 @@ export function EmbedPage() {
   const [switchCheckResult, setSwitchCheckResult] = useState<ModelSwitchCheckResult | null>(null);
 
   const { data: models, loading: loadingModels } = useModels();
-  const { data: availableModels, loading: loadingAvailable, refetch: refetchAvailable } = useAvailableModels();
+  const {
+    data: availableModels,
+    loading: loadingAvailable,
+    refetch: refetchAvailable,
+  } = useAvailableModels();
   const { data: collections, refetch: refetchCollections } = useVectorCollections();
   const { data: cacheStats, loading: loadingCache, refetch: refetchCache } = useCacheStats();
   const { search, data: searchResults, loading: searching } = useNearest();
@@ -51,7 +55,12 @@ export function EmbedPage() {
   const { switchTo: switchModelAPI, loading: switchingModel } = useSwitchModel();
 
   // Document embedding hooks
-  const { fetch: fetchDocs, data: docsData, loading: loadingDocs, refetch: refetchDocs } = useDocumentsForEmbedding(onlyUnembedded);
+  const {
+    fetch: fetchDocs,
+    data: docsData,
+    loading: loadingDocs,
+    refetch: refetchDocs,
+  } = useDocumentsForEmbedding(onlyUnembedded);
   const { embed: batchEmbed, loading: batchEmbedding } = useBatchEmbedDocuments();
 
   // Auto-refresh cache stats
@@ -68,7 +77,7 @@ export function EmbedPage() {
     fetchDocs();
   }, [fetchDocs, onlyUnembedded]);
 
-  const currentModel = models?.find(m => m.loaded) || availableModels?.find(m => m.is_current);
+  const currentModel = models?.find((m) => m.loaded) || availableModels?.find((m) => m.is_current);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -85,7 +94,7 @@ export function EmbedPage() {
 
   // Document selection handlers
   const handleDocumentSelect = (docId: string) => {
-    setSelectedDocIds(prev => {
+    setSelectedDocIds((prev) => {
       const next = new Set(prev);
       if (next.has(docId)) {
         next.delete(docId);
@@ -98,7 +107,7 @@ export function EmbedPage() {
 
   const handleSelectAll = () => {
     if (!docsData?.documents) return;
-    const allIds = docsData.documents.map(d => d.id);
+    const allIds = docsData.documents.map((d) => d.id);
     setSelectedDocIds(new Set(allIds));
   };
 
@@ -108,7 +117,7 @@ export function EmbedPage() {
 
   const handleSelectUnembedded = () => {
     if (!docsData?.documents) return;
-    const unembeddedIds = docsData.documents.filter(d => !d.has_embeddings).map(d => d.id);
+    const unembeddedIds = docsData.documents.filter((d) => !d.has_embeddings).map((d) => d.id);
     setSelectedDocIds(new Set(unembeddedIds));
   };
 
@@ -121,7 +130,9 @@ export function EmbedPage() {
     try {
       const result = await batchEmbed(Array.from(selectedDocIds));
       if (result.summary.queued_count > 0) {
-        toast.success(`Queued ${result.summary.queued_count} documents (${result.summary.total_chunks} chunks) for embedding`);
+        toast.success(
+          `Queued ${result.summary.queued_count} documents (${result.summary.total_chunks} chunks) for embedding`
+        );
       }
       if (result.summary.skipped_count > 0) {
         toast.info(`Skipped ${result.summary.skipped_count} documents (no chunks)`);
@@ -248,9 +259,7 @@ export function EmbedPage() {
           <Icon name="Sparkles" size={28} />
           <div>
             <h1>Embeddings</h1>
-            <p className="page-description">
-              Vector embeddings and semantic similarity operations
-            </p>
+            <p className="page-description">Vector embeddings and semantic similarity operations</p>
           </div>
         </div>
       </header>
@@ -315,7 +324,8 @@ export function EmbedPage() {
             Switch Embedding Model
           </h2>
           <p className="section-description">
-            Select a different embedding model. Different dimensions require wiping the vector database.
+            Select a different embedding model. Different dimensions require wiping the vector
+            database.
           </p>
         </div>
 
@@ -355,12 +365,14 @@ export function EmbedPage() {
                   </span>
                 </div>
                 <p className="model-option-desc">{model.description}</p>
-                {currentModel && model.dimensions !== currentModel.dimensions && !model.is_current && (
-                  <div className="dimension-warning">
-                    <Icon name="AlertTriangle" size={14} />
-                    Requires database wipe ({currentModel.dimensions}D → {model.dimensions}D)
-                  </div>
-                )}
+                {currentModel &&
+                  model.dimensions !== currentModel.dimensions &&
+                  !model.is_current && (
+                    <div className="dimension-warning">
+                      <Icon name="AlertTriangle" size={14} />
+                      Requires database wipe ({currentModel.dimensions}D → {model.dimensions}D)
+                    </div>
+                  )}
               </div>
             ))}
           </div>
@@ -395,29 +407,31 @@ export function EmbedPage() {
       {/* Wipe Confirmation Modal */}
       {showWipeConfirm && switchCheckResult && (
         <div className="modal-overlay" onClick={handleCancelWipe}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <Icon name="AlertTriangle" size={24} className="warning-icon" />
               <h3>Vector Database Wipe Required</h3>
             </div>
             <div className="modal-body">
               <p className="warning-text">
-                Switching from <strong>{switchCheckResult.current_model}</strong> ({switchCheckResult.current_dimensions}D)
-                to <strong>{switchCheckResult.new_model}</strong> ({switchCheckResult.new_dimensions}D)
+                Switching from <strong>{switchCheckResult.current_model}</strong> (
+                {switchCheckResult.current_dimensions}D) to{' '}
+                <strong>{switchCheckResult.new_model}</strong> ({switchCheckResult.new_dimensions}D)
                 requires wiping all vector embeddings.
               </p>
               {switchCheckResult.affected_collections.length > 0 && (
                 <div className="affected-collections">
                   <p>The following collections will be wiped:</p>
                   <ul>
-                    {switchCheckResult.affected_collections.map(name => (
+                    {switchCheckResult.affected_collections.map((name) => (
                       <li key={name}>{name}</li>
                     ))}
                   </ul>
                   {switchCheckResult.total_vectors_affected !== undefined && (
                     <p className="vectors-count">
                       <Icon name="AlertCircle" size={14} />
-                      {formatNumber(switchCheckResult.total_vectors_affected)} vectors will be deleted
+                      {formatNumber(switchCheckResult.total_vectors_affected)} vectors will be
+                      deleted
                     </p>
                   )}
                 </div>
@@ -430,7 +444,11 @@ export function EmbedPage() {
               <button className="button-secondary" onClick={handleCancelWipe}>
                 Cancel
               </button>
-              <button className="button-danger" onClick={handleConfirmWipe} disabled={switchingModel}>
+              <button
+                className="button-danger"
+                onClick={handleConfirmWipe}
+                disabled={switchingModel}
+              >
                 {switchingModel ? (
                   <>
                     <Icon name="Loader" size={16} className="spinner" />
@@ -460,9 +478,7 @@ export function EmbedPage() {
             <Icon name="Search" size={20} />
             Nearest Neighbor Search
           </h2>
-          <p className="section-description">
-            Find semantically similar vectors in the database
-          </p>
+          <p className="section-description">Find semantically similar vectors in the database</p>
         </div>
 
         <div className="search-controls">
@@ -473,8 +489,8 @@ export function EmbedPage() {
               className="search-input"
               placeholder="Enter query text to find similar vectors..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
           </div>
 
@@ -484,7 +500,7 @@ export function EmbedPage() {
               <select
                 className="option-select"
                 value={searchLimit}
-                onChange={e => setSearchLimit(Number(e.target.value))}
+                onChange={(e) => setSearchLimit(Number(e.target.value))}
               >
                 <option value={5}>5</option>
                 <option value={10}>10</option>
@@ -519,9 +535,7 @@ export function EmbedPage() {
               <span className="results-count">
                 {searchResults.total} result{searchResults.total !== 1 ? 's' : ''}
               </span>
-              <span className="results-meta">
-                Query: {searchResults.query_dimensions}D vector
-              </span>
+              <span className="results-meta">Query: {searchResults.query_dimensions}D vector</span>
             </div>
 
             {searchResults.neighbors.length === 0 ? (
@@ -540,7 +554,12 @@ export function EmbedPage() {
                         <span
                           className="result-score"
                           style={{
-                            color: neighbor.score >= 0.8 ? '#22c55e' : neighbor.score >= 0.6 ? '#3b82f6' : '#f59e0b',
+                            color:
+                              neighbor.score >= 0.8
+                                ? '#22c55e'
+                                : neighbor.score >= 0.6
+                                  ? '#3b82f6'
+                                  : '#f59e0b',
                           }}
                         >
                           {Math.round(neighbor.score * 100)}% similar
@@ -548,12 +567,14 @@ export function EmbedPage() {
                       </div>
                       {neighbor.payload && Object.keys(neighbor.payload).length > 0 && (
                         <div className="result-payload">
-                          {Object.entries(neighbor.payload).slice(0, 3).map(([key, value]) => (
-                            <span key={key} className="payload-item">
-                              <strong>{key}:</strong> {String(value).substring(0, 50)}
-                              {String(value).length > 50 ? '...' : ''}
-                            </span>
-                          ))}
+                          {Object.entries(neighbor.payload)
+                            .slice(0, 3)
+                            .map(([key, value]) => (
+                              <span key={key} className="payload-item">
+                                <strong>{key}:</strong> {String(value).substring(0, 50)}
+                                {String(value).length > 50 ? '...' : ''}
+                              </span>
+                            ))}
                         </div>
                       )}
                     </div>
@@ -572,9 +593,7 @@ export function EmbedPage() {
             <Icon name="FileCode" size={20} />
             Embed Documents
           </h2>
-          <p className="section-description">
-            Select documents to queue for embedding
-          </p>
+          <p className="section-description">Select documents to queue for embedding</p>
         </div>
 
         <div className="document-controls">
@@ -592,7 +611,7 @@ export function EmbedPage() {
               <input
                 type="checkbox"
                 checked={onlyUnembedded}
-                onChange={e => setOnlyUnembedded(e.target.checked)}
+                onChange={(e) => setOnlyUnembedded(e.target.checked)}
               />
               Show only unembedded
             </label>
@@ -652,7 +671,7 @@ export function EmbedPage() {
                     type="checkbox"
                     checked={selectedDocIds.has(doc.id)}
                     onChange={() => handleDocumentSelect(doc.id)}
-                    onClick={e => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                   />
                 </span>
                 <span className="col-title">
@@ -698,11 +717,7 @@ export function EmbedPage() {
             <Icon name="Database" size={20} />
             Embedding Statistics
           </h2>
-          <button
-            className="button-secondary"
-            onClick={handleClearCache}
-            disabled={clearingCache}
-          >
+          <button className="button-secondary" onClick={handleClearCache} disabled={clearingCache}>
             {clearingCache ? (
               <>
                 <Icon name="Loader" size={14} className="spinner" />

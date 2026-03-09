@@ -28,7 +28,7 @@ class ResultRanker:
         Returns:
             Sorted results
         """
-        reverse = (sort_order == SortOrder.DESC)
+        reverse = sort_order == SortOrder.DESC
 
         if sort_by == SortBy.RELEVANCE:
             key_func = lambda x: x.score
@@ -71,7 +71,7 @@ class ResultRanker:
 
             if matches > 0:
                 # Boost score based on number of matching entities
-                result.score *= (1.0 + boost * matches)
+                result.score *= 1.0 + boost * matches
 
         return sorted(results, key=lambda x: x.score, reverse=True)
 
@@ -115,10 +115,7 @@ class ResultRanker:
             recency_score = 1.0 / (1.0 + age_days * 0.1)
 
             # Blend with original score
-            result.score = (
-                result.score * (1.0 - decay_factor) +
-                recency_score * decay_factor
-            )
+            result.score = result.score * (1.0 - decay_factor) + recency_score * decay_factor
 
         return sorted(results, key=lambda x: x.score, reverse=True)
 
@@ -173,11 +170,11 @@ class ResultRanker:
         for result in results:
             # Check title for exact match
             if query_lower in result.title.lower():
-                result.score *= (1.0 + boost)
+                result.score *= 1.0 + boost
 
             # Check excerpt for exact match
             elif query_lower in result.excerpt.lower():
-                result.score *= (1.0 + boost * 0.5)  # Smaller boost for excerpt
+                result.score *= 1.0 + boost * 0.5  # Smaller boost for excerpt
 
         return sorted(results, key=lambda x: x.score, reverse=True)
 

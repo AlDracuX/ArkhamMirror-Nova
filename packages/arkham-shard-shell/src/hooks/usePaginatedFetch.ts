@@ -77,9 +77,7 @@ export function usePaginatedFetch<T>(
   const [localPageSize, setLocalPageSize] = useState(effectiveDefaultPageSize);
 
   // Determine current page and pageSize based on sync mode
-  const page = syncToUrl
-    ? parseInt(searchParams.get('page') || '1', 10)
-    : localPage;
+  const page = syncToUrl ? parseInt(searchParams.get('page') || '1', 10) : localPage;
   const pageSize = syncToUrl
     ? parseInt(searchParams.get('page_size') || String(effectiveDefaultPageSize), 10)
     : localPageSize;
@@ -151,31 +149,37 @@ export function usePaginatedFetch<T>(
   }, [fetchData]);
 
   // Pagination controls
-  const setPage = useCallback((newPage: number) => {
-    if (syncToUrl) {
-      setSearchParams(prev => {
-        const next = new URLSearchParams(prev);
-        next.set('page', String(newPage));
-        return next;
-      });
-    } else {
-      setLocalPage(newPage);
-    }
-  }, [syncToUrl, setSearchParams]);
+  const setPage = useCallback(
+    (newPage: number) => {
+      if (syncToUrl) {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('page', String(newPage));
+          return next;
+        });
+      } else {
+        setLocalPage(newPage);
+      }
+    },
+    [syncToUrl, setSearchParams]
+  );
 
-  const setPageSizeHandler = useCallback((newSize: number) => {
-    if (syncToUrl) {
-      setSearchParams(prev => {
-        const next = new URLSearchParams(prev);
-        next.set('page_size', String(newSize));
-        next.set('page', '1'); // Reset to first page
-        return next;
-      });
-    } else {
-      setLocalPageSize(newSize);
-      setLocalPage(1);
-    }
-  }, [syncToUrl, setSearchParams]);
+  const setPageSizeHandler = useCallback(
+    (newSize: number) => {
+      if (syncToUrl) {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('page_size', String(newSize));
+          next.set('page', '1'); // Reset to first page
+          return next;
+        });
+      } else {
+        setLocalPageSize(newSize);
+        setLocalPage(1);
+      }
+    },
+    [syncToUrl, setSearchParams]
+  );
 
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / pageSize);

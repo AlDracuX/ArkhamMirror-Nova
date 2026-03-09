@@ -81,7 +81,9 @@ export async function updateMatrix(
   });
 }
 
-export async function deleteMatrix(matrixId: string): Promise<{ status: string; matrix_id: string }> {
+export async function deleteMatrix(
+  matrixId: string
+): Promise<{ status: string; matrix_id: string }> {
   return fetchAPI(`/matrix/${matrixId}`, {
     method: 'DELETE',
   });
@@ -239,10 +241,7 @@ export async function suggestEvidence(data: {
   });
 }
 
-export async function suggestRatings(data: {
-  matrix_id: string;
-  evidence_id: string;
-}): Promise<{
+export async function suggestRatings(data: { matrix_id: string; evidence_id: string }): Promise<{
   matrix_id: string;
   evidence_id: string;
   suggestions: {
@@ -406,7 +405,10 @@ export async function searchCorpusAll(
   minSimilarity: number = 0.5
 ): Promise<{
   matrix_id: string;
-  by_hypothesis: Record<string, { hypothesis_title: string; results: ExtractedEvidence[]; count: number }>;
+  by_hypothesis: Record<
+    string,
+    { hypothesis_title: string; results: ExtractedEvidence[]; count: number }
+  >;
   total_results: number;
 }> {
   const params = new URLSearchParams({
@@ -461,7 +463,9 @@ export async function getPremortem(premortemId: string): Promise<PremortemAnalys
   return fetchAPI(`/premortem/${premortemId}`);
 }
 
-export async function deletePremortem(premortemId: string): Promise<{ status: string; premortem_id: string }> {
+export async function deletePremortem(
+  premortemId: string
+): Promise<{ status: string; premortem_id: string }> {
   return fetchAPI(`/premortem/${premortemId}`, {
     method: 'DELETE',
   });
@@ -514,7 +518,9 @@ export async function getScenarioTree(treeId: string): Promise<ScenarioTree> {
   return fetchAPI(`/scenarios/${treeId}`);
 }
 
-export async function deleteScenarioTree(treeId: string): Promise<{ status: string; tree_id: string }> {
+export async function deleteScenarioTree(
+  treeId: string
+): Promise<{ status: string; tree_id: string }> {
   return fetchAPI(`/scenarios/${treeId}`, {
     method: 'DELETE',
   });

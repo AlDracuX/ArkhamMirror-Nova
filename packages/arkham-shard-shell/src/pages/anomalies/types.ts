@@ -5,7 +5,13 @@
  */
 
 // Anomaly types
-export type AnomalyType = 'content' | 'metadata' | 'temporal' | 'structural' | 'statistical' | 'red_flag';
+export type AnomalyType =
+  | 'content'
+  | 'metadata'
+  | 'temporal'
+  | 'structural'
+  | 'statistical'
+  | 'red_flag';
 
 // Anomaly status
 export type AnomalyStatus = 'detected' | 'confirmed' | 'dismissed' | 'false_positive';

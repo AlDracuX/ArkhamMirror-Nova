@@ -50,7 +50,6 @@ function NavBadge({ shardName, subRouteId }: { shardName: string; subRouteId?: s
 
 function NavItem({ manifest, sidebarCollapsed }: NavItemProps) {
   const { navigation, name } = manifest;
-  
 
   return (
     <div className="nav-item-wrapper">
@@ -69,10 +68,7 @@ function NavItem({ manifest, sidebarCollapsed }: NavItemProps) {
             </>
           )}
         </NavLink>
-
-
       </div>
-
     </div>
   );
 }
@@ -106,13 +102,10 @@ function NavGroup({
           <Icon name="ChevronDown" size={14} className="nav-group-chevron" />
         </button>
       )}
-      {!categoryCollapsed && shards.map(shard => (
-        <NavItem
-          key={shard.name}
-          manifest={shard}
-          sidebarCollapsed={sidebarCollapsed}
-        />
-      ))}
+      {!categoryCollapsed &&
+        shards.map((shard) => (
+          <NavItem key={shard.name} manifest={shard} sidebarCollapsed={sidebarCollapsed} />
+        ))}
     </div>
   );
 }
@@ -144,7 +137,7 @@ export function Sidebar() {
 
   // Toggle category collapse
   const toggleCategory = useCallback((category: string) => {
-    setCollapseState(prev => ({
+    setCollapseState((prev) => ({
       ...prev,
       categories: {
         ...prev.categories,
@@ -154,12 +147,15 @@ export function Sidebar() {
   }, []);
 
   // Group shards by category
-  const groupedShards = CATEGORY_ORDER.reduce((acc, category) => {
-    acc[category] = shards
-      .filter(s => s.navigation.category === category)
-      .sort((a, b) => a.navigation.order - b.navigation.order);
-    return acc;
-  }, {} as Record<string, ShardManifest[]>);
+  const groupedShards = CATEGORY_ORDER.reduce(
+    (acc, category) => {
+      acc[category] = shards
+        .filter((s) => s.navigation.category === category)
+        .sort((a, b) => a.navigation.order - b.navigation.order);
+      return acc;
+    },
+    {} as Record<string, ShardManifest[]>
+  );
 
   return (
     <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
@@ -183,7 +179,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="sidebar-nav">
-        {CATEGORY_ORDER.map(category => (
+        {CATEGORY_ORDER.map((category) => (
           <NavGroup
             key={category}
             category={category}

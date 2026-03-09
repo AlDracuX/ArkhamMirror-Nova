@@ -101,14 +101,24 @@ export function ExportPage() {
   // Fetch data
   const { data: formats, loading: _formatsLoading } = useFetch<FormatInfo[]>('/api/export/formats');
   const { data: targets, loading: _targetsLoading } = useFetch<TargetInfo[]>('/api/export/targets');
-  const { data: jobs, loading: jobsLoading, refetch: refetchJobs } = useFetch<{ jobs: ExportJob[]; total: number }>('/api/export/jobs');
-  const { data: stats, loading: statsLoading, refetch: refetchStats } = useFetch<ExportStatistics>('/api/export/stats');
+  const {
+    data: jobs,
+    loading: jobsLoading,
+    refetch: refetchJobs,
+  } = useFetch<{ jobs: ExportJob[]; total: number }>('/api/export/jobs');
+  const {
+    data: stats,
+    loading: statsLoading,
+    refetch: refetchStats,
+  } = useFetch<ExportStatistics>('/api/export/stats');
 
   // Auto-refresh jobs every 5 seconds when there are active jobs
   useEffect(() => {
     if (!jobs) return;
 
-    const hasActiveJobs = jobs.jobs.some(j => j.status === 'pending' || j.status === 'processing');
+    const hasActiveJobs = jobs.jobs.some(
+      (j) => j.status === 'pending' || j.status === 'processing'
+    );
     if (!hasActiveJobs) return;
 
     const interval = setInterval(() => {
@@ -205,9 +215,10 @@ export function ExportPage() {
   };
 
   const renderCreateTab = () => {
-    const currentTarget = targets?.find(t => t.target === selectedTarget);
-    const availableFormats = currentTarget ?
-      formats?.filter(f => currentTarget.available_formats.includes(f.format)) : formats;
+    const currentTarget = targets?.find((t) => t.target === selectedTarget);
+    const availableFormats = currentTarget
+      ? formats?.filter((f) => currentTarget.available_formats.includes(f.format))
+      : formats;
 
     return (
       <div className="export-create">
@@ -216,7 +227,7 @@ export function ExportPage() {
             <h3>Export Target</h3>
             <p className="section-description">Choose what data to export</p>
             <div className="target-grid">
-              {targets?.map(target => (
+              {targets?.map((target) => (
                 <button
                   key={target.target}
                   className={`target-card ${selectedTarget === target.target ? 'active' : ''}`}
@@ -241,7 +252,7 @@ export function ExportPage() {
             <h3>Export Format</h3>
             <p className="section-description">Select output format</p>
             <div className="format-grid">
-              {availableFormats?.map(format => (
+              {availableFormats?.map((format) => (
                 <button
                   key={format.format}
                   className={`format-card ${selectedFormat === format.format ? 'active' : ''} ${format.placeholder ? 'placeholder' : ''}`}
@@ -251,9 +262,7 @@ export function ExportPage() {
                   <div className="format-header">
                     <Icon name="FileText" size={20} />
                     <span className="format-name">{format.name}</span>
-                    {format.placeholder && (
-                      <span className="placeholder-badge">Coming Soon</span>
-                    )}
+                    {format.placeholder && <span className="placeholder-badge">Coming Soon</span>}
                   </div>
                   <p className="format-description">{format.description}</p>
                   <div className="format-extension">{format.file_extension}</div>
@@ -270,7 +279,7 @@ export function ExportPage() {
                 <input
                   type="checkbox"
                   checked={includeMetadata}
-                  onChange={e => setIncludeMetadata(e.target.checked)}
+                  onChange={(e) => setIncludeMetadata(e.target.checked)}
                 />
                 <div>
                   <span className="option-label">Include Metadata</span>
@@ -282,21 +291,25 @@ export function ExportPage() {
                 <input
                   type="checkbox"
                   checked={includeRelationships}
-                  onChange={e => setIncludeRelationships(e.target.checked)}
+                  onChange={(e) => setIncludeRelationships(e.target.checked)}
                 />
                 <div>
                   <span className="option-label">Include Relationships</span>
-                  <span className="option-description">Export related entities and connections</span>
+                  <span className="option-description">
+                    Export related entities and connections
+                  </span>
                 </div>
               </label>
 
               <div className="option-item">
-                <label htmlFor="maxRecords" className="option-label">Maximum Records</label>
+                <label htmlFor="maxRecords" className="option-label">
+                  Maximum Records
+                </label>
                 <input
                   id="maxRecords"
                   type="number"
                   value={maxRecords}
-                  onChange={e => setMaxRecords(e.target.value)}
+                  onChange={(e) => setMaxRecords(e.target.value)}
                   placeholder="Unlimited"
                   className="option-input"
                   min="1"
@@ -313,11 +326,13 @@ export function ExportPage() {
                   <input
                     type="checkbox"
                     checked={includeConflicts}
-                    onChange={e => setIncludeConflicts(e.target.checked)}
+                    onChange={(e) => setIncludeConflicts(e.target.checked)}
                   />
                   <div>
                     <span className="option-label">Include Conflicts</span>
-                    <span className="option-description">Add timeline conflicts and contradictions</span>
+                    <span className="option-description">
+                      Add timeline conflicts and contradictions
+                    </span>
                   </div>
                 </label>
 
@@ -325,7 +340,7 @@ export function ExportPage() {
                   <input
                     type="checkbox"
                     checked={includeGaps}
-                    onChange={e => setIncludeGaps(e.target.checked)}
+                    onChange={(e) => setIncludeGaps(e.target.checked)}
                   />
                   <div>
                     <span className="option-label">Include Gaps</span>
@@ -334,11 +349,13 @@ export function ExportPage() {
                 </label>
 
                 <div className="option-item">
-                  <label htmlFor="groupBy" className="option-label">Group Events By</label>
+                  <label htmlFor="groupBy" className="option-label">
+                    Group Events By
+                  </label>
                   <select
                     id="groupBy"
                     value={groupBy}
-                    onChange={e => setGroupBy(e.target.value)}
+                    onChange={(e) => setGroupBy(e.target.value)}
                     className="option-select"
                   >
                     <option value="">Chronological (no grouping)</option>
@@ -347,17 +364,16 @@ export function ExportPage() {
                     <option value="month">Month</option>
                     <option value="entity">Entity</option>
                   </select>
-                  <span className="option-description">Organize events by time period or entity</span>
+                  <span className="option-description">
+                    Organize events by time period or entity
+                  </span>
                 </div>
               </div>
             )}
           </div>
 
           <div className="export-actions">
-            <button
-              className="btn btn-primary btn-lg"
-              onClick={handleCreateExport}
-            >
+            <button className="btn btn-primary btn-lg" onClick={handleCreateExport}>
               <Icon name="Download" size={20} />
               Create Export
             </button>
@@ -400,7 +416,7 @@ export function ExportPage() {
         </div>
 
         <div className="jobs-list">
-          {jobs.jobs.map(job => (
+          {jobs.jobs.map((job) => (
             <div key={job.id} className={`job-card status-${job.status}`}>
               <div className="job-header">
                 <div className="job-info">
@@ -411,18 +427,18 @@ export function ExportPage() {
                   />
                   <div>
                     <div className="job-title">
-                      {targets?.find(t => t.target === job.target)?.name || job.target} →{' '}
-                      {formats?.find(f => f.format === job.format)?.name || job.format.toUpperCase()}
+                      {targets?.find((t) => t.target === job.target)?.name || job.target} →{' '}
+                      {formats?.find((f) => f.format === job.format)?.name ||
+                        job.format.toUpperCase()}
                     </div>
                     <div className="job-meta">
-                      ID: {job.id.substring(0, 8)} • Created: {new Date(job.created_at).toLocaleString()}
+                      ID: {job.id.substring(0, 8)} • Created:{' '}
+                      {new Date(job.created_at).toLocaleString()}
                     </div>
                   </div>
                 </div>
                 <div className="job-status">
-                  <span className={`status-badge status-${job.status}`}>
-                    {job.status}
-                  </span>
+                  <span className={`status-badge status-${job.status}`}>{job.status}</span>
                 </div>
               </div>
 
@@ -467,10 +483,7 @@ export function ExportPage() {
 
               <div className="job-actions">
                 {job.status === 'completed' && job.download_url && (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => handleDownload(job)}
-                  >
+                  <button className="btn btn-primary btn-sm" onClick={() => handleDownload(job)}>
                     <Icon name="Download" size={14} />
                     Download
                   </button>
@@ -550,7 +563,7 @@ export function ExportPage() {
               {Object.entries(stats.by_target).map(([target, count]) => (
                 <div key={target} className="breakdown-item">
                   <span className="breakdown-label">
-                    {targets?.find(t => t.target === target)?.name || target}
+                    {targets?.find((t) => t.target === target)?.name || target}
                   </span>
                   <span className="breakdown-value">{count}</span>
                 </div>
@@ -584,7 +597,9 @@ export function ExportPage() {
           <Icon name="Download" size={28} />
           <div>
             <h1>Export</h1>
-            <p className="page-description">Export data in various formats (JSON, CSV, PDF, DOCX)</p>
+            <p className="page-description">
+              Export data in various formats (JSON, CSV, PDF, DOCX)
+            </p>
           </div>
         </div>
       </header>
@@ -603,9 +618,7 @@ export function ExportPage() {
         >
           <Icon name="FileDown" size={16} />
           Export Jobs
-          {jobs && jobs.total > 0 && (
-            <span className="tab-badge">{jobs.total}</span>
-          )}
+          {jobs && jobs.total > 0 && <span className="tab-badge">{jobs.total}</span>}
         </button>
         <button
           className={`tab ${activeTab === 'stats' ? 'active' : ''}`}

@@ -4,25 +4,25 @@ Packets Shard - API Tests
 Tests for the FastAPI routes.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from fastapi import HTTPException
+import pytest
 from arkham_shard_packets.models import (
+    ContentType,
+    ExportFormat,
     Packet,
     PacketContent,
-    PacketShare,
-    PacketVersion,
     PacketExportResult,
     PacketImportResult,
+    PacketShare,
     PacketStatistics,
     PacketStatus,
+    PacketVersion,
     PacketVisibility,
-    ContentType,
     SharePermission,
-    ExportFormat,
 )
+from fastapi import HTTPException
 
 
 @pytest.fixture
@@ -63,7 +63,7 @@ class TestHealthEndpoint:
         """Test health check returns shard info."""
         from arkham_shard_packets.api import health_check
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await health_check()
 
             assert response.status == "healthy"
@@ -81,7 +81,7 @@ class TestCountEndpoint:
 
         mock_shard.get_count.return_value = 42
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await get_packets_count()
 
             assert response.count == 42
@@ -94,7 +94,7 @@ class TestCountEndpoint:
 
         mock_shard.get_count.return_value = 15
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await get_packets_count(status="draft")
 
             assert response.count == 15
@@ -107,7 +107,7 @@ class TestPacketCRUDEndpoints:
     @pytest.mark.asyncio
     async def test_create_packet(self, mock_shard):
         """Test creating a packet."""
-        from arkham_shard_packets.api import create_packet, PacketCreate
+        from arkham_shard_packets.api import PacketCreate, create_packet
 
         now = datetime.utcnow()
         packet = Packet(
@@ -119,7 +119,7 @@ class TestPacketCRUDEndpoints:
         )
         mock_shard.create_packet.return_value = packet
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             request = PacketCreate(name="Test Packet", description="Test")
             response = await create_packet(request)
 
@@ -140,7 +140,7 @@ class TestPacketCRUDEndpoints:
         )
         mock_shard.get_packet.return_value = packet
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await get_packet("test-id")
 
             assert response.id == "test-id"
@@ -153,7 +153,7 @@ class TestPacketCRUDEndpoints:
 
         mock_shard.get_packet.return_value = None
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             with pytest.raises(HTTPException) as exc_info:
                 await get_packet("nonexistent")
 
@@ -172,7 +172,7 @@ class TestPacketCRUDEndpoints:
         mock_shard.list_packets.return_value = packets
         mock_shard.get_count.return_value = 2
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await list_packets()
 
             assert len(response.packets) == 2
@@ -181,7 +181,7 @@ class TestPacketCRUDEndpoints:
     @pytest.mark.asyncio
     async def test_update_packet(self, mock_shard):
         """Test updating a packet."""
-        from arkham_shard_packets.api import update_packet, PacketUpdate
+        from arkham_shard_packets.api import PacketUpdate, update_packet
 
         now = datetime.utcnow()
         packet = Packet(
@@ -192,7 +192,7 @@ class TestPacketCRUDEndpoints:
         )
         mock_shard.update_packet.return_value = packet
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             request = PacketUpdate(name="Updated Name")
             response = await update_packet("test-id", request)
 
@@ -213,7 +213,7 @@ class TestPacketCRUDEndpoints:
         )
         mock_shard.archive_packet.return_value = packet
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             await delete_packet("test-id")
 
             mock_shard.archive_packet.assert_called_once_with("test-id")
@@ -237,7 +237,7 @@ class TestPacketStatusEndpoints:
         )
         mock_shard.finalize_packet.return_value = packet
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await finalize_packet("test-id")
 
             assert response.status == "finalized"
@@ -257,7 +257,7 @@ class TestPacketStatusEndpoints:
         )
         mock_shard.archive_packet.return_value = packet
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await archive_packet("test-id")
 
             assert response.status == "archived"
@@ -286,7 +286,7 @@ class TestContentEndpoints:
         mock_shard.get_packet.return_value = packet
         mock_shard.get_packet_contents.return_value = contents
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await get_packet_contents("p1")
 
             assert len(response) == 1
@@ -295,7 +295,7 @@ class TestContentEndpoints:
     @pytest.mark.asyncio
     async def test_add_packet_content(self, mock_shard):
         """Test adding content to packet."""
-        from arkham_shard_packets.api import add_packet_content, ContentCreate
+        from arkham_shard_packets.api import ContentCreate, add_packet_content
 
         now = datetime.utcnow()
         content = PacketContent(
@@ -308,7 +308,7 @@ class TestContentEndpoints:
         )
         mock_shard.add_content.return_value = content
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             request = ContentCreate(
                 content_type=ContentType.ENTITY,
                 content_id="ent-1",
@@ -325,7 +325,7 @@ class TestContentEndpoints:
 
         mock_shard.remove_content.return_value = True
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             await remove_packet_content("p1", "c1")
 
             mock_shard.remove_content.assert_called_once_with("p1", "c1")
@@ -337,7 +337,7 @@ class TestShareEndpoints:
     @pytest.mark.asyncio
     async def test_share_packet(self, mock_shard):
         """Test sharing a packet."""
-        from arkham_shard_packets.api import share_packet, ShareCreate
+        from arkham_shard_packets.api import ShareCreate, share_packet
 
         now = datetime.utcnow()
         share = PacketShare(
@@ -350,7 +350,7 @@ class TestShareEndpoints:
         )
         mock_shard.share_packet.return_value = share
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             request = ShareCreate(shared_with="user-123")
             response = await share_packet("p1", request)
 
@@ -376,7 +376,7 @@ class TestShareEndpoints:
         mock_shard.get_packet.return_value = packet
         mock_shard.get_packet_shares.return_value = shares
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await get_packet_shares("p1")
 
             assert len(response) == 1
@@ -388,7 +388,7 @@ class TestShareEndpoints:
 
         mock_shard.revoke_share.return_value = True
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             await revoke_share("p1", "s1")
 
             mock_shard.revoke_share.assert_called_once_with("s1")
@@ -400,7 +400,7 @@ class TestExportImportEndpoints:
     @pytest.mark.asyncio
     async def test_export_packet(self, mock_shard):
         """Test exporting a packet."""
-        from arkham_shard_packets.api import export_packet, ExportRequest
+        from arkham_shard_packets.api import ExportRequest, export_packet
 
         now = datetime.utcnow()
         result = PacketExportResult(
@@ -413,7 +413,7 @@ class TestExportImportEndpoints:
         )
         mock_shard.export_packet.return_value = result
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             request = ExportRequest(format=ExportFormat.ZIP)
             response = await export_packet("p1", request)
 
@@ -423,7 +423,7 @@ class TestExportImportEndpoints:
     @pytest.mark.asyncio
     async def test_import_packet(self, mock_shard):
         """Test importing a packet."""
-        from arkham_shard_packets.api import import_packet, ImportRequest
+        from arkham_shard_packets.api import ImportRequest, import_packet
 
         now = datetime.utcnow()
         result = PacketImportResult(
@@ -435,7 +435,7 @@ class TestExportImportEndpoints:
         )
         mock_shard.import_packet.return_value = result
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             request = ImportRequest(file_path="/imports/packet.zip")
             response = await import_packet(request)
 
@@ -466,7 +466,7 @@ class TestVersionEndpoints:
         mock_shard.get_packet.return_value = packet
         mock_shard.get_packet_versions.return_value = versions
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await get_packet_versions("p1")
 
             assert len(response) == 1
@@ -490,7 +490,7 @@ class TestStatisticsEndpoints:
         )
         mock_shard.get_statistics.return_value = stats
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await get_statistics()
 
             assert response.total_packets == 100
@@ -518,7 +518,7 @@ class TestFilteredListEndpoints:
         mock_shard.list_packets.return_value = packets
         mock_shard.get_count.return_value = 1
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await list_draft_packets()
 
             assert len(response.packets) == 1
@@ -542,7 +542,7 @@ class TestFilteredListEndpoints:
         mock_shard.list_packets.return_value = packets
         mock_shard.get_count.return_value = 1
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await list_finalized_packets()
 
             assert len(response.packets) == 1
@@ -565,7 +565,7 @@ class TestFilteredListEndpoints:
         mock_shard.list_packets.return_value = packets
         mock_shard.get_count.return_value = 1
 
-        with patch('arkham_shard_packets.api._get_shard', return_value=mock_shard):
+        with patch("arkham_shard_packets.api._get_shard", return_value=mock_shard):
             response = await list_shared_packets()
 
             assert len(response.packets) == 1

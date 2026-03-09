@@ -66,6 +66,7 @@ class ImageWorker(BaseWorker):
             Resolved absolute path as string
         """
         from pathlib import Path
+
         if not os.path.isabs(file_path):
             data_silo = os.environ.get("DATA_SILO_PATH", ".")
             return str(Path(data_silo) / file_path)
@@ -96,9 +97,7 @@ class ImageWorker(BaseWorker):
             "analyze",
         ]
         if operation not in valid_operations:
-            raise ValueError(
-                f"Invalid operation '{operation}'. Must be one of: {valid_operations}"
-            )
+            raise ValueError(f"Invalid operation '{operation}'. Must be one of: {valid_operations}")
 
         logger.info(f"Job {job_id}: Running {operation} operation")
 
@@ -148,6 +147,7 @@ class ImageWorker(BaseWorker):
         Returns:
             PIL Image
         """
+
         def _load():
             from PIL import Image
 
@@ -179,6 +179,7 @@ class ImageWorker(BaseWorker):
             img_base64: Base64-encoded image
             output_path: File path to save to
         """
+
         def _save():
             from PIL import Image
 
@@ -202,6 +203,7 @@ class ImageWorker(BaseWorker):
         Returns:
             Base64-encoded image string
         """
+
         def _convert():
             buffer = io.BytesIO()
             img.save(buffer, format=format)
@@ -209,9 +211,7 @@ class ImageWorker(BaseWorker):
 
         return await asyncio.to_thread(_convert)
 
-    async def _preprocess(
-        self, img, payload: Dict[str, Any], job_id: str
-    ) -> Dict[str, Any]:
+    async def _preprocess(self, img, payload: Dict[str, Any], job_id: str) -> Dict[str, Any]:
         """
         Full preprocessing pipeline for OCR.
 
@@ -225,10 +225,11 @@ class ImageWorker(BaseWorker):
         Returns:
             Result dict with processed image
         """
+
         def _process():
-            from PIL import Image, ImageEnhance
-            import numpy as np
             import cv2
+            import numpy as np
+            from PIL import Image, ImageEnhance
 
             logger.info(f"Job {job_id}: Starting preprocessing pipeline")
             operations_applied = []
@@ -258,17 +259,13 @@ class ImageWorker(BaseWorker):
                 operations_applied.append(f"deskew({angle:.2f}°)")
 
             # 5. Binarize (Otsu's method)
-            _, img_binary = cv2.threshold(
-                img_deskewed, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-            )
+            _, img_binary = cv2.threshold(img_deskewed, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             operations_applied.append("binarize")
 
             # Convert back to PIL
             result_img = Image.fromarray(img_binary)
 
-            logger.info(
-                f"Job {job_id}: Preprocessing complete: {', '.join(operations_applied)}"
-            )
+            logger.info(f"Job {job_id}: Preprocessing complete: {', '.join(operations_applied)}")
 
             return result_img, operations_applied
 
@@ -291,6 +288,7 @@ class ImageWorker(BaseWorker):
         Returns:
             Result dict with resized image
         """
+
         def _process():
             from PIL import Image
 
@@ -335,6 +333,7 @@ class ImageWorker(BaseWorker):
         Returns:
             Result dict with downscaled image and metadata
         """
+
         def _process():
             from PIL import Image
 
@@ -405,9 +404,10 @@ class ImageWorker(BaseWorker):
         Returns:
             Result dict with deskewed image
         """
+
         def _process():
-            from PIL import Image
             import numpy as np
+            from PIL import Image
 
             max_angle = payload.get("max_angle", 10)
 
@@ -417,6 +417,7 @@ class ImageWorker(BaseWorker):
             # Convert to grayscale if needed
             if len(img_np.shape) == 3:
                 import cv2
+
                 img_gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
             else:
                 img_gray = img_np
@@ -426,10 +427,7 @@ class ImageWorker(BaseWorker):
 
             # Limit to max_angle
             if abs(angle) > max_angle:
-                logger.warning(
-                    f"Detected angle {angle:.2f}° exceeds max_angle {max_angle}°, "
-                    "skipping deskew"
-                )
+                logger.warning(f"Detected angle {angle:.2f}° exceeds max_angle {max_angle}°, skipping deskew")
                 return img, 0.0
 
             # Convert back to PIL
@@ -505,10 +503,11 @@ class ImageWorker(BaseWorker):
         Returns:
             Result dict with denoised image
         """
+
         def _process():
-            from PIL import Image
-            import numpy as np
             import cv2
+            import numpy as np
+            from PIL import Image
 
             strength = payload.get("strength", "medium")
 
@@ -555,10 +554,11 @@ class ImageWorker(BaseWorker):
         Returns:
             Result dict with enhanced image
         """
+
         def _process():
-            from PIL import Image, ImageEnhance
-            import numpy as np
             import cv2
+            import numpy as np
+            from PIL import Image, ImageEnhance
 
             method = payload.get("method", "clahe")
 
@@ -613,10 +613,11 @@ class ImageWorker(BaseWorker):
         Returns:
             Result dict with binarized image
         """
+
         def _process():
-            from PIL import Image
-            import numpy as np
             import cv2
+            import numpy as np
+            from PIL import Image
 
             method = payload.get("method", "otsu")
             block_size = payload.get("block_size", 11)
@@ -636,9 +637,7 @@ class ImageWorker(BaseWorker):
 
             if method == "otsu":
                 # Otsu's binarization
-                threshold_val, img_binary = cv2.threshold(
-                    img_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-                )
+                threshold_val, img_binary = cv2.threshold(img_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
             elif method == "adaptive":
                 # Adaptive thresholding (Gaussian)
@@ -696,9 +695,10 @@ class ImageWorker(BaseWorker):
         Returns:
             Result dict with analysis metrics
         """
+
         def _process():
-            import numpy as np
             import cv2
+            import numpy as np
 
             # Convert to numpy
             img_np = np.array(img)
@@ -725,9 +725,7 @@ class ImageWorker(BaseWorker):
             noise_level = laplacian.var() / 10000.0  # Normalize
 
             # Estimate skew angle
-            _, thresh = cv2.threshold(
-                img_gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
-            )
+            _, thresh = cv2.threshold(img_gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
             coords = np.column_stack(np.where(thresh > 0))
             if len(coords) > 10:
                 rect = cv2.minAreaRect(coords)
@@ -773,6 +771,7 @@ def run_image_worker(database_url: str = None, worker_id: str = None):
         python -m arkham_shard_ingest.workers.image_worker
     """
     import asyncio
+
     worker = ImageWorker(database_url=database_url, worker_id=worker_id)
     asyncio.run(worker.run())
 

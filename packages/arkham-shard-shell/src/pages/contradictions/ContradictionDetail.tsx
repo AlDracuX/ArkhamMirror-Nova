@@ -135,12 +135,17 @@ export function ContradictionDetail({ contradictionId }: ContradictionDetailProp
                 {SEVERITY_LABELS[contradiction.severity as Severity]}
               </span>
               <span className="badge badge-outline">
-                <Icon name={TYPE_ICONS[contradiction.contradiction_type as ContradictionType]} size={12} />
+                <Icon
+                  name={TYPE_ICONS[contradiction.contradiction_type as ContradictionType]}
+                  size={12}
+                />
                 {TYPE_LABELS[contradiction.contradiction_type as ContradictionType]}
               </span>
               <span
                 className="status-badge"
-                style={{ backgroundColor: STATUS_COLORS[contradiction.status as ContradictionStatus] }}
+                style={{
+                  backgroundColor: STATUS_COLORS[contradiction.status as ContradictionStatus],
+                }}
               >
                 {STATUS_LABELS[contradiction.status as ContradictionStatus]}
               </span>

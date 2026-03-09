@@ -15,10 +15,7 @@ import { HiddenContentTab } from './HiddenContentTab';
 
 import * as api from './api';
 import './AnomaliesPage.css';
-import type {
-  Anomaly,
-  DetectionConfig,
-} from './types';
+import type { Anomaly, DetectionConfig } from './types';
 import {
   ANOMALY_TYPE_LABELS,
   ANOMALY_TYPE_ICONS,
@@ -79,11 +76,7 @@ export function AnomaliesPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'list' ? (
-        <AnomaliesListView />
-      ) : (
-        <HiddenContentTab />
-      )}
+      {activeTab === 'list' ? <AnomaliesListView /> : <HiddenContentTab />}
     </div>
   );
 }
@@ -162,7 +155,7 @@ function AnomaliesListView() {
 
   // Filter anomalies by score (client-side)
   const filteredAnomalies = anomalies.filter(
-    a => a.score >= minSeverity && a.score <= maxSeverity
+    (a) => a.score >= minSeverity && a.score <= maxSeverity
   );
 
   const handleOpenAnomaly = (anomalyId: string) => {
@@ -184,7 +177,7 @@ function AnomaliesListView() {
   // Bulk selection handlers
   const toggleSelection = (anomalyId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(anomalyId)) {
         next.delete(anomalyId);
@@ -199,7 +192,7 @@ function AnomaliesListView() {
     if (selectedIds.size === filteredAnomalies.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredAnomalies.map(a => a.id)));
+      setSelectedIds(new Set(filteredAnomalies.map((a) => a.id)));
     }
   };
 
@@ -212,12 +205,7 @@ function AnomaliesListView() {
 
     setBulkActionLoading(true);
     try {
-      const result = await api.bulkUpdateStatus(
-        Array.from(selectedIds),
-        status,
-        '',
-        'user'
-      );
+      const result = await api.bulkUpdateStatus(Array.from(selectedIds), status, '', 'user');
 
       if (result.success) {
         toast.success(`Updated ${result.updated_count} anomalies to "${status}"`);
@@ -280,7 +268,7 @@ function AnomaliesListView() {
                 status: statusFilter || null,
                 severity: severityFilter || null,
               },
-              anomalies: anomalies.slice(0, 20).map(a => ({
+              anomalies: anomalies.slice(0, 20).map((a) => ({
                 id: a.id,
                 anomaly_type: a.anomaly_type,
                 severity: a.severity,
@@ -359,8 +347,10 @@ function AnomaliesListView() {
           <label>Type</label>
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
             <option value="">All Types</option>
-            {ANOMALY_TYPE_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {ANOMALY_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
         </div>
@@ -369,8 +359,10 @@ function AnomaliesListView() {
           <label>Status</label>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All Statuses</option>
-            {STATUS_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
         </div>
@@ -379,14 +371,18 @@ function AnomaliesListView() {
           <label>Severity</label>
           <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}>
             <option value="">All Severities</option>
-            {SEVERITY_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {SEVERITY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
         </div>
 
         <div className="filter-group filter-group-range">
-          <label>Score Range: {minSeverity.toFixed(1)} - {maxSeverity.toFixed(1)}</label>
+          <label>
+            Score Range: {minSeverity.toFixed(1)} - {maxSeverity.toFixed(1)}
+          </label>
           <div className="range-inputs">
             <input
               type="range"
@@ -480,14 +476,16 @@ function AnomaliesListView() {
             <label className="select-all-checkbox" onClick={(e) => e.stopPropagation()}>
               <input
                 type="checkbox"
-                checked={selectedIds.size === filteredAnomalies.length && filteredAnomalies.length > 0}
+                checked={
+                  selectedIds.size === filteredAnomalies.length && filteredAnomalies.length > 0
+                }
                 onChange={toggleSelectAll}
               />
               <span>Select All ({filteredAnomalies.length})</span>
             </label>
           </div>
 
-          {filteredAnomalies.map(anomaly => (
+          {filteredAnomalies.map((anomaly) => (
             <div
               key={anomaly.id}
               className={`anomaly-card ${selectedIds.has(anomaly.id) ? 'selected' : ''}`}
@@ -640,12 +638,12 @@ function DetectionDialog({ onSubmit, onCancel }: DetectionDialogProps) {
   };
 
   const toggleDetectionType = (key: keyof DetectionConfig) => {
-    setConfig(prev => ({ ...prev, [key]: !prev[key] }));
+    setConfig((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   return (
     <div className="dialog-overlay" onClick={onCancel}>
-      <div className="dialog dialog-lg" onClick={e => e.stopPropagation()}>
+      <div className="dialog dialog-lg" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-header">
           <h2>Run Anomaly Detection</h2>
           <button className="btn btn-icon" onClick={onCancel}>
@@ -718,20 +716,26 @@ function DetectionDialog({ onSubmit, onCancel }: DetectionDialogProps) {
                 max="5"
                 step="0.1"
                 value={config.z_score_threshold ?? 3.0}
-                onChange={(e) => setConfig(prev => ({ ...prev, z_score_threshold: Number(e.target.value) }))}
+                onChange={(e) =>
+                  setConfig((prev) => ({ ...prev, z_score_threshold: Number(e.target.value) }))
+                }
               />
               <p className="form-hint">Higher values = stricter detection (fewer anomalies)</p>
             </div>
 
             <div className="form-field">
-              <label>Minimum Confidence: {((config.min_confidence ?? 0.5) * 100).toFixed(0)}%</label>
+              <label>
+                Minimum Confidence: {((config.min_confidence ?? 0.5) * 100).toFixed(0)}%
+              </label>
               <input
                 type="range"
                 min="0"
                 max="1"
                 step="0.05"
                 value={config.min_confidence ?? 0.5}
-                onChange={(e) => setConfig(prev => ({ ...prev, min_confidence: Number(e.target.value) }))}
+                onChange={(e) =>
+                  setConfig((prev) => ({ ...prev, min_confidence: Number(e.target.value) }))
+                }
               />
             </div>
           </div>

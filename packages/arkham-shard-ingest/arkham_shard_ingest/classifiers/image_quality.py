@@ -28,12 +28,14 @@ class ImageQualityClassifier:
         self._np = None
         try:
             from PIL import Image
+
             self._pil = Image
         except ImportError:
             logger.warning("PIL not available for image quality assessment")
 
         try:
             import numpy as np
+
             self._np = np
         except ImportError:
             logger.warning("NumPy not available, using simplified quality checks")
@@ -181,11 +183,7 @@ class ImageQualityClassifier:
         try:
             # Simple Laplacian approximation
             # Full implementation would use cv2.Laplacian
-            laplacian = (
-                arr[:-2, 1:-1] + arr[2:, 1:-1] +
-                arr[1:-1, :-2] + arr[1:-1, 2:] -
-                4 * arr[1:-1, 1:-1]
-            )
+            laplacian = arr[:-2, 1:-1] + arr[2:, 1:-1] + arr[1:-1, :-2] + arr[1:-1, 2:] - 4 * arr[1:-1, 1:-1]
             variance = self._np.var(laplacian)
 
             # Low variance = blurry, very high = noisy

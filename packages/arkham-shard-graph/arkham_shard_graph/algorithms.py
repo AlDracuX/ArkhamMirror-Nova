@@ -1,16 +1,16 @@
 """Graph algorithms - path finding, centrality, community detection."""
 
 import logging
+import math
 from collections import defaultdict, deque
 from typing import Any
-import math
 
 from .models import (
+    CentralityResult,
+    Community,
     Graph,
     GraphEdge,
     GraphPath,
-    CentralityResult,
-    Community,
     GraphStatistics,
 )
 
@@ -121,14 +121,16 @@ class GraphAlgorithms:
                 # Found a path
                 edges = self._get_path_edges(graph.edges, path)
                 total_weight = sum(e.weight for e in edges)
-                all_paths.append(GraphPath(
-                    source_entity_id=source_entity_id,
-                    target_entity_id=target_entity_id,
-                    path=path.copy(),
-                    edges=edges,
-                    total_weight=total_weight,
-                    path_length=len(path) - 1,
-                ))
+                all_paths.append(
+                    GraphPath(
+                        source_entity_id=source_entity_id,
+                        target_entity_id=target_entity_id,
+                        path=path.copy(),
+                        edges=edges,
+                        total_weight=total_weight,
+                        path_length=len(path) - 1,
+                    )
+                )
                 return
 
             for neighbor in adjacency.get(current, []):
@@ -214,10 +216,7 @@ class GraphAlgorithms:
             for neighbor, weight in adjacency.get(current, []):
                 if neighbor not in visited:
                     new_cost = cost + get_edge_cost(weight)
-                    heapq.heappush(
-                        heap,
-                        (new_cost, path_len + 1, neighbor, path + [neighbor])
-                    )
+                    heapq.heappush(heap, (new_cost, path_len + 1, neighbor, path + [neighbor]))
 
         return None
 
@@ -360,17 +359,11 @@ class GraphAlgorithms:
         # Select top sources and targets by degree (most connected)
         node_degrees = {n.id: n.degree for n in graph.nodes}
 
-        source_candidates = sorted(
-            can_reach.keys(),
-            key=lambda x: node_degrees.get(x, 0),
-            reverse=True
-        )[:max_sources]
+        source_candidates = sorted(can_reach.keys(), key=lambda x: node_degrees.get(x, 0), reverse=True)[:max_sources]
 
-        target_candidates = sorted(
-            reachable_from.keys(),
-            key=lambda x: node_degrees.get(x, 0),
-            reverse=True
-        )[:max_targets]
+        target_candidates = sorted(reachable_from.keys(), key=lambda x: node_degrees.get(x, 0), reverse=True)[
+            :max_targets
+        ]
 
         # Find paths between sources and targets that pass through intermediate
         paths = []
@@ -395,9 +388,7 @@ class GraphAlgorithms:
 
         return paths
 
-    def calculate_degree_centrality(
-        self, graph: Graph, limit: int = 50
-    ) -> list[CentralityResult]:
+    def calculate_degree_centrality(self, graph: Graph, limit: int = 50) -> list[CentralityResult]:
         """
         Calculate degree centrality.
 
@@ -433,9 +424,7 @@ class GraphAlgorithms:
 
         return results
 
-    def calculate_betweenness_centrality(
-        self, graph: Graph, limit: int = 50
-    ) -> list[CentralityResult]:
+    def calculate_betweenness_centrality(self, graph: Graph, limit: int = 50) -> list[CentralityResult]:
         """
         Calculate betweenness centrality.
 
@@ -467,9 +456,7 @@ class GraphAlgorithms:
         max_betweenness = (n - 1) * (n - 2) / 2 if n > 2 else 1
 
         # Sort by betweenness
-        sorted_items = sorted(
-            betweenness.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_items = sorted(betweenness.items(), key=lambda x: x[1], reverse=True)
 
         node_map = {n.id: n for n in graph.nodes}
 
@@ -556,9 +543,7 @@ class GraphAlgorithms:
                 break
 
         # Sort by PageRank
-        sorted_items = sorted(
-            pagerank.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_items = sorted(pagerank.items(), key=lambda x: x[1], reverse=True)
 
         node_map = {n.id: n for n in graph.nodes}
 
@@ -694,13 +679,9 @@ class GraphAlgorithms:
             communities.append(community)
 
         # Calculate overall modularity
-        modularity = self._calculate_modularity(
-            community_map, adjacency, total_weight
-        )
+        modularity = self._calculate_modularity(community_map, adjacency, total_weight)
 
-        logger.info(
-            f"Detected {len(communities)} communities (modularity: {modularity:.3f})"
-        )
+        logger.info(f"Detected {len(communities)} communities (modularity: {modularity:.3f})")
 
         return communities, modularity
 
@@ -824,13 +805,15 @@ class GraphAlgorithms:
         for neighbor_id, weight, hop_distance in neighbors:
             node = node_map.get(neighbor_id)
             if node:
-                result_neighbors.append({
-                    "entity_id": node.entity_id,
-                    "label": node.label,
-                    "entity_type": node.entity_type,
-                    "weight": weight,
-                    "hop_distance": hop_distance,
-                })
+                result_neighbors.append(
+                    {
+                        "entity_id": node.entity_id,
+                        "label": node.label,
+                        "entity_type": node.entity_type,
+                        "weight": weight,
+                        "hop_distance": hop_distance,
+                    }
+                )
 
         return {
             "entity_id": entity_id,
@@ -840,9 +823,7 @@ class GraphAlgorithms:
 
     # --- Helper Methods ---
 
-    def _build_adjacency_dict(
-        self, edges: list[GraphEdge]
-    ) -> dict[str, list[str]]:
+    def _build_adjacency_dict(self, edges: list[GraphEdge]) -> dict[str, list[str]]:
         """Build adjacency dictionary (unweighted)."""
         adjacency = defaultdict(list)
 
@@ -852,9 +833,7 @@ class GraphAlgorithms:
 
         return adjacency
 
-    def _build_weighted_adjacency(
-        self, edges: list[GraphEdge]
-    ) -> dict[str, list[tuple[str, float]]]:
+    def _build_weighted_adjacency(self, edges: list[GraphEdge]) -> dict[str, list[tuple[str, float]]]:
         """Build weighted adjacency dictionary."""
         adjacency = defaultdict(list)
 
@@ -864,9 +843,7 @@ class GraphAlgorithms:
 
         return adjacency
 
-    def _get_path_edges(
-        self, edges: list[GraphEdge], path: list[str]
-    ) -> list[GraphEdge]:
+    def _get_path_edges(self, edges: list[GraphEdge], path: list[str]) -> list[GraphEdge]:
         """Get edges along a path."""
         # Build edge lookup
         edge_map = {}
@@ -1050,9 +1027,7 @@ class GraphAlgorithms:
 
         return list(components.values())
 
-    def _calculate_distance_metrics(
-        self, graph: Graph
-    ) -> tuple[int, float]:
+    def _calculate_distance_metrics(self, graph: Graph) -> tuple[int, float]:
         """Calculate diameter and average path length."""
         node_ids = [n.id for n in graph.nodes]
         adjacency = self._build_adjacency_dict(graph.edges)
@@ -1064,22 +1039,18 @@ class GraphAlgorithms:
         for source in node_ids[:50]:  # Sample for performance
             distances = self._bfs_distances(source, adjacency, node_ids)
             for dist in distances.values():
-                if dist < float('inf'):
+                if dist < float("inf"):
                     all_distances.append(dist)
                     max_distance = max(max_distance, dist)
 
         diameter = max_distance if all_distances else 0
-        avg_path_length = (
-            sum(all_distances) / len(all_distances) if all_distances else 0.0
-        )
+        avg_path_length = sum(all_distances) / len(all_distances) if all_distances else 0.0
 
         return diameter, avg_path_length
 
-    def _bfs_distances(
-        self, source: str, adjacency: dict, all_nodes: list[str]
-    ) -> dict[str, float]:
+    def _bfs_distances(self, source: str, adjacency: dict, all_nodes: list[str]) -> dict[str, float]:
         """BFS to calculate distances from source."""
-        distances = {node: float('inf') for node in all_nodes}
+        distances = {node: float("inf") for node in all_nodes}
         distances[source] = 0
 
         queue = deque([source])
@@ -1088,7 +1059,7 @@ class GraphAlgorithms:
             current_dist = distances[current]
 
             for neighbor in adjacency.get(current, []):
-                if distances[neighbor] == float('inf'):
+                if distances[neighbor] == float("inf"):
                     distances[neighbor] = current_dist + 1
                     queue.append(neighbor)
 
@@ -1121,7 +1092,8 @@ class GraphAlgorithms:
         Returns:
             New Graph containing the ego network
         """
-        from .models import Graph as GraphModel, GraphNode, GraphEdge
+        from .models import Graph as GraphModel
+        from .models import GraphEdge, GraphNode
 
         # Find the ego node
         ego_node = None
@@ -1165,21 +1137,21 @@ class GraphAlgorithms:
             node = node_map.get(node_id)
             if node:
                 # Clone node with ego network metadata
-                ego_nodes.append(GraphNode(
-                    id=node.id,
-                    entity_id=node.entity_id,
-                    label=node.label,
-                    entity_type=node.entity_type,
-                    document_count=node.document_count,
-                    degree=node.degree,
-                    properties={
-                        **node.properties,
-                        "ego_distance": next(
-                            d for d, nodes in nodes_by_depth.items() if node_id in nodes
-                        ),
-                        "is_ego": node_id == ego_node.id,
-                    },
-                ))
+                ego_nodes.append(
+                    GraphNode(
+                        id=node.id,
+                        entity_id=node.entity_id,
+                        label=node.label,
+                        entity_type=node.entity_type,
+                        document_count=node.document_count,
+                        degree=node.degree,
+                        properties={
+                            **node.properties,
+                            "ego_distance": next(d for d, nodes in nodes_by_depth.items() if node_id in nodes),
+                            "is_ego": node_id == ego_node.id,
+                        },
+                    )
+                )
 
         # Collect edges
         ego_edges = []
@@ -1209,18 +1181,20 @@ class GraphAlgorithms:
                 continue
             edge_set.add(edge_key)
 
-            ego_edges.append(GraphEdge(
-                source=edge.source,
-                target=edge.target,
-                relationship_type=edge.relationship_type,
-                weight=edge.weight,
-                co_occurrence_count=edge.co_occurrence_count,
-                document_ids=edge.document_ids,
-                properties={
-                    **edge.properties,
-                    "is_ego_tie": is_ego_tie,
-                },
-            ))
+            ego_edges.append(
+                GraphEdge(
+                    source=edge.source,
+                    target=edge.target,
+                    relationship_type=edge.relationship_type,
+                    weight=edge.weight,
+                    co_occurrence_count=edge.co_occurrence_count,
+                    document_ids=edge.document_ids,
+                    properties={
+                        **edge.properties,
+                        "is_ego_tie": is_ego_tie,
+                    },
+                )
+            )
 
         return GraphModel(
             project_id=graph.project_id,

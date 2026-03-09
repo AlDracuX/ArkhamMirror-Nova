@@ -152,8 +152,8 @@ export function ArgumentationView({
   const positions = useMemo(() => {
     if (!data) return [];
 
-    const hypotheses = data.nodes.filter(n => n.node_type === 'hypothesis');
-    const evidence = data.nodes.filter(n => n.node_type === 'evidence');
+    const hypotheses = data.nodes.filter((n) => n.node_type === 'hypothesis');
+    const evidence = data.nodes.filter((n) => n.node_type === 'evidence');
 
     const positions: NodePosition[] = [];
     const margin = { top: 80, bottom: 80, left: 100, right: 100 };
@@ -162,7 +162,7 @@ export function ArgumentationView({
     // Position hypotheses at top
     const hypSpacing = (width - margin.left - margin.right) / Math.max(hypotheses.length, 1);
     hypotheses.forEach((node, i) => {
-      const status = data.statuses.find(s => s.node_id === node.id);
+      const status = data.statuses.find((s) => s.node_id === node.id);
       positions.push({
         id: node.id,
         x: margin.left + hypSpacing * (i + 0.5),
@@ -193,13 +193,14 @@ export function ArgumentationView({
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
-    const positionMap = new Map(positions.map(p => [p.id, p]));
+    const positionMap = new Map(positions.map((p) => [p.id, p]));
 
     // Create defs for markers (arrowheads)
     const defs = svg.append('defs');
 
     // Support arrow (green)
-    defs.append('marker')
+    defs
+      .append('marker')
       .attr('id', 'arrow-support')
       .attr('viewBox', '0 -5 10 10')
       .attr('refX', 25)
@@ -212,7 +213,8 @@ export function ArgumentationView({
       .attr('fill', '#22c55e');
 
     // Attack arrow (red)
-    defs.append('marker')
+    defs
+      .append('marker')
       .attr('id', 'arrow-attack')
       .attr('viewBox', '0 -5 10 10')
       .attr('refX', 25)
@@ -227,7 +229,7 @@ export function ArgumentationView({
     // Draw edges
     const edgeGroup = svg.append('g').attr('class', 'edges');
 
-    data.edges.forEach(edge => {
+    data.edges.forEach((edge) => {
       const sourcePos = positionMap.get(edge.source);
       const targetPos = positionMap.get(edge.target);
 
@@ -238,7 +240,8 @@ export function ArgumentationView({
       const color = isSupport ? '#22c55e' : isAttack ? '#ef4444' : '#94a3b8';
       const strokeWidth = Math.max(1, Math.min(4, Math.abs(edge.strength) * 1.5));
 
-      edgeGroup.append('line')
+      edgeGroup
+        .append('line')
         .attr('x1', sourcePos.x)
         .attr('y1', sourcePos.y)
         .attr('x2', targetPos.x)
@@ -246,7 +249,10 @@ export function ArgumentationView({
         .attr('stroke', color)
         .attr('stroke-width', strokeWidth)
         .attr('stroke-opacity', 0.6)
-        .attr('marker-end', isSupport ? 'url(#arrow-support)' : isAttack ? 'url(#arrow-attack)' : '')
+        .attr(
+          'marker-end',
+          isSupport ? 'url(#arrow-support)' : isAttack ? 'url(#arrow-attack)' : ''
+        )
         .attr('stroke-dasharray', isAttack ? '5,3' : 'none')
         .attr('cursor', 'pointer')
         .on('click', () => {
@@ -260,22 +266,30 @@ export function ArgumentationView({
             content: (
               <div>
                 <div style={{ fontWeight: 600 }}>
-                  {edge.edge_type === 'supports' ? '✓ Supports' : edge.edge_type === 'attacks' ? '✗ Attacks' : '○ Neutral'}
+                  {edge.edge_type === 'supports'
+                    ? '✓ Supports'
+                    : edge.edge_type === 'attacks'
+                      ? '✗ Attacks'
+                      : '○ Neutral'}
                 </div>
                 <div>Rating: {edge.rating_value}</div>
                 <div>Strength: {edge.strength.toFixed(1)}</div>
-                {edge.reasoning && <div style={{ marginTop: 4, fontSize: '0.7rem', maxWidth: 200 }}>{edge.reasoning}</div>}
+                {edge.reasoning && (
+                  <div style={{ marginTop: 4, fontSize: '0.7rem', maxWidth: 200 }}>
+                    {edge.reasoning}
+                  </div>
+                )}
               </div>
             ),
           });
         })
-        .on('mouseleave', () => setTooltip(prev => ({ ...prev, visible: false })));
+        .on('mouseleave', () => setTooltip((prev) => ({ ...prev, visible: false })));
     });
 
     // Draw nodes
     const nodeGroup = svg.append('g').attr('class', 'nodes');
 
-    positions.forEach(pos => {
+    positions.forEach((pos) => {
       const isHypothesis = pos.node.node_type === 'hypothesis';
       const isLead = pos.node.is_lead;
       const status = pos.status?.status;
@@ -295,7 +309,8 @@ export function ArgumentationView({
       }
 
       const nodeSize = isHypothesis ? 20 : 14;
-      const g = nodeGroup.append('g')
+      const g = nodeGroup
+        .append('g')
         .attr('transform', `translate(${pos.x}, ${pos.y})`)
         .attr('cursor', 'pointer')
         .on('click', () => onNodeClick?.(pos.node.id, pos.node.node_type))
@@ -313,7 +328,9 @@ export function ArgumentationView({
                 {isHypothesis && pos.status && (
                   <>
                     <div>Status: {pos.status.status}</div>
-                    <div>Support: {pos.status.support_count} | Attack: {pos.status.attack_count}</div>
+                    <div>
+                      Support: {pos.status.support_count} | Attack: {pos.status.attack_count}
+                    </div>
                     <div>Net Score: {pos.status.net_score.toFixed(1)}</div>
                   </>
                 )}
@@ -321,13 +338,15 @@ export function ArgumentationView({
                   <div>Credibility: {(pos.node.credibility * 100).toFixed(0)}%</div>
                 )}
                 {pos.node.description && (
-                  <div style={{ marginTop: 4, fontSize: '0.7rem', maxWidth: 200 }}>{pos.node.description}</div>
+                  <div style={{ marginTop: 4, fontSize: '0.7rem', maxWidth: 200 }}>
+                    {pos.node.description}
+                  </div>
                 )}
               </div>
             ),
           });
         })
-        .on('mouseleave', () => setTooltip(prev => ({ ...prev, visible: false })));
+        .on('mouseleave', () => setTooltip((prev) => ({ ...prev, visible: false })));
 
       // Node shape: rectangle for hypotheses, circle for evidence
       if (isHypothesis) {
@@ -369,7 +388,8 @@ export function ArgumentationView({
     });
 
     // Add layer labels
-    svg.append('text')
+    svg
+      .append('text')
       .attr('x', 20)
       .attr('y', 30)
       .attr('font-size', 12)
@@ -377,14 +397,14 @@ export function ArgumentationView({
       .attr('font-weight', 600)
       .text('HYPOTHESES');
 
-    svg.append('text')
+    svg
+      .append('text')
       .attr('x', 20)
       .attr('y', height / 2 + 30)
       .attr('font-size', 12)
       .attr('fill', 'var(--text-secondary)')
       .attr('font-weight', 600)
       .text('EVIDENCE');
-
   }, [data, positions, width, height, onNodeClick, onEdgeClick]);
 
   // Empty state
@@ -408,7 +428,7 @@ export function ArgumentationView({
             value={selectedMatrixId || ''}
             onChange={(e) => setSelectedMatrixId(e.target.value)}
           >
-            {matrices.map(m => (
+            {matrices.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.title} ({m.hypothesis_count}H / {m.evidence_count}E)
               </option>
@@ -439,12 +459,7 @@ export function ArgumentationView({
             <span>{error}</span>
           </div>
         ) : (
-          <svg
-            ref={svgRef}
-            width={width}
-            height={height}
-            className="argumentation-svg"
-          />
+          <svg ref={svgRef} width={width} height={height} className="argumentation-svg" />
         )}
       </div>
 
@@ -531,7 +546,9 @@ export function ArgumentationControls({
 
       <div className="control-info">
         <Icon name="Info" size={14} />
-        <p>Argumentation graphs show how evidence supports or attacks hypotheses from ACH matrices.</p>
+        <p>
+          Argumentation graphs show how evidence supports or attacks hypotheses from ACH matrices.
+        </p>
       </div>
     </div>
   );

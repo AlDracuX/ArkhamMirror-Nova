@@ -112,6 +112,7 @@ class PatternsShard(ArkhamShard):
     def get_routes(self):
         """Return FastAPI router for this shard."""
         from .api import router
+
         return router
 
     # === Database Schema ===
@@ -585,6 +586,7 @@ class PatternsShard(ArkhamShard):
     ) -> PatternAnalysisResult:
         """Analyze documents for patterns."""
         import time
+
         start_time = time.time()
         patterns_detected = []
         matches_found = []
@@ -673,8 +675,9 @@ class PatternsShard(ArkhamShard):
         Uses Pearson correlation for continuous co-occurrence patterns
         and Spearman for ranked correlations.
         """
-        import time
         import math
+        import time
+
         start_time = time.time()
         correlations = []
 
@@ -698,7 +701,7 @@ class PatternsShard(ArkhamShard):
                    UNION
                    SELECT DISTINCT source_id as document_id FROM arkham_pattern_matches
                    WHERE source_type = 'entity' AND source_id = :entity_id""",
-                {"entity_id": entity_id}
+                {"entity_id": entity_id},
             )
 
             doc_ids = {row["document_id"] for row in rows if row.get("document_id")}
@@ -706,8 +709,7 @@ class PatternsShard(ArkhamShard):
             # Fallback: check if entity has document references in metadata
             if not doc_ids:
                 entity_row = await self._db.fetch_one(
-                    "SELECT metadata FROM arkham_entities WHERE id = :id",
-                    {"id": entity_id}
+                    "SELECT metadata FROM arkham_entities WHERE id = :id", {"id": entity_id}
                 )
                 if entity_row:
                     metadata = json.loads(entity_row.get("metadata", "{}"))
@@ -722,21 +724,23 @@ class PatternsShard(ArkhamShard):
         if len(doc_list) < 2:
             # Not enough documents to calculate correlation
             for i, entity1 in enumerate(request.entity_ids):
-                for entity2 in request.entity_ids[i + 1:]:
+                for entity2 in request.entity_ids[i + 1 :]:
                     docs1 = entity_docs.get(entity1, set())
                     docs2 = entity_docs.get(entity2, set())
                     common = docs1 & docs2
 
                     if len(common) >= request.min_occurrences:
-                        correlations.append(Correlation(
-                            entity_id_1=entity1,
-                            entity_id_2=entity2,
-                            correlation_score=1.0 if common else 0.0,
-                            co_occurrence_count=len(common),
-                            document_ids=list(common),
-                            correlation_type="co_occurrence",
-                            description=f"Found in {len(common)} common documents",
-                        ))
+                        correlations.append(
+                            Correlation(
+                                entity_id_1=entity1,
+                                entity_id_2=entity2,
+                                correlation_score=1.0 if common else 0.0,
+                                co_occurrence_count=len(common),
+                                document_ids=list(common),
+                                correlation_type="co_occurrence",
+                                description=f"Found in {len(common)} common documents",
+                            )
+                        )
 
             return CorrelationResult(
                 correlations=correlations,
@@ -747,14 +751,11 @@ class PatternsShard(ArkhamShard):
         # Build occurrence vectors
         entity_vectors: Dict[str, List[int]] = {}
         for entity_id in request.entity_ids:
-            entity_vectors[entity_id] = [
-                1 if doc_id in entity_docs.get(entity_id, set()) else 0
-                for doc_id in doc_list
-            ]
+            entity_vectors[entity_id] = [1 if doc_id in entity_docs.get(entity_id, set()) else 0 for doc_id in doc_list]
 
         # Calculate Pearson correlation for each pair
         for i, entity1 in enumerate(request.entity_ids):
-            for entity2 in request.entity_ids[i + 1:]:
+            for entity2 in request.entity_ids[i + 1 :]:
                 vec1 = entity_vectors.get(entity1, [])
                 vec2 = entity_vectors.get(entity2, [])
 
@@ -789,15 +790,17 @@ class PatternsShard(ArkhamShard):
                     corr_type = "weak"
                     desc = f"Weak correlation (r={correlation_score:.2f})"
 
-                correlations.append(Correlation(
-                    entity_id_1=entity1,
-                    entity_id_2=entity2,
-                    correlation_score=correlation_score,
-                    co_occurrence_count=co_occurrence_count,
-                    document_ids=list(common_docs)[:20],  # Limit to 20 doc IDs
-                    correlation_type=corr_type,
-                    description=f"{desc}, co-occurred in {co_occurrence_count} documents",
-                ))
+                correlations.append(
+                    Correlation(
+                        entity_id_1=entity1,
+                        entity_id_2=entity2,
+                        correlation_score=correlation_score,
+                        co_occurrence_count=co_occurrence_count,
+                        document_ids=list(common_docs)[:20],  # Limit to 20 doc IDs
+                        correlation_type=corr_type,
+                        description=f"{desc}, co-occurred in {co_occurrence_count} documents",
+                    )
+                )
 
         # Sort by absolute correlation score (strongest correlations first)
         correlations.sort(key=lambda c: abs(c.correlation_score), reverse=True)
@@ -848,6 +851,7 @@ class PatternsShard(ArkhamShard):
 
         Converts values to ranks and applies Pearson correlation.
         """
+
         def rank(values: List[int]) -> List[float]:
             """Convert values to ranks (1-based, handle ties with average)."""
             sorted_indices = sorted(range(len(values)), key=lambda i: values[i])
@@ -871,10 +875,7 @@ class PatternsShard(ArkhamShard):
         ranks_y = rank(y)
 
         # Spearman is Pearson on ranks
-        return self._calculate_pearson(
-            [int(r) for r in ranks_x],
-            [int(r) for r in ranks_y]
-        )
+        return self._calculate_pearson([int(r) for r in ranks_x], [int(r) for r in ranks_y])
 
     async def get_statistics(self) -> PatternStatistics:
         """Get statistics about patterns in the system."""
@@ -890,48 +891,40 @@ class PatternsShard(ArkhamShard):
             params["tenant_id"] = str(tenant_id)
 
         # Total patterns
-        total = await self._db.fetch_one(
-            f"SELECT COUNT(*) as count FROM arkham_patterns{tenant_filter}",
-            params
-        )
+        total = await self._db.fetch_one(f"SELECT COUNT(*) as count FROM arkham_patterns{tenant_filter}", params)
         total_patterns = total["count"] if total else 0
 
         # By type
         type_rows = await self._db.fetch_all(
-            f"SELECT pattern_type, COUNT(*) as count FROM arkham_patterns{tenant_filter} GROUP BY pattern_type",
-            params
+            f"SELECT pattern_type, COUNT(*) as count FROM arkham_patterns{tenant_filter} GROUP BY pattern_type", params
         )
         by_type = {row["pattern_type"]: row["count"] for row in type_rows}
 
         # By status
         status_rows = await self._db.fetch_all(
-            f"SELECT status, COUNT(*) as count FROM arkham_patterns{tenant_filter} GROUP BY status",
-            params
+            f"SELECT status, COUNT(*) as count FROM arkham_patterns{tenant_filter} GROUP BY status", params
         )
         by_status = {row["status"]: row["count"] for row in status_rows}
 
         # By detection method
         method_rows = await self._db.fetch_all(
             f"SELECT detection_method, COUNT(*) as count FROM arkham_patterns{tenant_filter} GROUP BY detection_method",
-            params
+            params,
         )
         by_method = {row["detection_method"]: row["count"] for row in method_rows}
 
         # Total matches
         matches = await self._db.fetch_one(
-            f"SELECT COUNT(*) as count FROM arkham_pattern_matches{tenant_filter}",
-            params
+            f"SELECT COUNT(*) as count FROM arkham_pattern_matches{tenant_filter}", params
         )
         total_matches = matches["count"] if matches else 0
 
         # Averages
         avg_conf = await self._db.fetch_one(
-            f"SELECT AVG(confidence) as avg FROM arkham_patterns{tenant_filter}",
-            params
+            f"SELECT AVG(confidence) as avg FROM arkham_patterns{tenant_filter}", params
         )
         avg_matches = await self._db.fetch_one(
-            f"SELECT AVG(match_count) as avg FROM arkham_patterns{tenant_filter}",
-            params
+            f"SELECT AVG(match_count) as avg FROM arkham_patterns{tenant_filter}", params
         )
 
         return PatternStatistics(
@@ -997,7 +990,9 @@ class PatternsShard(ArkhamShard):
             "id": pattern.id,
             "name": pattern.name,
             "description": pattern.description,
-            "pattern_type": pattern.pattern_type.value if isinstance(pattern.pattern_type, PatternType) else pattern.pattern_type,
+            "pattern_type": pattern.pattern_type.value
+            if isinstance(pattern.pattern_type, PatternType)
+            else pattern.pattern_type,
             "status": pattern.status.value if isinstance(pattern.status, PatternStatus) else pattern.status,
             "confidence": pattern.confidence,
             "match_count": pattern.match_count,
@@ -1005,7 +1000,9 @@ class PatternsShard(ArkhamShard):
             "entity_count": pattern.entity_count,
             "first_detected": pattern.first_detected.isoformat() if pattern.first_detected else None,
             "last_matched": pattern.last_matched.isoformat() if pattern.last_matched else None,
-            "detection_method": pattern.detection_method.value if isinstance(pattern.detection_method, DetectionMethod) else pattern.detection_method,
+            "detection_method": pattern.detection_method.value
+            if isinstance(pattern.detection_method, DetectionMethod)
+            else pattern.detection_method,
             "detection_model": pattern.detection_model,
             "criteria": criteria_json,
             "created_at": pattern.created_at.isoformat(),
@@ -1015,7 +1012,8 @@ class PatternsShard(ArkhamShard):
         }
 
         if update:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 UPDATE arkham_patterns SET
                     name=:name, description=:description, pattern_type=:pattern_type, status=:status, confidence=:confidence,
                     match_count=:match_count, document_count=:document_count, entity_count=:entity_count,
@@ -1023,9 +1021,12 @@ class PatternsShard(ArkhamShard):
                     detection_method=:detection_method, detection_model=:detection_model, criteria=:criteria,
                     created_at=:created_at, updated_at=:updated_at, created_by=:created_by, metadata=:metadata
                 WHERE id=:id
-            """, params)
+            """,
+                params,
+            )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_patterns (
                     id, name, description, pattern_type, status, confidence,
                     match_count, document_count, entity_count,
@@ -1037,7 +1038,9 @@ class PatternsShard(ArkhamShard):
                     :first_detected, :last_matched,
                     :detection_method, :detection_model, :criteria,
                     :created_at, :updated_at, :created_by, :metadata)
-            """, params)
+            """,
+                params,
+            )
 
     async def _save_match(self, match: PatternMatch) -> None:
         """Save a match to the database."""
@@ -1060,7 +1063,8 @@ class PatternsShard(ArkhamShard):
             "metadata": json.dumps(match.metadata),
         }
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_pattern_matches (
                 id, pattern_id, source_type, source_id, source_title,
                 match_score, excerpt, context, start_char, end_char,
@@ -1068,7 +1072,9 @@ class PatternsShard(ArkhamShard):
             ) VALUES (:id, :pattern_id, :source_type, :source_id, :source_title,
                 :match_score, :excerpt, :context, :start_char, :end_char,
                 :matched_at, :matched_by, :metadata)
-        """, params)
+        """,
+            params,
+        )
 
     async def _update_pattern_counts(self, pattern_id: str) -> None:
         """Update match counts on a pattern."""
@@ -1094,7 +1100,8 @@ class PatternsShard(ArkhamShard):
             {"pattern_id": pattern_id},
         )
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             UPDATE arkham_patterns SET
                 match_count = :match_count,
                 document_count = :document_count,
@@ -1102,14 +1109,16 @@ class PatternsShard(ArkhamShard):
                 last_matched = :last_matched,
                 updated_at = :updated_at
             WHERE id = :id
-        """, {
-            "match_count": total["count"] if total else 0,
-            "document_count": doc_count["count"] if doc_count else 0,
-            "entity_count": entity_count["count"] if entity_count else 0,
-            "last_matched": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
-            "id": pattern_id,
-        })
+        """,
+            {
+                "match_count": total["count"] if total else 0,
+                "document_count": doc_count["count"] if doc_count else 0,
+                "entity_count": entity_count["count"] if entity_count else 0,
+                "last_matched": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat(),
+                "id": pattern_id,
+            },
+        )
 
     async def _check_source_against_patterns(
         self,
@@ -1148,23 +1157,25 @@ class PatternsShard(ArkhamShard):
 
         for pattern in patterns:
             # Check if source matches pattern criteria
-            matches, score, excerpt = await self._source_matches_pattern(
-                source_type, source_id, pattern
-            )
+            matches, score, excerpt = await self._source_matches_pattern(source_type, source_id, pattern)
 
             if matches and score >= 0.5:
                 # Check for duplicate match
-                existing = await self._db.fetch_one(
-                    """SELECT id FROM arkham_pattern_matches
+                existing = (
+                    await self._db.fetch_one(
+                        """SELECT id FROM arkham_pattern_matches
                        WHERE pattern_id = :pattern_id
                        AND source_type = :source_type
                        AND source_id = :source_id""",
-                    {
-                        "pattern_id": pattern.id,
-                        "source_type": source_type.value,
-                        "source_id": source_id,
-                    }
-                ) if self._db else None
+                        {
+                            "pattern_id": pattern.id,
+                            "source_type": source_type.value,
+                            "source_id": source_id,
+                        },
+                    )
+                    if self._db
+                    else None
+                )
 
                 if not existing:
                     match = await self.add_match(
@@ -1255,7 +1266,7 @@ class PatternsShard(ArkhamShard):
                     collection="documents",
                     query=query_text,
                     limit=5,
-                    filter={"source_id": source_id} if source_type == SourceType.DOCUMENT else None
+                    filter={"source_id": source_id} if source_type == SourceType.DOCUMENT else None,
                 )
 
                 if results and len(results) > 0:
@@ -1269,9 +1280,7 @@ class PatternsShard(ArkhamShard):
 
         # Check minimum occurrences for keyword patterns
         if criteria.keywords and criteria.min_occurrences > 1:
-            total_occurrences = sum(
-                content_lower.count(kw.lower()) for kw in criteria.keywords
-            )
+            total_occurrences = sum(content_lower.count(kw.lower()) for kw in criteria.keywords)
             if total_occurrences < criteria.min_occurrences:
                 return False, 0.0, None
 
@@ -1317,8 +1326,7 @@ class PatternsShard(ArkhamShard):
                 if not content and self._db:
                     # Get title from documents table
                     doc_row = await self._db.fetch_one(
-                        "SELECT filename FROM arkham_frame.documents WHERE id = :id",
-                        {"id": source_id}
+                        "SELECT filename FROM arkham_frame.documents WHERE id = :id", {"id": source_id}
                     )
                     if doc_row:
                         title = doc_row.get("filename")
@@ -1328,7 +1336,7 @@ class PatternsShard(ArkhamShard):
                         """SELECT text FROM arkham_frame.chunks
                            WHERE document_id = :id
                            ORDER BY chunk_index""",
-                        {"id": source_id}
+                        {"id": source_id},
                     )
                     if chunk_rows:
                         content = "\n".join(row.get("text", "") for row in chunk_rows if row.get("text"))
@@ -1347,8 +1355,7 @@ class PatternsShard(ArkhamShard):
                 # Fallback: direct DB query
                 if not content and self._db:
                     row = await self._db.fetch_one(
-                        "SELECT name, properties FROM arkham_entities WHERE id = :id",
-                        {"id": source_id}
+                        "SELECT name, properties FROM arkham_entities WHERE id = :id", {"id": source_id}
                     )
                     if row:
                         title = row.get("name")
@@ -1367,8 +1374,7 @@ class PatternsShard(ArkhamShard):
                 # Fallback: direct DB query
                 if not content and self._db:
                     row = await self._db.fetch_one(
-                        "SELECT text, claim_text FROM arkham_claims WHERE id = :id",
-                        {"id": source_id}
+                        "SELECT text, claim_text FROM arkham_claims WHERE id = :id", {"id": source_id}
                     )
                     if row:
                         content = row.get("text") or row.get("claim_text")
@@ -1386,8 +1392,7 @@ class PatternsShard(ArkhamShard):
                 # Fallback: direct DB query
                 if not content and self._db:
                     row = await self._db.fetch_one(
-                        "SELECT title, description FROM arkham_timeline_events WHERE id = :id",
-                        {"id": source_id}
+                        "SELECT title, description FROM arkham_timeline_events WHERE id = :id", {"id": source_id}
                     )
                     if row:
                         title = row.get("title") or row.get("description")
@@ -1397,8 +1402,7 @@ class PatternsShard(ArkhamShard):
                 # Direct DB query for chunks using correct schema
                 if self._db:
                     row = await self._db.fetch_one(
-                        "SELECT text, document_id FROM arkham_frame.chunks WHERE id = :id",
-                        {"id": source_id}
+                        "SELECT text, document_id FROM arkham_frame.chunks WHERE id = :id", {"id": source_id}
                     )
                     if row:
                         content = row.get("text")
@@ -1424,7 +1428,7 @@ class PatternsShard(ArkhamShard):
                 """SELECT text FROM arkham_frame.chunks
                    WHERE document_id = :doc_id
                    ORDER BY chunk_index""",
-                {"doc_id": doc_id}
+                {"doc_id": doc_id},
             )
 
             if chunk_rows:
@@ -1434,8 +1438,7 @@ class PatternsShard(ArkhamShard):
 
             # Fallback: try content column if it exists
             doc_row = await self._db.fetch_one(
-                """SELECT content FROM arkham_frame.documents WHERE id = :doc_id""",
-                {"doc_id": doc_id}
+                """SELECT content FROM arkham_frame.documents WHERE id = :doc_id""", {"doc_id": doc_id}
             )
             if doc_row and doc_row.get("content"):
                 return doc_row.get("content")
@@ -1496,7 +1499,7 @@ Analyze the following text and identify significant patterns. For each pattern:
 Return a JSON array of patterns. Each pattern should have:
 - "name": Brief descriptive name (3-6 words)
 - "description": What the pattern represents and why it matters
-- "type": One of [{', '.join(f'"{t.value}"' for t in types_to_check)}]
+- "type": One of [{", ".join(f'"{t.value}"' for t in types_to_check)}]
 - "confidence": Float 0.0-1.0 based on evidence strength
 - "keywords": Array of key terms that identify this pattern
 - "evidence": Array of excerpts/quotes supporting this pattern
@@ -1527,7 +1530,7 @@ Return ONLY the JSON array, no other text:
         try:
             llm_response = await self._llm.generate(prompt)
             # Extract text from LLMResponse object
-            response_text = llm_response.text if hasattr(llm_response, 'text') else str(llm_response)
+            response_text = llm_response.text if hasattr(llm_response, "text") else str(llm_response)
             patterns_data = self._parse_llm_patterns(response_text)
 
             patterns = []
@@ -1582,6 +1585,7 @@ Return ONLY the JSON array, no other text:
         except Exception as e:
             logger.error(f"LLM pattern detection failed: {e}")
             import traceback
+
             traceback.print_exc()
             return []
 
@@ -1662,7 +1666,9 @@ Return ONLY the JSON array, no other text:
             match_count=row["match_count"],
             document_count=row["document_count"],
             entity_count=row["entity_count"],
-            first_detected=datetime.fromisoformat(row["first_detected"]) if row["first_detected"] else datetime.utcnow(),
+            first_detected=datetime.fromisoformat(row["first_detected"])
+            if row["first_detected"]
+            else datetime.utcnow(),
             last_matched=datetime.fromisoformat(row["last_matched"]) if row["last_matched"] else None,
             detection_method=DetectionMethod(row["detection_method"]),
             detection_model=row["detection_model"],
@@ -1719,8 +1725,8 @@ Return ONLY the JSON array, no other text:
 
         # 2. Look for JSON in markdown code blocks
         code_block_patterns = [
-            r'```json\s*\n?(.*?)\n?```',
-            r'```\s*\n?(.*?)\n?```',
+            r"```json\s*\n?(.*?)\n?```",
+            r"```\s*\n?(.*?)\n?```",
         ]
         for pattern in code_block_patterns:
             match = re.search(pattern, text, re.DOTALL)
@@ -1737,15 +1743,15 @@ Return ONLY the JSON array, no other text:
         end = text.rfind("]")
         if start >= 0 and end > start:
             try:
-                parsed = json.loads(text[start:end + 1])
+                parsed = json.loads(text[start : end + 1])
                 if isinstance(parsed, list):
                     return parsed
             except json.JSONDecodeError:
                 # Try to fix common JSON issues
-                json_text = text[start:end + 1]
+                json_text = text[start : end + 1]
                 # Fix trailing commas
-                json_text = re.sub(r',\s*}', '}', json_text)
-                json_text = re.sub(r',\s*]', ']', json_text)
+                json_text = re.sub(r",\s*}", "}", json_text)
+                json_text = re.sub(r",\s*]", "]", json_text)
                 try:
                     parsed = json.loads(json_text)
                     if isinstance(parsed, list):
@@ -1754,7 +1760,7 @@ Return ONLY the JSON array, no other text:
                     pass
 
         # 4. Try to extract individual JSON objects
-        object_pattern = r'\{[^{}]*\}'
+        object_pattern = r"\{[^{}]*\}"
         matches = re.findall(object_pattern, text)
         for match in matches:
             try:

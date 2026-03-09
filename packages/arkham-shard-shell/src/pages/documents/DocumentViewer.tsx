@@ -256,14 +256,12 @@ export function DocumentViewer({ documentId, onClose }: DocumentViewerProps) {
     return (
       <div className="chunks-view">
         <div className="chunks-header">
-          <span className="chunks-count">
-            {chunksData.total} chunks total
-          </span>
+          <span className="chunks-count">{chunksData.total} chunks total</span>
           {totalChunkPages > 1 && (
             <div className="chunks-pagination">
               <button
                 className="btn btn-icon"
-                onClick={() => setChunksPage(p => Math.max(1, p - 1))}
+                onClick={() => setChunksPage((p) => Math.max(1, p - 1))}
                 disabled={chunksPage <= 1}
               >
                 <Icon name="ChevronLeft" size={16} />
@@ -273,7 +271,7 @@ export function DocumentViewer({ documentId, onClose }: DocumentViewerProps) {
               </span>
               <button
                 className="btn btn-icon"
-                onClick={() => setChunksPage(p => Math.min(totalChunkPages, p + 1))}
+                onClick={() => setChunksPage((p) => Math.min(totalChunkPages, p + 1))}
                 disabled={chunksPage >= totalChunkPages}
               >
                 <Icon name="ChevronRight" size={16} />
@@ -286,9 +284,7 @@ export function DocumentViewer({ documentId, onClose }: DocumentViewerProps) {
             <div key={chunk.id} className="chunk-item">
               <div className="chunk-header">
                 <span className="chunk-index">#{chunk.chunk_index}</span>
-                {chunk.page_number && (
-                  <span className="chunk-page">Page {chunk.page_number}</span>
-                )}
+                {chunk.page_number && <span className="chunk-page">Page {chunk.page_number}</span>}
                 <span className="chunk-tokens">{chunk.token_count} tokens</span>
                 {chunk.embedding_id && (
                   <span className="chunk-embedded" title="Has embedding">
@@ -342,16 +338,14 @@ export function DocumentViewer({ documentId, onClose }: DocumentViewerProps) {
     return (
       <div className="entities-view">
         <div className="entities-header">
-          <span className="entities-count">
-            {entitiesData.total} entities
-          </span>
+          <span className="entities-count">{entitiesData.total} entities</span>
           <select
             className="entity-filter"
             value={entityTypeFilter}
-            onChange={e => setEntityTypeFilter(e.target.value)}
+            onChange={(e) => setEntityTypeFilter(e.target.value)}
           >
             <option value="">All types</option>
-            {entityTypes.map(type => (
+            {entityTypes.map((type) => (
               <option key={type} value={type}>
                 {type}
               </option>
@@ -369,9 +363,7 @@ export function DocumentViewer({ documentId, onClose }: DocumentViewerProps) {
                   {entity.entity_type}
                 </span>
                 <span className="entity-text">{entity.text}</span>
-                <span className="entity-occurrences">
-                  {entity.occurrences}x
-                </span>
+                <span className="entity-occurrences">{entity.occurrences}x</span>
               </div>
               {entity.confidence > 0 && (
                 <div className="entity-confidence">
@@ -508,9 +500,7 @@ export function DocumentViewer({ documentId, onClose }: DocumentViewerProps) {
         >
           <Icon name="Package" size={16} />
           Chunks
-          {document?.chunk_count ? (
-            <span className="tab-badge">{document.chunk_count}</span>
-          ) : null}
+          {document?.chunk_count ? <span className="tab-badge">{document.chunk_count}</span> : null}
         </button>
         <button
           className={`tab-btn ${activeTab === 'entities' ? 'active' : ''}`}

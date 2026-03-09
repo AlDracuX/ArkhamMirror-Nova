@@ -925,7 +925,9 @@
 .assessment-card.selected {
   background: #1a2a3d;
   border: 2px solid #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 0 3px rgba(59, 130, 246, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.3);
   padding: calc(1rem - 1px);
 }
 

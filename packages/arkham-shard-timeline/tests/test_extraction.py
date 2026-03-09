@@ -4,16 +4,16 @@ Timeline Shard - Extraction Tests
 Tests for the DateExtractor class.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
 
+import pytest
 from arkham_shard_timeline.extraction import DateExtractor
 from arkham_shard_timeline.models import (
     DatePrecision,
     EventType,
     ExtractionContext,
 )
+from dateutil.relativedelta import relativedelta
 
 
 class TestDateExtractorInit:

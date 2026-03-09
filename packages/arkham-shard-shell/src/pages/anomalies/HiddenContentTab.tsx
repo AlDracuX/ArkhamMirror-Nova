@@ -13,12 +13,7 @@ import { Icon } from '../../components/common/Icon';
 import { useToast } from '../../context/ToastContext';
 import { useFetch } from '../../hooks/useFetch';
 import * as api from './api';
-import type {
-  HiddenContentScan,
-  HiddenContentStats,
-  EntropyRegion,
-  StegoIndicator,
-} from './api';
+import type { HiddenContentScan, HiddenContentStats, EntropyRegion, StegoIndicator } from './api';
 
 // Props
 interface HiddenContentTabProps {
@@ -41,9 +36,9 @@ export function HiddenContentTab({ onScanComplete }: HiddenContentTabProps) {
   const stats = statsData?.stats;
 
   // Fetch documents for selection
-  const { data: documentsData } = useFetch<{ items: Array<{ id: string; filename: string; file_type: string }> }>(
-    '/api/documents/items?limit=100'
-  );
+  const { data: documentsData } = useFetch<{
+    items: Array<{ id: string; filename: string; file_type: string }>;
+  }>('/api/documents/items?limit=100');
   const documents = documentsData?.items || [];
 
   // Scan a document
@@ -57,14 +52,16 @@ export function HiddenContentTab({ onScanComplete }: HiddenContentTabProps) {
     try {
       const result = await api.scanHiddenContent({ doc_id: selectedDocId });
       setSelectedScan(result.scan);
-      setRecentScans(prev => [result.scan, ...prev.slice(0, 9)]);
+      setRecentScans((prev) => [result.scan, ...prev.slice(0, 9)]);
       refetchStats();
 
       if (result.anomaly_created) {
         toast.warning('Hidden content detected! Anomaly created.');
         onScanComplete?.();
       } else if (result.scan.stego_confidence > 0.5) {
-        toast.warning(`Suspicious patterns detected (${(result.scan.stego_confidence * 100).toFixed(0)}% confidence)`);
+        toast.warning(
+          `Suspicious patterns detected (${(result.scan.stego_confidence * 100).toFixed(0)}% confidence)`
+        );
       } else {
         toast.success('Scan complete - no hidden content detected');
       }
@@ -77,7 +74,7 @@ export function HiddenContentTab({ onScanComplete }: HiddenContentTabProps) {
 
   // Quick scan multiple documents
   const handleQuickScan = useCallback(async () => {
-    const docIds = documents.slice(0, 20).map(d => d.id);
+    const docIds = documents.slice(0, 20).map((d) => d.id);
     if (docIds.length === 0) {
       toast.error('No documents available for scanning');
       return;
@@ -86,7 +83,9 @@ export function HiddenContentTab({ onScanComplete }: HiddenContentTabProps) {
     setScanning(true);
     try {
       const result = await api.quickScanHiddenContent(docIds);
-      toast.success(`Scanned ${result.scanned} documents. ${result.requires_full_scan_count} need full analysis.`);
+      toast.success(
+        `Scanned ${result.scanned} documents. ${result.requires_full_scan_count} need full analysis.`
+      );
 
       if (result.requires_full_scan_count > 0) {
         toast.warning(`High entropy detected in: ${result.requires_full_scan.join(', ')}`);
@@ -134,7 +133,7 @@ export function HiddenContentTab({ onScanComplete }: HiddenContentTabProps) {
             disabled={scanning}
           >
             <option value="">-- Select a document --</option>
-            {documents.map(doc => (
+            {documents.map((doc) => (
               <option key={doc.id} value={doc.id}>
                 {doc.filename} ({doc.file_type || 'unknown'})
               </option>
@@ -181,7 +180,9 @@ export function HiddenContentTab({ onScanComplete }: HiddenContentTabProps) {
 
           {/* Summary */}
           <div className="hc-result-summary">
-            <div className={`hc-confidence-badge ${getConfidenceClass(selectedScan.stego_confidence)}`}>
+            <div
+              className={`hc-confidence-badge ${getConfidenceClass(selectedScan.stego_confidence)}`}
+            >
               <span className="confidence-value">
                 {(selectedScan.stego_confidence * 100).toFixed(0)}%
               </span>
@@ -191,7 +192,9 @@ export function HiddenContentTab({ onScanComplete }: HiddenContentTabProps) {
             <div className="hc-summary-stats">
               <div className="summary-item">
                 <span className="label">Global Entropy:</span>
-                <span className={`value ${selectedScan.entropy_global > 7 ? 'high' : selectedScan.entropy_global > 6 ? 'medium' : ''}`}>
+                <span
+                  className={`value ${selectedScan.entropy_global > 7 ? 'high' : selectedScan.entropy_global > 6 ? 'medium' : ''}`}
+                >
                   {selectedScan.entropy_global.toFixed(3)} / 8.0
                 </span>
               </div>
@@ -263,27 +266,37 @@ export function HiddenContentTab({ onScanComplete }: HiddenContentTabProps) {
               <div className="lsb-details">
                 <div className="lsb-item">
                   <span className="label">Bit Ratio:</span>
-                  <span className="value">{(selectedScan.lsb_result.bit_ratio * 100).toFixed(2)}%</span>
+                  <span className="value">
+                    {(selectedScan.lsb_result.bit_ratio * 100).toFixed(2)}%
+                  </span>
                 </div>
                 <div className="lsb-item">
                   <span className="label">Chi-Square Value:</span>
-                  <span className="value">{selectedScan.lsb_result.chi_square_value.toFixed(4)}</span>
+                  <span className="value">
+                    {selectedScan.lsb_result.chi_square_value.toFixed(4)}
+                  </span>
                 </div>
                 <div className="lsb-item">
                   <span className="label">P-Value:</span>
-                  <span className={`value ${selectedScan.lsb_result.chi_square_p_value < 0.05 ? 'suspicious' : ''}`}>
+                  <span
+                    className={`value ${selectedScan.lsb_result.chi_square_p_value < 0.05 ? 'suspicious' : ''}`}
+                  >
                     {selectedScan.lsb_result.chi_square_p_value.toFixed(6)}
                   </span>
                 </div>
                 <div className="lsb-item">
                   <span className="label">Suspicious:</span>
-                  <span className={`value ${selectedScan.lsb_result.is_suspicious ? 'error' : 'success'}`}>
+                  <span
+                    className={`value ${selectedScan.lsb_result.is_suspicious ? 'error' : 'success'}`}
+                  >
                     {selectedScan.lsb_result.is_suspicious ? 'YES' : 'NO'}
                   </span>
                 </div>
                 <div className="lsb-item">
                   <span className="label">Confidence:</span>
-                  <span className="value">{(selectedScan.lsb_result.confidence * 100).toFixed(0)}%</span>
+                  <span className="value">
+                    {(selectedScan.lsb_result.confidence * 100).toFixed(0)}%
+                  </span>
                 </div>
               </div>
             </div>
@@ -320,7 +333,7 @@ export function HiddenContentTab({ onScanComplete }: HiddenContentTabProps) {
         <div className="hc-recent-scans">
           <h3>Recent Scans</h3>
           <div className="recent-scans-list">
-            {recentScans.map(scan => (
+            {recentScans.map((scan) => (
               <div
                 key={scan.id}
                 className={`recent-scan-item ${selectedScan?.id === scan.id ? 'selected' : ''}`}
@@ -330,9 +343,7 @@ export function HiddenContentTab({ onScanComplete }: HiddenContentTabProps) {
                 <div className={`scan-confidence ${getConfidenceClass(scan.stego_confidence)}`}>
                   {(scan.stego_confidence * 100).toFixed(0)}%
                 </div>
-                <div className="scan-date">
-                  {new Date(scan.created_at).toLocaleTimeString()}
-                </div>
+                <div className="scan-date">{new Date(scan.created_at).toLocaleTimeString()}</div>
               </div>
             ))}
           </div>
@@ -346,7 +357,13 @@ export function HiddenContentTab({ onScanComplete }: HiddenContentTabProps) {
 
 function EntropyRegionBar({ region, index }: { region: EntropyRegion; index: number }) {
   const percentage = (region.entropy_value / 8) * 100;
-  const colorClass = region.is_anomalous ? 'anomalous' : percentage > 87.5 ? 'high' : percentage > 75 ? 'medium' : 'normal';
+  const colorClass = region.is_anomalous
+    ? 'anomalous'
+    : percentage > 87.5
+      ? 'high'
+      : percentage > 75
+        ? 'medium'
+        : 'normal';
 
   return (
     <div className="entropy-region">
@@ -357,10 +374,7 @@ function EntropyRegionBar({ region, index }: { region: EntropyRegion; index: num
         </span>
       </div>
       <div className="region-bar-container">
-        <div
-          className={`region-bar ${colorClass}`}
-          style={{ width: `${percentage}%` }}
-        />
+        <div className={`region-bar ${colorClass}`} style={{ width: `${percentage}%` }} />
         <span className="region-value">{region.entropy_value.toFixed(3)}</span>
       </div>
       {region.description && (
@@ -387,12 +401,8 @@ function StegoIndicatorCard({ indicator }: { indicator: StegoIndicator }) {
         <Icon name={(iconMap[indicator.indicator_type] || 'AlertCircle') as any} size={20} />
       </div>
       <div className="indicator-content">
-        <div className="indicator-type">
-          {indicator.indicator_type.replace(/_/g, ' ')}
-        </div>
-        <div className="indicator-location">
-          Location: {indicator.location}
-        </div>
+        <div className="indicator-type">{indicator.indicator_type.replace(/_/g, ' ')}</div>
+        <div className="indicator-location">Location: {indicator.location}</div>
         <div className="indicator-confidence">
           {(indicator.confidence * 100).toFixed(0)}% confidence
         </div>

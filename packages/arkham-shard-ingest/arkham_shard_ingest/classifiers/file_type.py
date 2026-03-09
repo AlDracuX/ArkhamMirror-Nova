@@ -64,6 +64,7 @@ class FileTypeClassifier:
         self._magic = None
         try:
             import magic
+
             self._magic = magic
         except ImportError:
             logger.warning("python-magic not available, using extension-only detection")
@@ -139,7 +140,9 @@ class FileTypeClassifier:
         # Check extension first
         ext_category = self._ext_to_category.get(extension)
         if ext_category:
-            return FileCategory(ext_category) if ext_category in [e.value for e in FileCategory] else FileCategory.DOCUMENT
+            return (
+                FileCategory(ext_category) if ext_category in [e.value for e in FileCategory] else FileCategory.DOCUMENT
+            )
 
         # Fallback to MIME type
         if mime_type.startswith("image/"):
@@ -159,6 +162,7 @@ class FileTypeClassifier:
         """Add image-specific info (dimensions, DPI)."""
         try:
             from PIL import Image
+
             with Image.open(file_info.path) as img:
                 file_info.width, file_info.height = img.size
                 # Try to get DPI from EXIF or image info
@@ -172,6 +176,7 @@ class FileTypeClassifier:
         """Add PDF-specific info (page count)."""
         try:
             from pypdf import PdfReader
+
             reader = PdfReader(file_info.path)
             file_info.page_count = len(reader.pages)
         except Exception as e:
@@ -187,7 +192,8 @@ class FileTypeClassifier:
             if file_info.extension in config["extensions"]:
                 # Filter out meta-instructions like ROUTE_BY_QUALITY
                 return [
-                    step for step in config["pipeline"]
+                    step
+                    for step in config["pipeline"]
                     if not step.startswith("ROUTE") and not step.startswith("RECURSE") and not step.startswith("IMAGES")
                 ]
 

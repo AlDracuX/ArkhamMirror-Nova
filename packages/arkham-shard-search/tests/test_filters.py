@@ -4,12 +4,12 @@ Search Shard - Filter Tests
 Tests for FilterBuilder and FilterOptimizer classes.
 """
 
-import pytest
 from datetime import datetime
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from arkham_shard_search.filters import FilterBuilder, FilterOptimizer
-from arkham_shard_search.models import SearchFilters, DateRangeFilter, SearchResultItem
+from arkham_shard_search.models import DateRangeFilter, SearchFilters, SearchResultItem
 
 
 class TestFilterBuilderFromDict:
@@ -168,9 +168,7 @@ class TestFilterBuilderValidate:
     def test_valid_date_range_same_day(self):
         """Test validation of same-day date range."""
         same_day = datetime(2024, 6, 15)
-        filters = SearchFilters(
-            date_range=DateRangeFilter(start=same_day, end=same_day)
-        )
+        filters = SearchFilters(date_range=DateRangeFilter(start=same_day, end=same_day))
         is_valid, error = FilterBuilder.validate(filters)
         assert is_valid is True
 

@@ -31,17 +31,17 @@ export function NodeSizeControls({ settings, onChange }: NodeSizeControlsProps) 
         <label>Size By</label>
         <select
           value={settings.sizeBy}
-          onChange={e => onChange({ sizeBy: e.target.value as NodeSizeSettings['sizeBy'] })}
+          onChange={(e) => onChange({ sizeBy: e.target.value as NodeSizeSettings['sizeBy'] })}
           className="control-select"
         >
-          {SIZE_BY_OPTIONS.map(option => (
+          {SIZE_BY_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
         </select>
         <span className="control-hint">
-          {SIZE_BY_OPTIONS.find(o => o.value === settings.sizeBy)?.description}
+          {SIZE_BY_OPTIONS.find((o) => o.value === settings.sizeBy)?.description}
         </span>
       </div>
 
@@ -55,11 +55,11 @@ export function NodeSizeControls({ settings, onChange }: NodeSizeControlsProps) 
               min="2"
               max="12"
               value={settings.minRadius}
-              onChange={e => {
+              onChange={(e) => {
                 const newMin = Number(e.target.value);
                 onChange({
                   minRadius: newMin,
-                  maxRadius: Math.max(newMin + 2, settings.maxRadius)
+                  maxRadius: Math.max(newMin + 2, settings.maxRadius),
                 });
               }}
               className="control-slider"
@@ -72,11 +72,11 @@ export function NodeSizeControls({ settings, onChange }: NodeSizeControlsProps) 
               min="8"
               max="24"
               value={settings.maxRadius}
-              onChange={e => {
+              onChange={(e) => {
                 const newMax = Number(e.target.value);
                 onChange({
                   maxRadius: newMax,
-                  minRadius: Math.min(newMax - 2, settings.minRadius)
+                  minRadius: Math.min(newMax - 2, settings.minRadius),
                 });
               }}
               className="control-slider"

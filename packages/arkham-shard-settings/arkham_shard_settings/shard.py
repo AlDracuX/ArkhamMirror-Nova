@@ -106,6 +106,7 @@ class SettingsShard(ArkhamShard):
     def get_routes(self):
         """Return the API router."""
         from .api import router
+
         return router
 
     # === Public API ===
@@ -132,13 +133,10 @@ class SettingsShard(ArkhamShard):
         if tenant_id:
             row = await self._db.fetch_one(
                 "SELECT * FROM arkham_settings WHERE key = :key AND (tenant_id = :tenant_id OR tenant_id IS NULL)",
-                {"key": key, "tenant_id": str(tenant_id)}
+                {"key": key, "tenant_id": str(tenant_id)},
             )
         else:
-            row = await self._db.fetch_one(
-                "SELECT * FROM arkham_settings WHERE key = :key",
-                {"key": key}
-            )
+            row = await self._db.fetch_one("SELECT * FROM arkham_settings WHERE key = :key", {"key": key})
 
         if row:
             setting = self._row_to_setting(row)
@@ -147,12 +145,7 @@ class SettingsShard(ArkhamShard):
 
         return None
 
-    async def update_setting(
-        self,
-        key: str,
-        value: Any,
-        validate: bool = True
-    ) -> Optional[Setting]:
+    async def update_setting(self, key: str, value: Any, validate: bool = True) -> Optional[Setting]:
         """
         Update a setting value.
 
@@ -199,7 +192,7 @@ class SettingsShard(ArkhamShard):
                     "value": json.dumps(value),
                     "modified_at": datetime.utcnow(),
                     "tenant_id": str(tenant_id),
-                }
+                },
             )
         else:
             await self._db.execute(
@@ -212,7 +205,7 @@ class SettingsShard(ArkhamShard):
                     "key": key,
                     "value": json.dumps(value),
                     "modified_at": datetime.utcnow(),
-                }
+                },
             )
 
         # Record change in history
@@ -226,7 +219,7 @@ class SettingsShard(ArkhamShard):
                 "old_value": json.dumps(old_value),
                 "new_value": json.dumps(value),
                 "tenant_id": str(tenant_id) if tenant_id else None,
-            }
+            },
         )
 
         # Invalidate cache
@@ -238,12 +231,16 @@ class SettingsShard(ArkhamShard):
 
         # Emit event
         if self._event_bus and updated:
-            await self._event_bus.emit("settings.setting.updated", {
-                "key": key,
-                "old_value": old_value,
-                "new_value": value,
-                "requires_restart": updated.requires_restart,
-            }, "settings")
+            await self._event_bus.emit(
+                "settings.setting.updated",
+                {
+                    "key": key,
+                    "old_value": old_value,
+                    "new_value": value,
+                    "requires_restart": updated.requires_restart,
+                },
+                "settings",
+            )
 
         return updated
 
@@ -293,7 +290,7 @@ class SettingsShard(ArkhamShard):
                 AND (tenant_id = :tenant_id OR tenant_id IS NULL)
                 ORDER BY display_order
                 """,
-                {"category": category, "tenant_id": str(tenant_id)}
+                {"category": category, "tenant_id": str(tenant_id)},
             )
         else:
             rows = await self._db.fetch_all(
@@ -302,7 +299,7 @@ class SettingsShard(ArkhamShard):
                 WHERE category = :category AND is_hidden = FALSE
                 ORDER BY display_order
                 """,
-                {"category": category}
+                {"category": category},
             )
 
         settings = [self._row_to_setting(row) for row in rows]
@@ -314,10 +311,7 @@ class SettingsShard(ArkhamShard):
         return settings
 
     async def get_all_settings(
-        self,
-        category: Optional[str] = None,
-        search: Optional[str] = None,
-        modified_only: bool = False
+        self, category: Optional[str] = None, search: Optional[str] = None, modified_only: bool = False
     ) -> List[Setting]:
         """
         Get all settings with optional filtering.
@@ -365,11 +359,7 @@ class SettingsShard(ArkhamShard):
 
         return settings
 
-    async def update_category_settings(
-        self,
-        category: str,
-        settings: Dict[str, Any]
-    ) -> List[Setting]:
+    async def update_category_settings(self, category: str, settings: Dict[str, Any]) -> List[Setting]:
         """
         Bulk update settings in a category.
 
@@ -385,10 +375,14 @@ class SettingsShard(ArkhamShard):
 
         # Stub implementation
         if self._event_bus:
-            await self._event_bus.emit("settings.category.updated", {
-                "category": category,
-                "count": len(settings),
-            }, "settings")
+            await self._event_bus.emit(
+                "settings.category.updated",
+                {
+                    "category": category,
+                    "count": len(settings),
+                },
+                "settings",
+            )
 
         return []
 
@@ -410,11 +404,7 @@ class SettingsShard(ArkhamShard):
         # Get setting metadata
         setting = await self.get_setting(key)
         if not setting:
-            return SettingsValidationResult(
-                is_valid=False,
-                errors=[f"Setting not found: {key}"],
-                coerced_value=value
-            )
+            return SettingsValidationResult(is_valid=False, errors=[f"Setting not found: {key}"], coerced_value=value)
 
         # Type coercion and validation based on data_type
         data_type = setting.data_type
@@ -466,14 +456,12 @@ class SettingsShard(ArkhamShard):
 
             if "pattern" in validation and isinstance(coerced_value, str):
                 import re
+
                 if not re.match(validation["pattern"], coerced_value):
                     errors.append(f"Value must match pattern: {validation['pattern']}")
 
         return SettingsValidationResult(
-            is_valid=len(errors) == 0,
-            errors=errors,
-            warnings=warnings,
-            coerced_value=coerced_value
+            is_valid=len(errors) == 0, errors=errors, warnings=warnings, coerced_value=coerced_value
         )
 
     # === Profiles ===
@@ -493,10 +481,7 @@ class SettingsShard(ArkhamShard):
         return None
 
     async def create_profile(
-        self,
-        name: str,
-        description: str = "",
-        settings: Optional[Dict[str, Any]] = None
+        self, name: str, description: str = "", settings: Optional[Dict[str, Any]] = None
     ) -> SettingsProfile:
         """
         Create a new settings profile.
@@ -513,6 +498,7 @@ class SettingsShard(ArkhamShard):
             raise RuntimeError("Shard not initialized")
 
         import uuid
+
         profile = SettingsProfile(
             id=str(uuid.uuid4()),
             name=name,
@@ -536,9 +522,13 @@ class SettingsShard(ArkhamShard):
 
         # Stub implementation
         if self._event_bus:
-            await self._event_bus.emit("settings.profile.applied", {
-                "profile_id": profile_id,
-            }, "settings")
+            await self._event_bus.emit(
+                "settings.profile.applied",
+                {
+                    "profile_id": profile_id,
+                },
+                "settings",
+            )
 
         return True
 
@@ -558,11 +548,7 @@ class SettingsShard(ArkhamShard):
 
         return None
 
-    async def update_shard_settings(
-        self,
-        shard_name: str,
-        settings: Dict[str, Any]
-    ) -> Optional[ShardSettings]:
+    async def update_shard_settings(self, shard_name: str, settings: Dict[str, Any]) -> Optional[ShardSettings]:
         """Update settings for a specific shard."""
         if not self._db:
             raise RuntimeError("Shard not initialized")
@@ -578,11 +564,7 @@ class SettingsShard(ArkhamShard):
 
     # === Backup/Restore ===
 
-    async def create_backup(
-        self,
-        name: str = "",
-        description: str = ""
-    ) -> Optional[SettingsBackup]:
+    async def create_backup(self, name: str = "", description: str = "") -> Optional[SettingsBackup]:
         """
         Create a backup of all settings.
 
@@ -628,9 +610,13 @@ class SettingsShard(ArkhamShard):
 
         # Stub implementation
         if self._event_bus:
-            await self._event_bus.emit("settings.backup.restored", {
-                "backup_id": backup_id,
-            }, "settings")
+            await self._event_bus.emit(
+                "settings.backup.restored",
+                {
+                    "backup_id": backup_id,
+                },
+                "settings",
+            )
 
         return True
 
@@ -755,9 +741,7 @@ class SettingsShard(ArkhamShard):
         if valid_keys:
             try:
                 placeholders = ", ".join(f"'{k}'" for k in valid_keys)
-                await self._db.execute(
-                    f"DELETE FROM arkham_settings WHERE key NOT IN ({placeholders})"
-                )
+                await self._db.execute(f"DELETE FROM arkham_settings WHERE key NOT IN ({placeholders})")
                 logger.debug("Cleaned up orphaned settings")
             except Exception as e:
                 logger.warning(f"Failed to clean up orphaned settings: {e}")
@@ -765,8 +749,7 @@ class SettingsShard(ArkhamShard):
         for setting in DEFAULT_SETTINGS:
             # Check if setting already exists
             existing = await self._db.fetch_one(
-                "SELECT key FROM arkham_settings WHERE key = :key",
-                {"key": setting.key}
+                "SELECT key FROM arkham_settings WHERE key = :key", {"key": setting.key}
             )
 
             if not existing:
@@ -797,7 +780,7 @@ class SettingsShard(ArkhamShard):
                         "is_hidden": setting.is_hidden,
                         "is_readonly": setting.is_readonly,
                         "display_order": setting.order,
-                    }
+                    },
                 )
                 logger.debug(f"Inserted default setting: {setting.key}")
 
@@ -833,7 +816,9 @@ class SettingsShard(ArkhamShard):
     def _row_to_setting(self, row: Dict[str, Any]) -> Setting:
         """Convert a database row to a Setting object."""
         # Debug log the raw row
-        logger.debug(f"Raw row for {row.get('key')}: value={row.get('value')!r} (type={type(row.get('value')).__name__})")
+        logger.debug(
+            f"Raw row for {row.get('key')}: value={row.get('value')!r} (type={type(row.get('value')).__name__})"
+        )
 
         # Parse JSONB fields - handle both string and already-parsed formats
         value = self._parse_jsonb(row.get("value"))

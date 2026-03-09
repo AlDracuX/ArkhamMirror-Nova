@@ -6,7 +6,6 @@ Defines all default settings for the application.
 
 from .models import Setting, SettingCategory, SettingType
 
-
 # Default settings organized by category
 DEFAULT_SETTINGS: list[Setting] = [
     # === General Settings ===
@@ -107,7 +106,6 @@ DEFAULT_SETTINGS: list[Setting] = [
         ],
         order=6,
     ),
-
     # === Appearance Settings ===
     Setting(
         key="appearance.theme",
@@ -164,7 +162,6 @@ DEFAULT_SETTINGS: list[Setting] = [
         description="Primary accent color",
         order=5,
     ),
-
     # === Notification Settings ===
     Setting(
         key="notifications.enabled",
@@ -197,7 +194,6 @@ DEFAULT_SETTINGS: list[Setting] = [
         validation={"min": 0, "max": 30},
         order=3,
     ),
-
     # === Performance Settings ===
     Setting(
         key="performance.page_size",
@@ -255,7 +251,6 @@ DEFAULT_SETTINGS: list[Setting] = [
         description="Load images only when visible (placeholder - future feature)",
         order=5,
     ),
-
     # === Data Management Settings ===
     # Note: These are informational settings. The actual actions (clear, reset, export)
     # are performed via the custom Data Management UI, not by changing these values.
@@ -286,7 +281,6 @@ DEFAULT_SETTINGS: list[Setting] = [
         description="Show confirmation dialog before clearing or deleting data",
         order=2,
     ),
-
     # === Advanced Settings ===
     # --- Timeouts ---
     Setting(
@@ -337,7 +331,6 @@ DEFAULT_SETTINGS: list[Setting] = [
         ],
         order=3,
     ),
-
     # --- Storage ---
     Setting(
         key="storage.max_file_size_mb",
@@ -373,7 +366,6 @@ DEFAULT_SETTINGS: list[Setting] = [
         ],
         order=5,
     ),
-
     # --- Resources ---
     Setting(
         key="advanced.enable_gpu",
@@ -418,7 +410,6 @@ DEFAULT_SETTINGS: list[Setting] = [
         ],
         order=8,
     ),
-
     # --- Developer ---
     Setting(
         key="advanced.log_level",
@@ -447,7 +438,6 @@ DEFAULT_SETTINGS: list[Setting] = [
         description="Display additional debugging information in the UI",
         order=10,
     ),
-
     # --- Embedding Model ---
     Setting(
         key="advanced.embedding_model",
@@ -465,18 +455,23 @@ DEFAULT_SETTINGS: list[Setting] = [
             # === DISABLED ===
             {"value": "", "label": "[DISABLED] No semantic search"},
             # === LOCAL MODELS (run on your machine) ===
-            {"value": "sentence-transformers/all-MiniLM-L6-v2", "label": "[LOCAL] MiniLM-L6 (384D, ~80MB) - Default, fast"},
+            {
+                "value": "sentence-transformers/all-MiniLM-L6-v2",
+                "label": "[LOCAL] MiniLM-L6 (384D, ~80MB) - Default, fast",
+            },
             {"value": "sentence-transformers/all-mpnet-base-v2", "label": "[LOCAL] MPNet-Base (768D, ~420MB)"},
             {"value": "BAAI/bge-base-en-v1.5", "label": "[LOCAL] BGE-Base-EN (768D, ~440MB)"},
             {"value": "BAAI/bge-large-en-v1.5", "label": "[LOCAL] BGE-Large-EN (1024D, ~1.3GB)"},
             {"value": "BAAI/bge-m3", "label": "[LOCAL] BGE-M3 (1024D, ~2.2GB, multilingual) - Best quality"},
             # === CLOUD API MODELS (require API key, data sent externally) ===
-            {"value": "text-embedding-3-small", "label": "[CLOUD API] OpenAI text-embedding-3-small (1536D) - Requires API key"},
+            {
+                "value": "text-embedding-3-small",
+                "label": "[CLOUD API] OpenAI text-embedding-3-small (1536D) - Requires API key",
+            },
         ],
         requires_restart=True,
         order=11,
     ),
-
     # --- LLM Configuration ---
     Setting(
         key="llm.endpoint",

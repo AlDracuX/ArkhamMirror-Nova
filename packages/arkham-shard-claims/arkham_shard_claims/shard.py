@@ -89,6 +89,7 @@ class ClaimsShard(ArkhamShard):
     def get_routes(self):
         """Return FastAPI router for this shard."""
         from .api import router
+
         return router
 
     # === Database Schema ===
@@ -243,12 +244,12 @@ class ClaimsShard(ArkhamShard):
                     # Combine chunk content
                     texts = []
                     for chunk in chunks:
-                        if hasattr(chunk, 'content'):
+                        if hasattr(chunk, "content"):
                             texts.append(chunk.content)
-                        elif hasattr(chunk, 'text'):
+                        elif hasattr(chunk, "text"):
                             texts.append(chunk.text)
                         elif isinstance(chunk, dict):
-                            texts.append(chunk.get('content') or chunk.get('text', ''))
+                            texts.append(chunk.get("content") or chunk.get("text", ""))
                     content = "\n".join(filter(None, texts))
 
             if not content:
@@ -256,7 +257,7 @@ class ClaimsShard(ArkhamShard):
                 return
 
             # Extract claims using LLM if available, otherwise simple extraction
-            if self._llm and hasattr(self._llm, 'is_available') and self._llm.is_available():
+            if self._llm and hasattr(self._llm, "is_available") and self._llm.is_available():
                 claims = await self._extract_claims_llm(content, document_id)
             else:
                 claims = await self._extract_claims_simple(content, document_id)
@@ -316,7 +317,7 @@ class ClaimsShard(ArkhamShard):
         claims = []
 
         # Split into sentences (handles . ! ? but preserves abbreviations like "Dr." "Mr.")
-        sentence_pattern = r'(?<=[.!?])\s+(?=[A-Z])'
+        sentence_pattern = r"(?<=[.!?])\s+(?=[A-Z])"
         sentences = re.split(sentence_pattern, text)
 
         for sentence in sentences:
@@ -332,11 +333,11 @@ class ClaimsShard(ArkhamShard):
                 continue
 
             # Skip questions
-            if sentence.rstrip().endswith('?'):
+            if sentence.rstrip().endswith("?"):
                 continue
 
             # Skip sentences that are likely headers or list items
-            if sentence.startswith('-') or sentence.startswith('*') or sentence.startswith('#'):
+            if sentence.startswith("-") or sentence.startswith("*") or sentence.startswith("#"):
                 continue
 
             # Create claim
@@ -426,18 +427,14 @@ Return ONLY a valid JSON array, no other text. Example format:
 
         try:
             # Use LLM generate method
-            response = await self._llm.generate(
-                prompt,
-                system_prompt=system_prompt,
-                temperature=0.3
-            )
+            response = await self._llm.generate(prompt, system_prompt=system_prompt, temperature=0.3)
 
             # Extract response text
-            response_text = response.text if hasattr(response, 'text') else str(response)
-            extraction_model = response.model if hasattr(response, 'model') else "unknown"
+            response_text = response.text if hasattr(response, "text") else str(response)
+            extraction_model = response.model if hasattr(response, "model") else "unknown"
 
             # Parse JSON from response
-            json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
+            json_match = re.search(r"\[.*\]", response_text, re.DOTALL)
             if not json_match:
                 logger.warning("LLM response did not contain JSON array, falling back to simple extraction")
                 return await self._extract_claims_simple(text, document_id)
@@ -525,7 +522,9 @@ Return ONLY a valid JSON array, no other text. Example format:
             "source_start_char": claim.source_start_char,
             "source_end_char": claim.source_end_char,
             "source_context": claim.source_context,
-            "extracted_by": claim.extracted_by.value if isinstance(claim.extracted_by, ExtractionMethod) else claim.extracted_by,
+            "extracted_by": claim.extracted_by.value
+            if isinstance(claim.extracted_by, ExtractionMethod)
+            else claim.extracted_by,
             "extraction_model": claim.extraction_model,
             "entity_ids": json_module.dumps(claim.entity_ids),
             "evidence_count": claim.evidence_count,
@@ -537,7 +536,8 @@ Return ONLY a valid JSON array, no other text. Example format:
             "metadata": json_module.dumps(claim.metadata),
         }
 
-        await self._db.execute("""
+        await self._db.execute(
+            """
             INSERT INTO arkham_claims (
                 id, text, claim_type, status, confidence,
                 source_document_id, source_start_char, source_end_char,
@@ -551,7 +551,9 @@ Return ONLY a valid JSON array, no other text. Example format:
                 :entity_ids, :evidence_count, :supporting_count, :refuting_count,
                 :created_at, :updated_at, :verified_at, :metadata
             )
-        """, params)
+        """,
+            params,
+        )
 
         logger.debug(f"Stored claim {claim.id}: {claim.text[:50]}...")
 
@@ -804,6 +806,7 @@ Return ONLY a valid JSON array, no other text. Example format:
             ClaimExtractionResult with extracted claims and metadata
         """
         import time
+
         start_time = time.time()
         claims = []
         errors = []
@@ -811,7 +814,7 @@ Return ONLY a valid JSON array, no other text. Example format:
 
         try:
             # Use LLM extraction if available
-            if self._llm and hasattr(self._llm, 'is_available') and self._llm.is_available():
+            if self._llm and hasattr(self._llm, "is_available") and self._llm.is_available():
                 claims = await self._extract_claims_llm(text, document_id)
                 method = ExtractionMethod.LLM
             else:
@@ -899,13 +902,15 @@ Return ONLY a valid JSON array, no other text. Example format:
             )
             for item in similar:
                 if item["id"] != claim_id and item["score"] >= threshold:
-                    matches.append(ClaimMatch(
-                        claim_id=claim_id,
-                        matched_claim_id=item["id"],
-                        similarity_score=item["score"],
-                        match_type="semantic",
-                        suggested_action="review" if item["score"] < 0.95 else "merge",
-                    ))
+                    matches.append(
+                        ClaimMatch(
+                            claim_id=claim_id,
+                            matched_claim_id=item["id"],
+                            similarity_score=item["score"],
+                            match_type="semantic",
+                            suggested_action="review" if item["score"] < 0.95 else "merge",
+                        )
+                    )
         else:
             # Fallback to simple text matching
             all_claims = await self.list_claims(limit=1000)
@@ -913,13 +918,15 @@ Return ONLY a valid JSON array, no other text. Example format:
                 if other.id != claim_id:
                     score = self._simple_similarity(claim.text, other.text)
                     if score >= threshold:
-                        matches.append(ClaimMatch(
-                            claim_id=claim_id,
-                            matched_claim_id=other.id,
-                            similarity_score=score,
-                            match_type="fuzzy",
-                            suggested_action="review",
-                        ))
+                        matches.append(
+                            ClaimMatch(
+                                claim_id=claim_id,
+                                matched_claim_id=other.id,
+                                similarity_score=score,
+                                match_type="fuzzy",
+                                suggested_action="review",
+                            )
+                        )
 
         return sorted(matches, key=lambda m: m.similarity_score, reverse=True)[:limit]
 
@@ -996,62 +1003,54 @@ Return ONLY a valid JSON array, no other text. Example format:
             tenant_params["tenant_id"] = str(tenant_id)
 
         # Total claims
-        total = await self._db.fetch_one(
-            f"SELECT COUNT(*) as count FROM arkham_claims{tenant_filter}",
-            tenant_params
-        )
+        total = await self._db.fetch_one(f"SELECT COUNT(*) as count FROM arkham_claims{tenant_filter}", tenant_params)
         total_claims = total["count"] if total else 0
 
         # By status
         status_rows = await self._db.fetch_all(
-            f"SELECT status, COUNT(*) as count FROM arkham_claims{tenant_filter} GROUP BY status",
-            tenant_params
+            f"SELECT status, COUNT(*) as count FROM arkham_claims{tenant_filter} GROUP BY status", tenant_params
         )
         by_status = {row["status"]: row["count"] for row in status_rows}
 
         # By type
         type_rows = await self._db.fetch_all(
-            f"SELECT claim_type, COUNT(*) as count FROM arkham_claims{tenant_filter} GROUP BY claim_type",
-            tenant_params
+            f"SELECT claim_type, COUNT(*) as count FROM arkham_claims{tenant_filter} GROUP BY claim_type", tenant_params
         )
         by_type = {row["claim_type"]: row["count"] for row in type_rows}
 
         # By extraction method
         method_rows = await self._db.fetch_all(
             f"SELECT extracted_by, COUNT(*) as count FROM arkham_claims{tenant_filter} GROUP BY extracted_by",
-            tenant_params
+            tenant_params,
         )
         by_method = {row["extracted_by"]: row["count"] for row in method_rows}
 
         # Evidence stats
         evidence_total = await self._db.fetch_one(
-            f"SELECT COUNT(*) as count FROM arkham_claim_evidence{tenant_filter}",
-            tenant_params
+            f"SELECT COUNT(*) as count FROM arkham_claim_evidence{tenant_filter}", tenant_params
         )
         total_evidence = evidence_total["count"] if evidence_total else 0
 
         supporting = await self._db.fetch_one(
             f"SELECT COUNT(*) as count FROM arkham_claim_evidence WHERE relationship = 'supports'{' AND tenant_id = :tenant_id' if tenant_id else ''}",
-            tenant_params
+            tenant_params,
         )
         refuting = await self._db.fetch_one(
             f"SELECT COUNT(*) as count FROM arkham_claim_evidence WHERE relationship = 'refutes'{' AND tenant_id = :tenant_id' if tenant_id else ''}",
-            tenant_params
+            tenant_params,
         )
 
         with_evidence = await self._db.fetch_one(
             f"SELECT COUNT(*) as count FROM arkham_claims WHERE evidence_count > 0{' AND tenant_id = :tenant_id' if tenant_id else ''}",
-            tenant_params
+            tenant_params,
         )
 
         # Averages
         avg_conf = await self._db.fetch_one(
-            f"SELECT AVG(confidence) as avg FROM arkham_claims{tenant_filter}",
-            tenant_params
+            f"SELECT AVG(confidence) as avg FROM arkham_claims{tenant_filter}", tenant_params
         )
         avg_ev = await self._db.fetch_one(
-            f"SELECT AVG(evidence_count) as avg FROM arkham_claims{tenant_filter}",
-            tenant_params
+            f"SELECT AVG(evidence_count) as avg FROM arkham_claims{tenant_filter}", tenant_params
         )
 
         return ClaimStatistics(
@@ -1097,6 +1096,7 @@ Return ONLY a valid JSON array, no other text. Example format:
             return
 
         import json
+
         params = {
             "id": claim.id,
             "text": claim.text,
@@ -1120,7 +1120,8 @@ Return ONLY a valid JSON array, no other text. Example format:
         }
 
         if update:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 UPDATE arkham_claims SET
                     text=:text, claim_type=:claim_type, status=:status, confidence=:confidence,
                     source_document_id=:source_document_id, source_start_char=:source_start_char, source_end_char=:source_end_char,
@@ -1128,9 +1129,12 @@ Return ONLY a valid JSON array, no other text. Example format:
                     entity_ids=:entity_ids, evidence_count=:evidence_count, supporting_count=:supporting_count, refuting_count=:refuting_count,
                     created_at=:created_at, updated_at=:updated_at, verified_at=:verified_at, metadata=:metadata
                 WHERE id=:id
-            """, params)
+            """,
+                params,
+            )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_claims (
                     id, text, claim_type, status, confidence,
                     source_document_id, source_start_char, source_end_char,
@@ -1142,7 +1146,9 @@ Return ONLY a valid JSON array, no other text. Example format:
                     :source_context, :extracted_by, :extraction_model,
                     :entity_ids, :evidence_count, :supporting_count, :refuting_count,
                     :created_at, :updated_at, :verified_at, :metadata)
-            """, params)
+            """,
+                params,
+            )
 
     async def _save_evidence(self, evidence: Evidence, update: bool = False) -> None:
         """Save evidence to the database."""
@@ -1150,6 +1156,7 @@ Return ONLY a valid JSON array, no other text. Example format:
             return
 
         import json
+
         params = {
             "id": evidence.id,
             "claim_id": evidence.claim_id,
@@ -1166,15 +1173,19 @@ Return ONLY a valid JSON array, no other text. Example format:
         }
 
         if update:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 UPDATE arkham_claim_evidence SET
                     claim_id=:claim_id, evidence_type=:evidence_type, reference_id=:reference_id, reference_title=:reference_title,
                     relationship=:relationship, strength=:strength, excerpt=:excerpt, notes=:notes,
                     added_by=:added_by, added_at=:added_at, metadata=:metadata
                 WHERE id=:id
-            """, params)
+            """,
+                params,
+            )
         else:
-            await self._db.execute("""
+            await self._db.execute(
+                """
                 INSERT INTO arkham_claim_evidence (
                     id, claim_id, evidence_type, reference_id, reference_title,
                     relationship, strength, excerpt, notes,
@@ -1182,7 +1193,9 @@ Return ONLY a valid JSON array, no other text. Example format:
                 ) VALUES (:id, :claim_id, :evidence_type, :reference_id, :reference_title,
                     :relationship, :strength, :excerpt, :notes,
                     :added_by, :added_at, :metadata)
-            """, params)
+            """,
+                params,
+            )
 
     async def _update_claim_evidence_counts(self, claim_id: str) -> None:
         """Update evidence counts on a claim."""
@@ -1251,6 +1264,7 @@ Return ONLY a valid JSON array, no other text. Example format:
         claims = await self._db.fetch_all(query, params)
 
         import json
+
         for row in claims:
             entity_ids = json.loads(row["entity_ids"] or "[]")
             if entity_id not in entity_ids:
@@ -1265,6 +1279,7 @@ Return ONLY a valid JSON array, no other text. Example format:
     def _row_to_claim(self, row: Dict[str, Any]) -> Claim:
         """Convert database row to Claim object."""
         import json
+
         return Claim(
             id=row["id"],
             text=row["text"],
@@ -1290,6 +1305,7 @@ Return ONLY a valid JSON array, no other text. Example format:
     def _row_to_evidence(self, row: Dict[str, Any]) -> Evidence:
         """Convert database row to Evidence object."""
         import json
+
         return Evidence(
             id=row["id"],
             claim_id=row["claim_id"],
@@ -1308,6 +1324,7 @@ Return ONLY a valid JSON array, no other text. Example format:
     def _parse_extraction_response(self, response: str) -> List[Dict[str, Any]]:
         """Parse LLM extraction response into structured data."""
         import json
+
         try:
             # Try to extract JSON from response
             start = response.find("[")

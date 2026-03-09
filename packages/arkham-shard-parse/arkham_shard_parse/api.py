@@ -136,6 +136,7 @@ async def parse_text(request: ParseTextRequest):
         raise HTTPException(status_code=503, detail="Parse service not initialized")
 
     from time import time
+
     start_time = time()
 
     entities = []
@@ -460,24 +461,22 @@ async def get_parse_stats():
             total_chunks = result.scalar() or 0
 
             # Get documents with chunks (parsed documents)
-            result = conn.execute(text(
-                "SELECT COUNT(DISTINCT document_id) FROM arkham_frame.chunks"
-            ))
+            result = conn.execute(text("SELECT COUNT(DISTINCT document_id) FROM arkham_frame.chunks"))
             total_documents_parsed = result.scalar() or 0
 
             # Get total entities from entities shard table
             total_entities = 0
             entity_types = {}
             try:
-                result = conn.execute(text(
-                    "SELECT COUNT(*) FROM arkham_entities WHERE canonical_id IS NULL"
-                ))
+                result = conn.execute(text("SELECT COUNT(*) FROM arkham_entities WHERE canonical_id IS NULL"))
                 total_entities = result.scalar() or 0
 
                 # Get entity counts by type
-                result = conn.execute(text(
-                    "SELECT entity_type, COUNT(*) as count FROM arkham_entities WHERE canonical_id IS NULL GROUP BY entity_type"
-                ))
+                result = conn.execute(
+                    text(
+                        "SELECT entity_type, COUNT(*) as count FROM arkham_entities WHERE canonical_id IS NULL GROUP BY entity_type"
+                    )
+                )
                 for row in result:
                     entity_types[row[0]] = row[1]
             except Exception:
@@ -543,7 +542,7 @@ async def list_all_chunks(
                     LIMIT :limit OFFSET :offset
                 """)
                 result = conn.execute(query, {"doc_id": document_id, "limit": limit, "offset": offset})
-                
+
                 count_query = text("SELECT COUNT(*) FROM arkham_frame.chunks WHERE document_id = :doc_id")
                 total = conn.execute(count_query, {"doc_id": document_id}).scalar() or 0
             else:
@@ -557,25 +556,27 @@ async def list_all_chunks(
                     LIMIT :limit OFFSET :offset
                 """)
                 result = conn.execute(query, {"limit": limit, "offset": offset})
-                
+
                 count_query = text("SELECT COUNT(*) FROM arkham_frame.chunks")
                 total = conn.execute(count_query).scalar() or 0
 
             chunks = []
             for row in result:
-                chunks.append({
-                    "id": row.id,
-                    "document_id": row.document_id,
-                    "document_name": row.filename,
-                    "chunk_index": row.chunk_index,
-                    "text": row.text[:500] + "..." if len(row.text) > 500 else row.text,
-                    "full_text": row.text,
-                    "page_number": row.page_number,
-                    "start_char": row.start_char,
-                    "end_char": row.end_char,
-                    "token_count": row.token_count,
-                    "vector_id": row.vector_id,
-                })
+                chunks.append(
+                    {
+                        "id": row.id,
+                        "document_id": row.document_id,
+                        "document_name": row.filename,
+                        "chunk_index": row.chunk_index,
+                        "text": row.text[:500] + "..." if len(row.text) > 500 else row.text,
+                        "full_text": row.text,
+                        "page_number": row.page_number,
+                        "start_char": row.start_char,
+                        "end_char": row.end_char,
+                        "token_count": row.token_count,
+                        "vector_id": row.vector_id,
+                    }
+                )
 
         return {
             "chunks": chunks,
@@ -629,10 +630,7 @@ async def update_chunking_config(request: UpdateChunkingConfigRequest):
 
     # Validate method if provided
     if request.chunk_method and request.chunk_method not in ["fixed", "sentence", "semantic"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid chunk_method. Must be one of: fixed, sentence, semantic"
-        )
+        raise HTTPException(status_code=400, detail="Invalid chunk_method. Must be one of: fixed, sentence, semantic")
 
     # Update settings
     if request.chunk_size is not None:
@@ -650,7 +648,9 @@ async def update_chunking_config(request: UpdateChunkingConfigRequest):
     if request.chunk_method is not None:
         _chunker.method = request.chunk_method
 
-    logger.info(f"Updated chunking config: size={_chunker.chunk_size}, overlap={_chunker.overlap}, method={_chunker.method}")
+    logger.info(
+        f"Updated chunking config: size={_chunker.chunk_size}, overlap={_chunker.overlap}, method={_chunker.method}"
+    )
 
     # Emit event for other shards to know config changed
     if _event_bus:

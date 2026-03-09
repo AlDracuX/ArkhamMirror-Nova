@@ -68,7 +68,7 @@ export function SearchPage() {
 
   // Update filter state
   const updateFilter = (key: keyof SearchFilters, value: unknown) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       [key]: value,
     }));
@@ -136,9 +136,7 @@ export function SearchPage() {
           <Icon name="Search" size={28} />
           <div>
             <h1>Search</h1>
-            <p className="page-description">
-              Hybrid semantic and keyword search across documents
-            </p>
+            <p className="page-description">Hybrid semantic and keyword search across documents</p>
           </div>
         </div>
         <div className="page-actions">
@@ -174,7 +172,7 @@ export function SearchPage() {
             className="search-input"
             placeholder="Search documents, entities, and content..."
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             autoFocus
           />
@@ -226,10 +224,7 @@ export function SearchPage() {
         </div>
 
         {/* Filters Toggle */}
-        <button
-          className="filters-toggle-button"
-          onClick={() => setShowFilters(!showFilters)}
-        >
+        <button className="filters-toggle-button" onClick={() => setShowFilters(!showFilters)}>
           <Icon name="Filter" size={16} />
           Filters
           {Object.keys(filters).length > 0 && (
@@ -265,7 +260,7 @@ export function SearchPage() {
                   className="filter-input"
                   placeholder="From"
                   value={filters.date_from || ''}
-                  onChange={e => updateFilter('date_from', e.target.value)}
+                  onChange={(e) => updateFilter('date_from', e.target.value)}
                 />
                 <span>to</span>
                 <input
@@ -273,7 +268,7 @@ export function SearchPage() {
                   className="filter-input"
                   placeholder="To"
                   value={filters.date_to || ''}
-                  onChange={e => updateFilter('date_to', e.target.value)}
+                  onChange={(e) => updateFilter('date_to', e.target.value)}
                 />
               </div>
             </div>
@@ -285,18 +280,16 @@ export function SearchPage() {
                 File Types
               </label>
               <div className="filter-checkboxes">
-                {['PDF', 'TXT', 'JSON', 'CSV', 'DOCX'].map(type => (
+                {['PDF', 'TXT', 'JSON', 'CSV', 'DOCX'].map((type) => (
                   <label key={type} className="checkbox-label">
                     <input
                       type="checkbox"
                       checked={filters.file_types?.includes(type) || false}
-                      onChange={e => {
+                      onChange={(e) => {
                         const current = filters.file_types || [];
                         updateFilter(
                           'file_types',
-                          e.target.checked
-                            ? [...current, type]
-                            : current.filter(t => t !== type)
+                          e.target.checked ? [...current, type] : current.filter((t) => t !== type)
                         );
                       }}
                     />
@@ -313,18 +306,16 @@ export function SearchPage() {
                 Entity Types
               </label>
               <div className="filter-checkboxes">
-                {['PERSON', 'ORG', 'LOCATION', 'DATE', 'MONEY'].map(type => (
+                {['PERSON', 'ORG', 'LOCATION', 'DATE', 'MONEY'].map((type) => (
                   <label key={type} className="checkbox-label">
                     <input
                       type="checkbox"
                       checked={filters.entity_types?.includes(type) || false}
-                      onChange={e => {
+                      onChange={(e) => {
                         const current = filters.entity_types || [];
                         updateFilter(
                           'entity_types',
-                          e.target.checked
-                            ? [...current, type]
-                            : current.filter(t => t !== type)
+                          e.target.checked ? [...current, type] : current.filter((t) => t !== type)
                         );
                       }}
                     />
@@ -345,7 +336,7 @@ export function SearchPage() {
                 className="filter-input"
                 placeholder="Project ID or name"
                 value={filters.project_id || ''}
-                onChange={e => updateFilter('project_id', e.target.value)}
+                onChange={(e) => updateFilter('project_id', e.target.value)}
               />
             </div>
           </div>
@@ -405,7 +396,7 @@ export function SearchPage() {
               )}
 
               <div className="results-list">
-                {data.items.map(result => (
+                {data.items.map((result) => (
                   <SearchResultCard
                     key={`${result.doc_id}-${result.chunk_id || 'doc'}`}
                     result={result}
@@ -467,12 +458,14 @@ export function SearchPage() {
                 <div className="results-empty">
                   <Icon name="SearchX" size={48} />
                   <h3>No similar documents found</h3>
-                  <p>This feature requires document embeddings. Try running the Embed shard first.</p>
+                  <p>
+                    This feature requires document embeddings. Try running the Embed shard first.
+                  </p>
                 </div>
               )}
 
               <div className="results-list">
-                {similarResults.map(result => (
+                {similarResults.map((result) => (
                   <SearchResultCard
                     key={`${result.doc_id}-${result.chunk_id || 'doc'}`}
                     result={result}

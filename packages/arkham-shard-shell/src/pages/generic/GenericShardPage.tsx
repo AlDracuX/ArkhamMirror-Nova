@@ -27,7 +27,10 @@ export function GenericShardPage() {
   // Check if shard has list configuration for generic rendering
   // We render generically regardless of has_custom_ui flag, since if we're here
   // it means no custom UI route exists in the router
-  const hasListConfig = currentShard.ui?.list_endpoint && currentShard.ui?.list_columns && currentShard.ui.list_columns.length > 0;
+  const hasListConfig =
+    currentShard.ui?.list_endpoint &&
+    currentShard.ui?.list_columns &&
+    currentShard.ui.list_columns.length > 0;
 
   return (
     <div className="generic-shard-page">
@@ -48,17 +51,12 @@ export function GenericShardPage() {
 
       {/* Content */}
       {hasListConfig ? (
-        <GenericList
-          apiPrefix={currentShard.api_prefix}
-          ui={currentShard.ui!}
-        />
+        <GenericList apiPrefix={currentShard.api_prefix} ui={currentShard.ui!} />
       ) : (
         <div className="shard-no-ui">
           <Icon name="LayoutList" size={48} />
           <h2>No UI Configuration</h2>
-          <p>
-            This shard ({currentShard.name}) doesn't have a list view configured.
-          </p>
+          <p>This shard ({currentShard.name}) doesn't have a list view configured.</p>
           <p className="api-hint">
             API available at: <code>{currentShard.api_prefix}</code>
           </p>

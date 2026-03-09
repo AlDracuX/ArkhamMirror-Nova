@@ -9,36 +9,40 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-
 # === Enums ===
+
 
 class ReportType(str, Enum):
     """Type of report to generate."""
-    SUMMARY = "summary"                     # System-wide summary
-    ENTITY_PROFILE = "entity_profile"       # Entity profile report
-    TIMELINE = "timeline"                   # Timeline report
-    CONTRADICTION = "contradiction"         # Contradiction analysis
-    ACH_ANALYSIS = "ach_analysis"           # ACH analysis report
-    CUSTOM = "custom"                       # Custom user-defined report
+
+    SUMMARY = "summary"  # System-wide summary
+    ENTITY_PROFILE = "entity_profile"  # Entity profile report
+    TIMELINE = "timeline"  # Timeline report
+    CONTRADICTION = "contradiction"  # Contradiction analysis
+    ACH_ANALYSIS = "ach_analysis"  # ACH analysis report
+    CUSTOM = "custom"  # Custom user-defined report
 
 
 class ReportStatus(str, Enum):
     """Status of report generation."""
-    PENDING = "pending"         # Queued for generation
-    GENERATING = "generating"   # Currently being generated
-    COMPLETED = "completed"     # Successfully generated
-    FAILED = "failed"           # Generation failed
+
+    PENDING = "pending"  # Queued for generation
+    GENERATING = "generating"  # Currently being generated
+    COMPLETED = "completed"  # Successfully generated
+    FAILED = "failed"  # Generation failed
 
 
 class ReportFormat(str, Enum):
     """Output format for reports."""
-    HTML = "html"               # Rich HTML format
-    PDF = "pdf"                 # PDF document
-    MARKDOWN = "markdown"       # Markdown format
-    JSON = "json"               # Structured JSON data
+
+    HTML = "html"  # Rich HTML format
+    PDF = "pdf"  # PDF document
+    MARKDOWN = "markdown"  # Markdown format
+    JSON = "json"  # Structured JSON data
 
 
 # === Dataclasses ===
+
 
 @dataclass
 class Report:
@@ -48,6 +52,7 @@ class Report:
     Reports aggregate data from multiple sources and present
     it in various formats for analysis and export.
     """
+
     id: str
     report_type: ReportType
     title: str
@@ -63,7 +68,7 @@ class Report:
     # Output
     output_format: ReportFormat = ReportFormat.HTML
     file_path: Optional[str] = None
-    file_size: Optional[int] = None          # Bytes
+    file_size: Optional[int] = None  # Bytes
 
     # Error tracking
     error: Optional[str] = None
@@ -80,6 +85,7 @@ class ReportTemplate:
     Templates define report structure, parameters, and
     generation logic for consistent reporting.
     """
+
     id: str
     name: str
     report_type: ReportType
@@ -88,7 +94,7 @@ class ReportTemplate:
     # Template configuration
     parameters_schema: Dict[str, Any] = field(default_factory=dict)  # JSON schema
     default_format: ReportFormat = ReportFormat.HTML
-    template_content: str = ""               # Template markup/code
+    template_content: str = ""  # Template markup/code
 
     # Timestamps
     created_at: datetime = field(default_factory=datetime.utcnow)
@@ -105,9 +111,10 @@ class ReportSchedule:
 
     Schedules automate periodic report generation.
     """
+
     id: str
     template_id: str
-    cron_expression: str                     # Cron schedule (e.g., "0 9 * * 1")
+    cron_expression: str  # Cron schedule (e.g., "0 9 * * 1")
     enabled: bool = True
 
     # Execution tracking
@@ -119,7 +126,7 @@ class ReportSchedule:
     output_format: ReportFormat = ReportFormat.HTML
 
     # Retention
-    retention_days: int = 30                 # Keep reports for N days
+    retention_days: int = 30  # Keep reports for N days
 
     # Delivery (future feature)
     email_recipients: List[str] = field(default_factory=list)
@@ -136,15 +143,16 @@ class GeneratedSection:
     Reports are composed of hierarchical sections with
     content, charts, and tables.
     """
+
     title: str
-    content: str = ""                        # Section content (text/HTML/markdown)
+    content: str = ""  # Section content (text/HTML/markdown)
 
     # Visualizations
     charts: List[Dict[str, Any]] = field(default_factory=list)
     tables: List[Dict[str, Any]] = field(default_factory=list)
 
     # Hierarchy
-    subsections: List['GeneratedSection'] = field(default_factory=list)
+    subsections: List["GeneratedSection"] = field(default_factory=list)
 
     # Metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -155,6 +163,7 @@ class ReportGenerationResult:
     """
     Result of report generation.
     """
+
     report_id: str
     success: bool
     file_path: Optional[str] = None
@@ -169,6 +178,7 @@ class ReportStatistics:
     """
     Statistics about reports in the system.
     """
+
     total_reports: int = 0
     by_status: Dict[str, int] = field(default_factory=dict)
     by_type: Dict[str, int] = field(default_factory=dict)
@@ -191,6 +201,7 @@ class ReportFilter:
     """
     Filter criteria for report queries.
     """
+
     status: Optional[ReportStatus] = None
     report_type: Optional[ReportType] = None
     output_format: Optional[ReportFormat] = None

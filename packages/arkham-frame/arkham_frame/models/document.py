@@ -7,10 +7,7 @@ These models define the schema for arkham_frame.documents and related tables.
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, BigInteger,
-    SmallInteger, ForeignKey
-)
+from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, SmallInteger, String, Text
 from sqlalchemy.orm import relationship
 
 from arkham_frame.models.base import Base, TimestampMixin
@@ -18,6 +15,7 @@ from arkham_frame.models.base import Base, TimestampMixin
 
 class Project(Base, TimestampMixin):
     """Project container for documents."""
+
     __tablename__ = "projects"
     __table_args__ = {"schema": "arkham_frame"}
 
@@ -37,6 +35,7 @@ class Project(Base, TimestampMixin):
 
 class Cluster(Base, TimestampMixin):
     """Document cluster for grouping related documents."""
+
     __tablename__ = "clusters"
     __table_args__ = {"schema": "arkham_frame"}
 
@@ -54,6 +53,7 @@ class Cluster(Base, TimestampMixin):
 
 class Document(Base, TimestampMixin):
     """Main document entity."""
+
     __tablename__ = "documents"
     __table_args__ = {"schema": "arkham_frame"}
 
@@ -91,6 +91,7 @@ class Document(Base, TimestampMixin):
 
 class MiniDoc(Base, TimestampMixin):
     """Document splitting tracking (for large documents split into parts)."""
+
     __tablename__ = "minidocs"
     __table_args__ = {"schema": "arkham_frame"}
 
@@ -107,6 +108,7 @@ class MiniDoc(Base, TimestampMixin):
 
 class PageOCR(Base, TimestampMixin):
     """OCR results per page."""
+
     __tablename__ = "page_ocr"
     __table_args__ = {"schema": "arkham_frame"}
 
@@ -123,6 +125,7 @@ class PageOCR(Base, TimestampMixin):
 
 class Chunk(Base, TimestampMixin):
     """Text chunks for embedding and search."""
+
     __tablename__ = "chunks"
     __table_args__ = {"schema": "arkham_frame"}
 

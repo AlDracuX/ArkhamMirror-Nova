@@ -128,9 +128,9 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
   const stats = statsData?.stats;
 
   // Fetch documents for selection
-  const { data: documentsData } = useFetch<{ items: Array<{ id: string; filename: string; file_type: string }> }>(
-    '/api/documents/items?limit=100'
-  );
+  const { data: documentsData } = useFetch<{
+    items: Array<{ id: string; filename: string; file_type: string }>;
+  }>('/api/documents/items?limit=100');
   const documents = documentsData?.items || [];
 
   // Scan a document
@@ -155,11 +155,13 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
 
       const result = await response.json();
       setSelectedScan(result.scan);
-      setRecentScans(prev => [result.scan, ...prev.slice(0, 9)]);
+      setRecentScans((prev) => [result.scan, ...prev.slice(0, 9)]);
       refetchStats();
 
       if (result.scan.findings.length > 0) {
-        toast.warning(`Forensic analysis complete. ${result.scan.findings.length} findings detected.`);
+        toast.warning(
+          `Forensic analysis complete. ${result.scan.findings.length} findings detected.`
+        );
       } else {
         toast.success('Forensic analysis complete - no issues detected');
       }
@@ -215,21 +217,31 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
 
   const getIntegrityBadgeClass = (status: string): string => {
     switch (status) {
-      case 'pristine': return 'integrity-pristine';
-      case 'modified': return 'integrity-modified';
-      case 'suspicious': return 'integrity-suspicious';
-      case 'compromised': return 'integrity-compromised';
-      default: return 'integrity-unknown';
+      case 'pristine':
+        return 'integrity-pristine';
+      case 'modified':
+        return 'integrity-modified';
+      case 'suspicious':
+        return 'integrity-suspicious';
+      case 'compromised':
+        return 'integrity-compromised';
+      default:
+        return 'integrity-unknown';
     }
   };
 
   const getSeverityClass = (severity: string): string => {
     switch (severity) {
-      case 'critical': return 'severity-critical';
-      case 'high': return 'severity-high';
-      case 'medium': return 'severity-medium';
-      case 'low': return 'severity-low';
-      default: return 'severity-info';
+      case 'critical':
+        return 'severity-critical';
+      case 'high':
+        return 'severity-high';
+      case 'medium':
+        return 'severity-medium';
+      case 'low':
+        return 'severity-low';
+      default:
+        return 'severity-info';
     }
   };
 
@@ -249,7 +261,9 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
         </div>
         <div className="forensics-stat-card">
           <Icon name="Shield" size={24} />
-          <div className="forensics-stat-value">{stats?.integrity_status_counts?.pristine ?? 0}</div>
+          <div className="forensics-stat-value">
+            {stats?.integrity_status_counts?.pristine ?? 0}
+          </div>
           <div className="forensics-stat-label">Pristine</div>
         </div>
         <div className="forensics-stat-card">
@@ -271,7 +285,7 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
             disabled={scanning}
           >
             <option value="">-- Select a document --</option>
-            {documents.map(doc => (
+            {documents.map((doc) => (
               <option key={doc.id} value={doc.id}>
                 {doc.filename} ({doc.file_type || 'unknown'})
               </option>
@@ -310,7 +324,9 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
 
           {/* Summary */}
           <div className="forensics-result-summary">
-            <div className={`forensics-integrity-badge ${getIntegrityBadgeClass(selectedScan.integrity_status)}`}>
+            <div
+              className={`forensics-integrity-badge ${getIntegrityBadgeClass(selectedScan.integrity_status)}`}
+            >
               <span className="integrity-status">{selectedScan.integrity_status}</span>
               <span className="integrity-label">Integrity Status</span>
             </div>
@@ -333,7 +349,9 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
               <div className="summary-item">
                 <span className="label">File Size:</span>
                 <span className="value">
-                  {selectedScan.file_size ? `${(selectedScan.file_size / 1024).toFixed(1)} KB` : 'N/A'}
+                  {selectedScan.file_size
+                    ? `${(selectedScan.file_size / 1024).toFixed(1)} KB`
+                    : 'N/A'}
                 </span>
               </div>
             </div>
@@ -356,7 +374,9 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
                 {selectedScan.file_hash_sha256 && (
                   <div className="hash-item">
                     <span className="hash-label">SHA256:</span>
-                    <code className="hash-value">{selectedScan.file_hash_sha256.substring(0, 32)}...</code>
+                    <code className="hash-value">
+                      {selectedScan.file_hash_sha256.substring(0, 32)}...
+                    </code>
                   </div>
                 )}
               </div>
@@ -364,200 +384,227 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
           )}
 
           {/* EXIF Data */}
-          {selectedScan.exif_data && Object.values(selectedScan.exif_data).some(v => v !== null && v !== undefined) && (
-            <div className="forensics-exif">
-              <h4>
-                <Icon name="Camera" size={16} />
-                EXIF Data (Image Metadata)
-              </h4>
-              <div className="metadata-grid">
-                {selectedScan.exif_data.make && (
-                  <div className="metadata-item">
-                    <span className="label">Camera Make:</span>
-                    <span className="value">{selectedScan.exif_data.make}</span>
-                  </div>
-                )}
-                {selectedScan.exif_data.model && (
-                  <div className="metadata-item">
-                    <span className="label">Camera Model:</span>
-                    <span className="value">{selectedScan.exif_data.model}</span>
-                  </div>
-                )}
-                {selectedScan.exif_data.serial_number && (
-                  <div className="metadata-item">
-                    <span className="label">Serial Number:</span>
-                    <span className="value">{selectedScan.exif_data.serial_number}</span>
-                  </div>
-                )}
-                {selectedScan.exif_data.software && (
-                  <div className="metadata-item">
-                    <span className="label">Software:</span>
-                    <span className="value">{selectedScan.exif_data.software}</span>
-                  </div>
-                )}
-                {selectedScan.exif_data.datetime_original && (
-                  <div className="metadata-item">
-                    <span className="label">Date Taken:</span>
-                    <span className="value">{formatDate(selectedScan.exif_data.datetime_original)}</span>
-                  </div>
-                )}
-                {(selectedScan.exif_data.gps_latitude || selectedScan.exif_data.gps_longitude) && (
-                  <div className="metadata-item">
-                    <span className="label">GPS Location:</span>
-                    <span className="value">
-                      {selectedScan.exif_data.gps_latitude?.toFixed(6)}, {selectedScan.exif_data.gps_longitude?.toFixed(6)}
-                    </span>
-                  </div>
-                )}
-                {(selectedScan.exif_data.width && selectedScan.exif_data.height) && (
-                  <div className="metadata-item">
-                    <span className="label">Dimensions:</span>
-                    <span className="value">{selectedScan.exif_data.width} x {selectedScan.exif_data.height}</span>
-                  </div>
-                )}
+          {selectedScan.exif_data &&
+            Object.values(selectedScan.exif_data).some((v) => v !== null && v !== undefined) && (
+              <div className="forensics-exif">
+                <h4>
+                  <Icon name="Camera" size={16} />
+                  EXIF Data (Image Metadata)
+                </h4>
+                <div className="metadata-grid">
+                  {selectedScan.exif_data.make && (
+                    <div className="metadata-item">
+                      <span className="label">Camera Make:</span>
+                      <span className="value">{selectedScan.exif_data.make}</span>
+                    </div>
+                  )}
+                  {selectedScan.exif_data.model && (
+                    <div className="metadata-item">
+                      <span className="label">Camera Model:</span>
+                      <span className="value">{selectedScan.exif_data.model}</span>
+                    </div>
+                  )}
+                  {selectedScan.exif_data.serial_number && (
+                    <div className="metadata-item">
+                      <span className="label">Serial Number:</span>
+                      <span className="value">{selectedScan.exif_data.serial_number}</span>
+                    </div>
+                  )}
+                  {selectedScan.exif_data.software && (
+                    <div className="metadata-item">
+                      <span className="label">Software:</span>
+                      <span className="value">{selectedScan.exif_data.software}</span>
+                    </div>
+                  )}
+                  {selectedScan.exif_data.datetime_original && (
+                    <div className="metadata-item">
+                      <span className="label">Date Taken:</span>
+                      <span className="value">
+                        {formatDate(selectedScan.exif_data.datetime_original)}
+                      </span>
+                    </div>
+                  )}
+                  {(selectedScan.exif_data.gps_latitude ||
+                    selectedScan.exif_data.gps_longitude) && (
+                    <div className="metadata-item">
+                      <span className="label">GPS Location:</span>
+                      <span className="value">
+                        {selectedScan.exif_data.gps_latitude?.toFixed(6)},{' '}
+                        {selectedScan.exif_data.gps_longitude?.toFixed(6)}
+                      </span>
+                    </div>
+                  )}
+                  {selectedScan.exif_data.width && selectedScan.exif_data.height && (
+                    <div className="metadata-item">
+                      <span className="label">Dimensions:</span>
+                      <span className="value">
+                        {selectedScan.exif_data.width} x {selectedScan.exif_data.height}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* PDF Metadata */}
-          {selectedScan.pdf_metadata && Object.values(selectedScan.pdf_metadata).some(v => v !== null && v !== undefined) && (
-            <div className="forensics-pdf">
-              <h4>
-                <Icon name="FileText" size={16} />
-                PDF Metadata
-              </h4>
-              <div className="metadata-grid">
-                {selectedScan.pdf_metadata.title && (
-                  <div className="metadata-item">
-                    <span className="label">Title:</span>
-                    <span className="value">{selectedScan.pdf_metadata.title}</span>
-                  </div>
-                )}
-                {selectedScan.pdf_metadata.author && (
-                  <div className="metadata-item">
-                    <span className="label">Author:</span>
-                    <span className="value">{selectedScan.pdf_metadata.author}</span>
-                  </div>
-                )}
-                {selectedScan.pdf_metadata.creator && (
-                  <div className="metadata-item">
-                    <span className="label">Creator:</span>
-                    <span className="value">{selectedScan.pdf_metadata.creator}</span>
-                  </div>
-                )}
-                {selectedScan.pdf_metadata.producer && (
-                  <div className="metadata-item">
-                    <span className="label">Producer:</span>
-                    <span className="value">{selectedScan.pdf_metadata.producer}</span>
-                  </div>
-                )}
-                {selectedScan.pdf_metadata.creation_date && (
-                  <div className="metadata-item">
-                    <span className="label">Created:</span>
-                    <span className="value">{formatDate(selectedScan.pdf_metadata.creation_date)}</span>
-                  </div>
-                )}
-                {selectedScan.pdf_metadata.modification_date && (
-                  <div className="metadata-item">
-                    <span className="label">Modified:</span>
-                    <span className="value">{formatDate(selectedScan.pdf_metadata.modification_date)}</span>
-                  </div>
-                )}
-                {selectedScan.pdf_metadata.page_count && (
-                  <div className="metadata-item">
-                    <span className="label">Pages:</span>
-                    <span className="value">{selectedScan.pdf_metadata.page_count}</span>
-                  </div>
-                )}
-                {selectedScan.pdf_metadata.pdf_version && (
-                  <div className="metadata-item">
-                    <span className="label">PDF Version:</span>
-                    <span className="value">{selectedScan.pdf_metadata.pdf_version}</span>
-                  </div>
-                )}
-                {selectedScan.pdf_metadata.is_encrypted !== undefined && (
-                  <div className="metadata-item">
-                    <span className="label">Encrypted:</span>
-                    <span className={`value ${selectedScan.pdf_metadata.is_encrypted ? 'warning' : ''}`}>
-                      {selectedScan.pdf_metadata.is_encrypted ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                )}
-                {selectedScan.pdf_metadata.keywords && selectedScan.pdf_metadata.keywords.length > 0 && (
-                  <div className="metadata-item full-width">
-                    <span className="label">Keywords:</span>
-                    <span className="value">{selectedScan.pdf_metadata.keywords.join(', ')}</span>
-                  </div>
-                )}
+          {selectedScan.pdf_metadata &&
+            Object.values(selectedScan.pdf_metadata).some((v) => v !== null && v !== undefined) && (
+              <div className="forensics-pdf">
+                <h4>
+                  <Icon name="FileText" size={16} />
+                  PDF Metadata
+                </h4>
+                <div className="metadata-grid">
+                  {selectedScan.pdf_metadata.title && (
+                    <div className="metadata-item">
+                      <span className="label">Title:</span>
+                      <span className="value">{selectedScan.pdf_metadata.title}</span>
+                    </div>
+                  )}
+                  {selectedScan.pdf_metadata.author && (
+                    <div className="metadata-item">
+                      <span className="label">Author:</span>
+                      <span className="value">{selectedScan.pdf_metadata.author}</span>
+                    </div>
+                  )}
+                  {selectedScan.pdf_metadata.creator && (
+                    <div className="metadata-item">
+                      <span className="label">Creator:</span>
+                      <span className="value">{selectedScan.pdf_metadata.creator}</span>
+                    </div>
+                  )}
+                  {selectedScan.pdf_metadata.producer && (
+                    <div className="metadata-item">
+                      <span className="label">Producer:</span>
+                      <span className="value">{selectedScan.pdf_metadata.producer}</span>
+                    </div>
+                  )}
+                  {selectedScan.pdf_metadata.creation_date && (
+                    <div className="metadata-item">
+                      <span className="label">Created:</span>
+                      <span className="value">
+                        {formatDate(selectedScan.pdf_metadata.creation_date)}
+                      </span>
+                    </div>
+                  )}
+                  {selectedScan.pdf_metadata.modification_date && (
+                    <div className="metadata-item">
+                      <span className="label">Modified:</span>
+                      <span className="value">
+                        {formatDate(selectedScan.pdf_metadata.modification_date)}
+                      </span>
+                    </div>
+                  )}
+                  {selectedScan.pdf_metadata.page_count && (
+                    <div className="metadata-item">
+                      <span className="label">Pages:</span>
+                      <span className="value">{selectedScan.pdf_metadata.page_count}</span>
+                    </div>
+                  )}
+                  {selectedScan.pdf_metadata.pdf_version && (
+                    <div className="metadata-item">
+                      <span className="label">PDF Version:</span>
+                      <span className="value">{selectedScan.pdf_metadata.pdf_version}</span>
+                    </div>
+                  )}
+                  {selectedScan.pdf_metadata.is_encrypted !== undefined && (
+                    <div className="metadata-item">
+                      <span className="label">Encrypted:</span>
+                      <span
+                        className={`value ${selectedScan.pdf_metadata.is_encrypted ? 'warning' : ''}`}
+                      >
+                        {selectedScan.pdf_metadata.is_encrypted ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                  )}
+                  {selectedScan.pdf_metadata.keywords &&
+                    selectedScan.pdf_metadata.keywords.length > 0 && (
+                      <div className="metadata-item full-width">
+                        <span className="label">Keywords:</span>
+                        <span className="value">
+                          {selectedScan.pdf_metadata.keywords.join(', ')}
+                        </span>
+                      </div>
+                    )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Office Metadata */}
-          {selectedScan.office_metadata && Object.values(selectedScan.office_metadata).some(v => v !== null && v !== undefined) && (
-            <div className="forensics-office">
-              <h4>
-                <Icon name="FileSpreadsheet" size={16} />
-                Office Document Metadata
-              </h4>
-              <div className="metadata-grid">
-                {selectedScan.office_metadata.title && (
-                  <div className="metadata-item">
-                    <span className="label">Title:</span>
-                    <span className="value">{selectedScan.office_metadata.title}</span>
-                  </div>
-                )}
-                {selectedScan.office_metadata.author && (
-                  <div className="metadata-item">
-                    <span className="label">Author:</span>
-                    <span className="value">{selectedScan.office_metadata.author}</span>
-                  </div>
-                )}
-                {selectedScan.office_metadata.company && (
-                  <div className="metadata-item">
-                    <span className="label">Company:</span>
-                    <span className="value">{selectedScan.office_metadata.company}</span>
-                  </div>
-                )}
-                {selectedScan.office_metadata.last_modified_by && (
-                  <div className="metadata-item">
-                    <span className="label">Last Modified By:</span>
-                    <span className="value">{selectedScan.office_metadata.last_modified_by}</span>
-                  </div>
-                )}
-                {selectedScan.office_metadata.created && (
-                  <div className="metadata-item">
-                    <span className="label">Created:</span>
-                    <span className="value">{formatDate(selectedScan.office_metadata.created)}</span>
-                  </div>
-                )}
-                {selectedScan.office_metadata.modified && (
-                  <div className="metadata-item">
-                    <span className="label">Modified:</span>
-                    <span className="value">{formatDate(selectedScan.office_metadata.modified)}</span>
-                  </div>
-                )}
-                {selectedScan.office_metadata.revision && (
-                  <div className="metadata-item">
-                    <span className="label">Revision:</span>
-                    <span className="value">{selectedScan.office_metadata.revision}</span>
-                  </div>
-                )}
-                {selectedScan.office_metadata.subject && (
-                  <div className="metadata-item full-width">
-                    <span className="label">Subject:</span>
-                    <span className="value">{selectedScan.office_metadata.subject}</span>
-                  </div>
-                )}
-                {selectedScan.office_metadata.keywords && selectedScan.office_metadata.keywords.length > 0 && (
-                  <div className="metadata-item full-width">
-                    <span className="label">Keywords:</span>
-                    <span className="value">{selectedScan.office_metadata.keywords.join(', ')}</span>
-                  </div>
-                )}
+          {selectedScan.office_metadata &&
+            Object.values(selectedScan.office_metadata).some(
+              (v) => v !== null && v !== undefined
+            ) && (
+              <div className="forensics-office">
+                <h4>
+                  <Icon name="FileSpreadsheet" size={16} />
+                  Office Document Metadata
+                </h4>
+                <div className="metadata-grid">
+                  {selectedScan.office_metadata.title && (
+                    <div className="metadata-item">
+                      <span className="label">Title:</span>
+                      <span className="value">{selectedScan.office_metadata.title}</span>
+                    </div>
+                  )}
+                  {selectedScan.office_metadata.author && (
+                    <div className="metadata-item">
+                      <span className="label">Author:</span>
+                      <span className="value">{selectedScan.office_metadata.author}</span>
+                    </div>
+                  )}
+                  {selectedScan.office_metadata.company && (
+                    <div className="metadata-item">
+                      <span className="label">Company:</span>
+                      <span className="value">{selectedScan.office_metadata.company}</span>
+                    </div>
+                  )}
+                  {selectedScan.office_metadata.last_modified_by && (
+                    <div className="metadata-item">
+                      <span className="label">Last Modified By:</span>
+                      <span className="value">{selectedScan.office_metadata.last_modified_by}</span>
+                    </div>
+                  )}
+                  {selectedScan.office_metadata.created && (
+                    <div className="metadata-item">
+                      <span className="label">Created:</span>
+                      <span className="value">
+                        {formatDate(selectedScan.office_metadata.created)}
+                      </span>
+                    </div>
+                  )}
+                  {selectedScan.office_metadata.modified && (
+                    <div className="metadata-item">
+                      <span className="label">Modified:</span>
+                      <span className="value">
+                        {formatDate(selectedScan.office_metadata.modified)}
+                      </span>
+                    </div>
+                  )}
+                  {selectedScan.office_metadata.revision && (
+                    <div className="metadata-item">
+                      <span className="label">Revision:</span>
+                      <span className="value">{selectedScan.office_metadata.revision}</span>
+                    </div>
+                  )}
+                  {selectedScan.office_metadata.subject && (
+                    <div className="metadata-item full-width">
+                      <span className="label">Subject:</span>
+                      <span className="value">{selectedScan.office_metadata.subject}</span>
+                    </div>
+                  )}
+                  {selectedScan.office_metadata.keywords &&
+                    selectedScan.office_metadata.keywords.length > 0 && (
+                      <div className="metadata-item full-width">
+                        <span className="label">Keywords:</span>
+                        <span className="value">
+                          {selectedScan.office_metadata.keywords.join(', ')}
+                        </span>
+                      </div>
+                    )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Findings */}
           {selectedScan.findings.length > 0 && (
@@ -570,7 +617,9 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
                 {selectedScan.findings.map((finding, i) => (
                   <div key={i} className={`finding-card ${getSeverityClass(finding.severity)}`}>
                     <div className="finding-header">
-                      <span className="finding-type">{finding.finding_type.replace(/_/g, ' ')}</span>
+                      <span className="finding-type">
+                        {finding.finding_type.replace(/_/g, ' ')}
+                      </span>
                       <span className={`finding-severity ${getSeverityClass(finding.severity)}`}>
                         {finding.severity}
                       </span>
@@ -597,10 +646,15 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
                   .sort((a, b) => {
                     if (!a.event_timestamp) return 1;
                     if (!b.event_timestamp) return -1;
-                    return new Date(a.event_timestamp).getTime() - new Date(b.event_timestamp).getTime();
+                    return (
+                      new Date(a.event_timestamp).getTime() - new Date(b.event_timestamp).getTime()
+                    );
                   })
                   .map((event, i) => (
-                    <div key={event.id || i} className={`timeline-event ${event.is_estimated ? 'estimated' : ''}`}>
+                    <div
+                      key={event.id || i}
+                      className={`timeline-event ${event.is_estimated ? 'estimated' : ''}`}
+                    >
                       <div className="event-marker">
                         <Icon name="Circle" size={10} />
                       </div>
@@ -610,7 +664,9 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
                           {event.is_estimated && <span className="event-estimated">Estimated</span>}
                         </div>
                         <div className="event-timestamp">
-                          {event.event_timestamp ? formatDate(event.event_timestamp) : 'Unknown time'}
+                          {event.event_timestamp
+                            ? formatDate(event.event_timestamp)
+                            : 'Unknown time'}
                         </div>
                         {event.event_actor && (
                           <div className="event-actor">
@@ -618,9 +674,7 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
                             {event.event_actor}
                           </div>
                         )}
-                        <div className="event-source">
-                          Source: {event.event_source}
-                        </div>
+                        <div className="event-source">Source: {event.event_source}</div>
                         <div className="event-confidence">
                           {(event.confidence * 100).toFixed(0)}% confidence
                         </div>
@@ -648,7 +702,7 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
               disabled={comparing}
             >
               <option value="">-- Select source --</option>
-              {documents.map(doc => (
+              {documents.map((doc) => (
                 <option key={doc.id} value={doc.id}>
                   {doc.filename}
                 </option>
@@ -666,7 +720,7 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
               disabled={comparing}
             >
               <option value="">-- Select target --</option>
-              {documents.map(doc => (
+              {documents.map((doc) => (
                 <option key={doc.id} value={doc.id}>
                   {doc.filename}
                 </option>
@@ -697,7 +751,9 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
           <div className="comparison-result">
             <div className="comparison-header">
               <div className="match-score">
-                <span className="score-value">{(comparisonResult.match_score * 100).toFixed(0)}%</span>
+                <span className="score-value">
+                  {(comparisonResult.match_score * 100).toFixed(0)}%
+                </span>
                 <span className="score-label">Match Score</span>
               </div>
               <div className="relationship-type">
@@ -708,7 +764,9 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
               </div>
               <div className="comparison-confidence">
                 <span className="confidence-label">Confidence:</span>
-                <span className="confidence-value">{(comparisonResult.confidence * 100).toFixed(0)}%</span>
+                <span className="confidence-value">
+                  {(comparisonResult.confidence * 100).toFixed(0)}%
+                </span>
               </div>
             </div>
 
@@ -748,7 +806,7 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
         <div className="forensics-recent-scans">
           <h3>Recent Scans</h3>
           <div className="recent-scans-list">
-            {recentScans.map(scan => (
+            {recentScans.map((scan) => (
               <div
                 key={scan.id}
                 className={`recent-scan-item ${selectedScan?.id === scan.id ? 'selected' : ''}`}
@@ -758,9 +816,7 @@ export function ForensicsTab({ onScanComplete }: ForensicsTabProps) {
                 <div className={`scan-integrity ${getIntegrityBadgeClass(scan.integrity_status)}`}>
                   {scan.integrity_status}
                 </div>
-                <div className="scan-findings">
-                  {scan.findings.length} findings
-                </div>
+                <div className="scan-findings">{scan.findings.length} findings</div>
                 <div className="scan-date">
                   {scan.scanned_at ? new Date(scan.scanned_at).toLocaleTimeString() : 'N/A'}
                 </div>

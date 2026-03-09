@@ -69,10 +69,7 @@ export function C2PAPanel({ analysis }: C2PAPanelProps) {
                 manifest.signer.validation_status !== 'valid' ? 'invalid' : ''
               }`}
             >
-              <Icon
-                name={manifest.signer.is_trusted ? 'ShieldCheck' : 'ShieldAlert'}
-                size={24}
-              />
+              <Icon name={manifest.signer.is_trusted ? 'ShieldCheck' : 'ShieldAlert'} size={24} />
             </div>
             <div className="c2pa-signer-info">
               <div className="c2pa-signer-name">{manifest.signer.name}</div>
@@ -245,9 +242,7 @@ export function C2PAPanel({ analysis }: C2PAPanelProps) {
           name={c2pa_data.validation_status === 'valid' ? 'ShieldCheck' : 'ShieldAlert'}
           size={20}
         />
-        <span>
-          Content Credentials: {C2PA_VALIDATION_LABELS[c2pa_data.validation_status]}
-        </span>
+        <span>Content Credentials: {C2PA_VALIDATION_LABELS[c2pa_data.validation_status]}</span>
       </div>
 
       {/* Validation Errors */}

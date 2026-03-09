@@ -8,14 +8,13 @@ Run with:
     pytest tests/test_shard.py -v
 """
 
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
 import pytest_asyncio
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
-from pathlib import Path
-
-from arkham_shard_documents.shard import DocumentsShard
 from arkham_shard_documents.models import DocumentStatus
-
+from arkham_shard_documents.shard import DocumentsShard
 
 # =============================================================================
 # Fixtures
@@ -68,12 +67,14 @@ def mock_document_service():
 def mock_frame(mock_database, mock_events, mock_storage, mock_document_service):
     """Mock ArkhamFrame instance."""
     frame = Mock()
-    frame.get_service = Mock(side_effect=lambda name: {
-        "database": mock_database,
-        "events": mock_events,
-        "storage": mock_storage,
-        "documents": mock_document_service,
-    }.get(name))
+    frame.get_service = Mock(
+        side_effect=lambda name: {
+            "database": mock_database,
+            "events": mock_events,
+            "storage": mock_storage,
+            "documents": mock_document_service,
+        }.get(name)
+    )
     return frame
 
 
@@ -151,12 +152,14 @@ class TestShardInitialization:
     async def test_initialize_without_optional_services(self, shard):
         """Test initialization without optional services."""
         frame = Mock()
-        frame.get_service = Mock(side_effect=lambda name: {
-            "database": AsyncMock(),
-            "events": AsyncMock(),
-            "storage": None,  # Optional
-            "documents": None,  # Optional
-        }.get(name))
+        frame.get_service = Mock(
+            side_effect=lambda name: {
+                "database": AsyncMock(),
+                "events": AsyncMock(),
+                "storage": None,  # Optional
+                "documents": None,  # Optional
+            }.get(name)
+        )
 
         await shard.initialize(frame)
 
@@ -188,12 +191,14 @@ class TestShardInitialization:
     async def test_initialize_logs_warnings_for_missing_optional(self, shard, caplog):
         """Test initialization logs warnings for missing optional services."""
         frame = Mock()
-        frame.get_service = Mock(side_effect=lambda name: {
-            "database": AsyncMock(),
-            "events": AsyncMock(),
-            "storage": None,
-            "documents": None,
-        }.get(name))
+        frame.get_service = Mock(
+            side_effect=lambda name: {
+                "database": AsyncMock(),
+                "events": AsyncMock(),
+                "storage": None,
+                "documents": None,
+            }.get(name)
+        )
 
         await shard.initialize(frame)
 

@@ -46,7 +46,6 @@ Your role:
 - Assess severity (high: direct contradiction, medium: inconsistency, low: tension)
 
 Be precise, cite specific claims, and explain why they conflict.""",
-
     "verify_claims": """You are a rigorous fact-checking engine for investigative journalism.
 
 Your role:
@@ -57,7 +56,6 @@ Your role:
 - Distinguish between evidence and inference
 
 Always be skeptical, thorough, and transparent about uncertainty.""",
-
     "speculate": """You are an analytical speculation engine for investigative research.
 
 Your role:
@@ -69,7 +67,6 @@ Your role:
 
 CRITICAL: Distinguish between facts (what is known) and speculation (what might be true).
 Never present speculation as fact.""",
-
     "find_gaps": """You are an information gap analysis engine.
 
 Your role:
@@ -80,7 +77,6 @@ Your role:
 - Detect evasions and omissions
 
 Focus on what's notably absent, unexplained, or under-addressed.""",
-
     "compare_narratives": """You are a narrative comparison engine for multi-source analysis.
 
 Your role:
@@ -92,7 +88,6 @@ Your role:
 - Evaluate source reliability factors
 
 Be objective and systematic in comparing narratives.""",
-
     "extract_timeline": """You are a chronological event extraction engine.
 
 Your role:
@@ -104,7 +99,6 @@ Your role:
 - Flag timeline inconsistencies
 
 Be precise about dates and distinguish certainty from approximation.""",
-
     "assess_credibility": """You are a source credibility assessment engine using journalistic standards.
 
 Your role:
@@ -116,7 +110,6 @@ Your role:
 - Consider source context (author, date, type)
 
 Apply rigorous journalistic skepticism.""",
-
     "analyze": """You are a comprehensive document analysis engine.
 
 Your role:
@@ -248,9 +241,7 @@ class AnalysisWorker(BaseWorker):
         else:
             raise ValueError(f"Unknown operation: {operation}")
 
-    async def _find_contradictions(
-        self, job_id: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _find_contradictions(self, job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Find contradictions between two texts.
 
@@ -318,9 +309,7 @@ Severity levels:
             "success": True,
         }
 
-    async def _verify_claims(
-        self, job_id: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _verify_claims(self, job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Fact-check claims against evidence.
 
@@ -341,7 +330,7 @@ Severity levels:
         if not isinstance(claims, list):
             claims = [claims]
 
-        claims_text = "\n".join([f"{i+1}. {claim}" for i, claim in enumerate(claims)])
+        claims_text = "\n".join([f"{i + 1}. {claim}" for i, claim in enumerate(claims)])
         context_section = f"\n\nContext: {context}\n" if context else ""
 
         user_prompt = f"""Fact-check these claims against the provided evidence.
@@ -386,12 +375,7 @@ Be rigorous. Quote exact evidence. Express uncertainty honestly."""
         if not result or "results" not in result:
             result = {
                 "results": [
-                    {
-                        "claim": claim,
-                        "verdict": "uncertain",
-                        "confidence": 0.0,
-                        "error": "Failed to verify"
-                    }
+                    {"claim": claim, "verdict": "uncertain", "confidence": 0.0, "error": "Failed to verify"}
                     for claim in claims
                 ]
             }
@@ -402,9 +386,7 @@ Be rigorous. Quote exact evidence. Express uncertainty honestly."""
             "success": True,
         }
 
-    async def _speculate(
-        self, job_id: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _speculate(self, job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate informed speculation/hypotheses.
 
@@ -479,9 +461,7 @@ CRITICAL:
             "success": True,
         }
 
-    async def _find_gaps(
-        self, job_id: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _find_gaps(self, job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Identify information gaps and missing context.
 
@@ -548,9 +528,7 @@ Focus on:
             "success": True,
         }
 
-    async def _compare_narratives(
-        self, job_id: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _compare_narratives(self, job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Compare multiple accounts of same event.
 
@@ -635,9 +613,7 @@ Focus on:
             "success": True,
         }
 
-    async def _extract_timeline(
-        self, job_id: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _extract_timeline(self, job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract chronological events.
 
@@ -708,9 +684,7 @@ Guidelines:
             "success": True,
         }
 
-    async def _assess_credibility(
-        self, job_id: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _assess_credibility(self, job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Assess document/source credibility.
 
@@ -790,7 +764,7 @@ Use 0-1 scale for all scores."""
                 "factors": {},
                 "red_flags": [],
                 "strengths": [],
-                "overall_assessment": "Unable to assess"
+                "overall_assessment": "Unable to assess",
             }
 
         return {
@@ -798,9 +772,7 @@ Use 0-1 scale for all scores."""
             "success": True,
         }
 
-    async def _analyze_pipeline(
-        self, job_id: str, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _analyze_pipeline(self, job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Run multiple analysis operations in sequence.
 
@@ -851,10 +823,7 @@ Use 0-1 scale for all scores."""
 
         return {
             **results,
-            "operations_completed": [
-                op for op in operations
-                if op not in [e["operation"] for e in errors]
-            ],
+            "operations_completed": [op for op in operations if op not in [e["operation"] for e in errors]],
             "operations_failed": errors,
             "success": len(errors) == 0,
         }
@@ -886,7 +855,7 @@ Use 0-1 scale for all scores."""
         # Truncate text if needed (rough estimate: 4 chars per token)
         if len(user_prompt) > MAX_CONTEXT_TOKENS * 4:
             logger.warning(f"Job {job_id}: Text truncated to fit context window")
-            user_prompt = user_prompt[:MAX_CONTEXT_TOKENS * 4] + "\n\n[Text truncated...]"
+            user_prompt = user_prompt[: MAX_CONTEXT_TOKENS * 4] + "\n\n[Text truncated...]"
 
         api_url = f"{endpoint.rstrip('/')}/chat/completions"
 
@@ -907,13 +876,10 @@ Use 0-1 scale for all scores."""
             response.raise_for_status()
         except httpx.ConnectError:
             raise ConnectionError(
-                f"Failed to connect to LLM endpoint: {endpoint}. "
-                f"Make sure LM Studio/Ollama/vLLM is running."
+                f"Failed to connect to LLM endpoint: {endpoint}. Make sure LM Studio/Ollama/vLLM is running."
             )
         except httpx.HTTPStatusError as e:
-            raise RuntimeError(
-                f"LLM API error: {e.response.status_code} - {e.response.text}"
-            )
+            raise RuntimeError(f"LLM API error: {e.response.status_code} - {e.response.text}")
 
         result = response.json()
 
@@ -980,6 +946,7 @@ def run_analysis_worker(database_url: str = None, worker_id: str = None):
         LLM_ENDPOINT=http://localhost:11434/v1 LLM_MODEL=qwen2.5 python -m arkham_frame.workers.analysis_worker
     """
     import asyncio
+
     worker = AnalysisWorker(database_url=database_url, worker_id=worker_id)
     asyncio.run(worker.run())
 

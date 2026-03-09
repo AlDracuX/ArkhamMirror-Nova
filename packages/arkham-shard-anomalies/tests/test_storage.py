@@ -4,19 +4,19 @@ Anomalies Shard - Storage Tests
 Tests for the AnomalyStore class.
 """
 
-import pytest
-import pytest_asyncio
 from datetime import datetime, timedelta
 
-from arkham_shard_anomalies.storage import AnomalyStore
+import pytest
+import pytest_asyncio
 from arkham_shard_anomalies.models import (
-    Anomaly,
-    AnomalyType,
-    AnomalyStatus,
-    SeverityLevel,
-    AnomalyPattern,
     AnalystNote,
+    Anomaly,
+    AnomalyPattern,
+    AnomalyStatus,
+    AnomalyType,
+    SeverityLevel,
 )
+from arkham_shard_anomalies.storage import AnomalyStore
 
 
 class TestAnomalyStoreInit:
@@ -123,11 +123,41 @@ class TestAnomalyListing:
     async def populated_store(self, store):
         """Create store populated with test data."""
         anomalies = [
-            Anomaly(id="a1", doc_id="doc-1", anomaly_type=AnomalyType.CONTENT, status=AnomalyStatus.DETECTED, severity=SeverityLevel.HIGH),
-            Anomaly(id="a2", doc_id="doc-1", anomaly_type=AnomalyType.RED_FLAG, status=AnomalyStatus.CONFIRMED, severity=SeverityLevel.CRITICAL),
-            Anomaly(id="a3", doc_id="doc-2", anomaly_type=AnomalyType.STATISTICAL, status=AnomalyStatus.DISMISSED, severity=SeverityLevel.LOW),
-            Anomaly(id="a4", doc_id="doc-3", anomaly_type=AnomalyType.CONTENT, status=AnomalyStatus.DETECTED, severity=SeverityLevel.MEDIUM),
-            Anomaly(id="a5", doc_id="doc-3", anomaly_type=AnomalyType.METADATA, status=AnomalyStatus.FALSE_POSITIVE, severity=SeverityLevel.LOW),
+            Anomaly(
+                id="a1",
+                doc_id="doc-1",
+                anomaly_type=AnomalyType.CONTENT,
+                status=AnomalyStatus.DETECTED,
+                severity=SeverityLevel.HIGH,
+            ),
+            Anomaly(
+                id="a2",
+                doc_id="doc-1",
+                anomaly_type=AnomalyType.RED_FLAG,
+                status=AnomalyStatus.CONFIRMED,
+                severity=SeverityLevel.CRITICAL,
+            ),
+            Anomaly(
+                id="a3",
+                doc_id="doc-2",
+                anomaly_type=AnomalyType.STATISTICAL,
+                status=AnomalyStatus.DISMISSED,
+                severity=SeverityLevel.LOW,
+            ),
+            Anomaly(
+                id="a4",
+                doc_id="doc-3",
+                anomaly_type=AnomalyType.CONTENT,
+                status=AnomalyStatus.DETECTED,
+                severity=SeverityLevel.MEDIUM,
+            ),
+            Anomaly(
+                id="a5",
+                doc_id="doc-3",
+                anomaly_type=AnomalyType.METADATA,
+                status=AnomalyStatus.FALSE_POSITIVE,
+                severity=SeverityLevel.LOW,
+            ),
         ]
         for a in anomalies:
             await store.create_anomaly(a)
@@ -376,11 +406,54 @@ class TestStatistics:
         now = datetime.utcnow()
 
         anomalies = [
-            Anomaly(id="a1", doc_id="doc-1", anomaly_type=AnomalyType.CONTENT, status=AnomalyStatus.DETECTED, severity=SeverityLevel.HIGH, confidence=0.9, detected_at=now),
-            Anomaly(id="a2", doc_id="doc-2", anomaly_type=AnomalyType.RED_FLAG, status=AnomalyStatus.CONFIRMED, severity=SeverityLevel.CRITICAL, confidence=0.95, detected_at=now, reviewed_at=now),
-            Anomaly(id="a3", doc_id="doc-3", anomaly_type=AnomalyType.STATISTICAL, status=AnomalyStatus.DISMISSED, severity=SeverityLevel.LOW, confidence=0.7, detected_at=now, reviewed_at=now),
-            Anomaly(id="a4", doc_id="doc-4", anomaly_type=AnomalyType.CONTENT, status=AnomalyStatus.FALSE_POSITIVE, severity=SeverityLevel.MEDIUM, confidence=0.8, detected_at=now, reviewed_at=now),
-            Anomaly(id="a5", doc_id="doc-5", anomaly_type=AnomalyType.METADATA, status=AnomalyStatus.DETECTED, severity=SeverityLevel.LOW, confidence=0.6, detected_at=now - timedelta(days=2)),
+            Anomaly(
+                id="a1",
+                doc_id="doc-1",
+                anomaly_type=AnomalyType.CONTENT,
+                status=AnomalyStatus.DETECTED,
+                severity=SeverityLevel.HIGH,
+                confidence=0.9,
+                detected_at=now,
+            ),
+            Anomaly(
+                id="a2",
+                doc_id="doc-2",
+                anomaly_type=AnomalyType.RED_FLAG,
+                status=AnomalyStatus.CONFIRMED,
+                severity=SeverityLevel.CRITICAL,
+                confidence=0.95,
+                detected_at=now,
+                reviewed_at=now,
+            ),
+            Anomaly(
+                id="a3",
+                doc_id="doc-3",
+                anomaly_type=AnomalyType.STATISTICAL,
+                status=AnomalyStatus.DISMISSED,
+                severity=SeverityLevel.LOW,
+                confidence=0.7,
+                detected_at=now,
+                reviewed_at=now,
+            ),
+            Anomaly(
+                id="a4",
+                doc_id="doc-4",
+                anomaly_type=AnomalyType.CONTENT,
+                status=AnomalyStatus.FALSE_POSITIVE,
+                severity=SeverityLevel.MEDIUM,
+                confidence=0.8,
+                detected_at=now,
+                reviewed_at=now,
+            ),
+            Anomaly(
+                id="a5",
+                doc_id="doc-5",
+                anomaly_type=AnomalyType.METADATA,
+                status=AnomalyStatus.DETECTED,
+                severity=SeverityLevel.LOW,
+                confidence=0.6,
+                detected_at=now - timedelta(days=2),
+            ),
         ]
         for a in anomalies:
             await store.create_anomaly(a)
@@ -396,26 +469,26 @@ class TestStatistics:
     async def test_get_stats_by_type(self, populated_store):
         """Test counts by type."""
         stats = await populated_store.get_stats()
-        assert stats.by_type['content'] == 2
-        assert stats.by_type['red_flag'] == 1
+        assert stats.by_type["content"] == 2
+        assert stats.by_type["red_flag"] == 1
 
     @pytest.mark.asyncio
     async def test_get_stats_by_status(self, populated_store):
         """Test counts by status."""
         stats = await populated_store.get_stats()
-        assert stats.by_status['detected'] == 2
-        assert stats.by_status['confirmed'] == 1
-        assert stats.by_status['dismissed'] == 1
-        assert stats.by_status['false_positive'] == 1
+        assert stats.by_status["detected"] == 2
+        assert stats.by_status["confirmed"] == 1
+        assert stats.by_status["dismissed"] == 1
+        assert stats.by_status["false_positive"] == 1
 
     @pytest.mark.asyncio
     async def test_get_stats_by_severity(self, populated_store):
         """Test counts by severity."""
         stats = await populated_store.get_stats()
-        assert stats.by_severity['high'] == 1
-        assert stats.by_severity['critical'] == 1
-        assert stats.by_severity['low'] == 2
-        assert stats.by_severity['medium'] == 1
+        assert stats.by_severity["high"] == 1
+        assert stats.by_severity["critical"] == 1
+        assert stats.by_severity["low"] == 2
+        assert stats.by_severity["medium"] == 1
 
     @pytest.mark.asyncio
     async def test_get_stats_recent_activity(self, populated_store):
@@ -430,7 +503,7 @@ class TestStatistics:
         """Test false positive rate calculation."""
         stats = await populated_store.get_stats()
         # 1 false positive out of 3 reviewed (confirmed, dismissed, false_positive)
-        assert stats.false_positive_rate == pytest.approx(1/3, rel=0.01)
+        assert stats.false_positive_rate == pytest.approx(1 / 3, rel=0.01)
 
     @pytest.mark.asyncio
     async def test_get_stats_avg_confidence(self, populated_store):
@@ -448,9 +521,27 @@ class TestFacets:
         """Create store populated with test data."""
         store = AnomalyStore()
         anomalies = [
-            Anomaly(id="a1", doc_id="doc-1", anomaly_type=AnomalyType.CONTENT, status=AnomalyStatus.DETECTED, severity=SeverityLevel.HIGH),
-            Anomaly(id="a2", doc_id="doc-2", anomaly_type=AnomalyType.CONTENT, status=AnomalyStatus.CONFIRMED, severity=SeverityLevel.HIGH),
-            Anomaly(id="a3", doc_id="doc-3", anomaly_type=AnomalyType.RED_FLAG, status=AnomalyStatus.DETECTED, severity=SeverityLevel.CRITICAL),
+            Anomaly(
+                id="a1",
+                doc_id="doc-1",
+                anomaly_type=AnomalyType.CONTENT,
+                status=AnomalyStatus.DETECTED,
+                severity=SeverityLevel.HIGH,
+            ),
+            Anomaly(
+                id="a2",
+                doc_id="doc-2",
+                anomaly_type=AnomalyType.CONTENT,
+                status=AnomalyStatus.CONFIRMED,
+                severity=SeverityLevel.HIGH,
+            ),
+            Anomaly(
+                id="a3",
+                doc_id="doc-3",
+                anomaly_type=AnomalyType.RED_FLAG,
+                status=AnomalyStatus.DETECTED,
+                severity=SeverityLevel.CRITICAL,
+            ),
         ]
         for a in anomalies:
             await store.create_anomaly(a)
@@ -461,13 +552,13 @@ class TestFacets:
         """Test facet calculation."""
         facets = await populated_store.get_facets()
 
-        assert 'types' in facets
-        assert 'statuses' in facets
-        assert 'severities' in facets
+        assert "types" in facets
+        assert "statuses" in facets
+        assert "severities" in facets
 
-        assert facets['types']['content'] == 2
-        assert facets['types']['red_flag'] == 1
-        assert facets['statuses']['detected'] == 2
-        assert facets['statuses']['confirmed'] == 1
-        assert facets['severities']['high'] == 2
-        assert facets['severities']['critical'] == 1
+        assert facets["types"]["content"] == 2
+        assert facets["types"]["red_flag"] == 1
+        assert facets["statuses"]["detected"] == 2
+        assert facets["statuses"]["confirmed"] == 1
+        assert facets["severities"]["high"] == 2
+        assert facets["severities"]["critical"] == 1

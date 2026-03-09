@@ -27,15 +27,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const id = crypto.randomUUID();
     const duration = options?.duration ?? (type === 'error' ? 6000 : 4000);
 
-    setToasts(prev => [...prev, { id, type, message, duration }]);
+    setToasts((prev) => [...prev, { id, type, message, duration }]);
 
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      setToasts((prev) => prev.filter((t) => t.id !== id));
     }, duration);
   }, []);
 
   const dismiss = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   const toast = {
@@ -62,18 +62,19 @@ export function useToast() {
 }
 
 // Toast Container Component
-function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) {
+function ToastContainer({
+  toasts,
+  onDismiss,
+}: {
+  toasts: Toast[];
+  onDismiss: (id: string) => void;
+}) {
   if (toasts.length === 0) return null;
 
   return (
     <div className="toast-container" role="region" aria-label="Notifications">
-      {toasts.map(t => (
-        <div
-          key={t.id}
-          className={`toast toast-${t.type}`}
-          role="alert"
-          aria-live="polite"
-        >
+      {toasts.map((t) => (
+        <div key={t.id} className={`toast toast-${t.type}`} role="alert" aria-live="polite">
           <span className="toast-message">{t.message}</span>
           <button
             className="toast-dismiss"

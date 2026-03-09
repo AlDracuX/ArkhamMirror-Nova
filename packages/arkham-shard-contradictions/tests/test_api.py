@@ -4,32 +4,36 @@ Contradictions Shard - API Tests
 Tests for all FastAPI endpoints.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock
-from fastapi.testclient import TestClient
-from fastapi import FastAPI
+from unittest.mock import AsyncMock, MagicMock
 
-from arkham_shard_contradictions.api import router, init_api
+import pytest
+from arkham_shard_contradictions.api import init_api, router
 from arkham_shard_contradictions.models import (
+    Claim,
     Contradiction,
     ContradictionChain,
     ContradictionStatus,
-    Severity,
     ContradictionType,
-    Claim,
+    Severity,
 )
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
 def mock_detector():
     """Create mock contradiction detector."""
     mock = MagicMock()
-    mock.extract_claims_simple = MagicMock(return_value=[
-        Claim(id="claim-1", document_id="doc-1", text="Test claim"),
-    ])
-    mock.extract_claims_llm = AsyncMock(return_value=[
-        Claim(id="claim-1", document_id="doc-1", text="Test claim"),
-    ])
+    mock.extract_claims_simple = MagicMock(
+        return_value=[
+            Claim(id="claim-1", document_id="doc-1", text="Test claim"),
+        ]
+    )
+    mock.extract_claims_llm = AsyncMock(
+        return_value=[
+            Claim(id="claim-1", document_id="doc-1", text="Test claim"),
+        ]
+    )
     mock.find_similar_claims = AsyncMock(return_value=[])
     mock.verify_contradiction = AsyncMock(return_value=None)
     return mock
@@ -45,14 +49,16 @@ def mock_storage():
     mock.delete = MagicMock(return_value=True)
     mock.list_all = MagicMock(return_value=([], 0))
     mock.get_by_document = MagicMock(return_value=[])
-    mock.get_statistics = MagicMock(return_value={
-        "total_contradictions": 0,
-        "by_status": {},
-        "by_severity": {},
-        "by_type": {},
-        "chains_detected": 0,
-        "recent_count": 0,
-    })
+    mock.get_statistics = MagicMock(
+        return_value={
+            "total_contradictions": 0,
+            "by_status": {},
+            "by_severity": {},
+            "by_type": {},
+            "chains_detected": 0,
+            "recent_count": 0,
+        }
+    )
     mock.search = MagicMock(return_value=[])
     mock.list_chains = MagicMock(return_value=[])
     mock.get_chain = MagicMock(return_value=None)
@@ -198,9 +204,7 @@ class TestDocumentEndpoint:
 
     def test_get_document_with_chains(self, client, mock_storage):
         """Test getting contradictions with chain inclusion."""
-        response = client.get(
-            "/api/contradictions/document/doc-123?include_chains=true"
-        )
+        response = client.get("/api/contradictions/document/doc-123?include_chains=true")
 
         assert response.status_code == 200
         mock_storage.get_by_document.assert_called_with("doc-123", include_related=True)

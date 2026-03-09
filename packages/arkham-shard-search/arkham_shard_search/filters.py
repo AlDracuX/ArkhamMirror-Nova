@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from .models import SearchFilters, DateRangeFilter
+from .models import DateRangeFilter, SearchFilters
 
 logger = logging.getLogger(__name__)
 
@@ -129,10 +129,7 @@ class FilterOptimizer:
                 LIMIT 20
                 """
             )
-            result["file_types"] = [
-                {"type": row["type"], "count": row["count"]}
-                for row in file_type_rows
-            ]
+            result["file_types"] = [{"type": row["type"], "count": row["count"]} for row in file_type_rows]
 
             # Get project aggregations
             try:
@@ -147,8 +144,7 @@ class FilterOptimizer:
                     """
                 )
                 result["projects"] = [
-                    {"id": row["id"], "name": row["name"], "count": row["count"]}
-                    for row in project_rows
+                    {"id": row["id"], "name": row["name"], "count": row["count"]} for row in project_rows
                 ]
             except Exception as e:
                 logger.debug(f"Could not fetch project aggregations: {e}")
@@ -165,7 +161,7 @@ class FilterOptimizer:
                 SELECT COUNT(*) as count FROM arkham_frame.documents
                 WHERE created_at >= :start_date
                 """,
-                {"start_date": week_ago}
+                {"start_date": week_ago},
             )
             result["date_ranges"]["last_week"] = {
                 "start": week_ago.isoformat(),
@@ -179,7 +175,7 @@ class FilterOptimizer:
                 SELECT COUNT(*) as count FROM arkham_frame.documents
                 WHERE created_at >= :start_date
                 """,
-                {"start_date": month_ago}
+                {"start_date": month_ago},
             )
             result["date_ranges"]["last_month"] = {
                 "start": month_ago.isoformat(),
@@ -193,7 +189,7 @@ class FilterOptimizer:
                 SELECT COUNT(*) as count FROM arkham_frame.documents
                 WHERE created_at >= :start_date
                 """,
-                {"start_date": year_ago}
+                {"start_date": year_ago},
             )
             result["date_ranges"]["last_year"] = {
                 "start": year_ago.isoformat(),

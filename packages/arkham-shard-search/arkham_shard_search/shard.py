@@ -5,7 +5,7 @@ import logging
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
-from .engines import SemanticSearchEngine, KeywordSearchEngine, HybridSearchEngine, RegexSearchEngine
+from .engines import HybridSearchEngine, KeywordSearchEngine, RegexSearchEngine, SemanticSearchEngine
 from .filters import FilterOptimizer
 
 logger = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ class SearchShard(ArkhamShard):
             # Get embedding dimensions from vectors service for model-aware weight tuning
             embedding_dimensions = None
             if vectors_service:
-                embedding_dimensions = getattr(vectors_service, '_default_dimension', None)
+                embedding_dimensions = getattr(vectors_service, "_default_dimension", None)
                 logger.info(f"Detected embedding dimensions: {embedding_dimensions}")
 
             self.hybrid_engine = HybridSearchEngine(
@@ -321,7 +321,7 @@ class SearchShard(ArkhamShard):
                     "rating": rating,
                     "feedback_text": feedback_text,
                     "context": json.dumps(context or {}),
-                }
+                },
             )
             return True
         except Exception as e:
@@ -357,8 +357,7 @@ class SearchShard(ArkhamShard):
         if self._db and doc_id:
             try:
                 await self._db.execute(
-                    "DELETE FROM arkham_search.pattern_extractions WHERE document_id = :doc_id",
-                    {"doc_id": doc_id}
+                    "DELETE FROM arkham_search.pattern_extractions WHERE document_id = :doc_id", {"doc_id": doc_id}
                 )
             except Exception as e:
                 logger.warning(f"Failed to delete pattern extractions for {doc_id}: {e}")
@@ -396,7 +395,7 @@ class SearchShard(ArkhamShard):
                 WHERE document_id = :doc_id
                 ORDER BY chunk_index
                 """,
-                {"doc_id": doc_id}
+                {"doc_id": doc_id},
             )
 
             if not chunks:
@@ -437,22 +436,24 @@ class SearchShard(ArkhamShard):
                         if ctx_end < len(text):
                             context = context + "..."
 
-                        line_number = text[:match_start].count('\n') + 1
+                        line_number = text[:match_start].count("\n") + 1
 
-                        extractions.append({
-                            "id": str(uuid.uuid4())[:12],
-                            "document_id": doc_id,
-                            "preset_id": preset_id,
-                            "preset_name": preset_name,
-                            "category": category,
-                            "match_text": match_text,
-                            "context": context,
-                            "page_number": page_number,
-                            "chunk_id": chunk_id,
-                            "start_offset": match_start,
-                            "end_offset": match_end,
-                            "line_number": line_number,
-                        })
+                        extractions.append(
+                            {
+                                "id": str(uuid.uuid4())[:12],
+                                "document_id": doc_id,
+                                "preset_id": preset_id,
+                                "preset_name": preset_name,
+                                "category": category,
+                                "match_text": match_text,
+                                "context": context,
+                                "page_number": page_number,
+                                "chunk_id": chunk_id,
+                                "start_offset": match_start,
+                                "end_offset": match_end,
+                                "line_number": line_number,
+                            }
+                        )
 
             # Store extractions in batch
             if extractions:
@@ -466,7 +467,7 @@ class SearchShard(ArkhamShard):
                                 :context, :page_number, :chunk_id, :start_offset, :end_offset, :line_number)
                         ON CONFLICT (id) DO NOTHING
                         """,
-                        ext
+                        ext,
                     )
 
                 logger.info(f"Auto-extracted {len(extractions)} pattern matches from document {doc_id}")
@@ -502,7 +503,7 @@ class SearchShard(ArkhamShard):
         Returns:
             List of search results
         """
-        from .models import SearchQuery, SearchMode
+        from .models import SearchMode, SearchQuery
 
         try:
             search_mode = SearchMode(mode.lower())

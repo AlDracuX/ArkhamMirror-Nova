@@ -7,19 +7,20 @@ for semantic search capabilities using PostgreSQL + pgvector.
 Uses a single-database architecture with pgvector extension.
 """
 
-from typing import Optional, List, Dict, Any, Tuple
+import json
+import logging
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-import logging
-import uuid
-import json
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class DistanceMetric(str, Enum):
     """Vector distance metrics."""
+
     COSINE = "cosine"
     EUCLIDEAN = "euclidean"
     DOT = "dot"
@@ -28,6 +29,7 @@ class DistanceMetric(str, Enum):
 @dataclass
 class VectorPoint:
     """A point in vector space."""
+
     id: str
     vector: List[float]
     payload: Dict[str, Any] = field(default_factory=dict)
@@ -45,6 +47,7 @@ class VectorPoint:
 @dataclass
 class CollectionInfo:
     """Information about a vector collection."""
+
     name: str
     vector_size: int
     distance: DistanceMetric
@@ -77,6 +80,7 @@ class CollectionInfo:
 @dataclass
 class SearchResult:
     """A vector search result."""
+
     id: str
     score: float
     payload: Dict[str, Any] = field(default_factory=dict)
@@ -95,16 +99,19 @@ class SearchResult:
 
 class VectorServiceError(Exception):
     """Base vector service error."""
+
     pass
 
 
 class VectorStoreUnavailableError(VectorServiceError):
     """Vector store not available."""
+
     pass
 
 
 class CollectionNotFoundError(VectorServiceError):
     """Collection does not exist."""
+
     def __init__(self, collection: str):
         super().__init__(f"Collection not found: {collection}")
         self.collection = collection
@@ -112,6 +119,7 @@ class CollectionNotFoundError(VectorServiceError):
 
 class CollectionExistsError(VectorServiceError):
     """Collection already exists."""
+
     def __init__(self, collection: str):
         super().__init__(f"Collection already exists: {collection}")
         self.collection = collection
@@ -119,11 +127,13 @@ class CollectionExistsError(VectorServiceError):
 
 class EmbeddingError(VectorServiceError):
     """Embedding generation failed."""
+
     pass
 
 
 class VectorDimensionError(VectorServiceError):
     """Vector dimension mismatch."""
+
     def __init__(self, expected: int, got: int):
         super().__init__(f"Vector dimension mismatch: expected {expected}, got {got}")
         self.expected = expected
@@ -132,6 +142,7 @@ class VectorDimensionError(VectorServiceError):
 
 class UnsupportedDimensionError(VectorServiceError):
     """Model produces vectors exceeding pgvector limit."""
+
     def __init__(self, model: str, dimensions: int, max_dims: int = 2000):
         super().__init__(
             f"Model '{model}' produces {dimensions}-dimensional embeddings, "
@@ -212,18 +223,8 @@ class VectorService:
         # JSON codec setup for asyncpg
         async def init_connection(conn):
             """Initialize connection with JSON codecs."""
-            await conn.set_type_codec(
-                'jsonb',
-                encoder=json.dumps,
-                decoder=json.loads,
-                schema='pg_catalog'
-            )
-            await conn.set_type_codec(
-                'json',
-                encoder=json.dumps,
-                decoder=json.loads,
-                schema='pg_catalog'
-            )
+            await conn.set_type_codec("jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
+            await conn.set_type_codec("json", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
 
         # Initialize PostgreSQL connection pool
         try:
@@ -241,9 +242,7 @@ class VectorService:
 
             # Verify pgvector extension is available
             async with self._pool.acquire() as conn:
-                result = await conn.fetchval(
-                    "SELECT 1 FROM pg_extension WHERE extname = 'vector'"
-                )
+                result = await conn.fetchval("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
                 if not result:
                     raise ValueError("pgvector extension not installed")
 
@@ -260,6 +259,7 @@ class VectorService:
         # Initialize embedding model (only if explicitly configured)
         try:
             import os
+
             embedding_model = os.environ.get("EMBED_MODEL", "")
 
             # If not set via env, try to read from settings database
@@ -294,8 +294,7 @@ class VectorService:
         try:
             async with self._pool.acquire() as conn:
                 row = await conn.fetchrow(
-                    "SELECT value FROM arkham_settings WHERE key = $1",
-                    "advanced.embedding_model"
+                    "SELECT value FROM arkham_settings WHERE key = $1", "advanced.embedding_model"
                 )
                 if row and row["value"]:
                     value = row["value"]
@@ -325,10 +324,12 @@ class VectorService:
         # Run in thread pool to avoid blocking the event loop during model download/load
         try:
             import asyncio
+
             from sentence_transformers import SentenceTransformer
 
             def _load_model():
                 import os
+
                 device = os.environ.get("EMBED_DEVICE", "")
                 kwargs = {"device": device} if device else {}
                 return SentenceTransformer(model_name, **kwargs)
@@ -384,8 +385,7 @@ class VectorService:
         self._embedding_model = None
 
         logger.info(
-            f"Cloud embedding configured: {model_name} (dim={self._default_dimension}) "
-            f"via {self._cloud_api_url}"
+            f"Cloud embedding configured: {model_name} (dim={self._default_dimension}) via {self._cloud_api_url}"
         )
 
     def is_using_cloud_embeddings(self) -> bool:
@@ -395,9 +395,13 @@ class VectorService:
     def get_embedding_model_info(self) -> dict:
         """Get information about the current embedding configuration."""
         return {
-            "model": self._cloud_embedding_model if self._use_cloud_embeddings else
-                     (self._embedding_model.get_config_dict().get("model_name_or_path", "unknown")
-                      if self._embedding_model else None),
+            "model": self._cloud_embedding_model
+            if self._use_cloud_embeddings
+            else (
+                self._embedding_model.get_config_dict().get("model_name_or_path", "unknown")
+                if self._embedding_model
+                else None
+            ),
             "dimensions": self._default_dimension,
             "is_cloud": self._use_cloud_embeddings,
             "api_url": self._cloud_api_url if self._use_cloud_embeddings else None,
@@ -407,9 +411,9 @@ class VectorService:
     async def _ensure_standard_collections(self) -> None:
         """Ensure standard collections exist with correct dimensions."""
         standard = [
-            (self.COLLECTION_DOCUMENTS, self._default_dimension, 316),   # ~100k expected
-            (self.COLLECTION_CHUNKS, self._default_dimension, 1000),     # ~1M expected
-            (self.COLLECTION_ENTITIES, self._default_dimension, 707),    # ~500k expected
+            (self.COLLECTION_DOCUMENTS, self._default_dimension, 316),  # ~100k expected
+            (self.COLLECTION_CHUNKS, self._default_dimension, 1000),  # ~1M expected
+            (self.COLLECTION_ENTITIES, self._default_dimension, 707),  # ~500k expected
         ]
 
         for collection_name, dimension, lists in standard:
@@ -476,7 +480,7 @@ class VectorService:
         elif expected_rows < 1_000_000:
             return max(10, expected_rows // 1000)
         else:
-            return max(100, int(expected_rows ** 0.5))
+            return max(100, int(expected_rows**0.5))
 
     def _optimal_probes(self, lists: int, target_recall: float = None) -> int:
         """Calculate optimal probes for target recall."""
@@ -484,9 +488,9 @@ class VectorService:
             target_recall = self._target_recall
 
         if target_recall >= 0.99:
-            return max(lists // 2, int(lists ** 0.5) * 3)
+            return max(lists // 2, int(lists**0.5) * 3)
         elif target_recall >= 0.95:
-            return max(10, int(lists ** 0.5))
+            return max(10, int(lists**0.5))
         else:
             return max(5, lists // 10)
 
@@ -528,19 +532,25 @@ class VectorService:
             async with self._pool.acquire() as conn:
                 # Check if collection exists
                 existing = await conn.fetchval(
-                    "SELECT 1 FROM arkham_vectors.collections WHERE name = $1",
-                    collection_name
+                    "SELECT 1 FROM arkham_vectors.collections WHERE name = $1", collection_name
                 )
                 if existing:
                     raise CollectionExistsError(collection_name)
 
                 async with conn.transaction():
                     # Insert collection metadata
-                    await conn.execute("""
+                    await conn.execute(
+                        """
                         INSERT INTO arkham_vectors.collections
                             (name, vector_size, distance_metric, index_type, lists, probes)
                         VALUES ($1, $2, $3, 'ivfflat', $4, $5)
-                    """, collection_name, vector_size, distance.value, lists, probes)
+                    """,
+                        collection_name,
+                        vector_size,
+                        distance.value,
+                        lists,
+                        probes,
+                    )
 
                     # Create IVFFlat partial index
                     # DDL statements don't support parameters, use escaped literal
@@ -581,19 +591,13 @@ class VectorService:
             async with self._pool.acquire() as conn:
                 async with conn.transaction():
                     # Delete vectors
-                    await conn.execute(
-                        "DELETE FROM arkham_vectors.embeddings WHERE collection = $1",
-                        name
-                    )
+                    await conn.execute("DELETE FROM arkham_vectors.embeddings WHERE collection = $1", name)
 
                     # Drop index
                     await conn.execute(f"DROP INDEX IF EXISTS arkham_vectors.idx_ivfflat_{safe_name}")
 
                     # Delete metadata
-                    result = await conn.execute(
-                        "DELETE FROM arkham_vectors.collections WHERE name = $1",
-                        name
-                    )
+                    result = await conn.execute("DELETE FROM arkham_vectors.collections WHERE name = $1", name)
 
             deleted = "DELETE 1" in result
             if deleted:
@@ -610,10 +614,7 @@ class VectorService:
 
         try:
             async with self._pool.acquire() as conn:
-                result = await conn.fetchval(
-                    "SELECT 1 FROM arkham_vectors.collections WHERE name = $1",
-                    name
-                )
+                result = await conn.fetchval("SELECT 1 FROM arkham_vectors.collections WHERE name = $1", name)
                 return result is not None
         except Exception:
             return False
@@ -626,35 +627,31 @@ class VectorService:
         try:
             async with self._pool.acquire() as conn:
                 # Get collection metadata
-                row = await conn.fetchrow(
-                    "SELECT * FROM arkham_vectors.collections WHERE name = $1",
-                    name
-                )
+                row = await conn.fetchrow("SELECT * FROM arkham_vectors.collections WHERE name = $1", name)
                 if not row:
                     raise CollectionNotFoundError(name)
 
                 # Get actual vector count
                 count = await conn.fetchval(
-                    "SELECT COUNT(*) FROM arkham_vectors.embeddings WHERE collection = $1",
-                    name
+                    "SELECT COUNT(*) FROM arkham_vectors.embeddings WHERE collection = $1", name
                 )
 
                 # Parse distance metric
-                distance_str = row['distance_metric']
+                distance_str = row["distance_metric"]
                 distance = DistanceMetric(distance_str) if distance_str else DistanceMetric.COSINE
 
                 return CollectionInfo(
                     name=name,
-                    vector_size=row['vector_size'],
+                    vector_size=row["vector_size"],
                     distance=distance,
                     points_count=count or 0,
-                    indexed_vectors_count=row['vector_count'] or 0,
+                    indexed_vectors_count=row["vector_count"] or 0,
                     status="green",
-                    created_at=row['created_at'],
-                    index_type=row['index_type'] or 'ivfflat',
-                    lists=row['lists'] or 100,
-                    probes=row['probes'] or 10,
-                    last_reindex=row['last_reindex'],
+                    created_at=row["created_at"],
+                    index_type=row["index_type"] or "ivfflat",
+                    lists=row["lists"] or 100,
+                    probes=row["probes"] or 10,
+                    last_reindex=row["last_reindex"],
                 )
 
         except CollectionNotFoundError:
@@ -669,33 +666,32 @@ class VectorService:
 
         try:
             async with self._pool.acquire() as conn:
-                rows = await conn.fetch(
-                    "SELECT * FROM arkham_vectors.collections ORDER BY name"
-                )
+                rows = await conn.fetch("SELECT * FROM arkham_vectors.collections ORDER BY name")
 
                 result = []
                 for row in rows:
                     count = await conn.fetchval(
-                        "SELECT COUNT(*) FROM arkham_vectors.embeddings WHERE collection = $1",
-                        row['name']
+                        "SELECT COUNT(*) FROM arkham_vectors.embeddings WHERE collection = $1", row["name"]
                     )
 
-                    distance_str = row['distance_metric']
+                    distance_str = row["distance_metric"]
                     distance = DistanceMetric(distance_str) if distance_str else DistanceMetric.COSINE
 
-                    result.append(CollectionInfo(
-                        name=row['name'],
-                        vector_size=row['vector_size'],
-                        distance=distance,
-                        points_count=count or 0,
-                        indexed_vectors_count=row['vector_count'] or 0,
-                        status="green",
-                        created_at=row['created_at'],
-                        index_type=row['index_type'] or 'ivfflat',
-                        lists=row['lists'] or 100,
-                        probes=row['probes'] or 10,
-                        last_reindex=row['last_reindex'],
-                    ))
+                    result.append(
+                        CollectionInfo(
+                            name=row["name"],
+                            vector_size=row["vector_size"],
+                            distance=distance,
+                            points_count=count or 0,
+                            indexed_vectors_count=row["vector_count"] or 0,
+                            status="green",
+                            created_at=row["created_at"],
+                            index_type=row["index_type"] or "ivfflat",
+                            lists=row["lists"] or 100,
+                            probes=row["probes"] or 10,
+                            last_reindex=row["last_reindex"],
+                        )
+                    )
 
                 return result
 
@@ -722,10 +718,7 @@ class VectorService:
         try:
             async with self._pool.acquire() as conn:
                 # Verify collection exists
-                exists = await conn.fetchval(
-                    "SELECT 1 FROM arkham_vectors.collections WHERE name = $1",
-                    collection
-                )
+                exists = await conn.fetchval("SELECT 1 FROM arkham_vectors.collections WHERE name = $1", collection)
                 if not exists:
                     raise CollectionNotFoundError(collection)
 
@@ -736,17 +729,17 @@ class VectorService:
                         return payload  # Already JSON string
                     return json.dumps(payload)
 
-                await conn.executemany("""
+                await conn.executemany(
+                    """
                     INSERT INTO arkham_vectors.embeddings (id, collection, embedding, payload)
                     VALUES ($1, $2, $3::vector, $4::jsonb)
                     ON CONFLICT (id) DO UPDATE SET
                         embedding = EXCLUDED.embedding,
                         payload = EXCLUDED.payload,
                         updated_at = CURRENT_TIMESTAMP
-                """, [
-                    (p.id, collection, str(p.vector), serialize_payload(p.payload))
-                    for p in points
-                ])
+                """,
+                    [(p.id, collection, str(p.vector), serialize_payload(p.payload)) for p in points],
+                )
 
             logger.debug(f"Upserted {len(points)} vectors to {collection}")
             return len(points)
@@ -783,8 +776,7 @@ class VectorService:
         try:
             async with self._pool.acquire() as conn:
                 result = await conn.execute(
-                    "DELETE FROM arkham_vectors.embeddings WHERE collection = $1 AND id = ANY($2)",
-                    collection, ids
+                    "DELETE FROM arkham_vectors.embeddings WHERE collection = $1 AND id = ANY($2)", collection, ids
                 )
                 deleted = int(result.split()[-1]) if result else 0
 
@@ -807,7 +799,8 @@ class VectorService:
             async with self._pool.acquire() as conn:
                 await conn.execute(
                     "DELETE FROM arkham_vectors.embeddings WHERE collection = $1 AND payload @> $2::jsonb",
-                    collection, json.dumps(filter)
+                    collection,
+                    json.dumps(filter),
                 )
 
             logger.debug(f"Deleted vectors by filter from {collection}")
@@ -831,20 +824,22 @@ class VectorService:
                 if with_vector:
                     row = await conn.fetchrow(
                         "SELECT id, embedding, payload FROM arkham_vectors.embeddings WHERE collection = $1 AND id = $2",
-                        collection, id
+                        collection,
+                        id,
                     )
                 else:
                     row = await conn.fetchrow(
                         "SELECT id, payload FROM arkham_vectors.embeddings WHERE collection = $1 AND id = $2",
-                        collection, id
+                        collection,
+                        id,
                     )
 
                 if row:
-                    vector = list(row['embedding']) if with_vector and row.get('embedding') else []
+                    vector = list(row["embedding"]) if with_vector and row.get("embedding") else []
                     return VectorPoint(
-                        id=row['id'],
+                        id=row["id"],
                         vector=vector,
-                        payload=row['payload'] or {},
+                        payload=row["payload"] or {},
                     )
 
                 return None
@@ -874,34 +869,33 @@ class VectorService:
             async with self._pool.acquire() as conn:
                 # Get collection info for probes setting
                 coll = await conn.fetchrow(
-                    "SELECT lists, probes, distance_metric FROM arkham_vectors.collections WHERE name = $1",
-                    collection
+                    "SELECT lists, probes, distance_metric FROM arkham_vectors.collections WHERE name = $1", collection
                 )
                 if not coll:
                     raise CollectionNotFoundError(collection)
 
                 # Calculate probes for this search
                 if recall_target:
-                    probes = self._optimal_probes(coll['lists'], recall_target)
+                    probes = self._optimal_probes(coll["lists"], recall_target)
                 else:
-                    probes = coll['probes']
+                    probes = coll["probes"]
 
                 # Set probes for this query
                 await conn.execute(f"SET LOCAL ivfflat.probes = {probes}")
 
                 # Determine distance operator
-                distance_metric = coll['distance_metric'] or 'cosine'
+                distance_metric = coll["distance_metric"] or "cosine"
                 distance_ops = {
-                    'cosine': '<=>',
-                    'euclidean': '<->',
-                    'dot': '<#>',
+                    "cosine": "<=>",
+                    "euclidean": "<->",
+                    "dot": "<#>",
                 }
-                op = distance_ops.get(distance_metric, '<=>')
+                op = distance_ops.get(distance_metric, "<=>")
 
                 # Build score expression (higher = better)
-                if distance_metric == 'cosine':
+                if distance_metric == "cosine":
                     score_expr = f"1 - (embedding {op} $1::vector)"
-                elif distance_metric == 'dot':
+                elif distance_metric == "dot":
                     score_expr = f"-(embedding {op} $1::vector)"
                 else:
                     score_expr = f"embedding {op} $1::vector"
@@ -927,7 +921,7 @@ class VectorService:
                     param_idx += 1
 
                 # Add score threshold
-                if score_threshold and distance_metric == 'cosine':
+                if score_threshold and distance_metric == "cosine":
                     sql += f" AND {score_expr} >= ${param_idx}"
                     params.append(score_threshold)
                     param_idx += 1
@@ -940,10 +934,10 @@ class VectorService:
 
                 return [
                     SearchResult(
-                        id=r['id'],
-                        score=float(r['score']),
-                        payload=r['payload'] or {},
-                        vector=list(r['embedding']) if with_vectors and r.get('embedding') else None,
+                        id=r["id"],
+                        score=float(r["score"]),
+                        payload=r["payload"] or {},
+                        vector=list(r["embedding"]) if with_vectors and r.get("embedding") else None,
                     )
                     for r in rows
                 ]
@@ -1105,11 +1099,13 @@ class VectorService:
         for i, item in enumerate(items):
             payload = {k: v for k, v in item.items() if k != text_field}
 
-            points.append(VectorPoint(
-                id=str(item.get(id_field, str(uuid.uuid4()))),
-                vector=embeddings[i],
-                payload=payload,
-            ))
+            points.append(
+                VectorPoint(
+                    id=str(item.get(id_field, str(uuid.uuid4()))),
+                    vector=embeddings[i],
+                    payload=payload,
+                )
+            )
 
         # Upsert
         return await self.upsert(collection, points)
@@ -1123,8 +1119,7 @@ class VectorService:
         try:
             async with self._pool.acquire() as conn:
                 count = await conn.fetchval(
-                    "SELECT COUNT(*) FROM arkham_vectors.embeddings WHERE collection = $1",
-                    collection
+                    "SELECT COUNT(*) FROM arkham_vectors.embeddings WHERE collection = $1", collection
                 )
                 return count or 0
         except Exception:
@@ -1183,14 +1178,14 @@ class VectorService:
 
                 points = [
                     VectorPoint(
-                        id=r['id'],
-                        vector=list(r['embedding']) if with_vectors and r.get('embedding') else [],
-                        payload=r['payload'] or {},
+                        id=r["id"],
+                        vector=list(r["embedding"]) if with_vectors and r.get("embedding") else [],
+                        payload=r["payload"] or {},
                     )
                     for r in rows
                 ]
 
-                next_offset = rows[-1]['id'] if has_more and rows else None
+                next_offset = rows[-1]["id"] if has_more and rows else None
                 return points, next_offset
 
         except Exception as e:
@@ -1201,15 +1196,11 @@ class VectorService:
         embedding_model_name = None
         if self._embedding_model is not None:
             try:
-                embedding_model_name = getattr(
-                    self._embedding_model,
-                    "model_card_data",
-                    {}
-                ).get("model_name", None)
+                embedding_model_name = getattr(self._embedding_model, "model_card_data", {}).get("model_name", None)
                 if not embedding_model_name:
-                    embedding_model_name = str(getattr(
-                        self._embedding_model, "_model_card_vars", {}
-                    ).get("model_name", "unknown"))
+                    embedding_model_name = str(
+                        getattr(self._embedding_model, "_model_card_vars", {}).get("model_name", "unknown")
+                    )
             except Exception:
                 embedding_model_name = "loaded"
 
@@ -1251,17 +1242,13 @@ class VectorService:
         try:
             async with self._pool.acquire() as conn:
                 # Get collection info
-                coll = await conn.fetchrow(
-                    "SELECT * FROM arkham_vectors.collections WHERE name = $1",
-                    name
-                )
+                coll = await conn.fetchrow("SELECT * FROM arkham_vectors.collections WHERE name = $1", name)
                 if not coll:
                     raise CollectionNotFoundError(name)
 
                 # Get actual count
                 count = await conn.fetchval(
-                    "SELECT COUNT(*) FROM arkham_vectors.embeddings WHERE collection = $1",
-                    name
+                    "SELECT COUNT(*) FROM arkham_vectors.embeddings WHERE collection = $1", name
                 )
 
                 # Calculate new optimal parameters
@@ -1272,29 +1259,38 @@ class VectorService:
 
                 # Determine operator class
                 ops_map = {
-                    'cosine': 'vector_cosine_ops',
-                    'euclidean': 'vector_l2_ops',
-                    'dot': 'vector_ip_ops',
+                    "cosine": "vector_cosine_ops",
+                    "euclidean": "vector_l2_ops",
+                    "dot": "vector_ip_ops",
                 }
-                ops = ops_map.get(coll['distance_metric'], 'vector_cosine_ops')
+                ops = ops_map.get(coll["distance_metric"], "vector_cosine_ops")
 
                 # Drop and recreate index
                 await conn.execute(f"DROP INDEX IF EXISTS arkham_vectors.idx_ivfflat_{safe_name}")
 
-                await conn.execute(f"""
+                await conn.execute(
+                    f"""
                     CREATE INDEX idx_ivfflat_{safe_name}
                     ON arkham_vectors.embeddings
                     USING ivfflat (embedding {ops})
                     WITH (lists = {new_lists})
                     WHERE collection = $1
-                """, name)
+                """,
+                    name,
+                )
 
                 # Update metadata
-                await conn.execute("""
+                await conn.execute(
+                    """
                     UPDATE arkham_vectors.collections
                     SET lists = $2, probes = $3, last_reindex = NOW(), vector_count = $4
                     WHERE name = $1
-                """, name, new_lists, new_probes, count)
+                """,
+                    name,
+                    new_lists,
+                    new_probes,
+                    count,
+                )
 
             logger.info(f"Reindex complete for '{name}': lists={new_lists}, probes={new_probes}, vectors={count}")
 
@@ -1322,10 +1318,12 @@ class VectorService:
                 result = await self.reindex_collection(coll.name)
                 results.append(result)
             except Exception as e:
-                results.append({
-                    "collection": coll.name,
-                    "status": "error",
-                    "error": str(e),
-                })
+                results.append(
+                    {
+                        "collection": coll.name,
+                        "status": "error",
+                        "error": str(e),
+                    }
+                )
 
         return results

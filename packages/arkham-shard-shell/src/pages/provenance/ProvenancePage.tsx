@@ -99,14 +99,22 @@ export function ProvenancePage() {
   const [creating, setCreating] = useState(false);
 
   // Fetch artifacts
-  const { data: artifacts, loading: artifactsLoading, error: artifactsError, refetch: refetchArtifacts } = useFetch<Artifact[]>(
+  const {
+    data: artifacts,
+    loading: artifactsLoading,
+    error: artifactsError,
+    refetch: refetchArtifacts,
+  } = useFetch<Artifact[]>(
     `/api/provenance/artifacts${artifactTypeFilter ? `?artifact_type=${artifactTypeFilter}` : ''}`
   );
 
   // Fetch chains
-  const { data: chainsData, loading: chainsLoading, error: chainsError, refetch: refetchChains } = useFetch<{ items: Chain[]; total: number }>(
-    '/api/provenance/chains'
-  );
+  const {
+    data: chainsData,
+    loading: chainsLoading,
+    error: chainsError,
+    refetch: refetchChains,
+  } = useFetch<{ items: Chain[]; total: number }>('/api/provenance/chains');
 
   // Fetch links for selected chain
   const { data: chainLinks, loading: linksLoading } = useFetch<Link[]>(
@@ -114,7 +122,11 @@ export function ProvenancePage() {
   );
 
   // Fetch lineage for selected artifact
-  const { data: lineage, loading: lineageLoading, error: lineageError } = useFetch<LineageGraph>(
+  const {
+    data: lineage,
+    loading: lineageLoading,
+    error: lineageError,
+  } = useFetch<LineageGraph>(
     lineageArtifactId ? `/api/provenance/lineage/${lineageArtifactId}` : null
   );
 
@@ -222,20 +234,29 @@ export function ProvenancePage() {
 
   const getArtifactIcon = (type: string) => {
     switch (type) {
-      case 'document': return 'FileText';
-      case 'entity': return 'User';
-      case 'claim': return 'Quote';
-      case 'chunk': return 'FileSlice';
-      default: return 'Box';
+      case 'document':
+        return 'FileText';
+      case 'entity':
+        return 'User';
+      case 'claim':
+        return 'Quote';
+      case 'chunk':
+        return 'FileSlice';
+      default:
+        return 'Box';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'status-active';
-      case 'verified': return 'status-verified';
-      case 'disputed': return 'status-disputed';
-      default: return '';
+      case 'active':
+        return 'status-active';
+      case 'verified':
+        return 'status-verified';
+      case 'disputed':
+        return 'status-disputed';
+      default:
+        return '';
     }
   };
 
@@ -268,17 +289,21 @@ export function ProvenancePage() {
             <div className="error-state">
               <Icon name="AlertCircle" size={32} />
               <span>Failed to load artifacts</span>
-              <button className="btn btn-secondary" onClick={() => refetchArtifacts()}>Retry</button>
+              <button className="btn btn-secondary" onClick={() => refetchArtifacts()}>
+                Retry
+              </button>
             </div>
           ) : !artifacts || artifacts.length === 0 ? (
             <div className="empty-state">
               <Icon name="Box" size={48} />
               <span>No artifacts tracked yet</span>
-              <p className="empty-hint">Artifacts are automatically created when entities are processed</p>
+              <p className="empty-hint">
+                Artifacts are automatically created when entities are processed
+              </p>
             </div>
           ) : (
             <div className="items-list">
-              {artifacts.map(artifact => (
+              {artifacts.map((artifact) => (
                 <div
                   key={artifact.id}
                   className={`item-card ${selectedArtifact?.id === artifact.id ? 'selected' : ''}`}
@@ -287,11 +312,16 @@ export function ProvenancePage() {
                   <Icon name={getArtifactIcon(artifact.artifact_type)} size={20} />
                   <div className="item-info">
                     <h3>{artifact.title || artifact.entity_id}</h3>
-                    <p>{artifact.artifact_type} - {artifact.entity_table}</p>
+                    <p>
+                      {artifact.artifact_type} - {artifact.entity_table}
+                    </p>
                   </div>
                   <button
                     className="btn-icon-sm"
-                    onClick={(e) => { e.stopPropagation(); handleViewLineage(artifact.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewLineage(artifact.id);
+                    }}
                     title="View Lineage"
                   >
                     <Icon name="GitBranch" size={16} />
@@ -349,12 +379,17 @@ export function ProvenancePage() {
                 {Object.keys(selectedArtifact.metadata).length > 0 && (
                   <div className="detail-section">
                     <h3>Metadata</h3>
-                    <pre className="metadata-display">{JSON.stringify(selectedArtifact.metadata, null, 2)}</pre>
+                    <pre className="metadata-display">
+                      {JSON.stringify(selectedArtifact.metadata, null, 2)}
+                    </pre>
                   </div>
                 )}
 
                 <div className="detail-actions">
-                  <button className="btn btn-primary" onClick={() => handleViewLineage(selectedArtifact.id)}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleViewLineage(selectedArtifact.id)}
+                  >
                     <Icon name="GitBranch" size={16} />
                     View Lineage
                   </button>
@@ -395,7 +430,9 @@ export function ProvenancePage() {
             <div className="error-state">
               <Icon name="AlertCircle" size={32} />
               <span>Failed to load chains</span>
-              <button className="btn btn-secondary" onClick={() => refetchChains()}>Retry</button>
+              <button className="btn btn-secondary" onClick={() => refetchChains()}>
+                Retry
+              </button>
             </div>
           ) : chains.length === 0 ? (
             <div className="empty-state">
@@ -407,7 +444,7 @@ export function ProvenancePage() {
             </div>
           ) : (
             <div className="items-list">
-              {chains.map(chain => (
+              {chains.map((chain) => (
                 <div
                   key={chain.id}
                   className={`item-card ${selectedChain?.id === chain.id ? 'selected' : ''}`}
@@ -416,7 +453,9 @@ export function ProvenancePage() {
                   <Icon name="Link" size={20} />
                   <div className="item-info">
                     <h3>{chain.title}</h3>
-                    <p>{chain.chain_type} - {chain.link_count} links</p>
+                    <p>
+                      {chain.chain_type} - {chain.link_count} links
+                    </p>
                   </div>
                   <span className={`status-badge ${getStatusColor(chain.status)}`}>
                     {chain.status}
@@ -475,11 +514,13 @@ export function ProvenancePage() {
                     </div>
                   ) : chainLinks && chainLinks.length > 0 ? (
                     <div className="links-list">
-                      {chainLinks.map(link => (
+                      {chainLinks.map((link) => (
                         <div key={link.id} className="link-item">
                           <div className="link-source">
                             <Icon name="Box" size={14} />
-                            <span>{link.source_title || link.source_artifact_id.substring(0, 8)}</span>
+                            <span>
+                              {link.source_title || link.source_artifact_id.substring(0, 8)}
+                            </span>
                           </div>
                           <div className="link-arrow">
                             <Icon name="ArrowRight" size={16} />
@@ -487,10 +528,17 @@ export function ProvenancePage() {
                           </div>
                           <div className="link-target">
                             <Icon name="Box" size={14} />
-                            <span>{link.target_title || link.target_artifact_id.substring(0, 8)}</span>
+                            <span>
+                              {link.target_title || link.target_artifact_id.substring(0, 8)}
+                            </span>
                           </div>
                           {link.verified && (
-                            <Icon name="CheckCircle" size={14} className="verified-icon" title="Verified" />
+                            <Icon
+                              name="CheckCircle"
+                              size={14}
+                              className="verified-icon"
+                              title="Verified"
+                            />
                           )}
                         </div>
                       ))}
@@ -501,11 +549,17 @@ export function ProvenancePage() {
                 </div>
 
                 <div className="detail-actions">
-                  <button className="btn btn-secondary" onClick={() => handleVerifyChain(selectedChain.id)}>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => handleVerifyChain(selectedChain.id)}
+                  >
                     <Icon name="CheckCircle" size={16} />
                     Verify Chain
                   </button>
-                  <button className="btn btn-danger" onClick={() => handleDeleteChain(selectedChain.id)}>
+                  <button
+                    className="btn btn-danger"
+                    onClick={() => handleDeleteChain(selectedChain.id)}
+                  >
                     <Icon name="Trash2" size={16} />
                     Delete
                   </button>
@@ -544,7 +598,7 @@ export function ProvenancePage() {
             onChange={(e) => setLineageArtifactId(e.target.value)}
           >
             <option value="">Select an artifact...</option>
-            {artifacts.map(a => (
+            {artifacts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.title || a.entity_id} ({a.artifact_type})
               </option>
@@ -558,7 +612,9 @@ export function ProvenancePage() {
           <div className="empty-state">
             <Icon name="GitBranch" size={64} />
             <h2>View Data Lineage</h2>
-            <p>Enter an artifact ID or select from the list to trace its ancestry and descendants</p>
+            <p>
+              Enter an artifact ID or select from the list to trace its ancestry and descendants
+            </p>
           </div>
         ) : lineageLoading ? (
           <div className="loading-state">
@@ -595,17 +651,21 @@ export function ProvenancePage() {
             ) : (
               <div className="lineage-visualization">
                 {/* Group nodes by depth */}
-                {[...new Set(lineage.nodes.map(n => n.depth))]
+                {[...new Set(lineage.nodes.map((n) => n.depth))]
                   .sort((a, b) => a - b)
-                  .map(depth => (
+                  .map((depth) => (
                     <div key={depth} className="lineage-level">
                       <span className="level-label">
-                        {depth < 0 ? `Ancestor ${Math.abs(depth)}` : depth === 0 ? 'Focus' : `Descendant ${depth}`}
+                        {depth < 0
+                          ? `Ancestor ${Math.abs(depth)}`
+                          : depth === 0
+                            ? 'Focus'
+                            : `Descendant ${depth}`}
                       </span>
                       <div className="level-nodes">
                         {lineage.nodes
-                          .filter(n => n.depth === depth)
-                          .map(node => (
+                          .filter((n) => n.depth === depth)
+                          .map((node) => (
                             <div
                               key={node.id}
                               className={`lineage-node ${node.is_focus ? 'focus' : ''}`}
@@ -623,14 +683,16 @@ export function ProvenancePage() {
                 {lineage.edges.length > 0 && (
                   <div className="lineage-edges">
                     <h4>Connections ({lineage.edges.length})</h4>
-                    {lineage.edges.map(edge => (
+                    {lineage.edges.map((edge) => (
                       <div key={edge.id} className="edge-item">
                         <code>{edge.source.substring(0, 8)}</code>
                         <Icon name="ArrowRight" size={14} />
                         <span className="edge-type">{edge.link_type}</span>
                         <Icon name="ArrowRight" size={14} />
                         <code>{edge.target.substring(0, 8)}</code>
-                        <span className="edge-confidence">{(edge.confidence * 100).toFixed(0)}%</span>
+                        <span className="edge-confidence">
+                          {(edge.confidence * 100).toFixed(0)}%
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -715,7 +777,7 @@ export function ProvenancePage() {
       {/* Create Chain Dialog */}
       {showCreateChain && (
         <div className="dialog-overlay" onClick={() => setShowCreateChain(false)}>
-          <div className="dialog" onClick={e => e.stopPropagation()}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
             <div className="dialog-header">
               <h2>Create Evidence Chain</h2>
               <button className="dialog-close" onClick={() => setShowCreateChain(false)}>
@@ -730,7 +792,7 @@ export function ProvenancePage() {
                   type="text"
                   className="form-input"
                   value={newChainTitle}
-                  onChange={e => setNewChainTitle(e.target.value)}
+                  onChange={(e) => setNewChainTitle(e.target.value)}
                   placeholder="Enter chain title..."
                 />
               </div>
@@ -740,14 +802,18 @@ export function ProvenancePage() {
                   id="chain-description"
                   className="form-textarea"
                   value={newChainDescription}
-                  onChange={e => setNewChainDescription(e.target.value)}
+                  onChange={(e) => setNewChainDescription(e.target.value)}
                   placeholder="Describe the evidence chain..."
                   rows={3}
                 />
               </div>
             </div>
             <div className="dialog-actions">
-              <button className="btn btn-secondary" onClick={() => setShowCreateChain(false)} disabled={creating}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowCreateChain(false)}
+                disabled={creating}
+              >
                 Cancel
               </button>
               <button className="btn btn-primary" onClick={handleCreateChain} disabled={creating}>

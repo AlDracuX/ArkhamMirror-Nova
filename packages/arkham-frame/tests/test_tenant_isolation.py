@@ -13,10 +13,11 @@ Run with:
     pytest tests/test_tenant_isolation.py -v
 """
 
-import pytest
-from uuid import uuid4, UUID
 from datetime import datetime
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from uuid import UUID, uuid4
+
+import pytest
 
 # Import tenant context utilities
 from arkham_frame.middleware.tenant import (
@@ -25,10 +26,10 @@ from arkham_frame.middleware.tenant import (
 )
 from arkham_frame.shard_interface import ArkhamShard
 
-
 # =============================================================================
 # Test Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def tenant_a_id() -> UUID:
@@ -50,6 +51,7 @@ def mock_db():
     This mock maintains an in-memory store of data by tenant_id and verifies
     that queries include proper tenant filtering.
     """
+
     class MockDatabase:
         def __init__(self):
             self.queries = []
@@ -89,11 +91,7 @@ def mock_db():
             """Add test data to mock database."""
             if table not in self.data:
                 self.data[table] = {}
-            self.data[table][id] = {
-                "id": id,
-                "tenant_id": str(tenant_id) if tenant_id else None,
-                **data
-            }
+            self.data[table][id] = {"id": id, "tenant_id": str(tenant_id) if tenant_id else None, **data}
 
         def get_last_query(self):
             """Get the most recent query."""
@@ -120,14 +118,16 @@ def mock_events():
 def mock_frame(mock_db, mock_events):
     """Create a mock Frame with all services."""
     frame = MagicMock()
-    frame.get_service = MagicMock(side_effect=lambda name: {
-        "database": mock_db,
-        "events": mock_events,
-        "llm": None,
-        "vectors": None,
-        "storage": None,
-        "documents": None,
-    }.get(name))
+    frame.get_service = MagicMock(
+        side_effect=lambda name: {
+            "database": mock_db,
+            "events": mock_events,
+            "llm": None,
+            "vectors": None,
+            "storage": None,
+            "documents": None,
+        }.get(name)
+    )
     frame.db = mock_db
     frame.events = mock_events
     return frame
@@ -144,6 +144,7 @@ def clean_tenant_context():
 # =============================================================================
 # Test 1: Tenant Context Management
 # =============================================================================
+
 
 class TestTenantContext:
     """Tests for tenant context get/set operations."""
@@ -178,11 +179,13 @@ class TestTenantContext:
 # Test 2: Shard Base Class Tenant Helpers
 # =============================================================================
 
+
 class TestShardTenantHelpers:
     """Tests for ArkhamShard tenant helper methods."""
 
     def _create_test_shard(self):
         """Create a test shard implementation."""
+
         class TestShard(ArkhamShard):
             name = "test"
             version = "1.0.0"
@@ -235,12 +238,14 @@ class TestShardTenantHelpers:
 # Test 3: Tenant Filtering Query Patterns
 # =============================================================================
 
+
 class TestTenantFilteringPatterns:
     """Tests for correct tenant filtering in SQL queries."""
 
     @pytest.mark.asyncio
     async def test_select_with_tenant_filter(self, tenant_a_id, mock_db, mock_frame):
         """SELECT queries should include tenant_id filter when context is set."""
+
         class TestShard(ArkhamShard):
             name = "test"
             version = "1.0.0"
@@ -278,6 +283,7 @@ class TestTenantFilteringPatterns:
     @pytest.mark.asyncio
     async def test_select_without_tenant_filter(self, mock_db, mock_frame):
         """SELECT queries without tenant context should not filter by tenant."""
+
         class TestShard(ArkhamShard):
             name = "test"
             version = "1.0.0"
@@ -315,6 +321,7 @@ class TestTenantFilteringPatterns:
     @pytest.mark.asyncio
     async def test_insert_includes_tenant_id(self, tenant_a_id, mock_db, mock_frame):
         """INSERT queries should include tenant_id."""
+
         class TestShard(ArkhamShard):
             name = "test"
             version = "1.0.0"
@@ -333,11 +340,7 @@ class TestTenantFilteringPatterns:
                     INSERT INTO test_table (id, name, tenant_id)
                     VALUES (:id, :name, :tenant_id)
                     """,
-                    {
-                        "id": data["id"],
-                        "name": data["name"],
-                        "tenant_id": str(tenant_id) if tenant_id else None
-                    }
+                    {"id": data["id"], "name": data["name"], "tenant_id": str(tenant_id) if tenant_id else None},
                 )
 
         shard = TestShard()
@@ -355,6 +358,7 @@ class TestTenantFilteringPatterns:
     @pytest.mark.asyncio
     async def test_insert_without_tenant_uses_null(self, mock_db, mock_frame):
         """INSERT without tenant context should use NULL tenant_id."""
+
         class TestShard(ArkhamShard):
             name = "test"
             version = "1.0.0"
@@ -373,11 +377,7 @@ class TestTenantFilteringPatterns:
                     INSERT INTO test_table (id, name, tenant_id)
                     VALUES (:id, :name, :tenant_id)
                     """,
-                    {
-                        "id": data["id"],
-                        "name": data["name"],
-                        "tenant_id": str(tenant_id) if tenant_id else None
-                    }
+                    {"id": data["id"], "name": data["name"], "tenant_id": str(tenant_id) if tenant_id else None},
                 )
 
         shard = TestShard()
@@ -394,6 +394,7 @@ class TestTenantFilteringPatterns:
     @pytest.mark.asyncio
     async def test_update_includes_tenant_filter(self, tenant_a_id, mock_db, mock_frame):
         """UPDATE queries should include tenant_id filter."""
+
         class TestShard(ArkhamShard):
             name = "test"
             version = "1.0.0"
@@ -431,6 +432,7 @@ class TestTenantFilteringPatterns:
     @pytest.mark.asyncio
     async def test_delete_includes_tenant_filter(self, tenant_a_id, mock_db, mock_frame):
         """DELETE queries should include tenant_id filter."""
+
         class TestShard(ArkhamShard):
             name = "test"
             version = "1.0.0"
@@ -470,6 +472,7 @@ class TestTenantFilteringPatterns:
 # Test 4: Settings Hybrid Tenant Approach
 # =============================================================================
 
+
 class TestSettingsHybridPattern:
     """
     Tests for Settings shard's hybrid tenant approach.
@@ -485,6 +488,7 @@ class TestSettingsHybridPattern:
     @pytest.mark.asyncio
     async def test_settings_hybrid_query_pattern(self, tenant_a_id, mock_db, mock_frame):
         """Settings queries should include hybrid pattern for global + tenant."""
+
         class SettingsTestShard(ArkhamShard):
             name = "settings-test"
             version = "1.0.0"
@@ -509,13 +513,12 @@ class TestSettingsHybridPattern:
                         ORDER BY tenant_id DESC NULLS LAST
                         LIMIT 1
                         """,
-                        {"key": key, "tenant_id": str(tenant_id)}
+                        {"key": key, "tenant_id": str(tenant_id)},
                     )
                 else:
                     # No tenant context: get only global settings
                     row = await self._db.fetch_one(
-                        "SELECT * FROM arkham_settings WHERE key = :key AND tenant_id IS NULL",
-                        {"key": key}
+                        "SELECT * FROM arkham_settings WHERE key = :key AND tenant_id IS NULL", {"key": key}
                     )
 
                 return row
@@ -537,6 +540,7 @@ class TestSettingsHybridPattern:
     @pytest.mark.asyncio
     async def test_settings_global_only_without_tenant(self, mock_db, mock_frame):
         """Without tenant context, only global settings should be queried."""
+
         class SettingsTestShard(ArkhamShard):
             name = "settings-test"
             version = "1.0.0"
@@ -558,12 +562,11 @@ class TestSettingsHybridPattern:
                         WHERE key = :key
                         AND (tenant_id = :tenant_id OR tenant_id IS NULL)
                         """,
-                        {"key": key, "tenant_id": str(tenant_id)}
+                        {"key": key, "tenant_id": str(tenant_id)},
                     )
                 else:
                     row = await self._db.fetch_one(
-                        "SELECT * FROM arkham_settings WHERE key = :key AND tenant_id IS NULL",
-                        {"key": key}
+                        "SELECT * FROM arkham_settings WHERE key = :key AND tenant_id IS NULL", {"key": key}
                     )
 
                 return row
@@ -586,27 +589,16 @@ class TestSettingsHybridPattern:
 # Test 5: Data Isolation Between Tenants
 # =============================================================================
 
+
 class TestDataIsolation:
     """Tests for data isolation between tenants."""
 
     @pytest.mark.asyncio
-    async def test_tenant_a_cannot_see_tenant_b_data(
-        self, tenant_a_id, tenant_b_id, mock_db, mock_frame
-    ):
+    async def test_tenant_a_cannot_see_tenant_b_data(self, tenant_a_id, tenant_b_id, mock_db, mock_frame):
         """Tenant A should not be able to see Tenant B's data."""
         # Add data for both tenants
-        mock_db.add_data(
-            "test_table",
-            "rec-a",
-            tenant_id=tenant_a_id,
-            name="Record A"
-        )
-        mock_db.add_data(
-            "test_table",
-            "rec-b",
-            tenant_id=tenant_b_id,
-            name="Record B"
-        )
+        mock_db.add_data("test_table", "rec-a", tenant_id=tenant_a_id, name="Record A")
+        mock_db.add_data("test_table", "rec-b", tenant_id=tenant_b_id, name="Record B")
 
         class TestShard(ArkhamShard):
             name = "test"
@@ -623,8 +615,7 @@ class TestDataIsolation:
                 tenant_id = self.get_tenant_id_or_none()
                 if tenant_id:
                     return await self._db.fetch(
-                        "SELECT * FROM test_table WHERE tenant_id = :tenant_id",
-                        {"tenant_id": str(tenant_id)}
+                        "SELECT * FROM test_table WHERE tenant_id = :tenant_id", {"tenant_id": str(tenant_id)}
                     )
                 return await self._db.fetch("SELECT * FROM test_table", {})
 
@@ -642,9 +633,7 @@ class TestDataIsolation:
         await shard.shutdown()
 
     @pytest.mark.asyncio
-    async def test_switching_tenant_context_changes_visible_data(
-        self, tenant_a_id, tenant_b_id, mock_db, mock_frame
-    ):
+    async def test_switching_tenant_context_changes_visible_data(self, tenant_a_id, tenant_b_id, mock_db, mock_frame):
         """Switching tenant context should change visible data."""
         mock_db.add_data("test_table", "rec-a", tenant_id=tenant_a_id, name="A")
         mock_db.add_data("test_table", "rec-b", tenant_id=tenant_b_id, name="B")
@@ -664,8 +653,7 @@ class TestDataIsolation:
                 tenant_id = self.get_tenant_id_or_none()
                 if tenant_id:
                     return await self._db.fetch(
-                        "SELECT * FROM test_table WHERE tenant_id = :tenant_id",
-                        {"tenant_id": str(tenant_id)}
+                        "SELECT * FROM test_table WHERE tenant_id = :tenant_id", {"tenant_id": str(tenant_id)}
                     )
                 return await self._db.fetch("SELECT * FROM test_table", {})
 
@@ -687,9 +675,7 @@ class TestDataIsolation:
         await shard.shutdown()
 
     @pytest.mark.asyncio
-    async def test_admin_sees_all_data_without_tenant_context(
-        self, tenant_a_id, tenant_b_id, mock_db, mock_frame
-    ):
+    async def test_admin_sees_all_data_without_tenant_context(self, tenant_a_id, tenant_b_id, mock_db, mock_frame):
         """Without tenant context (admin mode), all data should be visible."""
         mock_db.add_data("test_table", "rec-a", tenant_id=tenant_a_id, name="A")
         mock_db.add_data("test_table", "rec-b", tenant_id=tenant_b_id, name="B")
@@ -710,8 +696,7 @@ class TestDataIsolation:
                 tenant_id = self.get_tenant_id_or_none()
                 if tenant_id:
                     return await self._db.fetch(
-                        "SELECT * FROM test_table WHERE tenant_id = :tenant_id",
-                        {"tenant_id": str(tenant_id)}
+                        "SELECT * FROM test_table WHERE tenant_id = :tenant_id", {"tenant_id": str(tenant_id)}
                     )
                 # Admin mode: no tenant filter
                 return await self._db.fetch("SELECT * FROM test_table", {})
@@ -728,9 +713,7 @@ class TestDataIsolation:
         await shard.shutdown()
 
     @pytest.mark.asyncio
-    async def test_global_data_visible_to_tenant(
-        self, tenant_a_id, mock_db, mock_frame
-    ):
+    async def test_global_data_visible_to_tenant(self, tenant_a_id, mock_db, mock_frame):
         """Global data (NULL tenant_id) should be visible when using hybrid pattern."""
         mock_db.add_data("test_table", "rec-a", tenant_id=tenant_a_id, name="A")
         mock_db.add_data("test_table", "rec-global", tenant_id=None, name="Global")
@@ -755,7 +738,7 @@ class TestDataIsolation:
                         SELECT * FROM test_table
                         WHERE tenant_id = :tenant_id OR tenant_id IS NULL
                         """,
-                        {"tenant_id": str(tenant_id)}
+                        {"tenant_id": str(tenant_id)},
                     )
                 return await self._db.fetch("SELECT * FROM test_table", {})
 
@@ -774,6 +757,7 @@ class TestDataIsolation:
 # =============================================================================
 # Test 6: Query Pattern Verification (Static Analysis)
 # =============================================================================
+
 
 class TestQueryPatternVerification:
     """Static tests to verify correct SQL query patterns."""
@@ -800,11 +784,7 @@ class TestQueryPatternVerification:
             INSERT INTO table (id, name, tenant_id)
             VALUES (:id, :name, :tenant_id)
         """
-        params = {
-            "id": "test-1",
-            "name": "Test",
-            "tenant_id": str(tenant_id) if tenant_id else None
-        }
+        params = {"id": "test-1", "name": "Test", "tenant_id": str(tenant_id) if tenant_id else None}
 
         assert "tenant_id" in query
         assert ":tenant_id" in query
@@ -858,14 +838,16 @@ class TestQueryPatternVerification:
 # Test 7: Tenant Context Middleware Integration
 # =============================================================================
 
+
 class TestTenantContextMiddleware:
     """Tests for TenantContextMiddleware behavior."""
 
     @pytest.mark.asyncio
     async def test_middleware_sets_tenant_from_user(self):
         """Middleware should set tenant_id from authenticated user."""
-        from arkham_frame.middleware.tenant import TenantContextMiddleware
         from starlette.requests import Request
+
+        from arkham_frame.middleware.tenant import TenantContextMiddleware
 
         tenant_id = uuid4()
 
@@ -899,8 +881,9 @@ class TestTenantContextMiddleware:
     @pytest.mark.asyncio
     async def test_middleware_exempt_paths_skip_tenant(self):
         """Exempt paths should not set tenant context."""
-        from arkham_frame.middleware.tenant import TenantContextMiddleware
         from starlette.requests import Request
+
+        from arkham_frame.middleware.tenant import TenantContextMiddleware
 
         mock_request = MagicMock(spec=Request)
         mock_request.url.path = "/api/auth/login"

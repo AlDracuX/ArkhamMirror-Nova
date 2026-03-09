@@ -1,22 +1,24 @@
 """Authentication models."""
 
+import uuid
 from datetime import datetime
 from typing import Optional
-import uuid
 
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTableUUID
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Integer, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship, DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, relationship
 
 
 class Base(DeclarativeBase):
     """Base class for auth models."""
+
     pass
 
 
 class Tenant(Base):
     """Tenant/Organization for multi-tenancy."""
+
     __tablename__ = "tenants"
     __table_args__ = {"schema": "arkham_auth"}
 
@@ -35,6 +37,7 @@ class Tenant(Base):
 
 class User(SQLAlchemyBaseUserTableUUID, Base):
     """User model with tenant association."""
+
     __tablename__ = "users"
     __table_args__ = {"schema": "arkham_auth"}
 
@@ -54,6 +57,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
 
 class UserRole:
     """Role constants and permissions."""
+
     ADMIN = "admin"
     ANALYST = "analyst"
     VIEWER = "viewer"

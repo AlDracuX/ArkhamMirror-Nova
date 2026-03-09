@@ -20,9 +20,7 @@ export function ContentArea({ children }: ContentAreaProps) {
   return (
     <main className="content-area">
       <ShardErrorBoundary shardName={shardName}>
-        <Suspense fallback={<ShardLoadingSkeleton />}>
-          {children}
-        </Suspense>
+        <Suspense fallback={<ShardLoadingSkeleton />}>{children}</Suspense>
       </ShardErrorBoundary>
     </main>
   );

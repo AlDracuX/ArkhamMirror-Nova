@@ -69,7 +69,11 @@ function formatFileSize(bytes: number): string {
 function formatDate(dateString: string): string {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
-  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return (
+    date.toLocaleDateString() +
+    ' ' +
+    date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  );
 }
 
 export function DocumentsPage() {
@@ -91,24 +95,30 @@ export function DocumentsPage() {
   }, [searchParams, selectedDoc, setSearchParams]);
 
   // Fetch documents with pagination
-  const { items: documents, total, loading, error, refetch } = usePaginatedFetch<Document>(
-    '/api/documents/items',
-    {
-      params: {
-        ...(searchQuery && { q: searchQuery }),
-        ...(statusFilter && { status: statusFilter }),
-      },
-      syncToUrl: false, // This page doesn't use URL-based pagination
-    }
-  );
+  const {
+    items: documents,
+    total,
+    loading,
+    error,
+    refetch,
+  } = usePaginatedFetch<Document>('/api/documents/items', {
+    params: {
+      ...(searchQuery && { q: searchQuery }),
+      ...(statusFilter && { status: statusFilter }),
+    },
+    syncToUrl: false, // This page doesn't use URL-based pagination
+  });
 
   // Fetch stats
   const { data: stats } = useFetch<DocumentStats>('/api/documents/stats');
 
   // Handle document selection
-  const handleSelectDocument = useCallback((docId: string) => {
-    setSelectedDoc(docId === selectedDoc ? null : docId);
-  }, [selectedDoc]);
+  const handleSelectDocument = useCallback(
+    (docId: string) => {
+      setSelectedDoc(docId === selectedDoc ? null : docId);
+    },
+    [selectedDoc]
+  );
 
   // Handle document deletion
   const handleDeleteDocument = async (docId: string, title: string) => {
@@ -205,7 +215,7 @@ export function DocumentsPage() {
               type="text"
               placeholder="Search documents..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
             {searchQuery && (
               <button
@@ -222,7 +232,7 @@ export function DocumentsPage() {
           <div className="filters">
             <select
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
+              onChange={(e) => setStatusFilter(e.target.value)}
               className="filter-select"
             >
               <option value="">All statuses</option>
@@ -275,7 +285,7 @@ export function DocumentsPage() {
             </div>
           ) : documents.length > 0 ? (
             <div className={`documents-${viewMode}`}>
-              {documents.map(doc => (
+              {documents.map((doc) => (
                 <div
                   key={doc.id}
                   className={`document-item ${selectedDoc === doc.id ? 'selected' : ''}`}
@@ -289,10 +299,7 @@ export function DocumentsPage() {
                       <h3 className="document-title">{doc.title}</h3>
                       <p className="document-filename">{doc.filename}</p>
                     </div>
-                    <div
-                      className="document-status"
-                      style={{ color: STATUS_COLORS[doc.status] }}
-                    >
+                    <div className="document-status" style={{ color: STATUS_COLORS[doc.status] }}>
                       <Icon name={STATUS_ICONS[doc.status] || 'Circle'} size={14} />
                       <span>{doc.status}</span>
                     </div>
@@ -386,10 +393,7 @@ export function DocumentsPage() {
 
       {selectedDoc && (
         <div className="documents-viewer-panel">
-          <DocumentViewer
-            documentId={selectedDoc}
-            onClose={() => setSelectedDoc(null)}
-          />
+          <DocumentViewer documentId={selectedDoc} onClose={() => setSelectedDoc(null)} />
         </div>
       )}
     </div>

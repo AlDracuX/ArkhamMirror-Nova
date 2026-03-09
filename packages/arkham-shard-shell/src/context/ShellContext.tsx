@@ -5,7 +5,15 @@
  * Dynamically fetches shards from Frame API.
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, useMemo, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  ReactNode,
+} from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { ShardManifest } from '../types';
 import { useFetch } from '../hooks/useFetch';
@@ -58,14 +66,19 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   // Fetch shards from Frame API
-  const { data: shardsData, loading, error, refetch: refetchShards } = useFetch<ShardsApiResponse>('/api/shards/');
+  const {
+    data: shardsData,
+    loading,
+    error,
+    refetch: refetchShards,
+  } = useFetch<ShardsApiResponse>('/api/shards/');
 
   // Filter shards that have navigation config (can be displayed in sidebar)
   // Use fallback shards if API fails or returns empty
   const shards = useMemo(() => {
     if (shardsData?.shards && shardsData.shards.length > 0) {
       // Filter to only shards with navigation
-      return shardsData.shards.filter(s => s.navigation && s.navigation.route);
+      return shardsData.shards.filter((s) => s.navigation && s.navigation.route);
     }
     // Use fallback when API unavailable
     return FALLBACK_SHARDS;
@@ -93,30 +106,37 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   }, [sidebarCollapsed]);
 
   // Find current shard based on route
-  const currentShard = shards.find(s => {
-    const route = s.navigation.route;
-    return location.pathname === route || location.pathname.startsWith(route + '/');
-  }) || null;
+  const currentShard =
+    shards.find((s) => {
+      const route = s.navigation.route;
+      return location.pathname === route || location.pathname.startsWith(route + '/');
+    }) || null;
 
-  const navigateToShard = useCallback((shardName: string, params?: Record<string, string>) => {
-    const shard = shards.find(s => s.name === shardName);
-    if (!shard) {
-      console.warn(`Shard "${shardName}" not found`);
-      return;
-    }
+  const navigateToShard = useCallback(
+    (shardName: string, params?: Record<string, string>) => {
+      const shard = shards.find((s) => s.name === shardName);
+      if (!shard) {
+        console.warn(`Shard "${shardName}" not found`);
+        return;
+      }
 
-    let url = shard.navigation.route;
-    if (params && Object.keys(params).length > 0) {
-      const searchParams = new URLSearchParams(params);
-      url += '?' + searchParams.toString();
-    }
-    navigate(url);
-  }, [shards, navigate]);
+      let url = shard.navigation.route;
+      if (params && Object.keys(params).length > 0) {
+        const searchParams = new URLSearchParams(params);
+        url += '?' + searchParams.toString();
+      }
+      navigate(url);
+    },
+    [shards, navigate]
+  );
 
-  const getShardRoute = useCallback((shardName: string): string | null => {
-    const shard = shards.find(s => s.name === shardName);
-    return shard?.navigation.route || null;
-  }, [shards]);
+  const getShardRoute = useCallback(
+    (shardName: string): string | null => {
+      const shard = shards.find((s) => s.name === shardName);
+      return shard?.navigation.route || null;
+    },
+    [shards]
+  );
 
   return (
     <ShellContext.Provider

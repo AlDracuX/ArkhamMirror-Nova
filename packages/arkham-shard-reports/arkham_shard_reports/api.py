@@ -4,10 +4,10 @@ Reports Shard - FastAPI Routes
 REST API endpoints for report generation and management.
 """
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import httpx
-from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
@@ -28,6 +28,7 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 
 class ReportCreate(BaseModel):
     """Request model for creating a report."""
+
     report_type: ReportType = Field(..., description="Type of report")
     title: str = Field(..., description="Report title")
     parameters: Optional[Dict[str, Any]] = Field(default=None, description="Generation parameters")
@@ -36,6 +37,7 @@ class ReportCreate(BaseModel):
 
 class ReportResponse(BaseModel):
     """Response model for a report."""
+
     id: str
     report_type: str
     title: str
@@ -52,6 +54,7 @@ class ReportResponse(BaseModel):
 
 class ReportListResponse(BaseModel):
     """Response model for listing reports."""
+
     items: List[ReportResponse]
     total: int
     limit: int
@@ -60,6 +63,7 @@ class ReportListResponse(BaseModel):
 
 class TemplateCreate(BaseModel):
     """Request model for creating a template."""
+
     name: str = Field(..., description="Template name")
     report_type: ReportType
     description: str = Field(..., description="Template description")
@@ -70,6 +74,7 @@ class TemplateCreate(BaseModel):
 
 class TemplateResponse(BaseModel):
     """Response model for a template."""
+
     id: str
     name: str
     report_type: str
@@ -84,6 +89,7 @@ class TemplateResponse(BaseModel):
 
 class ScheduleCreate(BaseModel):
     """Request model for creating a schedule."""
+
     template_id: str = Field(..., description="Template to use")
     cron_expression: str = Field(..., description="Cron schedule")
     parameters: Optional[Dict[str, Any]] = Field(default=None)
@@ -93,6 +99,7 @@ class ScheduleCreate(BaseModel):
 
 class ScheduleResponse(BaseModel):
     """Response model for a schedule."""
+
     id: str
     template_id: str
     cron_expression: str
@@ -108,6 +115,7 @@ class ScheduleResponse(BaseModel):
 
 class PreviewRequest(BaseModel):
     """Request model for report preview."""
+
     report_type: ReportType
     title: str
     parameters: Optional[Dict[str, Any]] = None
@@ -116,6 +124,7 @@ class PreviewRequest(BaseModel):
 
 class PreviewResponse(BaseModel):
     """Response model for report preview."""
+
     preview_content: str
     estimated_size: int
     warnings: List[str]
@@ -123,6 +132,7 @@ class PreviewResponse(BaseModel):
 
 class StatisticsResponse(BaseModel):
     """Response model for report statistics."""
+
     total_reports: int
     by_status: Dict[str, int]
     by_type: Dict[str, int]
@@ -139,11 +149,13 @@ class StatisticsResponse(BaseModel):
 
 class CountResponse(BaseModel):
     """Response model for count endpoint."""
+
     count: int
 
 
 class HealthResponse(BaseModel):
     """Response model for health check."""
+
     status: str
     version: str
     services: Dict[str, bool]
@@ -333,13 +345,13 @@ async def get_report_content(request: Request, report_id: str):
         raise HTTPException(status_code=404, detail=f"Report {report_id} not found")
 
     if not report.file_path:
-        raise HTTPException(status_code=404, detail=f"Report file not found")
+        raise HTTPException(status_code=404, detail="Report file not found")
 
     file_path = Path(report.file_path)
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"Report file not found on disk")
+        raise HTTPException(status_code=404, detail="Report file not found on disk")
 
-    content = file_path.read_text(encoding='utf-8')
+    content = file_path.read_text(encoding="utf-8")
     return {
         "id": report.id,
         "title": report.title,
@@ -360,20 +372,20 @@ async def download_report(request: Request, report_id: str):
         raise HTTPException(status_code=404, detail=f"Report {report_id} not found")
 
     if not report.file_path:
-        raise HTTPException(status_code=404, detail=f"Report file not generated yet")
+        raise HTTPException(status_code=404, detail="Report file not generated yet")
 
     file_path = Path(report.file_path)
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"Report file not found on disk")
+        raise HTTPException(status_code=404, detail="Report file not found on disk")
 
     # Determine media type based on format
     media_types = {
-        'html': 'text/html',
-        'pdf': 'application/pdf',
-        'markdown': 'text/markdown',
-        'json': 'application/json',
+        "html": "text/html",
+        "pdf": "application/pdf",
+        "markdown": "text/markdown",
+        "json": "application/json",
     }
-    media_type = media_types.get(report.output_format, 'application/octet-stream')
+    media_type = media_types.get(report.output_format, "application/octet-stream")
 
     return FileResponse(
         path=str(file_path),
@@ -402,7 +414,6 @@ async def list_templates(
     return [_template_to_response(t) for t in templates]
 
 
-
 # === Shared Templates Integration (from Templates Shard) ===
 
 INTERNAL_API_BASE = "http://127.0.0.1:8100"
@@ -410,6 +421,7 @@ INTERNAL_API_BASE = "http://127.0.0.1:8100"
 
 class SharedTemplateInfo(BaseModel):
     """Info about a template from the Templates shard."""
+
     id: str
     name: str
     description: str
@@ -422,6 +434,7 @@ class SharedTemplateInfo(BaseModel):
 
 class SharedTemplatesResponse(BaseModel):
     """Response for shared templates."""
+
     templates: List[SharedTemplateInfo]
     count: int
     source: str = "templates-shard"
@@ -429,6 +442,7 @@ class SharedTemplatesResponse(BaseModel):
 
 class ApplySharedTemplateRequest(BaseModel):
     """Request to apply a shared template for report generation."""
+
     template_id: str = Field(..., description="Template ID from Templates shard")
     title: str = Field(..., description="Report title")
     placeholder_values: Dict[str, Any] = Field(default_factory=dict, description="Values for placeholders")
@@ -443,35 +457,37 @@ async def get_shared_templates(
 ):
     """
     Get report templates from the Templates shard.
-    
+
     Fetches templates of type REPORT from the centralized Templates shard.
     """
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             response = await client.get(
                 f"{INTERNAL_API_BASE}/api/templates",
-                params={"template_type": "REPORT", "limit": limit, "is_active": True}
+                params={"template_type": "REPORT", "limit": limit, "is_active": True},
             )
-            
+
             if response.status_code != 200:
                 return SharedTemplatesResponse(templates=[], count=0)
-            
+
             data = response.json()
             templates_data = data.get("items", [])
-            
+
             templates = []
             for t in templates_data:
-                templates.append(SharedTemplateInfo(
-                    id=t.get("id", ""),
-                    name=t.get("name", ""),
-                    description=t.get("description", ""),
-                    template_type=t.get("template_type", "REPORT"),
-                    content=t.get("content", ""),
-                    placeholders=t.get("placeholders", []),
-                    created_at=t.get("created_at", ""),
-                    updated_at=t.get("updated_at", ""),
-                ))
-            
+                templates.append(
+                    SharedTemplateInfo(
+                        id=t.get("id", ""),
+                        name=t.get("name", ""),
+                        description=t.get("description", ""),
+                        template_type=t.get("template_type", "REPORT"),
+                        content=t.get("content", ""),
+                        placeholders=t.get("placeholders", []),
+                        created_at=t.get("created_at", ""),
+                        updated_at=t.get("updated_at", ""),
+                    )
+                )
+
             return SharedTemplatesResponse(templates=templates, count=len(templates))
     except httpx.RequestError as e:
         return SharedTemplatesResponse(templates=[], count=0, source="error: " + str(e))
@@ -494,46 +510,47 @@ async def get_shared_template_detail(template_id: str, request: Request):
 async def create_report_from_shared_template(body: ApplySharedTemplateRequest, request: Request):
     """Create a report using a template from the Templates shard."""
     from .models import ReportType
-    
+
     shard = get_shard(request)
-    
+
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             response = await client.get(f"{INTERNAL_API_BASE}/api/templates/{body.template_id}")
-            
+
             if response.status_code != 200:
                 raise HTTPException(status_code=404, detail=f"Template {body.template_id} not found")
-            
+
             template_data = response.json()
-            
+
             render_response = await client.post(
-                f"{INTERNAL_API_BASE}/api/templates/{body.template_id}/render",
-                json={"data": body.placeholder_values}
+                f"{INTERNAL_API_BASE}/api/templates/{body.template_id}/render", json={"data": body.placeholder_values}
             )
-            
+
             if render_response.status_code != 200:
                 rendered_content = template_data.get("content", "")
             else:
                 render_result = render_response.json()
                 rendered_content = render_result.get("rendered_content", template_data.get("content", ""))
-            
+
             params = body.parameters or {}
-            params.update({
-                "from_shared_template": True,
-                "shared_template_id": body.template_id,
-                "shared_template_name": template_data.get("name", ""),
-                "rendered_content": rendered_content,
-            })
-            
+            params.update(
+                {
+                    "from_shared_template": True,
+                    "shared_template_id": body.template_id,
+                    "shared_template_name": template_data.get("name", ""),
+                    "rendered_content": rendered_content,
+                }
+            )
+
             report = await shard.generate_report(
                 report_type=ReportType.CUSTOM,
                 title=body.title,
                 parameters=params,
                 output_format=body.output_format,
             )
-            
+
             return _report_to_response(report)
-            
+
     except httpx.RequestError as e:
         raise HTTPException(status_code=503, detail=f"Templates shard unavailable: {str(e)}")
 

@@ -29,9 +29,7 @@ export function applyEdgeBundling(cy: Core): void {
     const targetId = edge.target().id();
 
     // Create undirected key (smaller id first for consistency)
-    const key = sourceId < targetId
-      ? `${sourceId}|${targetId}`
-      : `${targetId}|${sourceId}`;
+    const key = sourceId < targetId ? `${sourceId}|${targetId}` : `${targetId}|${sourceId}`;
 
     if (!edgeGroups.has(key)) {
       edgeGroups.set(key, []);
@@ -97,10 +95,7 @@ export function clearEdgeBundling(cy: Core): void {
  * @param edgeCount - Number of edges in the graph
  * @returns Recommended curve control point distance in pixels
  */
-export function calculateCurveDistance(
-  nodeCount: number,
-  edgeCount: number
-): number {
+export function calculateCurveDistance(nodeCount: number, edgeCount: number): number {
   // Avoid division by zero for tiny graphs
   if (nodeCount < 2) return 40;
 
@@ -109,10 +104,10 @@ export function calculateCurveDistance(
   const density = maxPossibleEdges > 0 ? edgeCount / maxPossibleEdges : 0;
 
   // Return tighter curves for denser graphs
-  if (density > 0.3) return 25;    // Very dense: tight curves
-  if (density > 0.15) return 35;   // Moderately dense
-  if (density > 0.05) return 45;   // Average density
-  return 55;                        // Sparse: wider curves for clarity
+  if (density > 0.3) return 25; // Very dense: tight curves
+  if (density > 0.15) return 35; // Moderately dense
+  if (density > 0.05) return 45; // Average density
+  return 55; // Sparse: wider curves for clarity
 }
 
 /**
@@ -143,15 +138,13 @@ export function getMultiEdgeStats(cy: Core): {
     }
 
     // Create undirected key
-    const key = sourceId < targetId
-      ? `${sourceId}|${targetId}`
-      : `${targetId}|${sourceId}`;
+    const key = sourceId < targetId ? `${sourceId}|${targetId}` : `${targetId}|${sourceId}`;
 
     edgeGroups.set(key, (edgeGroups.get(key) || 0) + 1);
   });
 
   const counts = Array.from(edgeGroups.values());
-  const multiEdgePairs = counts.filter(c => c > 1).length;
+  const multiEdgePairs = counts.filter((c) => c > 1).length;
   const maxParallelEdges = counts.length > 0 ? Math.max(...counts) : 0;
 
   return {

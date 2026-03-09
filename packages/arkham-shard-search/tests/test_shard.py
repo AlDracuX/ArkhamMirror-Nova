@@ -5,11 +5,11 @@ Tests for the SearchShard class including initialization,
 lifecycle, and public API.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from arkham_shard_search.shard import SearchShard
+import pytest
 from arkham_shard_search.models import SearchMode
+from arkham_shard_search.shard import SearchShard
 
 
 class TestShardMetadata:
@@ -60,9 +60,7 @@ class TestShardInitialization:
         return mock
 
     @pytest.mark.asyncio
-    async def test_initialize_creates_semantic_engine(
-        self, mock_frame, mock_vectors_service
-    ):
+    async def test_initialize_creates_semantic_engine(self, mock_frame, mock_vectors_service):
         """Test that initialization creates semantic engine when vectors available."""
         mock_frame.get_service.side_effect = lambda name: {
             "vectors": mock_vectors_service,
@@ -74,9 +72,7 @@ class TestShardInitialization:
         assert shard.semantic_engine is not None
 
     @pytest.mark.asyncio
-    async def test_initialize_creates_keyword_engine(
-        self, mock_frame, mock_database_service
-    ):
+    async def test_initialize_creates_keyword_engine(self, mock_frame, mock_database_service):
         """Test that initialization creates keyword engine when database available."""
         mock_frame.get_service.side_effect = lambda name: {
             "database": mock_database_service,
@@ -88,9 +84,7 @@ class TestShardInitialization:
         assert shard.keyword_engine is not None
 
     @pytest.mark.asyncio
-    async def test_initialize_creates_hybrid_engine(
-        self, mock_frame, mock_vectors_service, mock_database_service
-    ):
+    async def test_initialize_creates_hybrid_engine(self, mock_frame, mock_vectors_service, mock_database_service):
         """Test that initialization creates hybrid engine when both available."""
         mock_frame.get_service.side_effect = lambda name: {
             "vectors": mock_vectors_service,
@@ -103,9 +97,7 @@ class TestShardInitialization:
         assert shard.hybrid_engine is not None
 
     @pytest.mark.asyncio
-    async def test_initialize_creates_filter_optimizer(
-        self, mock_frame, mock_database_service
-    ):
+    async def test_initialize_creates_filter_optimizer(self, mock_frame, mock_database_service):
         """Test that initialization creates filter optimizer."""
         mock_frame.get_service.side_effect = lambda name: {
             "database": mock_database_service,
@@ -117,9 +109,7 @@ class TestShardInitialization:
         assert shard.filter_optimizer is not None
 
     @pytest.mark.asyncio
-    async def test_initialize_subscribes_to_events(
-        self, mock_frame, mock_event_bus
-    ):
+    async def test_initialize_subscribes_to_events(self, mock_frame, mock_event_bus):
         """Test that initialization subscribes to events."""
         mock_frame.get_service.side_effect = lambda name: {
             "events": mock_event_bus,
@@ -308,9 +298,7 @@ class TestPublicSearchAPI:
         mock_keyword_engine.search.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_search_invalid_mode_defaults_hybrid(
-        self, initialized_shard, mock_hybrid_engine
-    ):
+    async def test_search_invalid_mode_defaults_hybrid(self, initialized_shard, mock_hybrid_engine):
         """Test search with invalid mode defaults to hybrid."""
         await initialized_shard.search("test query", mode="invalid")
         mock_hybrid_engine.search.assert_called_once()

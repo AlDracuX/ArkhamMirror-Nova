@@ -6,6 +6,7 @@ and public methods.
 """
 
 import asyncio
+
 import httpx
 
 
@@ -15,16 +16,13 @@ async def embed_single_text():
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "http://localhost:8000/api/embed/text",
-            json={
-                "text": "ArkhamMirror is a local-first document intelligence platform.",
-                "use_cache": True
-            }
+            json={"text": "ArkhamMirror is a local-first document intelligence platform.", "use_cache": True},
         )
         result = response.json()
         print(f"Embedding dimensions: {result['dimensions']}")
         print(f"Model: {result['model']}")
         print(f"Vector length: {len(result['embedding'])}")
-        return result['embedding']
+        return result["embedding"]
 
 
 # Example 2: Embed multiple texts in batch
@@ -34,18 +32,15 @@ async def embed_batch_texts():
         "Document intelligence for journalists",
         "Hybrid OCR with PaddleOCR and Qwen-VL",
         "Semantic search with vector embeddings",
-        "Entity extraction and relationship mapping"
+        "Entity extraction and relationship mapping",
     ]
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "http://localhost:8000/api/embed/batch",
-            json={"texts": texts, "batch_size": 32}
-        )
+        response = await client.post("http://localhost:8000/api/embed/batch", json={"texts": texts, "batch_size": 32})
         result = response.json()
         print(f"Embedded {result['count']} texts")
         print(f"Dimensions: {result['dimensions']}")
-        return result['embeddings']
+        return result["embeddings"]
 
 
 # Example 3: Calculate similarity between two texts
@@ -54,16 +49,12 @@ async def calculate_similarity():
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "http://localhost:8000/api/embed/similarity",
-            json={
-                "text1": "The cat sat on the mat",
-                "text2": "A feline rested on the rug",
-                "method": "cosine"
-            }
+            json={"text1": "The cat sat on the mat", "text2": "A feline rested on the rug", "method": "cosine"},
         )
         result = response.json()
         print(f"Similarity: {result['similarity']:.4f}")
         print(f"Method: {result['method']}")
-        return result['similarity']
+        return result["similarity"]
 
 
 # Example 4: Find nearest neighbors
@@ -76,14 +67,14 @@ async def find_nearest_neighbors():
                 "query": "corruption investigation documents",
                 "limit": 10,
                 "min_similarity": 0.7,
-                "collection": "documents"
-            }
+                "collection": "documents",
+            },
         )
         result = response.json()
         print(f"Found {result['total']} similar documents")
-        for i, neighbor in enumerate(result['neighbors'][:3]):
-            print(f"{i+1}. Score: {neighbor.get('score', 'N/A')}")
-        return result['neighbors']
+        for i, neighbor in enumerate(result["neighbors"][:3]):
+            print(f"{i + 1}. Score: {neighbor.get('score', 'N/A')}")
+        return result["neighbors"]
 
 
 # Example 5: Queue document embedding job
@@ -92,16 +83,12 @@ async def queue_document_embedding(doc_id: str):
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"http://localhost:8000/api/embed/document/{doc_id}",
-            json={
-                "force": False,
-                "chunk_size": 512,
-                "chunk_overlap": 50
-            }
+            json={"force": False, "chunk_size": 512, "chunk_overlap": 50},
         )
         result = response.json()
         print(f"Job ID: {result['job_id']}")
         print(f"Status: {result['status']}")
-        return result['job_id']
+        return result["job_id"]
 
 
 # Example 6: Get available models
@@ -112,7 +99,7 @@ async def list_models():
         models = response.json()
         print("Available models:")
         for model in models:
-            status = "LOADED" if model['loaded'] else "available"
+            status = "LOADED" if model["loaded"] else "available"
             print(f"  - {model['name']} ({status})")
             print(f"    Dimensions: {model['dimensions']}")
             print(f"    Size: {model['size_mb']} MB")
@@ -126,12 +113,12 @@ async def check_cache_stats():
     async with httpx.AsyncClient() as client:
         response = await client.get("http://localhost:8000/api/embed/cache/stats")
         stats = response.json()
-        if stats.get('enabled'):
+        if stats.get("enabled"):
             print("Cache Statistics:")
             print(f"  Hits: {stats['hits']}")
             print(f"  Misses: {stats['misses']}")
             print(f"  Current size: {stats['size']}/{stats['max_size']}")
-            hit_rate = stats['hits'] / (stats['hits'] + stats['misses']) if (stats['hits'] + stats['misses']) > 0 else 0
+            hit_rate = stats["hits"] / (stats["hits"] + stats["misses"]) if (stats["hits"] + stats["misses"]) > 0 else 0
             print(f"  Hit rate: {hit_rate:.2%}")
         else:
             print("Cache is disabled")
@@ -145,7 +132,7 @@ def example_shard_to_shard_usage():
 
     This is not executable - it shows the pattern for shard-to-shard communication.
     """
-    code = '''
+    code = """
     # In another shard's code:
 
     class MyAnalysisShard(ArkhamShard):
@@ -172,7 +159,7 @@ def example_shard_to_shard_usage():
             # Use the results
             for doc in similar:
                 print(f"Similar doc: {doc['id']} (score: {doc['score']})")
-    '''
+    """
     print("Shard-to-Shard Usage Pattern:")
     print(code)
 

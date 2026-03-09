@@ -87,14 +87,14 @@ export function AssociationMatrix({
     let colNodes = nodes;
 
     if (bipartiteMode && bipartiteRowType && bipartiteColType) {
-      rowNodes = nodes.filter(n => n.type?.toLowerCase() === bipartiteRowType.toLowerCase());
-      colNodes = nodes.filter(n => n.type?.toLowerCase() === bipartiteColType.toLowerCase());
+      rowNodes = nodes.filter((n) => n.type?.toLowerCase() === bipartiteRowType.toLowerCase());
+      colNodes = nodes.filter((n) => n.type?.toLowerCase() === bipartiteColType.toLowerCase());
     } else {
       if (rowEntityType) {
-        rowNodes = nodes.filter(n => n.type?.toLowerCase() === rowEntityType.toLowerCase());
+        rowNodes = nodes.filter((n) => n.type?.toLowerCase() === rowEntityType.toLowerCase());
       }
       if (colEntityType) {
-        colNodes = nodes.filter(n => n.type?.toLowerCase() === colEntityType.toLowerCase());
+        colNodes = nodes.filter((n) => n.type?.toLowerCase() === colEntityType.toLowerCase());
       }
     }
 
@@ -106,7 +106,9 @@ export function AssociationMatrix({
         case 'degree':
           return [...nodeList].sort((a, b) => (b.degree || 0) - (a.degree || 0));
         case 'type':
-          return [...nodeList].sort((a, b) => a.type.localeCompare(b.type) || a.label.localeCompare(b.label));
+          return [...nodeList].sort(
+            (a, b) => a.type.localeCompare(b.type) || a.label.localeCompare(b.label)
+          );
         case 'cluster':
           // Group by type, then by degree within type
           return [...nodeList].sort((a, b) => {
@@ -125,7 +127,7 @@ export function AssociationMatrix({
     // Build edge lookup for fast access
     // Note: d3-force mutates links, so source/target may be objects or strings
     const edgeMap = new Map<string, number>();
-    edges.forEach(edge => {
+    edges.forEach((edge) => {
       // Handle both string IDs and object references (d3-force mutates links)
       const sourceId = typeof edge.source === 'string' ? edge.source : (edge.source as any)?.id;
       const targetId = typeof edge.target === 'string' ? edge.target : (edge.target as any)?.id;
@@ -183,7 +185,16 @@ export function AssociationMatrix({
       cells,
       maxWeight,
     };
-  }, [nodes, edges, rowEntityType, colEntityType, sortBy, bipartiteMode, bipartiteRowType, bipartiteColType]);
+  }, [
+    nodes,
+    edges,
+    rowEntityType,
+    colEntityType,
+    sortBy,
+    bipartiteMode,
+    bipartiteRowType,
+    bipartiteColType,
+  ]);
 
   // Create color scale
   const getColorScale = useCallback(() => {
@@ -221,30 +232,28 @@ export function AssociationMatrix({
     const totalWidth = labelWidth + matrixWidth + 20;
     const totalHeight = labelHeight + matrixHeight + 20;
 
-    svg
-      .attr('width', totalWidth)
-      .attr('height', totalHeight);
+    svg.attr('width', totalWidth).attr('height', totalHeight);
 
     const colorScaleFn = getColorScale();
 
     // Create main group with offset for labels
-    const g = svg.append('g')
-      .attr('transform', `translate(${labelWidth}, ${labelHeight})`);
+    const g = svg.append('g').attr('transform', `translate(${labelWidth}, ${labelHeight})`);
 
     // Draw cells
     const cellGroup = g.append('g').attr('class', 'cells');
 
-    cellGroup.selectAll('rect')
+    cellGroup
+      .selectAll('rect')
       .data(cells)
       .enter()
       .append('rect')
-      .attr('x', d => d.col * cellSize)
-      .attr('y', d => d.row * cellSize)
+      .attr('x', (d) => d.col * cellSize)
+      .attr('y', (d) => d.row * cellSize)
       .attr('width', cellSize - 1)
       .attr('height', cellSize - 1)
-      .attr('fill', d => colorScaleFn(d.weight))
+      .attr('fill', (d) => colorScaleFn(d.weight))
       .attr('rx', 2)
-      .attr('class', d => {
+      .attr('class', (d) => {
         const classes = ['matrix-cell'];
         if (highlightedNodes?.has(d.rowId) || highlightedNodes?.has(d.colId)) {
           classes.push('highlighted');
@@ -268,7 +277,7 @@ export function AssociationMatrix({
         d3.selectAll('.col-label').classed('highlighted', (_, i) => i === d.col);
       })
       .on('mouseout', () => {
-        setTooltip(prev => ({ ...prev, visible: false }));
+        setTooltip((prev) => ({ ...prev, visible: false }));
         d3.selectAll('.row-label, .col-label').classed('highlighted', false);
       })
       .on('click', (_, d) => {
@@ -277,11 +286,13 @@ export function AssociationMatrix({
 
     // Draw row labels
     if (showLabels) {
-      const rowLabelGroup = svg.append('g')
+      const rowLabelGroup = svg
+        .append('g')
         .attr('class', 'row-labels')
         .attr('transform', `translate(${labelWidth - 5}, ${labelHeight})`);
 
-      rowLabelGroup.selectAll('text')
+      rowLabelGroup
+        .selectAll('text')
         .data(rows)
         .enter()
         .append('text')
@@ -290,20 +301,22 @@ export function AssociationMatrix({
         .attr('y', (_, i) => i * cellSize + cellSize / 2)
         .attr('dy', '0.35em')
         .attr('text-anchor', 'end')
-        .attr('fill', d => TYPE_COLORS[d.type?.toLowerCase()] || TYPE_COLORS.default)
+        .attr('fill', (d) => TYPE_COLORS[d.type?.toLowerCase()] || TYPE_COLORS.default)
         .style('font-size', `${Math.min(cellSize - 2, 11)}px`)
         .style('cursor', 'pointer')
-        .text(d => d.label.length > 15 ? d.label.slice(0, 14) + '...' : d.label)
+        .text((d) => (d.label.length > 15 ? d.label.slice(0, 14) + '...' : d.label))
         .on('click', (_, d) => onNodeClick?.(d.id))
         .append('title')
-        .text(d => d.label);
+        .text((d) => d.label);
 
       // Draw column labels (rotated)
-      const colLabelGroup = svg.append('g')
+      const colLabelGroup = svg
+        .append('g')
         .attr('class', 'col-labels')
         .attr('transform', `translate(${labelWidth}, ${labelHeight - 5})`);
 
-      colLabelGroup.selectAll('text')
+      colLabelGroup
+        .selectAll('text')
         .data(cols)
         .enter()
         .append('text')
@@ -312,13 +325,13 @@ export function AssociationMatrix({
         .attr('y', 0)
         .attr('transform', (_, i) => `translate(${i * cellSize + cellSize / 2}, 0) rotate(-45)`)
         .attr('text-anchor', 'start')
-        .attr('fill', d => TYPE_COLORS[d.type?.toLowerCase()] || TYPE_COLORS.default)
+        .attr('fill', (d) => TYPE_COLORS[d.type?.toLowerCase()] || TYPE_COLORS.default)
         .style('font-size', `${Math.min(cellSize - 2, 11)}px`)
         .style('cursor', 'pointer')
-        .text(d => d.label.length > 12 ? d.label.slice(0, 11) + '...' : d.label)
+        .text((d) => (d.label.length > 12 ? d.label.slice(0, 11) + '...' : d.label))
         .on('click', (_, d) => onNodeClick?.(d.id))
         .append('title')
-        .text(d => d.label);
+        .text((d) => d.label);
     }
 
     // Draw grid lines for better readability
@@ -326,34 +339,35 @@ export function AssociationMatrix({
       const gridGroup = g.append('g').attr('class', 'grid');
 
       // Horizontal grid lines
-      gridGroup.selectAll('.h-line')
+      gridGroup
+        .selectAll('.h-line')
         .data(d3.range(rows.length + 1))
         .enter()
         .append('line')
         .attr('class', 'h-line')
         .attr('x1', 0)
         .attr('x2', matrixWidth)
-        .attr('y1', d => d * cellSize)
-        .attr('y2', d => d * cellSize)
+        .attr('y1', (d) => d * cellSize)
+        .attr('y2', (d) => d * cellSize)
         .attr('stroke', 'var(--border-color)')
         .attr('stroke-width', 0.5)
         .attr('stroke-opacity', 0.3);
 
       // Vertical grid lines
-      gridGroup.selectAll('.v-line')
+      gridGroup
+        .selectAll('.v-line')
         .data(d3.range(cols.length + 1))
         .enter()
         .append('line')
         .attr('class', 'v-line')
-        .attr('x1', d => d * cellSize)
-        .attr('x2', d => d * cellSize)
+        .attr('x1', (d) => d * cellSize)
+        .attr('x2', (d) => d * cellSize)
         .attr('y1', 0)
         .attr('y2', matrixHeight)
         .attr('stroke', 'var(--border-color)')
         .attr('stroke-width', 0.5)
         .attr('stroke-opacity', 0.3);
     }
-
   }, [matrixData, cellSize, showLabels, getColorScale, highlightedNodes, onCellClick, onNodeClick]);
 
   // Calculate container dimensions
@@ -477,10 +491,7 @@ export function MatrixControls({
     <div className="matrix-controls">
       <div className="control-group">
         <label>Sort By</label>
-        <select
-          value={sortBy}
-          onChange={(e) => onSortByChange(e.target.value as typeof sortBy)}
-        >
+        <select value={sortBy} onChange={(e) => onSortByChange(e.target.value as typeof sortBy)}>
           <option value="degree">Degree</option>
           <option value="alphabetical">Alphabetical</option>
           <option value="type">Entity Type</option>
@@ -537,26 +548,24 @@ export function MatrixControls({
         <>
           <div className="control-group">
             <label>Row Type</label>
-            <select
-              value={rowEntityType}
-              onChange={(e) => onRowEntityTypeChange(e.target.value)}
-            >
+            <select value={rowEntityType} onChange={(e) => onRowEntityTypeChange(e.target.value)}>
               <option value="">All Types</option>
-              {entityTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
+              {entityTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="control-group">
             <label>Column Type</label>
-            <select
-              value={colEntityType}
-              onChange={(e) => onColEntityTypeChange(e.target.value)}
-            >
+            <select value={colEntityType} onChange={(e) => onColEntityTypeChange(e.target.value)}>
               <option value="">All Types</option>
-              {entityTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
+              {entityTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
               ))}
             </select>
           </div>
@@ -572,8 +581,10 @@ export function MatrixControls({
             }}
           >
             <option value="">All Types</option>
-            {entityTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
+            {entityTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
             ))}
           </select>
         </div>

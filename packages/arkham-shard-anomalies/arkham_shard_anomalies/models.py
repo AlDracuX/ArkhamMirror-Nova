@@ -8,6 +8,7 @@ from typing import Any
 
 class AnomalyType(Enum):
     """Type of anomaly detected."""
+
     CONTENT = "content"  # Semantically distant from corpus
     METADATA = "metadata"  # Unusual file properties
     TEMPORAL = "temporal"  # Unexpected dates/time references
@@ -23,6 +24,7 @@ class AnomalyType(Enum):
 
 class AnomalyStatus(Enum):
     """Status of an anomaly in analyst workflow."""
+
     DETECTED = "detected"  # Newly detected
     CONFIRMED = "confirmed"  # Analyst confirmed as anomalous
     DISMISSED = "dismissed"  # Analyst dismissed as normal
@@ -31,6 +33,7 @@ class AnomalyStatus(Enum):
 
 class SeverityLevel(Enum):
     """Severity level of anomaly."""
+
     CRITICAL = "critical"  # Highly anomalous, needs immediate attention
     HIGH = "high"  # Significantly anomalous
     MEDIUM = "medium"  # Moderately anomalous
@@ -40,6 +43,7 @@ class SeverityLevel(Enum):
 @dataclass
 class Anomaly:
     """An anomaly detected in a document."""
+
     id: str
     doc_id: str
     anomaly_type: AnomalyType
@@ -73,6 +77,7 @@ class Anomaly:
 @dataclass
 class AnomalyPattern:
     """A pattern of anomalies across multiple documents."""
+
     id: str
     pattern_type: str
     description: str
@@ -93,6 +98,7 @@ class AnomalyPattern:
 @dataclass
 class OutlierResult:
     """Result of outlier detection analysis."""
+
     doc_id: str
     is_outlier: bool
 
@@ -111,6 +117,7 @@ class OutlierResult:
 @dataclass
 class DetectionConfig:
     """Configuration for anomaly detection."""
+
     # Statistical thresholds
     z_score_threshold: float = 3.0  # Standard deviations for outlier
     min_cluster_distance: float = 0.7  # Cosine distance threshold
@@ -137,6 +144,7 @@ class DetectionConfig:
 @dataclass
 class DetectRequest:
     """Request to run anomaly detection."""
+
     project_id: str | None = None
     doc_ids: list[str] = field(default_factory=list)  # Empty = all docs
     config: DetectionConfig = field(default_factory=DetectionConfig)
@@ -145,6 +153,7 @@ class DetectRequest:
 @dataclass
 class PatternRequest:
     """Request to detect unusual patterns."""
+
     anomaly_ids: list[str] = field(default_factory=list)  # Empty = all anomalies
     min_frequency: int = 2  # Minimum occurrences to be a pattern
     pattern_types: list[str] = field(default_factory=list)  # Empty = all types
@@ -153,6 +162,7 @@ class PatternRequest:
 @dataclass
 class AnomalyResult:
     """Result of anomaly detection operation."""
+
     anomalies_detected: int
     anomalies: list[Anomaly] = field(default_factory=list)
     duration_ms: float = 0.0
@@ -162,6 +172,7 @@ class AnomalyResult:
 @dataclass
 class AnomalyList:
     """Paginated list of anomalies."""
+
     total: int
     items: list[Anomaly] = field(default_factory=list)
     offset: int = 0
@@ -175,6 +186,7 @@ class AnomalyList:
 @dataclass
 class AnomalyStats:
     """Statistics about detected anomalies."""
+
     total_anomalies: int = 0
     by_type: dict[str, int] = field(default_factory=dict)
     by_status: dict[str, int] = field(default_factory=dict)
@@ -195,6 +207,7 @@ class AnomalyStats:
 @dataclass
 class StatusUpdate:
     """Update to anomaly status."""
+
     status: AnomalyStatus
     notes: str = ""
     reviewed_by: str | None = None
@@ -203,6 +216,7 @@ class StatusUpdate:
 @dataclass
 class AnalystNote:
     """Note added by analyst to an anomaly."""
+
     id: str
     anomaly_id: str
     author: str
@@ -217,6 +231,7 @@ class AnalystNote:
 
 class HiddenContentScanType(Enum):
     """Type of hidden content scan."""
+
     ENTROPY = "entropy"  # Shannon entropy analysis
     LSB = "lsb"  # Least significant bit analysis
     MAGIC = "magic"  # File type vs extension mismatch
@@ -227,6 +242,7 @@ class HiddenContentScanType(Enum):
 
 class HiddenContentScanStatus(Enum):
     """Status of hidden content scan."""
+
     PENDING = "pending"
     COMPLETED = "completed"
     FAILED = "failed"
@@ -235,6 +251,7 @@ class HiddenContentScanStatus(Enum):
 @dataclass
 class EntropyRegion:
     """A region of high entropy in a file."""
+
     start_offset: int
     end_offset: int
     entropy_value: float
@@ -245,6 +262,7 @@ class EntropyRegion:
 @dataclass
 class LSBAnalysisResult:
     """Results from LSB bit pattern analysis."""
+
     bit_ratio: float  # Ratio of 0s to 1s in LSB
     chi_square_value: float
     chi_square_p_value: float
@@ -256,6 +274,7 @@ class LSBAnalysisResult:
 @dataclass
 class StegoIndicator:
     """An indicator of potential steganography."""
+
     indicator_type: str  # "lsb_pattern", "entropy_spike", "chi_square"
     confidence: float
     location: str  # "global", "region:0-1024"
@@ -265,6 +284,7 @@ class StegoIndicator:
 @dataclass
 class HiddenContentScan:
     """Complete hidden content scan result."""
+
     id: str
     doc_id: str
     scan_type: HiddenContentScanType
@@ -299,6 +319,7 @@ class HiddenContentScan:
 @dataclass
 class HiddenContentConfig:
     """Configuration for hidden content detection."""
+
     # Entropy thresholds
     entropy_threshold_high: float = 7.5  # Near-random (max 8.0)
     entropy_threshold_suspicious: float = 7.0
@@ -328,6 +349,7 @@ class HiddenContentConfig:
 @dataclass
 class HiddenContentStats:
     """Statistics about hidden content scans."""
+
     total_scans: int = 0
     scans_by_type: dict[str, int] = field(default_factory=dict)
     documents_with_findings: int = 0

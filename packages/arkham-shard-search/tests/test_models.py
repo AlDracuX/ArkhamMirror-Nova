@@ -4,20 +4,20 @@ Search Shard - Model Tests
 Tests for all dataclasses and enums in the models module.
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
 from arkham_shard_search.models import (
-    SearchMode,
-    SortBy,
-    SortOrder,
     DateRangeFilter,
     SearchFilters,
+    SearchMode,
     SearchQuery,
-    SearchResultItem,
     SearchResult,
-    SuggestionItem,
+    SearchResultItem,
     SimilarityRequest,
+    SortBy,
+    SortOrder,
+    SuggestionItem,
 )
 
 
