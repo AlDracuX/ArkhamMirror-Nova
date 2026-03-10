@@ -38,9 +38,6 @@ capabilities:
 # Events - Format: {shard}.{entity}.{action}
 events:
   publishes:
-    - sentiment.hostile.detected
-    - sentiment.pattern.identified
-    - sentiment.comparator.divergence
     - sentiment.analysis.created
   subscribes:
     - documents.processed

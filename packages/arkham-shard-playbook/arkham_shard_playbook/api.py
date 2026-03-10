@@ -82,3 +82,12 @@ async def list_objectives(project_id: str):
         "SELECT * FROM arkham_playbook.evidence_objectives WHERE project_id = :project_id", {"project_id": project_id}
     )
     return [dict(r) for r in rows]
+
+
+@router.get("/items/count")
+async def count_items():
+    """Return count for badge display."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_playbook.strategies")
+    return {"count": result["count"] if result else 0}

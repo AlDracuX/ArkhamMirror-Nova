@@ -647,3 +647,12 @@ async def characteristic_linkage_analysis(project_id: str):
         "project_id": project_id,
         "linkage_data": [dict(r) for r in rows],
     }
+
+
+@router.get("/items/count")
+async def count_items():
+    """Return count for badge display."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_comparator.comparators")
+    return {"count": result["count"] if result else 0}

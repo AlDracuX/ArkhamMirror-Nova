@@ -38,10 +38,11 @@ capabilities:
 # Events - Format: {shard}.{entity}.{action}
 events:
   publishes:
-    - skeleton.item.created
-    - skeleton.item.updated
-    - skeleton.item.deleted
-  subscribes: []
+    - skeleton.argument.structured
+    - skeleton.submission.generated
+  subscribes:
+    - casemap.theory.updated
+    - claims.verified
 
 # State Management
 state:

@@ -41,7 +41,10 @@ events:
     - burden-map.item.created
     - burden-map.item.updated
     - burden-map.item.deleted
-  subscribes: []
+  subscribes:
+    - casemap.theory.updated
+    - claims.status.changed
+    - credibility.score.updated
 
 # State Management
 state:

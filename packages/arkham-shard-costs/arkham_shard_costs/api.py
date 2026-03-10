@@ -259,3 +259,12 @@ async def list_applications(project_id: Optional[str] = None):
 
     rows = await _db.fetch_all(query, params)
     return [dict(row) for row in rows]
+
+
+@router.get("/items/count")
+async def count_items():
+    """Return count for badge display."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_costs.time_entries")
+    return {"count": result["count"] if result else 0}

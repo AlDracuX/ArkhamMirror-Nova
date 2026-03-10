@@ -38,10 +38,10 @@ capabilities:
 # Events - Format: {shard}.{entity}.{action}
 events:
   publishes:
-    - rules.item.created
-    - rules.item.updated
-    - rules.item.deleted
-  subscribes: []
+    - rules.breach.detected
+  subscribes:
+    - deadlines.created
+    - documents.processed
 
 # State Management
 state:

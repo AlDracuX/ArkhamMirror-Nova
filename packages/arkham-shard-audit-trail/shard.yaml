@@ -38,10 +38,9 @@ capabilities:
 # Events - Format: {shard}.{entity}.{action}
 events:
   publishes:
-    - audit-trail.item.created
-    - audit-trail.item.updated
-    - audit-trail.item.deleted
-  subscribes: []
+    - audit.export.recorded
+  subscribes:
+    - "*"
 
 # State Management
 state:

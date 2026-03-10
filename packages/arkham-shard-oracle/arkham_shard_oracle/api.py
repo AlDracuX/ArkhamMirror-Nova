@@ -87,6 +87,37 @@ async def get_authority(auth_id: str):
 
 @router.get("/project/{project_id}/authorities")
 async def list_authorities(project_id: str):
-    # This might need a join or a link table in a full implementation
-    rows = await _db.fetch_all("SELECT * FROM arkham_oracle.authorities")
+    """List authorities linked to a project via research sessions."""
+    sessions = await _db.fetch_all(
+        "SELECT authority_ids FROM arkham_oracle.research_sessions WHERE project_id = :project_id",
+        {"project_id": project_id},
+    )
+    all_ids = set()
+    for session in sessions:
+        ids = session["authority_ids"] if session["authority_ids"] else []
+        if isinstance(ids, str):
+            import json
+
+            ids = json.loads(ids)
+        all_ids.update(ids)
+
+    if not all_ids:
+        return []
+
+    id_list = list(all_ids)
+    placeholders = ", ".join(f":id_{i}" for i in range(len(id_list)))
+    params = {f"id_{i}": aid for i, aid in enumerate(id_list)}
+    rows = await _db.fetch_all(
+        f"SELECT * FROM arkham_oracle.authorities WHERE id IN ({placeholders})",
+        params,
+    )
     return [dict(r) for r in rows]
+
+
+@router.get("/items/count")
+async def count_items():
+    """Return count for badge display."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_oracle.authorities")
+    return {"count": result["count"] if result else 0}

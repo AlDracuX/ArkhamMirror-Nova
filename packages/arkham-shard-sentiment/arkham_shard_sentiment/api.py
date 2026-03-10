@@ -96,3 +96,12 @@ async def list_comparator_diffs(project_id: str):
         "SELECT * FROM arkham_sentiment.comparator_diffs WHERE project_id = :project_id", {"project_id": project_id}
     )
     return [dict(r) for r in rows]
+
+
+@router.get("/items/count")
+async def count_items():
+    """Return count for badge display."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_sentiment.analyses")
+    return {"count": result["count"] if result else 0}

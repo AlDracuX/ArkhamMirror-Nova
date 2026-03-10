@@ -224,3 +224,12 @@ async def generate_question_tree(witness_id: str, project_id: str):
         "witness_id": witness_id,
         "message": "AI generation started (simulated)",
     }
+
+
+@router.get("/items/count")
+async def count_items():
+    """Return count for badge display."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_crossexam.question_trees")
+    return {"count": result["count"] if result else 0}

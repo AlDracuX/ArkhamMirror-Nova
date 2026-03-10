@@ -11,7 +11,7 @@ requires_frame: ">=0.1.0"
 
 # Navigation - Shell integration
 navigation:
-  category: System
+  category: Analysis
   order: 14
   icon: Target
   label: Playbook

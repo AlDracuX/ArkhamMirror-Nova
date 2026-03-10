@@ -37,10 +37,7 @@ capabilities:
 
 # Events - Format: {shard}.{entity}.{action}
 events:
-  publishes:
-    - crossexam.item.created
-    - crossexam.item.updated
-    - crossexam.item.deleted
+  publishes: []
   subscribes: []
 
 # State Management

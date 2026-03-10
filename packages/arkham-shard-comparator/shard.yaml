@@ -38,9 +38,10 @@ capabilities:
 # Events - Format: {shard}.{entity}.{action}
 events:
   publishes:
-    - comparator.item.created
-    - comparator.item.updated
-    - comparator.item.deleted
+    - comparator.comparator.created
+    - comparator.incident.created
+    - comparator.treatment.mapped
+    - comparator.divergence.found
   subscribes: []
 
 # State Management

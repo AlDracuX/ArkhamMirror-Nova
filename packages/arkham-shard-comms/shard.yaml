@@ -38,10 +38,10 @@ capabilities:
 # Events - Format: {shard}.{entity}.{action}
 events:
   publishes:
-    - comms.item.created
-    - comms.item.updated
-    - comms.item.deleted
-  subscribes: []
+    - comms.thread.created
+  subscribes:
+    - ingest.document.processed
+    - entities.extracted
 
 # State Management
 state:

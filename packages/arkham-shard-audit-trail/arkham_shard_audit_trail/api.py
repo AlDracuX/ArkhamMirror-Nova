@@ -173,3 +173,12 @@ async def record_export(request: CreateExportRequest):
         await _event_bus.emit("audit.export.recorded", {"export_id": export_id}, source="audit-trail-shard")
 
     return {"export_id": export_id, "status": "recorded"}
+
+
+@router.get("/items/count")
+async def count_items():
+    """Return count for badge display."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_audit_trail.actions")
+    return {"count": result["count"] if result else 0}

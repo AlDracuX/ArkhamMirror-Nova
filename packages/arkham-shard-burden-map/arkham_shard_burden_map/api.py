@@ -176,3 +176,12 @@ async def add_evidence_weight(request: AddEvidenceWeightRequest):
         await _shard._recalculate_assignment(request.element_id)
 
     return {"weight_id": wid, "status": "added"}
+
+
+@router.get("/items/count")
+async def count_items():
+    """Return count for badge display."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_burden_map.claim_elements")
+    return {"count": result["count"] if result else 0}

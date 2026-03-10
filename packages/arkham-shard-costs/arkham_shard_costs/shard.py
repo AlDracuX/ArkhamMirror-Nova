@@ -20,7 +20,7 @@ class CostsShard(ArkhamShard):
 
     name = "costs"
     version = "0.1.0"
-    description = "Costs and wasted costs tracker"
+    description = "Litigation costs and conduct tracker"
 
     def __init__(self):
         super().__init__()  # Auto-loads manifest from shard.yaml

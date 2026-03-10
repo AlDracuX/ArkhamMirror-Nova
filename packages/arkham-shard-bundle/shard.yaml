@@ -38,9 +38,10 @@ capabilities:
 # Events - Format: {shard}.{entity}.{action}
 events:
   publishes:
-    - bundle.item.created
-    - bundle.item.updated
-    - bundle.item.deleted
+    - bundle.bundle.created
+    - bundle.bundle.updated
+    - bundle.bundle.deleted
+    - bundle.bundle.compiled
   subscribes: []
 
 # State Management

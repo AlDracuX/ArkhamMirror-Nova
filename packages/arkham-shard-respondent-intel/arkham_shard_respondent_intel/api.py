@@ -85,3 +85,12 @@ async def get_profile(profile_id: str):
 async def list_profiles():
     rows = await _db.fetch_all("SELECT * FROM arkham_respondent_intel.profiles")
     return [dict(r) for r in rows]
+
+
+@router.get("/items/count")
+async def count_items():
+    """Return count for badge display."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_respondent_intel.profiles")
+    return {"count": result["count"] if result else 0}

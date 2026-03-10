@@ -11,7 +11,7 @@ requires_frame: ">=0.1.0"
 
 # Navigation - Shell integration
 navigation:
-  category: Litigation
+  category: Analysis
   order: 16
   icon: FileSearch
   label: Disclosure
@@ -38,9 +38,8 @@ capabilities:
 # Events - Format: {shard}.{entity}.{action}
 events:
   publishes:
-    - disclosure.item.created
-    - disclosure.item.updated
-    - disclosure.item.deleted
+    - disclosure.response.received
+    - disclosure.gap.detected
   subscribes: []
 
 # State Management

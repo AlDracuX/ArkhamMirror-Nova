@@ -86,3 +86,12 @@ async def get_changelog(project_id: str, limit: int = 50):
         {"project_id": project_id, "limit": limit},
     )
     return [dict(r) for r in rows]
+
+
+@router.get("/items/count")
+async def count_items():
+    """Return count for badge display."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_digest.briefings")
+    return {"count": result["count"] if result else 0}

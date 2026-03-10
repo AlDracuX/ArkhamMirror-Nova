@@ -288,3 +288,12 @@ async def get_compliance_dashboard():
     """
     rows = await _db.fetch_all(query)
     return {"respondents": [dict(r) for r in rows]}
+
+
+@router.get("/items/count")
+async def count_items():
+    """Return count for badge display."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_disclosure.requests")
+    return {"count": result["count"] if result else 0}

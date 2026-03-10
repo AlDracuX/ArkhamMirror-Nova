@@ -1,295 +1,127 @@
-# SHATTERED - Project Guidelines
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-SHATTERED is a modular "distro-style" architecture where **shards** (feature modules) are loaded into a **frame** (core infrastructure). The system follows the **Voltron** philosophy: plug-and-play components that combine into a unified application.
+SHATTERED is a modular "distro-style" litigation analysis platform. **Shards** (feature modules) are loaded into an immutable **Frame** (core infrastructure) and rendered by a **Shell** (React UI). Follows the "Voltron" philosophy: plug-and-play components that combine into a unified application.
 
 ## Architecture
 
 ```
-                    +------------------+
-                    |   ArkhamFrame    |    <-- THE FRAME (immutable core)
-                    |   (Core Infra)   |
-                    +--------+---------+
-                             |
-                    +--------+---------+
-                    |   arkham-shell   |    <-- THE SHELL (UI renderer)
-                    | (React/TypeScript)|
-                    +--------+---------+
-                             |
-        +--------------------+--------------------+
-        |         |          |          |         |
-   +----v----+ +--v--+ +-----v-----+ +--v--+ +---v---+
-   |Dashboard| | ACH | |  Search   | |Parse| | Graph |  <-- SHARDS
-   | Shard   | |Shard| |  Shard    | |Shard| | Shard |
-   +---------+ +-----+ +-----------+ +-----+ +-------+
+Frame (Python/FastAPI)  →  discovers shards via entry_points("arkham.shards")
+  ├── services/: database, vectors, llm, events, workers, storage, etc.
+  └── shard_interface.py: ArkhamShard ABC + ShardManifest v5 dataclasses
+
+Shell (React/TypeScript/Vite)  →  renders navigation from shard manifests
+  ├── pages/{shard-name}/: custom UI per shard
+  └── pages/generic/: fallback list/form rendering
+
+Shards (Python packages)  →  self-contained feature modules (~47 shards)
+  ├── shard.py: extends ArkhamShard, owns its PostgreSQL schema
+  ├── api.py: FastAPI routes mounted at /api/{name}
+  └── shard.yaml: manifest v5 (navigation, events, capabilities)
 ```
 
 ## Critical Rules
 
-### The Frame (`packages/arkham-frame/`)
-- **IMMUTABLE**: Shards are NOT allowed to alter the frame
-- Provides core services: database, vectors, LLM, events, workers
-- Defines the `ArkhamShard` ABC that all shards must implement
-- Shards depend on the frame, never the reverse
-
-### The Shell (`packages/arkham-shard-shell/`)
-- React/TypeScript UI application
-- Renders navigation from shard manifests
-- Provides generic list/form components for shards
-- Shards can have custom UIs or use generic rendering
-
-### Shards (`packages/arkham-shard-*/`)
-- Self-contained feature modules
-- **CAN** depend on the frame (`arkham-frame>=0.1.0`)
-- **CAN** optionally utilize outputs of other shards (via events/shared data)
-- **CANNOT** depend on other shards (no direct imports)
-- **CANNOT** modify the frame
-- Communicate via the EventBus for loose coupling
-
-## Shard Standards (Reference Implementation: `arkham-shard-ach`)
-
-### Package Structure
-```
-packages/arkham-shard-{name}/
-├── pyproject.toml          # Package definition with entry point
-├── shard.yaml              # Manifest v5 format
-├── README.md               # Documentation
-├── arkham_shard_{name}/
-│   ├── __init__.py         # Exports {Name}Shard class
-│   ├── shard.py            # Shard implementation (extends ArkhamShard)
-│   ├── api.py              # FastAPI routes
-│   ├── models.py           # Pydantic models (optional)
-│   └── services/           # Business logic (optional)
-```
-
-### pyproject.toml Requirements
-```toml
-[project]
-name = "arkham-shard-{name}"
-version = "0.1.0"
-description = "Description of shard"
-requires-python = ">=3.10"
-
-dependencies = [
-    "arkham-frame>=0.1.0",  # REQUIRED: frame dependency
-    # Additional dependencies...
-]
-
-[project.entry-points."arkham.shards"]
-{name} = "arkham_shard_{name}:{Name}Shard"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-```
-
-### shard.yaml (Manifest v5)
-```yaml
-name: {name}
-version: 0.1.0
-description: "Shard description"
-entry_point: arkham_shard_{name}:{Name}Shard
-api_prefix: /api/{name}
-requires_frame: ">=0.1.0"
-
-navigation:
-  category: Analysis|Data|Search|System|Visualize|Export
-  order: 10-99
-  icon: LucideIconName
-  label: Display Name
-  route: /{name}
-  badge_endpoint: /api/{name}/count  # optional
-  badge_type: count|dot              # optional
-  sub_routes:                        # optional
-    - id: sub-id
-      label: Sub Label
-      route: /{name}/sub
-      icon: Icon
-
-dependencies:
-  services:
-    - database
-    - events
-  optional:
-    - llm
-  shards: []  # Always empty - no shard dependencies!
-
-capabilities:
-  - feature_one
-  - feature_two
-
-events:
-  publishes:
-    - {name}.entity.created
-    - {name}.entity.updated
-  subscribes:
-    - other.event.completed
-
-state:
-  strategy: url|local|session|none
-  url_params:
-    - param1
-
-ui:
-  has_custom_ui: true|false
-  # If false, uses generic list/form rendering
-```
-
-### Shard Class Implementation
-```python
-from arkham_frame import ArkhamShard, ShardManifest
-
-class {Name}Shard(ArkhamShard):
-    name = "{name}"
-    version = "0.1.0"
-    description = "Shard description"
-
-    async def initialize(self, frame) -> None:
-        self.frame = frame
-        # Setup: create schema, subscribe to events
-
-    async def shutdown(self) -> None:
-        # Cleanup: unsubscribe, close connections
-
-    def get_routes(self):
-        from .api import router
-        return router
-```
-
-## Current State
-
-### Core Infrastructure
-- **arkham-frame**: Core infrastructure (IMMUTABLE)
-- **arkham-shard-shell**: UI shell (React/TypeScript)
-
-### Complete Shards (25 total)
-All shards have backend (shard.py + api.py) and frontend (pages/) implementations:
-
-**System**: dashboard, settings
-**Data**: ingest, documents, parse, embed
-**Search**: search, ocr
-**Analysis**: ach, anomalies, contradictions, entities, claims, credibility, patterns, provenance
-**Visualize**: graph, timeline
-**Export**: export, reports, letters, packets, templates, summary, projects
+- **Frame is IMMUTABLE** — shards MUST NOT modify `packages/arkham-frame/`
+- **No shard-to-shard imports** — use EventBus for inter-shard communication
+- **Schema isolation** — each shard owns its own PostgreSQL schema (`arkham_{name}`)
+- **Shards depend on frame, never the reverse**
 
 ## Development Commands
 
 ```bash
-# Install frame
-cd packages/arkham-frame && pip install -e .
+# Backend
+pip install -e packages/arkham-frame              # Install frame (editable)
+pip install -e packages/arkham-shard-{name}       # Install a shard (editable)
+python -m uvicorn arkham_frame.main:app --host 127.0.0.1 --port 8100  # Run backend
 
-# Install a shard
-cd packages/arkham-shard-{name} && pip install -e .
+# Frontend
+cd packages/arkham-shard-shell && npm install     # Install UI deps
+cd packages/arkham-shard-shell && npm run dev     # Run Vite dev server
+cd packages/arkham-shard-shell && npm run build   # Production build (tsc + vite build)
 
-# Run frame (auto-discovers installed shards)
-python -m uvicorn arkham_frame.main:app --host 127.0.0.1 --port 8100
+# Docker (full stack)
+docker compose up -d                              # Start app + postgres (pgvector)
+docker compose logs -f app                        # View logs
+docker build -t shattered .                       # Rebuild image
 
-# Run shell (UI)
-cd packages/arkham-shard-shell && npm run dev
-
-# API docs: http://127.0.0.1:8100/docs
+# Quality
+make lint                    # ruff check packages/
+make lint-fix                # ruff check packages/ --fix
+make format                  # ruff format packages/
+make test                    # pytest packages/ -v --tb=short
+make test-shard SHARD=ach    # Test single shard
+make shell-lint              # ESLint on shell UI
+make shell-format            # Prettier check
+make check                   # All checks (lint + format + shell)
+make fix                     # Auto-fix all
+pre-commit run --all-files   # Pre-commit hooks (ruff + file hygiene)
 ```
+
+## Testing
+
+- pytest config in root `pyproject.toml` — asyncio_mode is `auto`, import-mode is `importlib`
+- Tests live in `packages/arkham-shard-{name}/tests/`
+- Run single test: `python -m pytest packages/arkham-shard-ach/tests/test_logic.py::TestClassName::test_name -v`
+
+## Linting
+
+- Python: ruff (config in root `pyproject.toml`) — line-length 120, target py310
+- TypeScript: ESLint + Prettier (in `packages/arkham-shard-shell/`)
+- Pre-commit: ruff lint+format, trailing whitespace, YAML/TOML/JSON checks, large file detection
 
 ## Key Files
 
-- `packages/arkham-frame/arkham_frame/shard_interface.py` - Shard ABC and manifest dataclasses
-- `packages/arkham-shard-ach/shard.yaml` - Reference manifest v5
-- `packages/arkham-shard-ach/pyproject.toml` - Reference package config
-- `docs/voltron_plan.md` - Architecture documentation
+| File | Purpose |
+|------|---------|
+| `packages/arkham-frame/arkham_frame/shard_interface.py` | `ArkhamShard` ABC and Manifest v5 dataclasses |
+| `packages/arkham-frame/arkham_frame/main.py` | `load_shards()` — entry_point discovery and route mounting |
+| `packages/arkham-frame/arkham_frame/frame.py` | `ArkhamFrame` — service container (db, vectors, llm, events, workers) |
+| `packages/arkham-frame/arkham_frame/services/` | All frame services (database, vectors, llm, events, workers, storage) |
+| `packages/arkham-shard-shell/src/pages/` | Per-shard UI pages + generic fallback rendering |
+| `packages/arkham-shard-ach/` | Reference shard implementation |
 
-## Event-Driven Communication
+## Shard Discovery
 
-Shards communicate via the EventBus, never by direct import:
+Shards register via `pyproject.toml` entry points:
+```toml
+[project.entry-points."arkham.shards"]
+ach = "arkham_shard_ach:AchShard"
+```
+The frame discovers all installed shards at startup via `importlib.metadata.entry_points(group="arkham.shards")`.
+
+## EventBus Communication
 
 ```python
-# Publishing (in shard)
+# Publish
 await self.frame.events.emit("ach.matrix.created", {"matrix_id": id}, source="ach-shard")
 
-# Subscribing (in initialize)
+# Subscribe (in initialize())
 self.frame.events.subscribe("document.processed", self.handle_document)
-
-# Querying events
-events = self.frame.events.get_events(source="ach-shard", limit=100)
-types = self.frame.events.get_event_types()
-sources = self.frame.events.get_event_sources()
 ```
 
 ## Navigation Categories
 
-Shards declare their navigation category in `shard.yaml`:
-- **System**: Dashboard, settings, admin tools
-- **Data**: Ingest, documents, raw data management
-- **Search**: Search interfaces
-- **Analysis**: ACH, contradictions, anomalies
-- **Visualize**: Graph, timeline, visual tools
-- **Export**: Export and reporting tools
+Shards declare their category in `shard.yaml`: System, Data, Search, Analysis, Visualize, Export.
 
-## Dashboard Shard
+## Infrastructure
 
-The Dashboard shard provides system monitoring and administration:
+- **Database**: PostgreSQL 15 with pgvector (structured data + vector embeddings + job queue via SKIP LOCKED)
+- **No Redis/Qdrant** — PostgreSQL handles everything
+- **Embedding**: configurable model via `EMBED_MODEL` env var (default: all-MiniLM-L6-v2)
+- **LLM**: optional, configured via `LLM_ENDPOINT` / `LM_STUDIO_URL` env vars
+- **GPU**: Docker compose reserves NVIDIA GPU; set `TORCH_INDEX_URL` build arg for CPU-only
+- **Frontend serving**: In production, FastAPI serves the built shell via `ARKHAM_SERVE_SHELL=true`
 
-### Tabs
-- **Health**: Service status overview (database, vectors, LLM, workers, events)
-- **LLM**: LLM endpoint configuration and connection testing
-- **Database**: Schema/table statistics, VACUUM ANALYZE, database reset
-- **Workers**: Worker pool management, scaling, job queue controls
-- **Events**: Event log with filtering by type/source, payload inspection
+## New Shard Checklist
 
-### Database Statistics API
-```python
-# Get database stats (sizes, row counts per schema)
-stats = await frame.db.get_stats()
-
-# Get table info for a schema
-tables = await frame.db.get_table_info("arkham_ach")
-
-# Run VACUUM ANALYZE
-result = await frame.db.vacuum_analyze()
-```
-
-### Worker Management API
-```python
-# Scale workers for a pool
-await frame.workers.scale("cpu-parse", count=4)
-
-# Get pool info
-pools = frame.workers.get_pool_info()
-
-# Clear queue, retry failed jobs
-await frame.workers.clear_queue("cpu-parse", status="pending")
-await frame.workers.retry_failed_jobs("cpu-parse")
-```
-
-## Claude Code File Write Workaround
-
-When Claude Code's native Write/Edit tools fail with "File has not been read yet" or "File has been unexpectedly modified" errors, use Python via Bash as a workaround:
-
-### For Simple Content
-```bash
-python -c "from pathlib import Path; Path('FILE_PATH').write_text('CONTENT')"
-```
-
-### For Complex Files (TypeScript, React, etc.)
-Write content to a temp file first, then use Python to read and write:
-```bash
-# Write content to temp file
-cat > /tmp/content.txt << 'CONTENT_EOF'
-file content here
-CONTENT_EOF
-
-# Use Python to copy to target
-python -c "
-from pathlib import Path
-content = Path('/tmp/content.txt').read_text()
-Path('TARGET_PATH').write_text(content)
-"
-```
-
-### For Files with Special Characters
-Use base64 encoding:
-```bash
-echo 'BASE64_CONTENT' | base64 -d > file.txt
-```
-
-This is a known bug in Claude Code (GitHub issues #4230, #10437, #12805) affecting Windows/MINGW environments.
+1. Copy `packages/arkham-shard-skeleton/` as template
+2. Create `pyproject.toml` with `arkham.shards` entry point
+3. Create `shard.yaml` manifest v5 (see `packages/arkham-shard-ach/shard.yaml` for reference)
+4. Implement shard class extending `ArkhamShard` with `initialize()`, `shutdown()`, `get_routes()`
+5. Add UI page in `packages/arkham-shard-shell/src/pages/{name}/`
+6. Add package path to `pythonpath` in root `pyproject.toml` for pytest
+7. Add COPY lines to `Dockerfile` (both shard directory and manifest)
