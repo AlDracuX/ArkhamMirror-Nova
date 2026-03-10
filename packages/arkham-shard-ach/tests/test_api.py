@@ -41,6 +41,13 @@ def mock_matrix_manager():
     manager.add_evidence = MagicMock(return_value=None)
     manager.remove_evidence = MagicMock(return_value=False)
     manager.set_rating = MagicMock(return_value=None)
+    # Async methods used by API endpoints
+    manager.save_matrix_async = AsyncMock()
+    manager.get_matrix_async = AsyncMock(return_value=None)
+    manager.list_matrices_async = AsyncMock(return_value=[])
+    manager.save_hypothesis_async = AsyncMock()
+    manager.save_evidence_async = AsyncMock()
+    manager.save_rating_async = AsyncMock()
     return manager
 
 
@@ -335,7 +342,7 @@ class TestListMatricesEndpoint:
         """Test listing matrices with results."""
         sample_matrix.hypotheses = []
         sample_matrix.evidence = []
-        mock_matrix_manager.list_matrices.return_value = [sample_matrix]
+        mock_matrix_manager.list_matrices_async.return_value = [sample_matrix]
 
         response = client.get("/api/ach/matrices")
 
@@ -346,12 +353,12 @@ class TestListMatricesEndpoint:
 
     def test_list_matrices_with_filters(self, client, mock_matrix_manager):
         """Test listing matrices with filters."""
-        mock_matrix_manager.list_matrices.return_value = []
+        mock_matrix_manager.list_matrices_async.return_value = []
 
         response = client.get("/api/ach/matrices?project_id=proj-1&status=active")
 
         assert response.status_code == 200
-        mock_matrix_manager.list_matrices.assert_called()
+        mock_matrix_manager.list_matrices_async.assert_called()
 
 
 class TestMatricesCountEndpoint:
@@ -359,7 +366,7 @@ class TestMatricesCountEndpoint:
 
     def test_get_count(self, client, mock_matrix_manager, sample_matrix):
         """Test getting active matrices count."""
-        mock_matrix_manager.list_matrices.return_value = [sample_matrix]
+        mock_matrix_manager.list_matrices_async.return_value = [sample_matrix]
 
         response = client.get("/api/ach/matrices/count")
 
@@ -374,8 +381,9 @@ class TestMatricesCountEndpoint:
 class TestAddHypothesisEndpoint:
     """Tests for POST /api/ach/hypothesis"""
 
-    def test_add_hypothesis(self, client, mock_matrix_manager, sample_hypothesis):
+    def test_add_hypothesis(self, client, mock_matrix_manager, sample_hypothesis, sample_matrix):
         """Test adding a hypothesis."""
+        mock_matrix_manager.get_matrix_async.return_value = sample_matrix
         mock_matrix_manager.add_hypothesis.return_value = sample_hypothesis
 
         response = client.post(
@@ -435,8 +443,9 @@ class TestRemoveHypothesisEndpoint:
 class TestAddEvidenceEndpoint:
     """Tests for POST /api/ach/evidence"""
 
-    def test_add_evidence(self, client, mock_matrix_manager, sample_evidence):
+    def test_add_evidence(self, client, mock_matrix_manager, sample_evidence, sample_matrix):
         """Test adding evidence."""
+        mock_matrix_manager.get_matrix_async.return_value = sample_matrix
         mock_matrix_manager.add_evidence.return_value = sample_evidence
 
         response = client.post(
@@ -498,8 +507,9 @@ class TestRemoveEvidenceEndpoint:
 class TestUpdateRatingEndpoint:
     """Tests for PUT /api/ach/rating"""
 
-    def test_update_rating(self, client, mock_matrix_manager, sample_rating):
+    def test_update_rating(self, client, mock_matrix_manager, sample_rating, sample_matrix):
         """Test updating a rating."""
+        mock_matrix_manager.get_matrix_async.return_value = sample_matrix
         mock_matrix_manager.set_rating.return_value = sample_rating
 
         response = client.put(
@@ -519,8 +529,9 @@ class TestUpdateRatingEndpoint:
         assert data["rating"] == "+"
         assert data["confidence"] == 0.9
 
-    def test_update_rating_invalid(self, client, mock_matrix_manager):
+    def test_update_rating_invalid(self, client, mock_matrix_manager, sample_matrix):
         """Test updating with invalid rating value."""
+        mock_matrix_manager.get_matrix_async.return_value = sample_matrix
         response = client.put(
             "/api/ach/rating",
             json={
@@ -533,8 +544,9 @@ class TestUpdateRatingEndpoint:
 
         assert response.status_code == 400
 
-    def test_update_rating_not_found(self, client, mock_matrix_manager):
+    def test_update_rating_not_found(self, client, mock_matrix_manager, sample_matrix):
         """Test updating rating when matrix/evidence/hypothesis not found."""
+        mock_matrix_manager.get_matrix_async.return_value = sample_matrix
         mock_matrix_manager.set_rating.return_value = None
 
         response = client.put(

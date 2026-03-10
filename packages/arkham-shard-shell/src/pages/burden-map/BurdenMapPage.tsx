@@ -72,7 +72,9 @@ export function BurdenMapPage() {
         description: String(e.description || ''),
         claim_type: String(e.claim_type || 'General'),
         statutory_reference: String(e.statutory_reference || ''),
-        burden_holder: (e.burden_holder === 'respondent' ? 'respondent' : 'claimant') as 'claimant' | 'respondent',
+        burden_holder: (e.burden_holder === 'respondent' ? 'respondent' : 'claimant') as
+          | 'claimant'
+          | 'respondent',
         status: (e.status as TrafficStatus) || 'red',
         current_weight: Number(e.current_weight || 0),
         required_weight: Number(e.required_weight || 100),
@@ -82,11 +84,14 @@ export function BurdenMapPage() {
 
       setElements(mapped);
 
-      const newStats = mapped.reduce((acc, el) => {
-        acc[el.status]++;
-        acc.total++;
-        return acc;
-      }, { green: 0, amber: 0, red: 0, total: 0 });
+      const newStats = mapped.reduce(
+        (acc, el) => {
+          acc[el.status]++;
+          acc.total++;
+          return acc;
+        },
+        { green: 0, amber: 0, red: 0, total: 0 }
+      );
 
       setStats(newStats);
     } catch (err) {
@@ -104,26 +109,31 @@ export function BurdenMapPage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: '32px'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '32px',
+        }}
+      >
         <div>
-          <h1 style={{
-            fontSize: '28px',
-            fontWeight: 700,
-            margin: 0,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
+          <h1
+            style={{
+              fontSize: '28px',
+              fontWeight: 700,
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+            }}
+          >
             <Icon name="Scale" size={32} color="#3b82f6" />
             Burden of Proof Mapper
           </h1>
           <p style={{ color: '#6b7280', marginTop: '8px', fontSize: '15px' }}>
-            Map statutory elements, track evidentiary weights, and visualize the status of your claim.
+            Map statutory elements, track evidentiary weights, and visualize the status of your
+            claim.
           </p>
         </div>
 
@@ -140,7 +150,7 @@ export function BurdenMapPage() {
             borderRadius: '8px',
             fontWeight: 600,
             cursor: 'pointer',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
           }}
         >
           <Icon name="Plus" size={18} />
@@ -148,35 +158,56 @@ export function BurdenMapPage() {
         </button>
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '20px',
-        marginBottom: '32px'
-      }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '20px',
+          marginBottom: '32px',
+        }}
+      >
         <SummaryCard label="Total Elements" value={stats.total} icon="ListChecks" color="#3b82f6" />
-        <SummaryCard label="Burden Met" value={stats.green} icon="CheckCircle" color={STATUS_COLORS.green} />
-        <SummaryCard label="Borderline" value={stats.amber} icon="AlertCircle" color={STATUS_COLORS.amber} />
-        <SummaryCard label="Gaps Identified" value={stats.red} icon="XCircle" color={STATUS_COLORS.red} />
+        <SummaryCard
+          label="Burden Met"
+          value={stats.green}
+          icon="CheckCircle"
+          color={STATUS_COLORS.green}
+        />
+        <SummaryCard
+          label="Borderline"
+          value={stats.amber}
+          icon="AlertCircle"
+          color={STATUS_COLORS.amber}
+        />
+        <SummaryCard
+          label="Gaps Identified"
+          value={stats.red}
+          icon="XCircle"
+          color={STATUS_COLORS.red}
+        />
       </div>
 
-      <div style={{
-        background: '#eff6ff',
-        border: '1px solid #bfdbfe',
-        borderRadius: '12px',
-        padding: '16px 20px',
-        marginBottom: '32px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px'
-      }}>
-        <div style={{
-          background: '#3b82f6',
-          color: 'white',
-          padding: '8px',
-          borderRadius: '8px',
-          display: 'flex'
-        }}>
+      <div
+        style={{
+          background: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '12px',
+          padding: '16px 20px',
+          marginBottom: '32px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+        }}
+      >
+        <div
+          style={{
+            background: '#3b82f6',
+            color: 'white',
+            padding: '8px',
+            borderRadius: '8px',
+            display: 'flex',
+          }}
+        >
           <Icon name="Info" size={20} />
         </div>
         <div style={{ flex: 1 }}>
@@ -184,41 +215,48 @@ export function BurdenMapPage() {
             Section 136 Equality Act 2010 Tracking
           </h4>
           <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#1e40af', opacity: 0.8 }}>
-            System is tracking the shift of burden from Claimant to Respondent once prima facie case is established.
+            System is tracking the shift of burden from Claimant to Respondent once prima facie case
+            is established.
           </p>
         </div>
-        <div style={{
-          fontSize: '12px',
-          fontWeight: 700,
-          background: '#dbeafe',
-          color: '#1e40af',
-          padding: '4px 10px',
-          borderRadius: '20px',
-          textTransform: 'uppercase'
-        }}>
+        <div
+          style={{
+            fontSize: '12px',
+            fontWeight: 700,
+            background: '#dbeafe',
+            color: '#1e40af',
+            padding: '4px 10px',
+            borderRadius: '20px',
+            textTransform: 'uppercase',
+          }}
+        >
           Active
         </div>
       </div>
 
       {elements.length === 0 ? (
-        <div style={{
-          textAlign: 'center',
-          padding: '64px',
-          background: 'white',
-          borderRadius: '16px',
-          border: '1px dashed #d1d5db'
-        }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '64px',
+            background: 'white',
+            borderRadius: '16px',
+            border: '1px dashed #d1d5db',
+          }}
+        >
           <Icon name="Search" size={48} color="#9ca3af" />
           <h3 style={{ marginTop: '16px', color: '#374151' }}>No elements found</h3>
           <p style={{ color: '#6b7280' }}>Start by creating the first element of your claim.</p>
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
-          gap: '24px'
-        }}>
-          {elements.map(element => (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
+            gap: '24px',
+          }}
+        >
+          {elements.map((element) => (
             <ElementCard
               key={element.id}
               element={element}
@@ -254,25 +292,39 @@ export function BurdenMapPage() {
   );
 }
 
-function SummaryCard({ label, value, icon, color }: { label: string; value: number; icon: string; color: string }) {
+function SummaryCard({
+  label,
+  value,
+  icon,
+  color,
+}: {
+  label: string;
+  value: number;
+  icon: string;
+  color: string;
+}) {
   return (
-    <div style={{
-      background: 'white',
-      padding: '20px',
-      borderRadius: '12px',
-      border: '1px solid #e5e7eb',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '16px',
-      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-    }}>
-      <div style={{
-        background: `${color}15`,
-        color: color,
-        padding: '12px',
-        borderRadius: '10px',
-        display: 'flex'
-      }}>
+    <div
+      style={{
+        background: 'white',
+        padding: '20px',
+        borderRadius: '12px',
+        border: '1px solid #e5e7eb',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+      }}
+    >
+      <div
+        style={{
+          background: `${color}15`,
+          color: color,
+          padding: '12px',
+          borderRadius: '10px',
+          display: 'flex',
+        }}
+      >
         <Icon name={icon} size={24} />
       </div>
       <div>
@@ -283,70 +335,101 @@ function SummaryCard({ label, value, icon, color }: { label: string; value: numb
   );
 }
 
-function ElementCard({ element, onAddWeight }: { element: BurdenElement; onAddWeight: () => void }) {
-  const percentage = Math.min(100, Math.round((element.current_weight / element.required_weight) * 100));
+function ElementCard({
+  element,
+  onAddWeight,
+}: {
+  element: BurdenElement;
+  onAddWeight: () => void;
+}) {
+  const percentage = Math.min(
+    100,
+    Math.round((element.current_weight / element.required_weight) * 100)
+  );
   const statusColor = STATUS_COLORS[element.status];
 
   return (
-    <div style={{
-      background: 'white',
-      borderRadius: '16px',
-      border: '1px solid #e5e7eb',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      transition: 'transform 0.2s, box-shadow 0.2s',
-      position: 'relative'
-    }}>
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        bottom: 0,
-        width: '6px',
-        background: statusColor
-      }} />
+    <div
+      style={{
+        background: 'white',
+        borderRadius: '16px',
+        border: '1px solid #e5e7eb',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        position: 'relative',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          width: '6px',
+          background: statusColor,
+        }}
+      />
 
       <div style={{ padding: '20px 20px 20px 26px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            marginBottom: '12px',
+          }}
+        >
           <div>
             <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#111827' }}>
               {element.title}
             </h3>
             {!!element.statutory_reference && (
-              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px', fontFamily: 'monospace' }}>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: '#6b7280',
+                  marginTop: '2px',
+                  fontFamily: 'monospace',
+                }}
+              >
                 {element.statutory_reference}
               </div>
             )}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: 700,
-              padding: '4px 8px',
-              borderRadius: '6px',
-              background: element.burden_holder === 'claimant' ? '#eff6ff' : '#fff7ed',
-              color: element.burden_holder === 'claimant' ? '#2563eb' : '#ea580c',
-              textTransform: 'uppercase',
-              letterSpacing: '0.025em',
-              border: `1px solid ${element.burden_holder === 'claimant' ? '#dbeafe' : '#ffedd5'}`
-            }}>
-              {element.burden_holder}
-            </span>
-            {!!element.has_shifted && (
-              <span style={{
+            <span
+              style={{
                 fontSize: '11px',
                 fontWeight: 700,
                 padding: '4px 8px',
                 borderRadius: '6px',
-                background: '#f0fdf4',
-                color: '#16a34a',
-                border: '1px solid #dcfce7',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}>
+                background: element.burden_holder === 'claimant' ? '#eff6ff' : '#fff7ed',
+                color: element.burden_holder === 'claimant' ? '#2563eb' : '#ea580c',
+                textTransform: 'uppercase',
+                letterSpacing: '0.025em',
+                border: `1px solid ${element.burden_holder === 'claimant' ? '#dbeafe' : '#ffedd5'}`,
+              }}
+            >
+              {element.burden_holder}
+            </span>
+            {!!element.has_shifted && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  background: '#f0fdf4',
+                  color: '#16a34a',
+                  border: '1px solid #dcfce7',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
                 <Icon name="ArrowRightLeft" size={10} />
                 Shifted
               </span>
@@ -354,22 +437,40 @@ function ElementCard({ element, onAddWeight }: { element: BurdenElement; onAddWe
           </div>
         </div>
 
-        <p style={{
-          fontSize: '14px',
-          color: '#4b5563',
-          margin: '0 0 20px 0',
-          lineHeight: '1.5',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden'
-        }}>
+        <p
+          style={{
+            fontSize: '14px',
+            color: '#4b5563',
+            margin: '0 0 20px 0',
+            lineHeight: '1.5',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
           {element.description || 'No description provided for this element.'}
         </p>
 
         <div style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '8px',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#374151',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
               <Icon name="Database" size={14} />
               Evidence Weight
             </span>
@@ -377,47 +478,74 @@ function ElementCard({ element, onAddWeight }: { element: BurdenElement; onAddWe
               {percentage}%
             </span>
           </div>
-          <div style={{
-            height: '10px',
-            background: '#f3f4f6',
-            borderRadius: '5px',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              height: '100%',
-              width: `${percentage}%`,
-              background: statusColor,
+          <div
+            style={{
+              height: '10px',
+              background: '#f3f4f6',
               borderRadius: '5px',
-              transition: 'width 0.5s ease-out'
-            }} />
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                width: `${percentage}%`,
+                background: statusColor,
+                borderRadius: '5px',
+                transition: 'width 0.5s ease-out',
+              }}
+            />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-            <span style={{ fontSize: '11px', color: '#9ca3af' }}>{element.current_weight} points</span>
-            <span style={{ fontSize: '11px', color: '#9ca3af' }}>Target: {element.required_weight}</span>
+            <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+              {element.current_weight} points
+            </span>
+            <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+              Target: {element.required_weight}
+            </span>
           </div>
         </div>
 
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          paddingTop: '16px',
-          borderTop: '1px solid #f3f4f6'
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingTop: '16px',
+            borderTop: '1px solid #f3f4f6',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#6b7280', fontSize: '13px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                color: '#6b7280',
+                fontSize: '13px',
+              }}
+            >
               <Icon name="FileText" size={14} />
               {element.evidence_count} items
             </div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: statusColor
-            }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: statusColor }} />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: statusColor,
+              }}
+            >
+              <div
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: statusColor,
+                }}
+              />
               {STATUS_LABELS[element.status]}
             </div>
           </div>
@@ -436,7 +564,7 @@ function ElementCard({ element, onAddWeight }: { element: BurdenElement; onAddWe
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              transition: 'background 0.2s'
+              transition: 'background 0.2s',
             }}
             onMouseOver={(e) => (e.currentTarget.style.background = '#eff6ff')}
             onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
@@ -453,7 +581,7 @@ function ElementCard({ element, onAddWeight }: { element: BurdenElement; onAddWe
 function CreateElementDialog({
   projectId,
   onClose,
-  onSuccess
+  onSuccess,
 }: {
   projectId?: string;
   onClose: () => void;
@@ -467,7 +595,7 @@ function CreateElementDialog({
     statutory_reference: '',
     description: '',
     burden_holder: 'claimant',
-    required: true
+    required: true,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -481,7 +609,7 @@ function CreateElementDialog({
       setSaving(true);
       await api.createElement({
         ...formData,
-        project_id: projectId
+        project_id: projectId,
       });
       toast.success('Element created successfully');
       onSuccess();
@@ -495,7 +623,16 @@ function CreateElementDialog({
   return (
     <DialogOverlay onClose={onClose}>
       <form onSubmit={handleSubmit} style={{ width: '500px' }}>
-        <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <h2
+          style={{
+            margin: '0 0 24px 0',
+            fontSize: '20px',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          }}
+        >
           <Icon name="PlusCircle" size={24} color="#3b82f6" />
           Create Burden Element
         </h2>
@@ -574,8 +711,12 @@ function CreateElementDialog({
           </FormField>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
-          <button type="button" onClick={onClose} style={secondaryButtonStyle}>Cancel</button>
+        <div
+          style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}
+        >
+          <button type="button" onClick={onClose} style={secondaryButtonStyle}>
+            Cancel
+          </button>
           <button type="submit" disabled={saving} style={primaryButtonStyle}>
             {saving ? 'Creating...' : 'Create Element'}
           </button>
@@ -588,7 +729,7 @@ function CreateElementDialog({
 function AddWeightDialog({
   elementId,
   onClose,
-  onSuccess
+  onSuccess,
 }: {
   elementId: string;
   onClose: () => void;
@@ -603,7 +744,7 @@ function AddWeightDialog({
     source_title: '',
     excerpt: '',
     supports_burden_holder: true,
-    analyst_notes: ''
+    analyst_notes: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -617,7 +758,7 @@ function AddWeightDialog({
       setSaving(true);
       await api.addEvidenceWeight({
         ...formData,
-        element_id: elementId
+        element_id: elementId,
       });
       toast.success('Evidence weight added');
       onSuccess();
@@ -631,7 +772,16 @@ function AddWeightDialog({
   return (
     <DialogOverlay onClose={onClose}>
       <form onSubmit={handleSubmit} style={{ width: '550px' }}>
-        <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <h2
+          style={{
+            margin: '0 0 24px 0',
+            fontSize: '20px',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          }}
+        >
           <Icon name="Scale" size={24} color="#f59e0b" />
           Add Evidence Weight
         </h2>
@@ -717,9 +867,17 @@ function AddWeightDialog({
           </FormField>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
-          <button type="button" onClick={onClose} style={secondaryButtonStyle}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ ...primaryButtonStyle, background: '#f59e0b' }}>
+        <div
+          style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}
+        >
+          <button type="button" onClick={onClose} style={secondaryButtonStyle}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            style={{ ...primaryButtonStyle, background: '#f59e0b' }}
+          >
             {saving ? 'Applying...' : 'Apply Weight'}
           </button>
         </div>
@@ -741,7 +899,7 @@ function DialogOverlay({ children, onClose }: { children: React.ReactNode; onClo
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1000,
-        padding: '20px'
+        padding: '20px',
       }}
     >
       <div
@@ -753,7 +911,7 @@ function DialogOverlay({ children, onClose }: { children: React.ReactNode; onClo
           padding: '32px',
           maxHeight: 'calc(100vh - 40px)',
           overflowY: 'auto',
-          border: '1px solid #e2e8f0'
+          border: '1px solid #e2e8f0',
         }}
       >
         {children}
@@ -762,10 +920,20 @@ function DialogOverlay({ children, onClose }: { children: React.ReactNode; onClo
   );
 }
 
-function FormField({ label, children, required }: { label: string; children: React.ReactNode; required?: boolean }) {
+function FormField({
+  label,
+  children,
+  required,
+}: {
+  label: string;
+  children: React.ReactNode;
+  required?: boolean;
+}) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'flex', gap: '4px' }}>
+      <label
+        style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'flex', gap: '4px' }}
+      >
         {label}
         {!!required && <span style={{ color: '#ef4444' }}>*</span>}
       </label>
@@ -783,7 +951,7 @@ const inputStyle: React.CSSProperties = {
   color: '#111827',
   background: '#ffffff',
   transition: 'border-color 0.2s',
-  boxSizing: 'border-box'
+  boxSizing: 'border-box',
 };
 
 const primaryButtonStyle: React.CSSProperties = {
@@ -794,7 +962,7 @@ const primaryButtonStyle: React.CSSProperties = {
   borderRadius: '8px',
   fontSize: '14px',
   fontWeight: 600,
-  cursor: 'pointer'
+  cursor: 'pointer',
 };
 
 const secondaryButtonStyle: React.CSSProperties = {
@@ -805,7 +973,7 @@ const secondaryButtonStyle: React.CSSProperties = {
   borderRadius: '8px',
   fontSize: '14px',
   fontWeight: 600,
-  cursor: 'pointer'
+  cursor: 'pointer',
 };
 
 const radioContainerStyle = (active: boolean): React.CSSProperties => ({
@@ -819,5 +987,5 @@ const radioContainerStyle = (active: boolean): React.CSSProperties => ({
   fontWeight: 700,
   textAlign: 'center',
   cursor: 'pointer',
-  transition: 'all 0.2s'
+  transition: 'all 0.2s',
 });

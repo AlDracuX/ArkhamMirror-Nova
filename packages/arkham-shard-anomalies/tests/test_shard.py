@@ -38,7 +38,8 @@ class TestShardInitialization:
     def mock_frame(self):
         """Create mock Frame."""
         frame = MagicMock()
-        frame.get_service = MagicMock()
+        frame.database = None
+        frame.get_service = MagicMock(return_value=None)
         return frame
 
     @pytest.fixture
@@ -49,20 +50,23 @@ class TestShardInitialization:
     @pytest.fixture
     def mock_db_service(self):
         """Create mock database service."""
-        return MagicMock()
+        mock = AsyncMock()
+        mock.execute = AsyncMock()
+        mock.fetch_one = AsyncMock(return_value=None)
+        mock.fetch_all = AsyncMock(return_value=[])
+        return mock
 
     @pytest.fixture
     def mock_event_bus(self):
         """Create mock event bus."""
         mock = MagicMock()
-        mock.subscribe = MagicMock()
-        mock.unsubscribe = MagicMock()
+        mock.subscribe = AsyncMock()
+        mock.unsubscribe = AsyncMock()
         return mock
 
     @pytest.mark.asyncio
     async def test_initialize_creates_detector(self, mock_frame):
         """Test that initialization creates detector."""
-        mock_frame.get_service.return_value = None
 
         shard = AnomaliesShard()
         await shard.initialize(mock_frame)
@@ -94,9 +98,11 @@ class TestShardInitialization:
     @pytest.mark.asyncio
     async def test_initialize_gets_db_service(self, mock_frame, mock_db_service):
         """Test initialization gets database service."""
-        mock_frame.get_service.side_effect = lambda name: {
-            "database": mock_db_service,
-        }.get(name)
+        mock_frame.get_service = MagicMock(
+            side_effect=lambda name: {
+                "database": mock_db_service,
+            }.get(name)
+        )
 
         shard = AnomaliesShard()
         await shard.initialize(mock_frame)
@@ -106,9 +112,11 @@ class TestShardInitialization:
     @pytest.mark.asyncio
     async def test_initialize_tries_db_fallback(self, mock_frame, mock_db_service):
         """Test initialization tries 'db' if 'database' returns None."""
-        mock_frame.get_service.side_effect = lambda name: {
-            "db": mock_db_service,
-        }.get(name)
+        mock_frame.get_service = MagicMock(
+            side_effect=lambda name: {
+                "db": mock_db_service,
+            }.get(name)
+        )
 
         shard = AnomaliesShard()
         await shard.initialize(mock_frame)
@@ -118,17 +126,19 @@ class TestShardInitialization:
     @pytest.mark.asyncio
     async def test_initialize_subscribes_to_events(self, mock_frame, mock_event_bus):
         """Test that initialization subscribes to events."""
-        mock_frame.get_service.side_effect = lambda name: {
-            "events": mock_event_bus,
-        }.get(name)
+        mock_frame.get_service = MagicMock(
+            side_effect=lambda name: {
+                "events": mock_event_bus,
+            }.get(name)
+        )
 
         shard = AnomaliesShard()
         await shard.initialize(mock_frame)
 
         assert mock_event_bus.subscribe.call_count == 2
         event_names = [call[0][0] for call in mock_event_bus.subscribe.call_args_list]
-        assert "embeddings.created" in event_names
-        assert "documents.indexed" in event_names
+        assert "embed.document.completed" in event_names
+        assert "documents.metadata.updated" in event_names
 
     @pytest.mark.asyncio
     async def test_initialize_without_services(self, mock_frame):
@@ -150,19 +160,22 @@ class TestShardShutdown:
     def mock_frame(self):
         """Create mock Frame."""
         frame = MagicMock()
-        frame.get_service = MagicMock()
+        frame.database = None
+        frame.get_service = MagicMock(return_value=None)
         return frame
 
     @pytest.mark.asyncio
     async def test_shutdown_unsubscribes_events(self, mock_frame):
         """Test that shutdown unsubscribes from events."""
         mock_event_bus = MagicMock()
-        mock_event_bus.subscribe = MagicMock()
-        mock_event_bus.unsubscribe = MagicMock()
+        mock_event_bus.subscribe = AsyncMock()
+        mock_event_bus.unsubscribe = AsyncMock()
 
-        mock_frame.get_service.side_effect = lambda name: {
-            "events": mock_event_bus,
-        }.get(name)
+        mock_frame.get_service = MagicMock(
+            side_effect=lambda name: {
+                "events": mock_event_bus,
+            }.get(name)
+        )
 
         shard = AnomaliesShard()
         await shard.initialize(mock_frame)
@@ -173,8 +186,6 @@ class TestShardShutdown:
     @pytest.mark.asyncio
     async def test_shutdown_clears_components(self, mock_frame):
         """Test that shutdown clears all components."""
-        mock_frame.get_service.return_value = None
-
         shard = AnomaliesShard()
         await shard.initialize(mock_frame)
         await shard.shutdown()

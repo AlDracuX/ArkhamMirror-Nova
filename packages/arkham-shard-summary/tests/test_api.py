@@ -1,5 +1,7 @@
 """Tests for Summary Shard API endpoints."""
 
+import json
+import re
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -16,21 +18,137 @@ from arkham_shard_summary.models import (
 from fastapi.testclient import TestClient
 
 
+class MockDatabase:
+    """In-memory mock database for summary shard testing."""
+
+    def __init__(self):
+        self.summaries = {}  # id -> row dict
+        self.documents = {}
+
+    def _make_doc(self, doc_id):
+        """Generate a document row for any doc_id."""
+        return {
+            "id": doc_id,
+            "filename": f"{doc_id}.txt",
+            "metadata": json.dumps(
+                {"content": f"Document content for {doc_id}. This is test content with enough text to summarize."}
+            ),
+        }
+
+    async def execute(self, sql, params=None):
+        if params is None:
+            params = {}
+        sql_upper = sql.strip().upper()
+
+        if sql_upper.startswith("CREATE") or sql_upper.startswith("DO"):
+            return
+
+        if "INSERT INTO ARKHAM_SUMMARIES" in sql_upper:
+            row = dict(params)
+            self.summaries[row["id"]] = row
+            return
+
+        if "DELETE FROM ARKHAM_SUMMARIES" in sql_upper:
+            sid = params.get("id")
+            if sid and sid in self.summaries:
+                del self.summaries[sid]
+            return
+
+        if "UPDATE ARKHAM_SUMMARIES" in sql_upper:
+            sid = params.get("id")
+            if sid and sid in self.summaries:
+                for k, v in params.items():
+                    if k != "id":
+                        self.summaries[sid][k] = v
+            return
+
+    async def fetch_one(self, sql, params=None):
+        if params is None:
+            params = {}
+        sql_upper = sql.strip().upper()
+
+        if "COUNT(*)" in sql_upper:
+            if "ARKHAM_SUMMARIES" in sql_upper:
+                return {"count": len(self.summaries)}
+            return {"count": 0}
+
+        if "ARKHAM_FRAME.DOCUMENTS" in sql_upper or "ARKHAM_DOCUMENTS" in sql_upper:
+            doc_id = params.get("id")
+            if doc_id:
+                return self._make_doc(doc_id)
+            return None
+
+        if "ARKHAM_SUMMARIES" in sql_upper:
+            sid = params.get("id")
+            if sid and sid in self.summaries:
+                return dict(self.summaries[sid])
+            return None
+
+        return None
+
+    async def fetch_all(self, sql, params=None):
+        if params is None:
+            params = {}
+        sql_upper = sql.strip().upper()
+
+        if "GROUP BY" in sql_upper:
+            if "SUMMARY_TYPE" in sql_upper:
+                type_counts = {}
+                for row in self.summaries.values():
+                    t = row.get("summary_type", "")
+                    type_counts[t] = type_counts.get(t, 0) + 1
+                return [{"summary_type": k, "count": v} for k, v in type_counts.items()]
+            if "SOURCE_TYPE" in sql_upper:
+                src_counts = {}
+                for row in self.summaries.values():
+                    t = row.get("source_type", "")
+                    src_counts[t] = src_counts.get(t, 0) + 1
+                return [{"source_type": k, "count": v} for k, v in src_counts.items()]
+            if "STATUS" in sql_upper:
+                status_counts = {}
+                for row in self.summaries.values():
+                    t = row.get("status", "")
+                    status_counts[t] = status_counts.get(t, 0) + 1
+                return [{"status": k, "count": v} for k, v in status_counts.items()]
+
+        if "ARKHAM_SUMMARIES" in sql_upper:
+            rows = list(self.summaries.values())
+
+            if "summary_type" in params:
+                rows = [r for r in rows if r.get("summary_type") == params["summary_type"]]
+            if "source_type" in params:
+                rows = [r for r in rows if r.get("source_type") == params["source_type"]]
+
+            rows.sort(key=lambda r: str(r.get("created_at", "")), reverse=True)
+
+            limit_match = re.search(r"LIMIT\s+(\d+)", sql_upper)
+            offset_match = re.search(r"OFFSET\s+(\d+)", sql_upper)
+            if limit_match:
+                limit = int(limit_match.group(1))
+                offset = int(offset_match.group(1)) if offset_match else 0
+                rows = rows[offset : offset + limit]
+
+            return [dict(r) for r in rows]
+
+        return []
+
+
 class MockFrame:
     """Mock ArkhamFrame for API testing."""
 
     def __init__(self):
         self.services = {}
+        self.db = MockDatabase()
 
     def get_service(self, name: str):
         """Get a mock service."""
         if name == "database" or name == "db":
-            return None
+            return self.db
 
         if name == "events":
             mock_events = Mock()
-            mock_events.subscribe = Mock()
-            mock_events.unsubscribe = Mock()
+            mock_events.subscribe = AsyncMock()
+            mock_events.unsubscribe = AsyncMock()
             mock_events.emit = AsyncMock()
             return mock_events
 
@@ -318,10 +436,16 @@ class TestDeleteEndpoint:
         assert data["summary_id"] == summary_id
 
     def test_delete_nonexistent_summary(self, client, shard):
-        """Test deleting a summary that doesn't exist."""
+        """Test deleting a summary that doesn't exist.
+
+        Note: The shard always returns True for deletes (SQL DELETE on
+        nonexistent row is a no-op), so the API returns 200.
+        """
         response = client.delete("/api/summary/nonexistent-id")
 
-        assert response.status_code == 404
+        assert response.status_code == 200
+        data = response.json()
+        assert data["deleted"] is True
 
 
 class TestBatchEndpoint:

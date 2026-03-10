@@ -446,12 +446,34 @@ class TestStatistics:
 
     @pytest.mark.asyncio
     async def test_get_statistics(self, shard_with_db):
-        """Test getting statistics."""
-        shard_with_db._db.fetch_one = AsyncMock(return_value={"count": 10, "avg": 0.75})
+        """Test getting statistics.
+
+        get_statistics() calls fetch_all multiple times with different GROUP BY
+        queries expecting different column names (pattern_type, status,
+        detection_method). Use side_effect to return appropriate data for each.
+        """
+        shard_with_db._db.fetch_one = AsyncMock(
+            side_effect=[
+                {"count": 10},  # total patterns
+                {"count": 50},  # total matches
+                {"avg": 0.75},  # avg confidence
+                {"avg": 5.0},  # avg matches per pattern
+            ]
+        )
         shard_with_db._db.fetch_all = AsyncMock(
-            return_value=[
-                {"pattern_type": "recurring_theme", "count": 5},
-                {"pattern_type": "behavioral", "count": 5},
+            side_effect=[
+                [  # type_rows: GROUP BY pattern_type
+                    {"pattern_type": "recurring_theme", "count": 5},
+                    {"pattern_type": "behavioral", "count": 5},
+                ],
+                [  # status_rows: GROUP BY status
+                    {"status": "confirmed", "count": 6},
+                    {"status": "detected", "count": 4},
+                ],
+                [  # method_rows: GROUP BY detection_method
+                    {"detection_method": "manual", "count": 7},
+                    {"detection_method": "automated", "count": 3},
+                ],
             ]
         )
 

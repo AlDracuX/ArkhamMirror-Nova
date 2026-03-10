@@ -86,7 +86,7 @@ class TestDetectEndpoint:
         )
 
         assert response.status_code == 200
-        mock_event_bus.emit.assert_called_once()
+        assert mock_event_bus.emit.call_count == 2  # detection_started + detection_completed
 
     def test_detect_with_doc_ids(self, client):
         """Test detection for specific documents."""

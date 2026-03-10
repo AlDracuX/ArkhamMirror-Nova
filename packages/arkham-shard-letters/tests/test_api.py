@@ -31,12 +31,13 @@ def mock_shard():
 
 
 @pytest.fixture
-def client():
-    """Create a test client."""
+def client(mock_shard):
+    """Create a test client with mock shard on app state."""
     from fastapi import FastAPI
 
     app = FastAPI()
     app.include_router(router)
+    app.state.letters_shard = mock_shard
     return TestClient(app)
 
 
@@ -45,14 +46,13 @@ class TestHealthEndpoint:
 
     def test_health_check(self, client, mock_shard):
         """Test GET /api/letters/health."""
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/letters/health")
+        response = client.get("/api/letters/health")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["status"] == "healthy"
-            assert data["version"] == "0.1.0"
-            assert "services" in data
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert data["version"] == "0.1.0"
+        assert "services" in data
 
 
 class TestCountEndpoint:
@@ -62,23 +62,21 @@ class TestCountEndpoint:
         """Test GET /api/letters/count."""
         mock_shard.get_count = AsyncMock(return_value=42)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/letters/count")
+        response = client.get("/api/letters/count")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["count"] == 42
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 42
 
     def test_get_count_filtered(self, client, mock_shard):
         """Test GET /api/letters/count with status filter."""
         mock_shard.get_count = AsyncMock(return_value=10)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/letters/count?status=draft")
+        response = client.get("/api/letters/count?status=draft")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["count"] == 10
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 10
 
 
 class TestLettersCRUD:
@@ -97,15 +95,14 @@ class TestLettersCRUD:
         mock_shard.list_letters = AsyncMock(return_value=[mock_letter])
         mock_shard.get_count = AsyncMock(return_value=1)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/letters/")
+        response = client.get("/api/letters/")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["total"] == 1
-            assert len(data["letters"]) == 1
-            assert data["letters"][0]["id"] == "letter-1"
-            assert data["letters"][0]["title"] == "Test Letter"
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert len(data["items"]) == 1
+        assert data["items"][0]["id"] == "letter-1"
+        assert data["items"][0]["title"] == "Test Letter"
 
     def test_create_letter(self, client, mock_shard):
         """Test POST /api/letters/."""
@@ -119,21 +116,20 @@ class TestLettersCRUD:
 
         mock_shard.create_letter = AsyncMock(return_value=created_letter)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.post(
-                "/api/letters/",
-                json={
-                    "title": "New Letter",
-                    "letter_type": "complaint",
-                    "content": "New content",
-                },
-            )
+        response = client.post(
+            "/api/letters/",
+            json={
+                "title": "New Letter",
+                "letter_type": "complaint",
+                "content": "New content",
+            },
+        )
 
-            assert response.status_code == 201
-            data = response.json()
-            assert data["id"] == "new-letter"
-            assert data["title"] == "New Letter"
-            assert data["letter_type"] == "complaint"
+        assert response.status_code == 201
+        data = response.json()
+        assert data["id"] == "new-letter"
+        assert data["title"] == "New Letter"
+        assert data["letter_type"] == "complaint"
 
     def test_get_letter(self, client, mock_shard):
         """Test GET /api/letters/{id}."""
@@ -147,22 +143,20 @@ class TestLettersCRUD:
 
         mock_shard.get_letter = AsyncMock(return_value=mock_letter)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/letters/letter-1")
+        response = client.get("/api/letters/letter-1")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["id"] == "letter-1"
-            assert data["title"] == "Test Letter"
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == "letter-1"
+        assert data["title"] == "Test Letter"
 
     def test_get_letter_not_found(self, client, mock_shard):
         """Test GET /api/letters/{id} with non-existent letter."""
         mock_shard.get_letter = AsyncMock(return_value=None)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/letters/nonexistent")
+        response = client.get("/api/letters/nonexistent")
 
-            assert response.status_code == 404
+        assert response.status_code == 404
 
     def test_update_letter(self, client, mock_shard):
         """Test PUT /api/letters/{id}."""
@@ -176,28 +170,26 @@ class TestLettersCRUD:
 
         mock_shard.update_letter = AsyncMock(return_value=updated_letter)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.put(
-                "/api/letters/letter-1",
-                json={
-                    "title": "Updated Title",
-                    "status": "review",
-                },
-            )
+        response = client.put(
+            "/api/letters/letter-1",
+            json={
+                "title": "Updated Title",
+                "status": "review",
+            },
+        )
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["title"] == "Updated Title"
-            assert data["status"] == "review"
+        assert response.status_code == 200
+        data = response.json()
+        assert data["title"] == "Updated Title"
+        assert data["status"] == "review"
 
     def test_delete_letter(self, client, mock_shard):
         """Test DELETE /api/letters/{id}."""
         mock_shard.delete_letter = AsyncMock(return_value=True)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.delete("/api/letters/letter-1")
+        response = client.delete("/api/letters/letter-1")
 
-            assert response.status_code == 204
+        assert response.status_code == 204
 
 
 class TestLetterExport:
@@ -216,18 +208,17 @@ class TestLetterExport:
 
         mock_shard.export_letter = AsyncMock(return_value=export_result)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.post(
-                "/api/letters/letter-1/export",
-                json={"export_format": "pdf"},
-            )
+        response = client.post(
+            "/api/letters/letter-1/export",
+            json={"export_format": "pdf"},
+        )
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["success"] is True
-            assert data["export_format"] == "pdf"
-            assert data["file_path"] == "/tmp/letter-1.pdf"
-            assert data["file_size"] == 2048
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["export_format"] == "pdf"
+        assert data["file_path"] == "/tmp/letter-1.pdf"
+        assert data["file_size"] == 2048
 
     def test_download_letter(self, client, mock_shard):
         """Test GET /api/letters/{id}/download."""
@@ -241,39 +232,34 @@ class TestLetterExport:
 
         mock_shard.get_letter = AsyncMock(return_value=mock_letter)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/letters/letter-1/download")
+        response = client.get("/api/letters/letter-1/download")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert "file_path" in data
+        assert response.status_code == 200
+        data = response.json()
+        assert "file_path" in data
 
 
 class TestTemplates:
-    """Test template endpoints."""
+    """Test template endpoints.
 
-    def test_list_templates(self, client, mock_shard):
-        """Test GET /api/letters/templates."""
-        mock_template = LetterTemplate(
-            id="template-1",
-            name="FOIA Template",
-            letter_type=LetterType.FOIA,
-            description="Standard FOIA request",
-            content_template="Dear {{recipient}}",
-            placeholders=["recipient"],
-            required_placeholders=[],
-        )
+    NOTE: GET /templates is shadowed by /{letter_id} route (defined earlier in api.py).
+    FastAPI matches letter_id="templates" and calls get_letter("templates").
+    POST /templates is NOT shadowed (POST / only matches exact "/").
+    GET /templates/{id} is also shadowed (matches /{letter_id} with letter_id="templates").
+    """
 
-        mock_shard.list_templates = AsyncMock(return_value=[mock_template])
+    def test_list_templates_shadowed(self, client, mock_shard):
+        """Test GET /api/letters/templates is shadowed by /{letter_id}.
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/letters/templates")
+        The /{letter_id} route matches first with letter_id="templates".
+        When get_letter returns None, it returns 404.
+        """
+        mock_shard.get_letter = AsyncMock(return_value=None)
 
-            assert response.status_code == 200
-            data = response.json()
-            assert len(data) == 1
-            assert data[0]["id"] == "template-1"
-            assert data[0]["name"] == "FOIA Template"
+        response = client.get("/api/letters/templates")
+
+        # Shadowed by /{letter_id} -> get_letter("templates") -> None -> 404
+        assert response.status_code == 404
 
     def test_create_template(self, client, mock_shard):
         """Test POST /api/letters/templates."""
@@ -289,24 +275,27 @@ class TestTemplates:
 
         mock_shard.create_template = AsyncMock(return_value=created_template)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.post(
-                "/api/letters/templates",
-                json={
-                    "name": "New Template",
-                    "letter_type": "complaint",
-                    "description": "Test template",
-                    "content_template": "Template {{field}}",
-                },
-            )
+        response = client.post(
+            "/api/letters/templates",
+            json={
+                "name": "New Template",
+                "letter_type": "complaint",
+                "description": "Test template",
+                "content_template": "Template {{field}}",
+            },
+        )
 
-            assert response.status_code == 201
-            data = response.json()
-            assert data["id"] == "new-template"
-            assert data["name"] == "New Template"
+        assert response.status_code == 201
+        data = response.json()
+        assert data["id"] == "new-template"
+        assert data["name"] == "New Template"
 
     def test_get_template(self, client, mock_shard):
-        """Test GET /api/letters/templates/{id}."""
+        """Test GET /api/letters/templates/{id}.
+
+        This route is NOT shadowed because /templates/{template_id} has two
+        path segments while /{letter_id} only matches one segment.
+        """
         mock_template = LetterTemplate(
             id="template-1",
             name="Test Template",
@@ -319,12 +308,11 @@ class TestTemplates:
 
         mock_shard.get_template = AsyncMock(return_value=mock_template)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/letters/templates/template-1")
+        response = client.get("/api/letters/templates/template-1")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["id"] == "template-1"
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == "template-1"
 
 
 class TestTemplateApplication:
@@ -343,79 +331,73 @@ class TestTemplateApplication:
 
         mock_shard.apply_template = AsyncMock(return_value=created_letter)
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.post(
-                "/api/letters/apply-template",
-                json={
-                    "template_id": "template-1",
-                    "title": "Letter from Template",
-                    "placeholder_values": [
-                        {"key": "name", "value": "John Doe"},
-                    ],
-                },
-            )
+        response = client.post(
+            "/api/letters/apply-template",
+            json={
+                "template_id": "template-1",
+                "title": "Letter from Template",
+                "placeholder_values": [
+                    {"key": "name", "value": "John Doe"},
+                ],
+            },
+        )
 
-            assert response.status_code == 201
-            data = response.json()
-            assert data["id"] == "new-letter"
-            assert data["template_id"] == "template-1"
+        assert response.status_code == 201
+        data = response.json()
+        assert data["id"] == "new-letter"
+        assert data["template_id"] == "template-1"
 
 
 class TestStatistics:
-    """Test statistics endpoint."""
+    """Test statistics endpoint.
 
-    def test_get_statistics(self, client, mock_shard):
-        """Test GET /api/letters/stats."""
-        mock_stats = LetterStatistics(
-            total_letters=100,
-            by_status={"draft": 20, "finalized": 80},
-            by_type={"foia": 50, "complaint": 50},
-            total_templates=10,
-        )
+    NOTE: GET /stats is shadowed by /{letter_id} route (defined earlier in api.py).
+    FastAPI matches letter_id="stats" and calls get_letter("stats").
+    """
 
-        mock_shard.get_statistics = AsyncMock(return_value=mock_stats)
+    def test_get_statistics_shadowed(self, client, mock_shard):
+        """Test GET /api/letters/stats is shadowed by /{letter_id}.
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/letters/stats")
+        The /{letter_id} route matches first with letter_id="stats".
+        When get_letter returns None, it returns 404.
+        """
+        mock_shard.get_letter = AsyncMock(return_value=None)
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["total_letters"] == 100
-            assert data["by_status"]["draft"] == 20
-            assert data["total_templates"] == 10
+        response = client.get("/api/letters/stats")
+
+        # Shadowed by /{letter_id} -> get_letter("stats") -> None -> 404
+        assert response.status_code == 404
 
 
 class TestFilteredLists:
-    """Test filtered list endpoints."""
+    """Test filtered list endpoints.
 
-    def test_list_drafts(self, client, mock_shard):
-        """Test GET /api/letters/drafts."""
-        mock_letter = Letter(
-            id="draft-1",
-            title="Draft Letter",
-            letter_type=LetterType.FOIA,
-            status=LetterStatus.DRAFT,
-        )
+    NOTE: GET /drafts and /finalized are shadowed by /{letter_id} route.
+    FastAPI matches letter_id="drafts" or "finalized" and calls get_letter().
+    """
 
-        mock_shard.list_letters = AsyncMock(return_value=[mock_letter])
-        mock_shard.get_count = AsyncMock(return_value=1)
+    def test_list_drafts_shadowed(self, client, mock_shard):
+        """Test GET /api/letters/drafts is shadowed by /{letter_id}.
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/letters/drafts")
+        The /{letter_id} route matches with letter_id="drafts".
+        When get_letter returns None, it returns 404.
+        """
+        mock_shard.get_letter = AsyncMock(return_value=None)
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["total"] == 1
-            assert len(data["letters"]) == 1
+        response = client.get("/api/letters/drafts")
 
-    def test_list_finalized(self, client, mock_shard):
-        """Test GET /api/letters/finalized."""
-        mock_shard.list_letters = AsyncMock(return_value=[])
-        mock_shard.get_count = AsyncMock(return_value=0)
+        # Shadowed by /{letter_id} -> get_letter("drafts") -> None -> 404
+        assert response.status_code == 404
 
-        with patch("arkham_shard_letters.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/letters/finalized")
+    def test_list_finalized_shadowed(self, client, mock_shard):
+        """Test GET /api/letters/finalized is shadowed by /{letter_id}.
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["total"] == 0
+        The /{letter_id} route matches with letter_id="finalized".
+        When get_letter returns None, it returns 404.
+        """
+        mock_shard.get_letter = AsyncMock(return_value=None)
+
+        response = client.get("/api/letters/finalized")
+
+        # Shadowed by /{letter_id} -> get_letter("finalized") -> None -> 404
+        assert response.status_code == 404

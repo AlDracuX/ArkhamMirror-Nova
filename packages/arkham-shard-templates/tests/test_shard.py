@@ -2,6 +2,8 @@
 Tests for Templates Shard Implementation
 """
 
+import json
+import re
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -17,13 +19,172 @@ from arkham_shard_templates.models import (
 )
 
 
+class MockDatabase:
+    """In-memory mock database that simulates execute/fetch_one/fetch_all."""
+
+    def __init__(self):
+        self.templates = {}  # id -> row dict
+        self.versions = {}  # id -> row dict
+
+    async def execute(self, sql, params=None):
+        """Handle INSERT, UPDATE, DELETE, CREATE TABLE, etc."""
+        if params is None:
+            params = {}
+
+        sql_stripped = sql.strip().upper()
+
+        # Schema creation / index creation / DO blocks - just ignore
+        if sql_stripped.startswith("CREATE") or sql_stripped.startswith("DO"):
+            return
+
+        # INSERT INTO arkham_templates
+        if "INSERT INTO ARKHAM_TEMPLATES" in sql_stripped:
+            row = dict(params)
+            self.templates[row["id"]] = row
+            return
+
+        # INSERT INTO arkham_template_versions
+        if "INSERT INTO ARKHAM_TEMPLATE_VERSIONS" in sql_stripped:
+            row = dict(params)
+            self.versions[row["id"]] = row
+            return
+
+        # UPDATE arkham_templates
+        if "UPDATE ARKHAM_TEMPLATES" in sql_stripped:
+            tid = params.get("id")
+            if tid and tid in self.templates:
+                for k, v in params.items():
+                    if k != "id":
+                        self.templates[tid][k] = v
+            return
+
+        # DELETE FROM arkham_templates
+        if "DELETE FROM ARKHAM_TEMPLATES" in sql_stripped:
+            tid = params.get("id")
+            if tid and tid in self.templates:
+                del self.templates[tid]
+                # Also delete associated versions
+                to_delete = [vid for vid, v in self.versions.items() if v.get("template_id") == tid]
+                for vid in to_delete:
+                    del self.versions[vid]
+            return
+
+    async def fetch_one(self, sql, params=None):
+        """Handle SELECT queries returning a single row."""
+        if params is None:
+            params = {}
+
+        sql_upper = sql.strip().upper()
+
+        # COUNT queries
+        if "COUNT(*)" in sql_upper:
+            if "ARKHAM_TEMPLATE_VERSIONS" in sql_upper:
+                rows = list(self.versions.values())
+                if "TEMPLATE_ID" in sql_upper:
+                    tid = params.get("template_id")
+                    rows = [r for r in rows if r.get("template_id") == tid]
+                return {"count": len(rows)}
+
+            if "ARKHAM_TEMPLATES" in sql_upper:
+                rows = list(self.templates.values())
+                if "IS_ACTIVE = TRUE" in sql_upper:
+                    rows = [r for r in rows if r.get("is_active") is True]
+                if "IS_ACTIVE = :IS_ACTIVE" in sql_upper:
+                    rows = [r for r in rows if r.get("is_active") == params.get("is_active")]
+                if "TEMPLATE_TYPE = :TEMPLATE_TYPE" in sql_upper:
+                    rows = [r for r in rows if r.get("template_type") == params.get("template_type")]
+                if "LOWER(NAME) LIKE :NAME_CONTAINS" in sql_upper:
+                    pattern = params.get("name_contains", "")
+                    rows = [r for r in rows if pattern.strip("%").lower() in r.get("name", "").lower()]
+                return {"count": len(rows)}
+
+        # SELECT id FROM arkham_templates WHERE id = :id (existence check in _save_template)
+        if "SELECT ID FROM ARKHAM_TEMPLATES" in sql_upper:
+            tid = params.get("id")
+            if tid in self.templates:
+                return {"id": tid}
+            return None
+
+        # SELECT * FROM arkham_templates WHERE id = :id
+        if "ARKHAM_TEMPLATES" in sql_upper and "WHERE" in sql_upper:
+            tid = params.get("id")
+            if tid and tid in self.templates:
+                return dict(self.templates[tid])
+            return None
+
+        # SELECT * FROM arkham_template_versions WHERE id = :id
+        if "ARKHAM_TEMPLATE_VERSIONS" in sql_upper and "WHERE" in sql_upper:
+            vid = params.get("id")
+            if vid and vid in self.versions:
+                return dict(self.versions[vid])
+            return None
+
+        return None
+
+    async def fetch_all(self, sql, params=None):
+        """Handle SELECT queries returning multiple rows."""
+        if params is None:
+            params = {}
+
+        sql_upper = sql.strip().upper()
+
+        # SELECT template_type, COUNT(*) ... GROUP BY template_type
+        if "GROUP BY TEMPLATE_TYPE" in sql_upper:
+            type_counts = {}
+            for row in self.templates.values():
+                t = row.get("template_type", "")
+                type_counts[t] = type_counts.get(t, 0) + 1
+            return [{"template_type": k, "count": v} for k, v in type_counts.items()]
+
+        # SELECT * FROM arkham_template_versions WHERE template_id = :template_id
+        if "ARKHAM_TEMPLATE_VERSIONS" in sql_upper:
+            tid = params.get("template_id")
+            rows = [dict(v) for v in self.versions.values() if v.get("template_id") == tid]
+            if "ORDER BY VERSION_NUMBER DESC" in sql_upper:
+                rows.sort(key=lambda r: r.get("version_number", 0), reverse=True)
+            return rows
+
+        # SELECT * FROM arkham_templates with filtering/pagination
+        if "ARKHAM_TEMPLATES" in sql_upper:
+            rows = list(self.templates.values())
+
+            # Apply filters
+            if "TEMPLATE_TYPE = :TEMPLATE_TYPE" in sql_upper:
+                tt = params.get("template_type")
+                rows = [r for r in rows if r.get("template_type") == tt]
+            if "IS_ACTIVE = :IS_ACTIVE" in sql_upper:
+                ia = params.get("is_active")
+                rows = [r for r in rows if r.get("is_active") == ia]
+            if "LOWER(NAME) LIKE :NAME_CONTAINS" in sql_upper:
+                pattern = params.get("name_contains", "")
+                rows = [r for r in rows if pattern.strip("%").lower() in r.get("name", "").lower()]
+
+            # Sort
+            if "ORDER BY" in sql_upper:
+                desc = "DESC" in sql_upper
+                # Default sort by created_at
+                rows.sort(key=lambda r: str(r.get("created_at", "")), reverse=desc)
+
+            # Pagination
+            limit = params.get("limit")
+            offset = params.get("offset", 0)
+            if limit is not None:
+                rows = rows[offset : offset + limit]
+
+            return [dict(r) for r in rows]
+
+        return []
+
+
 @pytest.fixture
 def mock_frame():
     """Create a mock ArkhamFrame."""
+    mock_db = MockDatabase()
+
     frame = MagicMock()
     frame.get_service = MagicMock(
         side_effect=lambda name: {
-            "database": MagicMock(),
+            "database": mock_db,
             "events": AsyncMock(),
             "storage": None,  # Optional
         }.get(name)

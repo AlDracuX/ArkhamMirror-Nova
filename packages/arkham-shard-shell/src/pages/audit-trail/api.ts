@@ -132,17 +132,16 @@ export async function createItem(data: {
   });
 }
 
-
 export async function updateItem(
   itemId: string,
   data: Record<string, unknown>
 ): Promise<{ id: string; status: string }> {
   return fetchAPI(`/items/${itemId}`, {
-    method: "PUT",
+    method: 'PUT',
     body: JSON.stringify(data),
   });
 }
 
 export async function deleteItem(itemId: string): Promise<{ status: string }> {
-  return fetchAPI(`/items/${itemId}`, { method: "DELETE" });
+  return fetchAPI(`/items/${itemId}`, { method: 'DELETE' });
 }

@@ -95,6 +95,144 @@ async def get_statistics(request: Request):
     return await shard.get_statistics()
 
 
+# === Metadata (must be before /{template_id} to avoid path conflict) ===
+
+
+@router.get("/types", response_model=list[TemplateTypeInfo])
+async def get_template_types(request: Request):
+    """
+    Get available template types with counts.
+
+    Args:
+        request: FastAPI request
+
+    Returns:
+        List of template type information
+    """
+    shard = get_shard(request)
+    return await shard.get_template_types()
+
+
+# === Bulk Actions (must be before /{template_id} to avoid path conflict) ===
+
+
+@router.post("/batch/activate", response_model=BulkActionResponse)
+async def bulk_activate(bulk_request: BulkActionRequest, request: Request):
+    """
+    Activate multiple templates.
+
+    Args:
+        bulk_request: Bulk action request with template IDs
+        request: FastAPI request
+
+    Returns:
+        Bulk action result
+    """
+    shard = get_shard(request)
+
+    processed = 0
+    failed = 0
+    errors = []
+
+    for template_id in bulk_request.template_ids:
+        try:
+            result = await shard.activate_template(template_id)
+            if result:
+                processed += 1
+            else:
+                failed += 1
+                errors.append(f"Template {template_id} not found")
+        except Exception as e:
+            failed += 1
+            errors.append(f"Template {template_id}: {str(e)}")
+
+    return BulkActionResponse(
+        success=(failed == 0),
+        processed=processed,
+        failed=failed,
+        errors=errors,
+        message=f"Activated {processed} templates, {failed} failed",
+    )
+
+
+@router.post("/batch/deactivate", response_model=BulkActionResponse)
+async def bulk_deactivate(bulk_request: BulkActionRequest, request: Request):
+    """
+    Deactivate multiple templates.
+
+    Args:
+        bulk_request: Bulk action request with template IDs
+        request: FastAPI request
+
+    Returns:
+        Bulk action result
+    """
+    shard = get_shard(request)
+
+    processed = 0
+    failed = 0
+    errors = []
+
+    for template_id in bulk_request.template_ids:
+        try:
+            result = await shard.deactivate_template(template_id)
+            if result:
+                processed += 1
+            else:
+                failed += 1
+                errors.append(f"Template {template_id} not found")
+        except Exception as e:
+            failed += 1
+            errors.append(f"Template {template_id}: {str(e)}")
+
+    return BulkActionResponse(
+        success=(failed == 0),
+        processed=processed,
+        failed=failed,
+        errors=errors,
+        message=f"Deactivated {processed} templates, {failed} failed",
+    )
+
+
+@router.post("/batch/delete", response_model=BulkActionResponse)
+async def bulk_delete(bulk_request: BulkActionRequest, request: Request):
+    """
+    Delete multiple templates.
+
+    Args:
+        bulk_request: Bulk action request with template IDs
+        request: FastAPI request
+
+    Returns:
+        Bulk action result
+    """
+    shard = get_shard(request)
+
+    processed = 0
+    failed = 0
+    errors = []
+
+    for template_id in bulk_request.template_ids:
+        try:
+            result = await shard.delete_template(template_id)
+            if result:
+                processed += 1
+            else:
+                failed += 1
+                errors.append(f"Template {template_id} not found")
+        except Exception as e:
+            failed += 1
+            errors.append(f"Template {template_id}: {str(e)}")
+
+    return BulkActionResponse(
+        success=(failed == 0),
+        processed=processed,
+        failed=failed,
+        errors=errors,
+        message=f"Deleted {processed} templates, {failed} failed",
+    )
+
+
 # === Template CRUD ===
 
 
@@ -227,15 +365,15 @@ async def update_template(
 
     try:
         template = await shard.update_template(template_id, update_data, create_version=create_version)
-
-        if not template:
-            raise HTTPException(status_code=404, detail="Template not found")
-
-        return template
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update template: {e}")
+
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    return template
 
 
 @router.delete("/{template_id}")
@@ -439,15 +577,15 @@ async def render_template(template_id: str, render_request: TemplateRenderReques
 
     try:
         result = await shard.render_template(template_id, render_request)
-
-        if not result:
-            raise HTTPException(status_code=404, detail="Template not found")
-
-        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to render template: {e}")
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    return result
 
 
 @router.post("/{template_id}/preview", response_model=TemplateRenderResult)
@@ -506,24 +644,6 @@ async def validate_template_data(template_id: str, data: dict, request: Request)
         raise HTTPException(status_code=500, detail=f"Failed to validate data: {e}")
 
 
-# === Metadata ===
-
-
-@router.get("/types", response_model=list[TemplateTypeInfo])
-async def get_template_types(request: Request):
-    """
-    Get available template types with counts.
-
-    Args:
-        request: FastAPI request
-
-    Returns:
-        List of template type information
-    """
-    shard = get_shard(request)
-    return await shard.get_template_types()
-
-
 @router.get("/{template_id}/placeholders", response_model=list)
 async def get_template_placeholders(template_id: str, request: Request):
     """
@@ -546,123 +666,3 @@ async def get_template_placeholders(template_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Template not found")
 
     return template.placeholders
-
-
-# === Bulk Actions ===
-
-
-@router.post("/batch/activate", response_model=BulkActionResponse)
-async def bulk_activate(bulk_request: BulkActionRequest, request: Request):
-    """
-    Activate multiple templates.
-
-    Args:
-        bulk_request: Bulk action request with template IDs
-        request: FastAPI request
-
-    Returns:
-        Bulk action result
-    """
-    shard = get_shard(request)
-
-    processed = 0
-    failed = 0
-    errors = []
-
-    for template_id in bulk_request.template_ids:
-        try:
-            result = await shard.activate_template(template_id)
-            if result:
-                processed += 1
-            else:
-                failed += 1
-                errors.append(f"Template {template_id} not found")
-        except Exception as e:
-            failed += 1
-            errors.append(f"Template {template_id}: {str(e)}")
-
-    return BulkActionResponse(
-        success=(failed == 0),
-        processed=processed,
-        failed=failed,
-        errors=errors,
-        message=f"Activated {processed} templates, {failed} failed",
-    )
-
-
-@router.post("/batch/deactivate", response_model=BulkActionResponse)
-async def bulk_deactivate(bulk_request: BulkActionRequest, request: Request):
-    """
-    Deactivate multiple templates.
-
-    Args:
-        bulk_request: Bulk action request with template IDs
-        request: FastAPI request
-
-    Returns:
-        Bulk action result
-    """
-    shard = get_shard(request)
-
-    processed = 0
-    failed = 0
-    errors = []
-
-    for template_id in bulk_request.template_ids:
-        try:
-            result = await shard.deactivate_template(template_id)
-            if result:
-                processed += 1
-            else:
-                failed += 1
-                errors.append(f"Template {template_id} not found")
-        except Exception as e:
-            failed += 1
-            errors.append(f"Template {template_id}: {str(e)}")
-
-    return BulkActionResponse(
-        success=(failed == 0),
-        processed=processed,
-        failed=failed,
-        errors=errors,
-        message=f"Deactivated {processed} templates, {failed} failed",
-    )
-
-
-@router.post("/batch/delete", response_model=BulkActionResponse)
-async def bulk_delete(bulk_request: BulkActionRequest, request: Request):
-    """
-    Delete multiple templates.
-
-    Args:
-        bulk_request: Bulk action request with template IDs
-        request: FastAPI request
-
-    Returns:
-        Bulk action result
-    """
-    shard = get_shard(request)
-
-    processed = 0
-    failed = 0
-    errors = []
-
-    for template_id in bulk_request.template_ids:
-        try:
-            result = await shard.delete_template(template_id)
-            if result:
-                processed += 1
-            else:
-                failed += 1
-                errors.append(f"Template {template_id} not found")
-        except Exception as e:
-            failed += 1
-            errors.append(f"Template {template_id}: {str(e)}")
-
-    return BulkActionResponse(
-        success=(failed == 0),
-        processed=processed,
-        failed=failed,
-        errors=errors,
-        message=f"Deleted {processed} templates, {failed} failed",
-    )

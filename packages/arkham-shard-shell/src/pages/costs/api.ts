@@ -28,9 +28,7 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 // Time Entries
 // ============================================
 
-export async function listTimeEntries(
-  projectId?: string
-): Promise<Record<string, unknown>[]> {
+export async function listTimeEntries(projectId?: string): Promise<Record<string, unknown>[]> {
   const params = new URLSearchParams();
   if (projectId) params.set('project_id', projectId);
 
@@ -52,9 +50,7 @@ export async function createTimeEntry(data: {
   });
 }
 
-export async function listExpenses(
-  projectId?: string
-): Promise<Record<string, unknown>[]> {
+export async function listExpenses(projectId?: string): Promise<Record<string, unknown>[]> {
   const params = new URLSearchParams();
   if (projectId) params.set('project_id', projectId);
 
@@ -76,9 +72,7 @@ export async function createExpense(data: {
   });
 }
 
-export async function listConductLog(
-  projectId?: string
-): Promise<Record<string, unknown>[]> {
+export async function listConductLog(projectId?: string): Promise<Record<string, unknown>[]> {
   const params = new URLSearchParams();
   if (projectId) params.set('project_id', projectId);
 
@@ -102,9 +96,7 @@ export async function createConductLog(data: {
   });
 }
 
-export async function listApplications(
-  projectId?: string
-): Promise<Record<string, unknown>[]> {
+export async function listApplications(projectId?: string): Promise<Record<string, unknown>[]> {
   const params = new URLSearchParams();
   if (projectId) params.set('project_id', projectId);
 

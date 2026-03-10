@@ -5,7 +5,15 @@
  * Themes: "arkham" (dark), "newsroom" (light parchment), "system" (follows OS preference)
  */
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  ReactNode,
+} from 'react';
 
 // Available theme presets
 export type ThemePreset =
@@ -203,7 +211,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themePreset, setThemePresetState] = useState<ThemePreset>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.theme) as ThemePreset | null;
-      const validThemes: ThemePreset[] = ['arkham', 'newsroom', 'ocean', 'forest', 'frost', 'midnight', 'terminal', 'system'];
+      const validThemes: ThemePreset[] = [
+        'arkham',
+        'newsroom',
+        'ocean',
+        'forest',
+        'frost',
+        'midnight',
+        'terminal',
+        'system',
+      ];
       if (saved && validThemes.includes(saved)) return saved;
     } catch {
       // Ignore storage errors

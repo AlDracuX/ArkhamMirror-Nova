@@ -138,18 +138,12 @@ class TestHardwareDetection:
         mock_psutil.virtual_memory = Mock(return_value=Mock(total=16 * 1024**3, available=8 * 1024**3))
         mock_psutil.disk_usage = Mock(return_value=Mock(free=100 * 1024**3))
 
-        # Simulate ImportError for torch
-        def mock_import(name, *args, **kwargs):
-            if name == "torch":
-                raise ImportError("No module named 'torch'")
-            return __import__(name, *args, **kwargs)
+        # Setting torch to None in sys.modules causes `import torch` to raise ImportError
+        with patch.dict("sys.modules", {"psutil": mock_psutil, "torch": None}):
+            service = ResourceService()
+            await service.initialize()
 
-        with patch.dict("sys.modules", {"psutil": mock_psutil}):
-            with patch("builtins.__import__", side_effect=mock_import):
-                service = ResourceService()
-                await service.initialize()
-
-                assert service.resources.gpu_available is False
+            assert service.resources.gpu_available is False
 
 
 # =============================================================================

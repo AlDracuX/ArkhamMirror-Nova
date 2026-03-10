@@ -113,7 +113,11 @@ export const CONDUCT_OPTIONS: { value: ConductCategory; label: string; color: st
   { value: 'deception', label: 'Deception', color: '#991b1b' },
 ];
 
-export const APPLICATION_STATUS_OPTIONS: { value: ApplicationStatus; label: string; color: string }[] = [
+export const APPLICATION_STATUS_OPTIONS: {
+  value: ApplicationStatus;
+  label: string;
+  color: string;
+}[] = [
   { value: 'draft', label: 'Draft', color: '#6b7280' },
   { value: 'filed', label: 'Filed', color: '#2563eb' },
   { value: 'pending', label: 'Pending', color: '#d97706' },

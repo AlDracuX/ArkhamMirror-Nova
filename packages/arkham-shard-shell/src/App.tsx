@@ -81,7 +81,26 @@ import { ProvenancePage } from './pages/provenance';
 import { MediaForensicsPage } from './pages/media-forensics';
 
 // Wave 4 shard imports
-import { ComparatorPage, DisclosurePage, ChainPage, AuditTrailPage, CrossExamPage, BundlePage, BurdenMapPage, CommsPage, SkeletonPage, RulesPage, CostsPage, SentimentPage, RedlinePage, StrategistPage, PlaybookPage, OraclePage, RespondentIntelPage, DigestPage } from './pages';
+import {
+  ComparatorPage,
+  DisclosurePage,
+  ChainPage,
+  AuditTrailPage,
+  CrossExamPage,
+  BundlePage,
+  BurdenMapPage,
+  CommsPage,
+  SkeletonPage,
+  RulesPage,
+  CostsPage,
+  SentimentPage,
+  RedlinePage,
+  StrategistPage,
+  PlaybookPage,
+  OraclePage,
+  RespondentIntelPage,
+  DigestPage,
+} from './pages';
 
 import { ExportPage } from './pages/export';
 import { ReportsPage } from './pages/reports';
@@ -91,11 +110,6 @@ import { LettersPage } from './pages/letters';
 import { PacketsPage } from './pages/packets';
 import { TemplatesPage } from './pages/templates';
 import { SummaryPage } from './pages/summary';
-
-
-
-
-
 
 export function App() {
   return (

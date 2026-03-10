@@ -45,12 +45,14 @@ def mock_llm():
 def mock_frame(mock_events, mock_llm):
     """Create a mock Frame with all services."""
     frame = MagicMock()
+    frame.database = None  # Shard accesses frame.database directly
     frame.get_service = MagicMock(
         side_effect=lambda name: {
             "events": mock_events,
             "llm": mock_llm,
             "database": None,
             "vectors": None,
+            "documents": None,
         }.get(name)
     )
     return frame
@@ -116,10 +118,13 @@ class TestInitialization:
     async def test_initialize_without_llm(self, mock_events):
         """Test shard initializes without LLM service."""
         frame = MagicMock()
+        frame.database = None
         frame.get_service = MagicMock(
             side_effect=lambda name: {
                 "events": mock_events,
                 "llm": None,
+                "vectors": None,
+                "documents": None,
             }.get(name)
         )
 
@@ -133,7 +138,7 @@ class TestInitialization:
     @pytest.mark.asyncio
     async def test_shutdown(self, initialized_shard):
         """Test shard shuts down correctly."""
-        shard = await initialized_shard
+        shard = initialized_shard
         await shard.shutdown()
 
         assert shard.matrix_manager is None
@@ -144,7 +149,7 @@ class TestInitialization:
     @pytest.mark.asyncio
     async def test_get_routes(self, initialized_shard):
         """Test get_routes returns a router."""
-        shard = await initialized_shard
+        shard = initialized_shard
         router = shard.get_routes()
 
         assert router is not None
@@ -160,7 +165,7 @@ class TestMatrixManagement:
     @pytest.mark.asyncio
     async def test_create_matrix(self, initialized_shard):
         """Test creating a matrix via public API."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(
             title="Test Matrix",
@@ -179,7 +184,7 @@ class TestMatrixManagement:
     @pytest.mark.asyncio
     async def test_create_matrix_minimal(self, initialized_shard):
         """Test creating a matrix with minimal fields."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Minimal Matrix")
 
@@ -191,7 +196,7 @@ class TestMatrixManagement:
     @pytest.mark.asyncio
     async def test_get_matrix(self, initialized_shard):
         """Test getting a matrix by ID."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         # Create a matrix first
         created = shard.create_matrix(title="Test")
@@ -207,7 +212,7 @@ class TestMatrixManagement:
     @pytest.mark.asyncio
     async def test_get_matrix_not_found(self, initialized_shard):
         """Test getting a non-existent matrix."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.get_matrix("nonexistent-id")
 
@@ -231,7 +236,7 @@ class TestHypothesisManagement:
     @pytest.mark.asyncio
     async def test_add_hypothesis(self, initialized_shard):
         """Test adding a hypothesis to a matrix."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
         hypothesis = shard.matrix_manager.add_hypothesis(
@@ -248,7 +253,7 @@ class TestHypothesisManagement:
     @pytest.mark.asyncio
     async def test_add_multiple_hypotheses(self, initialized_shard):
         """Test adding multiple hypotheses."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
 
@@ -273,7 +278,7 @@ class TestHypothesisManagement:
     @pytest.mark.asyncio
     async def test_remove_hypothesis(self, initialized_shard):
         """Test removing a hypothesis."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
         h1 = shard.matrix_manager.add_hypothesis(
@@ -303,7 +308,7 @@ class TestEvidenceManagement:
     @pytest.mark.asyncio
     async def test_add_evidence(self, initialized_shard):
         """Test adding evidence to a matrix."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
         evidence = shard.matrix_manager.add_evidence(
@@ -326,7 +331,7 @@ class TestEvidenceManagement:
     @pytest.mark.asyncio
     async def test_add_evidence_clamps_values(self, initialized_shard):
         """Test that credibility and relevance are clamped to 0-1."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
 
@@ -353,7 +358,7 @@ class TestEvidenceManagement:
     @pytest.mark.asyncio
     async def test_add_multiple_evidence(self, initialized_shard):
         """Test adding multiple evidence items."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
 
@@ -378,7 +383,7 @@ class TestEvidenceManagement:
     @pytest.mark.asyncio
     async def test_remove_evidence(self, initialized_shard):
         """Test removing evidence."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
         e1 = shard.matrix_manager.add_evidence(
@@ -408,7 +413,7 @@ class TestRatingManagement:
     @pytest.mark.asyncio
     async def test_set_rating(self, initialized_shard):
         """Test setting a rating."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
         hypothesis = shard.matrix_manager.add_hypothesis(
@@ -437,7 +442,7 @@ class TestRatingManagement:
     @pytest.mark.asyncio
     async def test_update_rating(self, initialized_shard):
         """Test updating an existing rating."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
         hypothesis = shard.matrix_manager.add_hypothesis(
@@ -474,7 +479,7 @@ class TestRatingManagement:
     @pytest.mark.asyncio
     async def test_set_rating_clamps_confidence(self, initialized_shard):
         """Test that confidence is clamped to 0-1."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
         hypothesis = shard.matrix_manager.add_hypothesis(
@@ -506,7 +511,7 @@ class TestScoring:
     @pytest.mark.asyncio
     async def test_calculate_scores(self, initialized_shard):
         """Test calculating scores."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
         h1 = shard.matrix_manager.add_hypothesis(
@@ -552,7 +557,7 @@ class TestScoring:
     @pytest.mark.asyncio
     async def test_calculate_scores_not_found(self, initialized_shard):
         """Test calculating scores for non-existent matrix."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         result = shard.calculate_scores("nonexistent")
 
@@ -576,7 +581,7 @@ class TestExport:
     @pytest.mark.asyncio
     async def test_export_matrix_json(self, initialized_shard):
         """Test exporting matrix as JSON."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
         shard.matrix_manager.add_hypothesis(
@@ -593,7 +598,7 @@ class TestExport:
     @pytest.mark.asyncio
     async def test_export_matrix_markdown(self, initialized_shard):
         """Test exporting matrix as Markdown."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(title="Test Matrix")
 
@@ -605,7 +610,7 @@ class TestExport:
     @pytest.mark.asyncio
     async def test_export_matrix_not_found(self, initialized_shard):
         """Test exporting non-existent matrix."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         result = shard.export_matrix("nonexistent")
 
@@ -629,7 +634,7 @@ class TestMatrixData:
     @pytest.mark.asyncio
     async def test_get_matrix_data(self, initialized_shard):
         """Test getting structured matrix data."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         matrix = shard.create_matrix(
             title="Test Matrix",
@@ -662,7 +667,7 @@ class TestMatrixData:
     @pytest.mark.asyncio
     async def test_get_matrix_data_not_found(self, initialized_shard):
         """Test getting data for non-existent matrix."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         data = shard.matrix_manager.get_matrix_data("nonexistent")
 
@@ -678,7 +683,7 @@ class TestIntegration:
     @pytest.mark.asyncio
     async def test_full_ach_workflow(self, initialized_shard):
         """Test complete ACH analysis workflow."""
-        shard = await initialized_shard
+        shard = initialized_shard
 
         # 1. Create matrix
         matrix = shard.create_matrix(

@@ -29,9 +29,7 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 // Threads
 // ============================================
 
-export async function listThreads(
-  projectId?: string
-): Promise<Record<string, unknown>[]> {
+export async function listThreads(projectId?: string): Promise<Record<string, unknown>[]> {
   const params = new URLSearchParams();
   if (projectId) params.set('project_id', projectId);
 
@@ -56,9 +54,7 @@ export async function createThread(data: {
 // Messages
 // ============================================
 
-export async function listMessages(
-  threadId?: string
-): Promise<Record<string, unknown>[]> {
+export async function listMessages(threadId?: string): Promise<Record<string, unknown>[]> {
   const params = new URLSearchParams();
   if (threadId) params.set('thread_id', threadId);
 
@@ -96,9 +92,7 @@ export async function listParticipants(): Promise<Record<string, unknown>[]> {
 // Gaps & Coordination Flags
 // ============================================
 
-export async function listGaps(
-  threadId?: string
-): Promise<Record<string, unknown>[]> {
+export async function listGaps(threadId?: string): Promise<Record<string, unknown>[]> {
   const params = new URLSearchParams();
   if (threadId) params.set('thread_id', threadId);
 
@@ -106,16 +100,13 @@ export async function listGaps(
   return fetchAPI(`/gaps${query ? `?${query}` : ''}`);
 }
 
-export async function listCoordinationFlags(
-  threadId?: string
-): Promise<Record<string, unknown>[]> {
+export async function listCoordinationFlags(threadId?: string): Promise<Record<string, unknown>[]> {
   const params = new URLSearchParams();
   if (threadId) params.set('thread_id', threadId);
 
   const query = params.toString();
   return fetchAPI(`/coordination-flags${query ? `?${query}` : ''}`);
 }
-
 
 export async function listItems(
   filters?: Record<string, unknown>
@@ -127,7 +118,7 @@ export async function listItems(
     });
   }
   const query = params.toString();
-  return fetchAPI(`/items${query ? `?${query}` : ""}`);
+  return fetchAPI(`/items${query ? `?${query}` : ''}`);
 }
 
 export async function getItem(itemId: string): Promise<Record<string, unknown>> {
@@ -141,23 +132,22 @@ export async function createItem(data: {
   metadata?: Record<string, unknown>;
   created_by?: string;
 }): Promise<{ id: string; status: string }> {
-  return fetchAPI("/items", {
-    method: "POST",
+  return fetchAPI('/items', {
+    method: 'POST',
     body: JSON.stringify(data),
   });
 }
-
 
 export async function updateItem(
   itemId: string,
   data: Record<string, unknown>
 ): Promise<{ id: string; status: string }> {
   return fetchAPI(`/items/${itemId}`, {
-    method: "PUT",
+    method: 'PUT',
     body: JSON.stringify(data),
   });
 }
 
 export async function deleteItem(itemId: string): Promise<{ status: string }> {
-  return fetchAPI(`/items/${itemId}`, { method: "DELETE" });
+  return fetchAPI(`/items/${itemId}`, { method: 'DELETE' });
 }

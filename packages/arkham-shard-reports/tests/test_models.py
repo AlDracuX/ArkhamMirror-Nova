@@ -38,7 +38,7 @@ class TestReportTypeEnum:
     def test_string_inheritance(self):
         """Verify enum values can be used as strings."""
         assert ReportType.SUMMARY == "summary"
-        assert str(ReportType.SUMMARY) == "summary"
+        assert ReportType.SUMMARY.value == "summary"
 
     def test_enum_count(self):
         """Verify total number of types."""

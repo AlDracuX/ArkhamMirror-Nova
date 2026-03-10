@@ -39,7 +39,7 @@ class TestPacketStatusEnum:
     def test_string_inheritance(self):
         """Verify enum values can be used as strings."""
         assert PacketStatus.DRAFT == "draft"
-        assert str(PacketStatus.DRAFT) == "draft"
+        assert PacketStatus.DRAFT.value == "draft"
 
     def test_enum_count(self):
         """Verify total number of statuses."""

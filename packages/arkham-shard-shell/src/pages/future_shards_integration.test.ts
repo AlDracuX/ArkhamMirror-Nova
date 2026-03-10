@@ -37,105 +37,145 @@ import { DigestPage } from './digest';
 // ============================================================
 
 import {
-  listComparators, getComparator, createComparator,
-  updateComparator, deleteComparator,
-  listIncidents, getIncident, createIncident,
+  listComparators,
+  getComparator,
+  createComparator,
+  updateComparator,
+  deleteComparator,
+  listIncidents,
+  getIncident,
+  createIncident,
 } from './comparator/api';
 
 import {
-  listRequests, createRequest,
-  listResponses, createResponse,
-  listGaps as disclosureListGaps, createGap,
-  listEvasionScores, getComplianceDashboard,
+  listRequests,
+  createRequest,
+  listResponses,
+  createResponse,
+  listGaps as disclosureListGaps,
+  createGap,
+  listEvasionScores,
+  getComplianceDashboard,
 } from './disclosure/api';
 
 import {
-  logCustodyEvent, getDocumentHistory,
-  verifyDocumentIntegrity, generateProvenanceReport,
-  listItems as chainListItems, getItem as chainGetItem, createItem as chainCreateItem,
+  logCustodyEvent,
+  getDocumentHistory,
+  verifyDocumentIntegrity,
+  generateProvenanceReport,
+  listItems as chainListItems,
+  getItem as chainGetItem,
+  createItem as chainCreateItem,
 } from './chain/api';
 
 import {
-  listActions, getAuditSummary,
-  listSessions as auditListSessions, listExports, recordExport,
+  listActions,
+  getAuditSummary,
+  listSessions as auditListSessions,
+  listExports,
+  recordExport,
 } from './audit-trail/api';
 
 import {
-  listTrees, getTreeNodes, createTree,
-  createNode, listImpeachments, generateQuestionTree,
-  listItems as crossexamListItems, getItem as crossexamGetItem, createItem as crossexamCreateItem,
+  listTrees,
+  getTreeNodes,
+  createTree,
+  createNode,
+  listImpeachments,
+  generateQuestionTree,
+  listItems as crossexamListItems,
+  getItem as crossexamGetItem,
+  createItem as crossexamCreateItem,
 } from './crossexam/api';
 
 import {
-  listBundles, getBundle, createBundle,
-  updateBundle, deleteBundle, compileBundle,
-  listVersions, getVersionPages, getVersionIndex,
+  listBundles,
+  getBundle,
+  createBundle,
+  updateBundle,
+  deleteBundle,
+  compileBundle,
+  listVersions,
+  getVersionPages,
+  getVersionIndex,
 } from './bundle/api';
 
 import {
-  listElements, createElement,
-  getBurdenDashboard, addEvidenceWeight,
+  listElements,
+  createElement,
+  getBurdenDashboard,
+  addEvidenceWeight,
 } from './burden-map/api';
 
 import {
-  listThreads, createThread,
-  listMessages, createMessage,
-  listParticipants, listGaps as commsListGaps, listCoordinationFlags,
+  listThreads,
+  createThread,
+  listMessages,
+  createMessage,
+  listParticipants,
+  listGaps as commsListGaps,
+  listCoordinationFlags,
 } from './comms/api';
 
 import {
-  listItems as skeletonListItems, getItem as skeletonGetItem,
-  createItem as skeletonCreateItem, updateItem as skeletonUpdateItem,
+  listItems as skeletonListItems,
+  getItem as skeletonGetItem,
+  createItem as skeletonCreateItem,
+  updateItem as skeletonUpdateItem,
   deleteItem as skeletonDeleteItem,
 } from './skeleton/api';
 
 import {
-  listItems as rulesListItems, getItem as rulesGetItem,
-  createItem as rulesCreateItem, updateItem as rulesUpdateItem,
+  listItems as rulesListItems,
+  getItem as rulesGetItem,
+  createItem as rulesCreateItem,
+  updateItem as rulesUpdateItem,
   deleteItem as rulesDeleteItem,
 } from './rules/api';
 
 import {
-  listTimeEntries, createTimeEntry,
-  listExpenses, createExpense,
-  listConductLog, createConductLog,
+  listTimeEntries,
+  createTimeEntry,
+  listExpenses,
+  createExpense,
+  listConductLog,
+  createConductLog,
   listApplications,
 } from './costs/api';
 
 import {
-  createAnalysis, getAnalysis,
-  listPatterns, listComparatorDiffs,
-  listItems as sentimentListItems, getItem as sentimentGetItem,
+  createAnalysis,
+  getAnalysis,
+  listPatterns,
+  listComparatorDiffs,
+  listItems as sentimentListItems,
+  getItem as sentimentGetItem,
 } from './sentiment/api';
 
-import {
-  createComparison, getComparison,
-  listChains,
-} from './redline/api';
+import { createComparison, getComparison, listChains } from './redline/api';
 
 import {
-  createPrediction, getPrediction,
-  listReports as strategistListReports, listTacticalModels,
+  createPrediction,
+  getPrediction,
+  listReports as strategistListReports,
+  listTacticalModels,
 } from './strategist/api';
 
-import {
-  createStrategy, getStrategy, listObjectives,
-} from './playbook/api';
+import { createStrategy, getStrategy, listObjectives } from './playbook/api';
 
 import {
-  startResearch, getSession as oracleGetSession,
-  getAuthority, listAuthorities,
-  listItems as oracleListItems, getItem as oracleGetItem, createItem as oracleCreateItem,
+  startResearch,
+  getSession as oracleGetSession,
+  getAuthority,
+  listAuthorities,
+  listItems as oracleListItems,
+  getItem as oracleGetItem,
+  createItem as oracleCreateItem,
 } from './oracle/api';
 
-import {
-  listProfiles, getProfile, createProfile,
-} from './respondent-intel/api';
+import { listProfiles, getProfile, createProfile } from './respondent-intel/api';
 
-import {
-  generateBriefing, getBriefing,
-  listBriefings, getChangelog,
-} from './digest/api';
+import { generateBriefing, getBriefing, listBriefings, getChangelog } from './digest/api';
 
 // ============================================================
 // TYPE-LEVEL MOUNT ASSERTIONS
@@ -169,22 +209,122 @@ const _pageComponentRegistry: Record<string, PageComponent> = {
 // ============================================================
 
 const _domainApiRegistry: Record<string, Record<string, (...args: never[]) => Promise<unknown>>> = {
-  comparator: { listComparators, getComparator, createComparator, updateComparator, deleteComparator, listIncidents, getIncident, createIncident },
-  disclosure: { listRequests, createRequest, listResponses, createResponse, listGaps: disclosureListGaps, createGap, listEvasionScores, getComplianceDashboard },
-  chain: { logCustodyEvent, getDocumentHistory, verifyDocumentIntegrity, generateProvenanceReport, listItems: chainListItems, getItem: chainGetItem, createItem: chainCreateItem },
-  'audit-trail': { listActions, getAuditSummary, listSessions: auditListSessions, listExports, recordExport },
-  crossexam: { listTrees, getTreeNodes, createTree, createNode, listImpeachments, generateQuestionTree, listItems: crossexamListItems, getItem: crossexamGetItem, createItem: crossexamCreateItem },
-  bundle: { listBundles, getBundle, createBundle, updateBundle, deleteBundle, compileBundle, listVersions, getVersionPages, getVersionIndex },
+  comparator: {
+    listComparators,
+    getComparator,
+    createComparator,
+    updateComparator,
+    deleteComparator,
+    listIncidents,
+    getIncident,
+    createIncident,
+  },
+  disclosure: {
+    listRequests,
+    createRequest,
+    listResponses,
+    createResponse,
+    listGaps: disclosureListGaps,
+    createGap,
+    listEvasionScores,
+    getComplianceDashboard,
+  },
+  chain: {
+    logCustodyEvent,
+    getDocumentHistory,
+    verifyDocumentIntegrity,
+    generateProvenanceReport,
+    listItems: chainListItems,
+    getItem: chainGetItem,
+    createItem: chainCreateItem,
+  },
+  'audit-trail': {
+    listActions,
+    getAuditSummary,
+    listSessions: auditListSessions,
+    listExports,
+    recordExport,
+  },
+  crossexam: {
+    listTrees,
+    getTreeNodes,
+    createTree,
+    createNode,
+    listImpeachments,
+    generateQuestionTree,
+    listItems: crossexamListItems,
+    getItem: crossexamGetItem,
+    createItem: crossexamCreateItem,
+  },
+  bundle: {
+    listBundles,
+    getBundle,
+    createBundle,
+    updateBundle,
+    deleteBundle,
+    compileBundle,
+    listVersions,
+    getVersionPages,
+    getVersionIndex,
+  },
   'burden-map': { listElements, createElement, getBurdenDashboard, addEvidenceWeight },
-  comms: { listThreads, createThread, listMessages, createMessage, listParticipants, listGaps: commsListGaps, listCoordinationFlags },
-  skeleton: { listItems: skeletonListItems, getItem: skeletonGetItem, createItem: skeletonCreateItem, updateItem: skeletonUpdateItem, deleteItem: skeletonDeleteItem },
-  rules: { listItems: rulesListItems, getItem: rulesGetItem, createItem: rulesCreateItem, updateItem: rulesUpdateItem, deleteItem: rulesDeleteItem },
-  costs: { listTimeEntries, createTimeEntry, listExpenses, createExpense, listConductLog, createConductLog, listApplications },
-  sentiment: { createAnalysis, getAnalysis, listPatterns, listComparatorDiffs, listItems: sentimentListItems, getItem: sentimentGetItem },
+  comms: {
+    listThreads,
+    createThread,
+    listMessages,
+    createMessage,
+    listParticipants,
+    listGaps: commsListGaps,
+    listCoordinationFlags,
+  },
+  skeleton: {
+    listItems: skeletonListItems,
+    getItem: skeletonGetItem,
+    createItem: skeletonCreateItem,
+    updateItem: skeletonUpdateItem,
+    deleteItem: skeletonDeleteItem,
+  },
+  rules: {
+    listItems: rulesListItems,
+    getItem: rulesGetItem,
+    createItem: rulesCreateItem,
+    updateItem: rulesUpdateItem,
+    deleteItem: rulesDeleteItem,
+  },
+  costs: {
+    listTimeEntries,
+    createTimeEntry,
+    listExpenses,
+    createExpense,
+    listConductLog,
+    createConductLog,
+    listApplications,
+  },
+  sentiment: {
+    createAnalysis,
+    getAnalysis,
+    listPatterns,
+    listComparatorDiffs,
+    listItems: sentimentListItems,
+    getItem: sentimentGetItem,
+  },
   redline: { createComparison, getComparison, listChains },
-  strategist: { createPrediction, getPrediction, listReports: strategistListReports, listTacticalModels },
+  strategist: {
+    createPrediction,
+    getPrediction,
+    listReports: strategistListReports,
+    listTacticalModels,
+  },
   playbook: { createStrategy, getStrategy, listObjectives },
-  oracle: { startResearch, getSession: oracleGetSession, getAuthority, listAuthorities, listItems: oracleListItems, getItem: oracleGetItem, createItem: oracleCreateItem },
+  oracle: {
+    startResearch,
+    getSession: oracleGetSession,
+    getAuthority,
+    listAuthorities,
+    listItems: oracleListItems,
+    getItem: oracleGetItem,
+    createItem: oracleCreateItem,
+  },
   'respondent-intel': { listProfiles, getProfile, createProfile },
   digest: { generateBriefing, getBriefing, listBriefings, getChangelog },
 };

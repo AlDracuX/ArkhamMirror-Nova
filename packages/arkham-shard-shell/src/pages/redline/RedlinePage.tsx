@@ -220,20 +220,30 @@ export function RedlinePage() {
     setSearchParams(nextParams);
   };
 
-  if (!!compId && compId !== "") {
-    return <ComparisonDetailView compId={compId} onBack={() => {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.delete('compId');
-      setSearchParams(nextParams);
-    }} />;
+  if (!!compId && compId !== '') {
+    return (
+      <ComparisonDetailView
+        compId={compId}
+        onBack={() => {
+          const nextParams = new URLSearchParams(searchParams);
+          nextParams.delete('compId');
+          setSearchParams(nextParams);
+        }}
+      />
+    );
   }
 
-  if (!!chainId && chainId !== "") {
-    return <ChainDetailView chainId={chainId} onBack={() => {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.delete('chainId');
-      setSearchParams(nextParams);
-    }} />;
+  if (!!chainId && chainId !== '') {
+    return (
+      <ChainDetailView
+        chainId={chainId}
+        onBack={() => {
+          const nextParams = new URLSearchParams(searchParams);
+          nextParams.delete('chainId');
+          setSearchParams(nextParams);
+        }}
+      />
+    );
   }
 
   return (
@@ -254,10 +264,7 @@ export function RedlinePage() {
         >
           Comparisons
         </button>
-        <button
-          style={styles.tab(activeTab === 'chains')}
-          onClick={() => setTab('chains')}
-        >
+        <button style={styles.tab(activeTab === 'chains')} onClick={() => setTab('chains')}>
           Version Chains
         </button>
       </div>
@@ -280,7 +287,7 @@ function ComparisonListView() {
     try {
       setLoading(true);
       const res = await api.listItems({ type: 'comparison' });
-      const mapped = (res.items || []).map(it => ({
+      const mapped = (res.items || []).map((it) => ({
         id: String(it.id || ''),
         title: String(it.title || 'Untitled Comparison'),
         description: String(it.description || ''),
@@ -323,18 +330,37 @@ function ComparisonListView() {
       </div>
 
       {items.length === 0 ? (
-        <EmptyState icon="FileDiff" message="No comparisons found" submessage="Create a comparison between two document versions." />
+        <EmptyState
+          icon="FileDiff"
+          message="No comparisons found"
+          submessage="Create a comparison between two document versions."
+        />
       ) : (
         <div style={styles.grid}>
           {items.map((item) => (
             <div key={item.id} style={styles.card} onClick={() => handleSelect(item.id)}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  marginBottom: '8px',
+                }}
+              >
                 <h3 style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>{item.title}</h3>
                 <span style={{ fontSize: '11px', color: 'var(--arkham-text-muted)' }}>
                   {new Date(item.created_at).toLocaleDateString()}
                 </span>
               </div>
-              <p style={{ fontSize: '13px', color: 'var(--arkham-text-muted)', marginBottom: '16px', height: '36px', overflow: 'hidden' }}>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: 'var(--arkham-text-muted)',
+                  marginBottom: '16px',
+                  height: '36px',
+                  overflow: 'hidden',
+                }}
+              >
                 {item.description}
               </p>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -342,8 +368,17 @@ function ComparisonListView() {
                 <span style={styles.badge('deletion')}>-{item.stats.deletions}</span>
                 <span style={styles.badge('modification')}>~{item.stats.modifications}</span>
               </div>
-              <div style={{ marginTop: '12px', fontSize: '12px', borderTop: '1px solid var(--arkham-border)', paddingTop: '8px', color: 'var(--arkham-text-muted)' }}>
-                {item.base_document_title} <Icon name="ArrowRight" size={10} /> {item.target_document_title}
+              <div
+                style={{
+                  marginTop: '12px',
+                  fontSize: '12px',
+                  borderTop: '1px solid var(--arkham-border)',
+                  paddingTop: '8px',
+                  color: 'var(--arkham-text-muted)',
+                }}
+              >
+                {item.base_document_title} <Icon name="ArrowRight" size={10} />{' '}
+                {item.target_document_title}
               </div>
             </div>
           ))}
@@ -375,24 +410,26 @@ function ChainListView() {
       const params = new URLSearchParams(window.location.search);
       const projectId = params.get('project_id') || params.get('projectId');
       if (!projectId) {
-        toast.error("Project ID required for chains");
+        toast.error('Project ID required for chains');
         setLoading(false);
         return;
       }
       const res = await api.listChains(projectId);
-      setChains(res.map(c => ({
-        id: String(c.id || ''),
-        title: String(c.title || 'Untitled Chain'),
-        description: String(c.description || ''),
-            versions: (c.versions as any[] || []).map(v => ({
-              id: String(v.id || ''),
-              version_number: Number(v.version_number || 0),
-              document_id: String(v.document_id || ''),
-              title: String(v.title || ''),
-              created_at: String(v.created_at || ''),
-              created_by: String(v.created_by || ''),
-            })),
-      })));
+      setChains(
+        res.map((c) => ({
+          id: String(c.id || ''),
+          title: String(c.title || 'Untitled Chain'),
+          description: String(c.description || ''),
+          versions: ((c.versions as any[]) || []).map((v) => ({
+            id: String(v.id || ''),
+            version_number: Number(v.version_number || 0),
+            document_id: String(v.document_id || ''),
+            title: String(v.title || ''),
+            created_at: String(v.created_at || ''),
+            created_by: String(v.created_by || ''),
+          })),
+        }))
+      );
     } catch (err) {
       toast.error(`Failed to load version chains: ${err}`);
     } finally {
@@ -415,18 +452,32 @@ function ChainListView() {
   return (
     <div>
       {chains.length === 0 ? (
-        <EmptyState icon="GitBranch" message="No version chains found" submessage=" Chards will automatically track versions of the same document name." />
+        <EmptyState
+          icon="GitBranch"
+          message="No version chains found"
+          submessage=" Chards will automatically track versions of the same document name."
+        />
       ) : (
         <div style={styles.grid}>
           {chains.map((chain) => (
             <div key={chain.id} style={styles.card} onClick={() => handleSelect(chain.id)}>
-              <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>{chain.title}</h3>
-              <p style={{ fontSize: '13px', color: 'var(--arkham-text-muted)', marginBottom: '12px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>
+                {chain.title}
+              </h3>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: 'var(--arkham-text-muted)',
+                  marginBottom: '12px',
+                }}
+              >
                 {chain.description}
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Icon name="Layers" size={14} color="#6b7280" />
-                <span style={{ fontSize: '13px', fontWeight: 500 }}>{chain.versions.length} versions</span>
+                <span style={{ fontSize: '13px', fontWeight: 500 }}>
+                  {chain.versions.length} versions
+                </span>
               </div>
             </div>
           ))}
@@ -457,7 +508,7 @@ function ComparisonDetailView({ compId, onBack }: { compId: string; onBack: () =
           target_document_id: String(res.target_document_id || ''),
           base_document_title: String(res.base_document_title || 'Original'),
           target_document_title: String(res.target_document_title || 'Revised'),
-          changes: (res.changes as any[] || []).map(ch => ({
+          changes: ((res.changes as any[]) || []).map((ch) => ({
             id: String(ch.id || Math.random().toString()),
             type: (ch.type as ChangeType) || 'modified',
             text: String(ch.text || ''),
@@ -473,7 +524,7 @@ function ComparisonDetailView({ compId, onBack }: { compId: string; onBack: () =
             modifications: Number((res.stats as any)?.modifications || 0),
             total: Number((res.stats as any)?.total || 0),
           },
-          silent_edits: (res.silent_edits as string[] || []),
+          silent_edits: (res.silent_edits as string[]) || [],
           created_at: String(res.created_at || ''),
         };
         setData(mapped);
@@ -493,25 +544,53 @@ function ComparisonDetailView({ compId, onBack }: { compId: string; onBack: () =
       <button
         onClick={onBack}
         style={{
-          display: 'flex', alignItems: 'center', gap: '4px',
-          background: 'none', border: 'none', color: '#3b82f6',
-          cursor: 'pointer', marginBottom: '16px', fontSize: '14px',
-          padding: 0
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          background: 'none',
+          border: 'none',
+          color: '#3b82f6',
+          cursor: 'pointer',
+          marginBottom: '16px',
+          fontSize: '14px',
+          padding: 0,
         }}
       >
         <Icon name="ChevronLeft" size={16} /> Back to list
       </button>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '24px',
+        }}
+      >
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 700, margin: 0 }}>{data.title}</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: 'var(--arkham-text-muted)' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '14px',
+                color: 'var(--arkham-text-muted)',
+              }}
+            >
               <Icon name="FileText" size={14} /> {data.base_document_title}
               <Icon name="ArrowRight" size={12} />
               <Icon name="FileText" size={14} /> {data.target_document_title}
             </div>
-            <div style={{ height: '4px', width: '4px', borderRadius: '50%', backgroundColor: '#d1d5db' }} />
+            <div
+              style={{
+                height: '4px',
+                width: '4px',
+                borderRadius: '50%',
+                backgroundColor: '#d1d5db',
+              }}
+            />
             <span style={{ fontSize: '13px', color: 'var(--arkham-text-muted)' }}>
               {new Date(data.created_at).toLocaleString()}
             </span>
@@ -528,11 +607,23 @@ function ComparisonDetailView({ compId, onBack }: { compId: string; onBack: () =
         <div style={styles.alertPanel}>
           <Icon name="AlertTriangle" size={20} color="#d97706" />
           <div>
-            <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', color: '#92400e', fontWeight: 600 }}>Silent Edits Detected</h4>
+            <h4
+              style={{ margin: '0 0 4px 0', fontSize: '15px', color: '#92400e', fontWeight: 600 }}
+            >
+              Silent Edits Detected
+            </h4>
             <p style={{ margin: 0, fontSize: '13px', color: '#b45309' }}>
-              The following changes were made without explicit disclosure or marking in the revised document:
+              The following changes were made without explicit disclosure or marking in the revised
+              document:
             </p>
-            <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', fontSize: '13px', color: '#b45309' }}>
+            <ul
+              style={{
+                margin: '8px 0 0 0',
+                paddingLeft: '20px',
+                fontSize: '13px',
+                color: '#b45309',
+              }}
+            >
               {data.silent_edits.map((edit, idx) => (
                 <li key={idx}>{edit}</li>
               ))}
@@ -541,19 +632,33 @@ function ComparisonDetailView({ compId, onBack }: { compId: string; onBack: () =
         </div>
       )}
 
-      <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <h3
+        style={{
+          fontSize: '18px',
+          fontWeight: 600,
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
         <Icon name="List" size={18} /> Detailed Changes ({data.changes.length})
       </h3>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {data.changes.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', background: 'var(--arkham-bg-tertiary)', borderRadius: '8px' }}>
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '40px',
+              background: 'var(--arkham-bg-tertiary)',
+              borderRadius: '8px',
+            }}
+          >
             No significant changes detected between these versions.
           </div>
         ) : (
-          data.changes.map((change) => (
-            <ChangeItem key={change.id} change={change} />
-          ))
+          data.changes.map((change) => <ChangeItem key={change.id} change={change} />)
         )}
       </div>
     </div>
@@ -570,33 +675,46 @@ function ChangeItem({ change }: { change: Change }) {
   };
 
   return (
-    <div style={{
-      ...styles.card,
-      cursor: 'default',
-      padding: '16px',
-      borderLeft: `4px solid ${change.type === 'added' ? '#059669' : change.type === 'removed' ? '#dc2626' : '#3b82f6'}`
-    }}>
+    <div
+      style={{
+        ...styles.card,
+        cursor: 'default',
+        padding: '16px',
+        borderLeft: `4px solid ${change.type === 'added' ? '#059669' : change.type === 'removed' ? '#dc2626' : '#3b82f6'}`,
+      }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             {getIcon()}
-            <span style={{ fontWeight: 600, fontSize: '14px', textTransform: 'capitalize' }}>{change.type}</span>
+            <span style={{ fontWeight: 600, fontSize: '14px', textTransform: 'capitalize' }}>
+              {change.type}
+            </span>
             <div style={styles.significanceBadge(change.significance)}>
               {change.significance} significance
             </div>
           </div>
 
-          <div style={{
-            fontSize: '14px',
-            lineHeight: '1.5',
-            padding: '8px',
-            borderRadius: '4px',
-            backgroundColor: change.type === 'added' ? '#f0fdf4' : change.type === 'removed' ? '#fef2f2' : '#f8fafc',
-            border: `1px dashed ${change.type === 'added' ? '#bcf0da' : change.type === 'removed' ? '#fecaca' : '#cbd5e1'}`,
-            marginBottom: '8px'
-          }}>
+          <div
+            style={{
+              fontSize: '14px',
+              lineHeight: '1.5',
+              padding: '8px',
+              borderRadius: '4px',
+              backgroundColor:
+                change.type === 'added'
+                  ? '#f0fdf4'
+                  : change.type === 'removed'
+                    ? '#fef2f2'
+                    : '#f8fafc',
+              border: `1px dashed ${change.type === 'added' ? '#bcf0da' : change.type === 'removed' ? '#fecaca' : '#cbd5e1'}`,
+              marginBottom: '8px',
+            }}
+          >
             {!!change.previous_text && (
-              <div style={{ color: '#94a3b8', textDecoration: 'line-through', marginBottom: '4px' }}>
+              <div
+                style={{ color: '#94a3b8', textDecoration: 'line-through', marginBottom: '4px' }}
+              >
                 {change.previous_text}
               </div>
             )}
@@ -606,21 +724,43 @@ function ChangeItem({ change }: { change: Change }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={() => setExpanded(!expanded)}
-              style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#3b82f6',
+                fontSize: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: 0,
+              }}
             >
               {expanded ? 'Hide reasoning' : 'Show AI analysis'}
-              <Icon name={expanded ? "ChevronUp" : "ChevronDown"} size={12} />
+              <Icon name={expanded ? 'ChevronUp' : 'ChevronDown'} size={12} />
             </button>
           </div>
 
           {!!expanded && (
-            <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--arkham-text-muted)', borderTop: '1px solid var(--arkham-border)', paddingTop: '12px' }}>
+            <div
+              style={{
+                marginTop: '12px',
+                fontSize: '13px',
+                color: 'var(--arkham-text-muted)',
+                borderTop: '1px solid var(--arkham-border)',
+                paddingTop: '12px',
+              }}
+            >
               <div style={{ marginBottom: '8px' }}>
-                <strong style={{ display: 'block', color: 'var(--arkham-text-primary)' }}>Reasoning:</strong>
+                <strong style={{ display: 'block', color: 'var(--arkham-text-primary)' }}>
+                  Reasoning:
+                </strong>
                 {change.reasoning}
               </div>
               <div>
-                <strong style={{ display: 'block', color: 'var(--arkham-text-primary)' }}>Context:</strong>
+                <strong style={{ display: 'block', color: 'var(--arkham-text-primary)' }}>
+                  Context:
+                </strong>
                 {change.context}
               </div>
             </div>
@@ -647,21 +787,23 @@ function ChainDetailView({ chainId, onBack }: { chainId: string; onBack: () => v
         if (!projectId) return;
 
         const res = await api.listChains(projectId);
-        const found = res.find(c => String(c.id) === chainId);
+        const found = res.find((c) => String(c.id) === chainId);
 
         if (found) {
           setChain({
             id: String(found.id || ''),
             title: String(found.title || ''),
             description: String(found.description || ''),
-            versions: (found.versions as any[] || []).map(v => ({
+            versions: ((found.versions as any[]) || []).map((v) => ({
               id: String(v.id || ''),
               version_number: Number(v.version_number || 0),
               document_id: String(v.document_id || ''),
               title: String(v.title || ''),
               created_at: String(v.created_at || ''),
               created_by: String(v.created_by || ''),
-              comparison_to_prev_id: v.comparison_to_prev_id ? String(v.comparison_to_prev_id) : undefined,
+              comparison_to_prev_id: v.comparison_to_prev_id
+                ? String(v.comparison_to_prev_id)
+                : undefined,
             })),
           });
         }
@@ -681,10 +823,16 @@ function ChainDetailView({ chainId, onBack }: { chainId: string; onBack: () => v
       <button
         onClick={onBack}
         style={{
-          display: 'flex', alignItems: 'center', gap: '4px',
-          background: 'none', border: 'none', color: '#3b82f6',
-          cursor: 'pointer', marginBottom: '16px', fontSize: '14px',
-          padding: 0
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          background: 'none',
+          border: 'none',
+          color: '#3b82f6',
+          cursor: 'pointer',
+          marginBottom: '16px',
+          fontSize: '14px',
+          padding: 0,
         }}
       >
         <Icon name="ChevronLeft" size={16} /> Back to list
@@ -694,45 +842,82 @@ function ChainDetailView({ chainId, onBack }: { chainId: string; onBack: () => v
       <p style={{ color: 'var(--arkham-text-muted)', marginBottom: '32px' }}>{chain.description}</p>
 
       <div style={styles.timeline}>
-        {chain.versions.sort((a, b) => b.version_number - a.version_number).map((v) => (
-          <div key={v.id} style={styles.timelineNode}>
-            <div style={styles.timelineDot} />
-            <div style={{ ...styles.card, margin: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase' }}>Version {v.version_number}</span>
-                  <h4 style={{ margin: '4px 0', fontSize: '16px', fontWeight: 600 }}>{v.title}</h4>
-                  <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: 'var(--arkham-text-muted)' }}>
-                    <span>{new Date(v.created_at).toLocaleString()}</span>
-                    {!!v.created_by && <span>By {v.created_by}</span>}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {!!v.comparison_to_prev_id && (
-                    <button
-                      onClick={() => {
-                        const params = new URLSearchParams(window.location.search);
-                        params.set('compId', v.comparison_to_prev_id!);
-                        window.history.pushState({}, '', `?${params.toString()}`);
-                        // Force a re-render or just use navigate
-                        window.location.reload();
-                      }}
+        {chain.versions
+          .sort((a, b) => b.version_number - a.version_number)
+          .map((v) => (
+            <div key={v.id} style={styles.timelineNode}>
+              <div style={styles.timelineDot} />
+              <div style={{ ...styles.card, margin: 0 }}>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <div>
+                    <span
                       style={{
-                        padding: '6px 12px', borderRadius: '4px', border: '1px solid #3b82f6',
-                        background: '#eff6ff', color: '#3b82f6', fontSize: '12px', fontWeight: 500, cursor: 'pointer'
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: '#3b82f6',
+                        textTransform: 'uppercase',
                       }}
                     >
-                      View Redline to V{v.version_number - 1}
+                      Version {v.version_number}
+                    </span>
+                    <h4 style={{ margin: '4px 0', fontSize: '16px', fontWeight: 600 }}>
+                      {v.title}
+                    </h4>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '12px',
+                        fontSize: '12px',
+                        color: 'var(--arkham-text-muted)',
+                      }}
+                    >
+                      <span>{new Date(v.created_at).toLocaleString()}</span>
+                      {!!v.created_by && <span>By {v.created_by}</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {!!v.comparison_to_prev_id && (
+                      <button
+                        onClick={() => {
+                          const params = new URLSearchParams(window.location.search);
+                          params.set('compId', v.comparison_to_prev_id!);
+                          window.history.pushState({}, '', `?${params.toString()}`);
+                          // Force a re-render or just use navigate
+                          window.location.reload();
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          border: '1px solid #3b82f6',
+                          background: '#eff6ff',
+                          color: '#3b82f6',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        View Redline to V{v.version_number - 1}
+                      </button>
+                    )}
+                    <button
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        border: '1px solid var(--arkham-border)',
+                        background: 'white',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      View Document
                     </button>
-                  )}
-                  <button style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--arkham-border)', background: 'white', fontSize: '12px', cursor: 'pointer' }}>
-                    View Document
-                  </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   );
@@ -740,7 +925,13 @@ function ChainDetailView({ chainId, onBack }: { chainId: string; onBack: () => v
 
 // --- Dialogs ---
 
-function CreateComparisonDialog({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function CreateComparisonDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [baseDocId, setBaseDocId] = useState('');
@@ -754,7 +945,9 @@ function CreateComparisonDialog({ onClose, onCreated }: { onClose: () => void; o
         // We need documents to select from. Using the generic item list or specialized doc service
         // For this implementation we'll try to list items from redline or mock
         const res = await api.listItems();
-        setDocuments((res.items || []).map(it => ({ id: String(it.id), title: String(it.title) })));
+        setDocuments(
+          (res.items || []).map((it) => ({ id: String(it.id), title: String(it.title) }))
+        );
       } catch (err) {
         console.error(err);
       }
@@ -762,8 +955,8 @@ function CreateComparisonDialog({ onClose, onCreated }: { onClose: () => void; o
   }, []);
 
   const handleCreate = async () => {
-    if (!title) return toast.error("Title required");
-    if (!baseDocId || !targetDocId) return toast.error("Both documents required");
+    if (!title) return toast.error('Title required');
+    if (!baseDocId || !targetDocId) return toast.error('Both documents required');
 
     try {
       setSaving(true);
@@ -774,10 +967,10 @@ function CreateComparisonDialog({ onClose, onCreated }: { onClose: () => void; o
         project_id: projectId,
         title: title,
         base_document_id: baseDocId,
-        target_document_id: targetDocId
+        target_document_id: targetDocId,
       } as any); // Using extra field 'title' which might be supported by backend
 
-      toast.success("Comparison started");
+      toast.success('Comparison started');
       onCreated();
     } catch (err) {
       toast.error(`Failed to create comparison: ${err}`);
@@ -787,43 +980,116 @@ function CreateComparisonDialog({ onClose, onCreated }: { onClose: () => void; o
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '480px', maxWidth: '90vw' }}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: 'white',
+          padding: '24px',
+          borderRadius: '12px',
+          width: '480px',
+          maxWidth: '90vw',
+        }}
+      >
         <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 20px 0' }}>New Comparison</h2>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>Comparison Title</label>
+          <label
+            style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}
+          >
+            Comparison Title
+          </label>
           <input
-            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--arkham-border)', boxSizing: 'border-box' }}
-            value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Contract V2 vs V1"
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--arkham-border)',
+              boxSizing: 'border-box',
+            }}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Contract V2 vs V1"
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '16px',
+            marginBottom: '24px',
+          }}
+        >
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>Base Version</label>
+            <label
+              style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}
+            >
+              Base Version
+            </label>
             <select
-              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--arkham-border)' }}
-              value={baseDocId} onChange={e => setBaseDocId(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                borderRadius: '6px',
+                border: '1px solid var(--arkham-border)',
+              }}
+              value={baseDocId}
+              onChange={(e) => setBaseDocId(e.target.value)}
             >
               <option value="">Select Document...</option>
-              {documents.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+              {documents.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.title}
+                </option>
+              ))}
             </select>
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>Target Version</label>
+            <label
+              style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}
+            >
+              Target Version
+            </label>
             <select
-              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--arkham-border)' }}
-              value={targetDocId} onChange={e => setTargetDocId(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                borderRadius: '6px',
+                border: '1px solid var(--arkham-border)',
+              }}
+              value={targetDocId}
+              onChange={(e) => setTargetDocId(e.target.value)}
             >
               <option value="">Select Document...</option>
-              {documents.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+              {documents.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.title}
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-          <button style={{ ...styles.button, backgroundColor: 'transparent', color: 'var(--arkham-text-muted)', border: '1px solid var(--arkham-border)' }} onClick={onClose}>
+          <button
+            style={{
+              ...styles.button,
+              backgroundColor: 'transparent',
+              color: 'var(--arkham-text-muted)',
+              border: '1px solid var(--arkham-border)',
+            }}
+            onClick={onClose}
+          >
             Cancel
           </button>
           <button style={{ ...styles.button }} onClick={handleCreate} disabled={saving}>
@@ -837,9 +1103,25 @@ function CreateComparisonDialog({ onClose, onCreated }: { onClose: () => void; o
 
 // --- Helpers ---
 
-function EmptyState({ icon, message, submessage }: { icon: string; message: string; submessage: string }) {
+function EmptyState({
+  icon,
+  message,
+  submessage,
+}: {
+  icon: string;
+  message: string;
+  submessage: string;
+}) {
   return (
-    <div style={{ textAlign: 'center', padding: '64px 24px', backgroundColor: 'var(--arkham-bg-tertiary)', borderRadius: '12px', border: '2px dashed var(--arkham-border)' }}>
+    <div
+      style={{
+        textAlign: 'center',
+        padding: '64px 24px',
+        backgroundColor: 'var(--arkham-bg-tertiary)',
+        borderRadius: '12px',
+        border: '2px dashed var(--arkham-border)',
+      }}
+    >
       <Icon name={icon} size={48} color="#9ca3af" />
       <h3 style={{ fontSize: '18px', fontWeight: 600, margin: '16px 0 8px 0' }}>{message}</h3>
       <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>{submessage}</p>

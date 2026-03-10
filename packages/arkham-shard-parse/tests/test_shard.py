@@ -61,8 +61,8 @@ class TestShardInitialization:
     def mock_event_bus(self):
         """Create mock event bus."""
         mock = MagicMock()
-        mock.subscribe = MagicMock()
-        mock.unsubscribe = MagicMock()
+        mock.subscribe = AsyncMock()
+        mock.unsubscribe = AsyncMock()
         return mock
 
     @pytest.mark.asyncio
@@ -176,8 +176,8 @@ class TestShardShutdown:
         mock_worker_service.register_worker = MagicMock()
         mock_worker_service.unregister_worker = MagicMock()
         mock_event_bus = MagicMock()
-        mock_event_bus.subscribe = MagicMock()
-        mock_event_bus.unsubscribe = MagicMock()
+        mock_event_bus.subscribe = AsyncMock()
+        mock_event_bus.unsubscribe = AsyncMock()
 
         mock_frame.get_service.side_effect = lambda name: {
             "workers": mock_worker_service,
@@ -196,6 +196,8 @@ class TestShardShutdown:
         """Test that shutdown unsubscribes from events."""
         mock_worker_service = MagicMock()
         mock_event_bus = MagicMock()
+        mock_event_bus.subscribe = AsyncMock()
+        mock_event_bus.unsubscribe = AsyncMock()
 
         mock_frame.get_service.side_effect = lambda name: {
             "workers": mock_worker_service,
@@ -252,10 +254,21 @@ class TestEventHandlers:
 
     @pytest.mark.asyncio
     async def test_on_document_ingested_dispatches_job(self, initialized_shard):
-        """Test that document ingestion triggers parse job."""
-        mock_worker_service = MagicMock()
-        mock_worker_service.enqueue = AsyncMock()
-        initialized_shard._frame.get_service.return_value = mock_worker_service
+        """Test that document ingestion triggers direct parse."""
+        # The handler now calls parse_document directly instead of enqueue
+        initialized_shard.parse_document = AsyncMock(
+            return_value={
+                "total_entities": 5,
+                "total_chunks": 3,
+                "chunks_saved": 3,
+                "entities_saved": 5,
+                "chunk_ids": [],
+                "entity_ids": [],
+            }
+        )
+        mock_event_bus = MagicMock()
+        mock_event_bus.emit = AsyncMock()
+        initialized_shard._frame.get_service.return_value = mock_event_bus
 
         event = {
             "job_id": "ingest-job-123",
@@ -266,11 +279,7 @@ class TestEventHandlers:
 
         await initialized_shard._on_document_ingested(event)
 
-        mock_worker_service.enqueue.assert_called_once()
-        call_args = mock_worker_service.enqueue.call_args
-        assert call_args[1]["pool"] == "cpu-ner"
-        assert call_args[1]["payload"]["document_id"] == "doc-456"
-        assert call_args[1]["payload"]["job_type"] == "parse_document"
+        initialized_shard.parse_document.assert_called_once_with("doc-456", save_chunks=True)
 
     @pytest.mark.asyncio
     async def test_on_document_ingested_no_doc_id(self, initialized_shard):
@@ -410,12 +419,14 @@ class TestPublicAPI:
     async def test_parse_document_with_doc_service(self, initialized_shard):
         """Test parse_document with document service available."""
         mock_doc_service = MagicMock()
+        mock_doc_service.get_document_pages = AsyncMock(return_value=[])
         initialized_shard._frame.get_service.return_value = mock_doc_service
 
         result = await initialized_shard.parse_document("doc-123")
 
-        # Currently returns mock result
+        # Returns result with empty pages
         assert "entities" in result
+        assert result["document_id"] == "doc-123"
 
 
 class TestExtractorIntegration:

@@ -40,9 +40,7 @@ export async function startResearch(data: {
   });
 }
 
-export async function getSession(
-  sessionId: string
-): Promise<Record<string, unknown>> {
+export async function getSession(sessionId: string): Promise<Record<string, unknown>> {
   return fetchAPI(`/sessions/${sessionId}`);
 }
 
@@ -50,18 +48,13 @@ export async function getSession(
 // Authorities
 // ============================================
 
-export async function getAuthority(
-  authId: string
-): Promise<Record<string, unknown>> {
+export async function getAuthority(authId: string): Promise<Record<string, unknown>> {
   return fetchAPI(`/authorities/${authId}`);
 }
 
-export async function listAuthorities(
-  projectId: string
-): Promise<Record<string, unknown>[]> {
+export async function listAuthorities(projectId: string): Promise<Record<string, unknown>[]> {
   return fetchAPI(`/project/${projectId}/authorities`);
 }
-
 
 export async function listItems(
   filters?: Record<string, unknown>
@@ -73,7 +66,7 @@ export async function listItems(
     });
   }
   const query = params.toString();
-  return fetchAPI(`/items${query ? `?${query}` : ""}`);
+  return fetchAPI(`/items${query ? `?${query}` : ''}`);
 }
 
 export async function getItem(itemId: string): Promise<Record<string, unknown>> {
@@ -87,23 +80,22 @@ export async function createItem(data: {
   metadata?: Record<string, unknown>;
   created_by?: string;
 }): Promise<{ id: string; status: string }> {
-  return fetchAPI("/items", {
-    method: "POST",
+  return fetchAPI('/items', {
+    method: 'POST',
     body: JSON.stringify(data),
   });
 }
-
 
 export async function updateItem(
   itemId: string,
   data: Record<string, unknown>
 ): Promise<{ id: string; status: string }> {
   return fetchAPI(`/items/${itemId}`, {
-    method: "PUT",
+    method: 'PUT',
     body: JSON.stringify(data),
   });
 }
 
 export async function deleteItem(itemId: string): Promise<{ status: string }> {
-  return fetchAPI(`/items/${itemId}`, { method: "DELETE" });
+  return fetchAPI(`/items/${itemId}`, { method: 'DELETE' });
 }

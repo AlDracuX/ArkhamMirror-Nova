@@ -42,7 +42,8 @@ class TestSearchModeEnum:
         assert "hybrid" in modes
         assert "semantic" in modes
         assert "keyword" in modes
-        assert len(modes) == 3
+        assert "regex" in modes
+        assert len(modes) == 4
 
 
 class TestSortByEnum:

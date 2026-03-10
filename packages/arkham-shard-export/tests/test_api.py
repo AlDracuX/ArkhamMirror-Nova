@@ -44,27 +44,13 @@ def mock_shard():
 
 
 @pytest.fixture
-def mock_frame(mock_shard):
-    """Create a mock Frame that returns the mock shard."""
-    frame = MagicMock()
-    frame.get_shard = MagicMock(return_value=mock_shard)
-    return frame
-
-
-@pytest.fixture
-def app(mock_frame):
-    """Create test FastAPI app with mocked dependencies."""
+def client(mock_shard):
+    """Create test client with mocked shard on app state."""
     test_app = FastAPI()
     test_app.include_router(router)
-    return test_app
-
-
-@pytest.fixture
-def client(app, mock_frame):
-    """Create test client with patched get_frame."""
-    with patch("arkham_shard_export.api.get_frame", return_value=mock_frame):
-        with TestClient(app) as c:
-            yield c
+    test_app.state.export_shard = mock_shard
+    with TestClient(test_app) as c:
+        yield c
 
 
 @pytest.fixture
@@ -98,20 +84,14 @@ class TestCountEndpoint:
     def test_get_count(self, client, mock_shard):
         """Test getting export job count."""
         mock_shard.get_count.return_value = 5
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/count")
-
+        response = client.get("/api/export/count")
         assert response.status_code == 200
         assert response.json()["count"] == 5
 
     def test_get_count_with_status(self, client, mock_shard):
         """Test getting count with status filter."""
         mock_shard.get_count.return_value = 3
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/count?status=pending")
-
+        response = client.get("/api/export/count?status=pending")
         assert response.status_code == 200
 
 
@@ -125,10 +105,7 @@ class TestListJobsEndpoint:
         """Test listing jobs when empty."""
         mock_shard.list_jobs.return_value = []
         mock_shard.get_count.return_value = 0
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/jobs")
-
+        response = client.get("/api/export/jobs")
         assert response.status_code == 200
         data = response.json()
         assert data["jobs"] == []
@@ -138,10 +115,7 @@ class TestListJobsEndpoint:
         """Test listing jobs with results."""
         mock_shard.list_jobs.return_value = [sample_job]
         mock_shard.get_count.return_value = 1
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/jobs")
-
+        response = client.get("/api/export/jobs")
         assert response.status_code == 200
         data = response.json()
         assert len(data["jobs"]) == 1
@@ -151,10 +125,7 @@ class TestListJobsEndpoint:
         """Test listing jobs with query filters."""
         mock_shard.list_jobs.return_value = []
         mock_shard.get_count.return_value = 0
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/jobs?status=completed&format=json&target=documents")
-
+        response = client.get("/api/export/jobs?status=completed&format=json&target=documents")
         assert response.status_code == 200
         mock_shard.list_jobs.assert_called_once()
 
@@ -162,10 +133,7 @@ class TestListJobsEndpoint:
         """Test listing jobs with pagination."""
         mock_shard.list_jobs.return_value = []
         mock_shard.get_count.return_value = 100
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/jobs?limit=20&offset=40")
-
+        response = client.get("/api/export/jobs?limit=20&offset=40")
         assert response.status_code == 200
         data = response.json()
         assert data["limit"] == 20
@@ -181,16 +149,13 @@ class TestCreateJobEndpoint:
     def test_create_job_minimal(self, client, mock_shard, sample_job):
         """Test creating a job with minimal fields."""
         mock_shard.create_export_job.return_value = sample_job
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.post(
-                "/api/export/jobs",
-                json={
-                    "format": "json",
-                    "target": "documents",
-                },
-            )
-
+        response = client.post(
+            "/api/export/jobs",
+            json={
+                "format": "json",
+                "target": "documents",
+            },
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["format"] == "json"
@@ -199,31 +164,26 @@ class TestCreateJobEndpoint:
     def test_create_job_with_options(self, client, mock_shard, sample_job):
         """Test creating a job with export options."""
         mock_shard.create_export_job.return_value = sample_job
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.post(
-                "/api/export/jobs",
-                json={
-                    "format": "csv",
-                    "target": "entities",
-                    "options": {
-                        "include_metadata": False,
-                        "flatten": True,
-                        "max_records": 100,
-                    },
+        response = client.post(
+            "/api/export/jobs",
+            json={
+                "format": "csv",
+                "target": "entities",
+                "options": {
+                    "include_metadata": False,
+                    "flatten": True,
+                    "max_records": 100,
                 },
-            )
-
+            },
+        )
         assert response.status_code == 201
 
     def test_create_job_missing_format(self, client, mock_shard):
         """Test creating a job without format fails."""
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.post(
-                "/api/export/jobs",
-                json={"target": "documents"},
-            )
-
+        response = client.post(
+            "/api/export/jobs",
+            json={"target": "documents"},
+        )
         assert response.status_code == 422  # Validation error
 
 
@@ -236,10 +196,7 @@ class TestGetJobEndpoint:
     def test_get_job_found(self, client, mock_shard, sample_job):
         """Test getting an existing job."""
         mock_shard.get_job_status.return_value = sample_job
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/jobs/job-1")
-
+        response = client.get("/api/export/jobs/job-1")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == "job-1"
@@ -248,10 +205,7 @@ class TestGetJobEndpoint:
     def test_get_job_not_found(self, client, mock_shard):
         """Test getting a non-existent job."""
         mock_shard.get_job_status.return_value = None
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/jobs/nonexistent")
-
+        response = client.get("/api/export/jobs/nonexistent")
         assert response.status_code == 404
 
 
@@ -271,19 +225,13 @@ class TestCancelJobEndpoint:
             created_at=sample_job.created_at,
         )
         mock_shard.cancel_job.return_value = cancelled_job
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.delete("/api/export/jobs/job-1")
-
+        response = client.delete("/api/export/jobs/job-1")
         assert response.status_code == 204
 
     def test_cancel_job_not_found(self, client, mock_shard):
         """Test cancelling non-existent job."""
         mock_shard.cancel_job.return_value = None
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.delete("/api/export/jobs/nonexistent")
-
+        response = client.delete("/api/export/jobs/nonexistent")
         assert response.status_code == 404
 
 
@@ -307,10 +255,7 @@ class TestDownloadJobEndpoint:
             sample_job.file_path = temp_path
             sample_job.expires_at = datetime.utcnow() + timedelta(hours=1)
             mock_shard.get_job_status.return_value = sample_job
-
-            with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-                response = client.get("/api/export/jobs/job-1/download")
-
+            response = client.get("/api/export/jobs/job-1/download")
             assert response.status_code == 200
         finally:
             # Clean up
@@ -320,30 +265,21 @@ class TestDownloadJobEndpoint:
     def test_download_job_not_found(self, client, mock_shard):
         """Test downloading non-existent job."""
         mock_shard.get_job_status.return_value = None
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/jobs/nonexistent/download")
-
+        response = client.get("/api/export/jobs/nonexistent/download")
         assert response.status_code == 404
 
     def test_download_job_not_completed(self, client, mock_shard, sample_job):
         """Test downloading a pending job."""
         sample_job.status = ExportStatus.PENDING
         mock_shard.get_job_status.return_value = sample_job
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/jobs/job-1/download")
-
+        response = client.get("/api/export/jobs/job-1/download")
         assert response.status_code == 400
 
     def test_download_job_expired(self, client, mock_shard, sample_job):
         """Test downloading an expired export."""
         sample_job.expires_at = datetime.utcnow() - timedelta(hours=1)
         mock_shard.get_job_status.return_value = sample_job
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/jobs/job-1/download")
-
+        response = client.get("/api/export/jobs/job-1/download")
         assert response.status_code == 410
 
 
@@ -367,10 +303,7 @@ class TestFormatsEndpoint:
                 placeholder=False,
             )
         ]
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/formats")
-
+        response = client.get("/api/export/formats")
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
@@ -396,10 +329,7 @@ class TestTargetsEndpoint:
                 supports_filters=True,
             )
         ]
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/targets")
-
+        response = client.get("/api/export/targets")
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
@@ -416,16 +346,14 @@ class TestPreviewEndpoint:
 
     def test_preview_export(self, client, mock_shard):
         """Test previewing an export."""
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.post(
-                "/api/export/preview",
-                json={
-                    "format": "json",
-                    "target": "documents",
-                    "max_preview_records": 5,
-                },
-            )
-
+        response = client.post(
+            "/api/export/preview",
+            json={
+                "format": "json",
+                "target": "documents",
+                "max_preview_records": 5,
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["format"] == "json"
@@ -453,10 +381,7 @@ class TestStatisticsEndpoint:
             total_file_size_bytes=1024000,
             avg_processing_time_ms=2500.0,
         )
-
-        with patch("arkham_shard_export.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/export/stats")
-
+        response = client.get("/api/export/stats")
         assert response.status_code == 200
         data = response.json()
         assert data["total_jobs"] == 100

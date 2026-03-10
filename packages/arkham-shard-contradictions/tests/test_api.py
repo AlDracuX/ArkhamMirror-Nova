@@ -43,13 +43,13 @@ def mock_detector():
 def mock_storage():
     """Create mock contradiction storage."""
     mock = MagicMock()
-    mock.create = MagicMock(side_effect=lambda c: c)
-    mock.get = MagicMock(return_value=None)
-    mock.update = MagicMock(side_effect=lambda c: c)
-    mock.delete = MagicMock(return_value=True)
-    mock.list_all = MagicMock(return_value=([], 0))
-    mock.get_by_document = MagicMock(return_value=[])
-    mock.get_statistics = MagicMock(
+    mock.create = AsyncMock(side_effect=lambda c: c)
+    mock.get = AsyncMock(return_value=None)
+    mock.update = AsyncMock(side_effect=lambda c: c)
+    mock.delete = AsyncMock(return_value=True)
+    mock.list_all = AsyncMock(return_value=([], 0))
+    mock.get_by_document = AsyncMock(return_value=[])
+    mock.get_statistics = AsyncMock(
         return_value={
             "total_contradictions": 0,
             "by_status": {},
@@ -59,12 +59,13 @@ def mock_storage():
             "recent_count": 0,
         }
     )
-    mock.search = MagicMock(return_value=[])
-    mock.list_chains = MagicMock(return_value=[])
-    mock.get_chain = MagicMock(return_value=None)
-    mock.get_chain_contradictions = MagicMock(return_value=[])
-    mock.update_status = MagicMock(return_value=None)
-    mock.add_note = MagicMock(return_value=None)
+    mock.search = AsyncMock(return_value=[])
+    mock.list_chains = AsyncMock(return_value=[])
+    mock.get_chain = AsyncMock(return_value=None)
+    mock.get_chain_contradictions = AsyncMock(return_value=[])
+    mock.update_status = AsyncMock(return_value=None)
+    mock.add_note = AsyncMock(return_value=None)
+    mock.create_chain = AsyncMock(side_effect=lambda c: c)
     return mock
 
 
@@ -85,14 +86,26 @@ def mock_chain_detector():
 
 
 @pytest.fixture
-def client(mock_detector, mock_storage, mock_event_bus, mock_chain_detector):
+def mock_db():
+    """Create mock database service for document fetching."""
+    mock = AsyncMock()
+    mock.fetch_one = AsyncMock(return_value={"id": "doc-1", "filename": "test.pdf"})
+    mock.fetch_all = AsyncMock(return_value=[{"text": "Sample document text for testing."}])
+    return mock
+
+
+@pytest.fixture
+def client(mock_detector, mock_storage, mock_event_bus, mock_chain_detector, mock_db):
     """Create test client with mocked dependencies."""
+    from arkham_shard_contradictions.api import set_db_service
+
     init_api(
         detector=mock_detector,
         storage=mock_storage,
         event_bus=mock_event_bus,
         chain_detector=mock_chain_detector,
     )
+    set_db_service(mock_db)
 
     app = FastAPI()
     app.include_router(router)

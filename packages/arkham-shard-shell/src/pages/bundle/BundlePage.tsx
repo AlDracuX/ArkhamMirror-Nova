@@ -162,26 +162,36 @@ const STYLES = {
 function StatusBadge({ status }: { status: BundleStatus | DocStatus }) {
   const getColors = () => {
     switch (status) {
-      case 'draft': return { bg: '#f1f5f9', text: '#64748b' };
-      case 'compiling': return { bg: '#eff6ff', text: '#3b82f6' };
-      case 'compiled': return { bg: '#ecfdf5', text: '#10b981' };
-      case 'finalized': return { bg: '#f5f3ff', text: '#8b5cf6' };
-      case 'agreed': return { bg: '#ecfdf5', text: '#10b981' };
-      case 'disputed': return { bg: '#fef2f2', text: '#ef4444' };
-      case 'pending': return { bg: '#f8fafc', text: '#94a3b8' };
-      default: return { bg: '#f1f5f9', text: '#64748b' };
+      case 'draft':
+        return { bg: '#f1f5f9', text: '#64748b' };
+      case 'compiling':
+        return { bg: '#eff6ff', text: '#3b82f6' };
+      case 'compiled':
+        return { bg: '#ecfdf5', text: '#10b981' };
+      case 'finalized':
+        return { bg: '#f5f3ff', text: '#8b5cf6' };
+      case 'agreed':
+        return { bg: '#ecfdf5', text: '#10b981' };
+      case 'disputed':
+        return { bg: '#fef2f2', text: '#ef4444' };
+      case 'pending':
+        return { bg: '#f8fafc', text: '#94a3b8' };
+      default:
+        return { bg: '#f1f5f9', text: '#64748b' };
     }
   };
 
   const colors = getColors();
 
   return (
-    <span style={{
-      ...STYLES.badge,
-      backgroundColor: colors.bg,
-      color: colors.text,
-      border: `1px solid ${colors.text}20`,
-    }}>
+    <span
+      style={{
+        ...STYLES.badge,
+        backgroundColor: colors.bg,
+        color: colors.text,
+        border: `1px solid ${colors.text}20`,
+      }}
+    >
       {String(status)}
     </span>
   );
@@ -224,7 +234,7 @@ function BundleListView({ onSelect }: { onSelect: (id: string) => void }) {
         id: String(b.id || b.bundle_id || ''),
         title: String(b.title || 'Untitled Bundle'),
         description: String(b.description || ''),
-        status: (String(b.status || 'draft') as BundleStatus),
+        status: String(b.status || 'draft') as BundleStatus,
         created_at: String(b.created_at || ''),
         updated_at: String(b.updated_at || ''),
       }));
@@ -276,22 +286,21 @@ function BundleListView({ onSelect }: { onSelect: (id: string) => void }) {
             Manage tribunal evidence bundles and versioning.
           </p>
         </div>
-        <button
-          style={STYLES.buttonPrimary}
-          onClick={() => setShowCreate(true)}
-        >
+        <button style={STYLES.buttonPrimary} onClick={() => setShowCreate(true)}>
           <Icon name="Plus" size={18} /> Create Bundle
         </button>
       </div>
 
       {bundles.length === 0 ? (
-        <div style={{
-          textAlign: 'center',
-          padding: '80px 20px',
-          background: '#f8fafc',
-          borderRadius: '16px',
-          border: '2px dashed #e2e8f0'
-        }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '80px 20px',
+            background: '#f8fafc',
+            borderRadius: '16px',
+            border: '2px dashed #e2e8f0',
+          }}
+        >
           <div style={{ color: '#94a3b8', marginBottom: '16px' }}>
             <Icon name="BookCopy" size={64} strokeWidth={1} />
           </div>
@@ -301,48 +310,59 @@ function BundleListView({ onSelect }: { onSelect: (id: string) => void }) {
           </p>
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-          gap: '20px'
-        }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+            gap: '20px',
+          }}
+        >
           {bundles.map((bundle) => (
-            <div
-              key={bundle.id}
-              style={STYLES.card}
-              onClick={() => onSelect(bundle.id)}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+            <div key={bundle.id} style={STYLES.card} onClick={() => onSelect(bundle.id)}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  marginBottom: '12px',
+                }}
+              >
                 <StatusBadge status={bundle.status} />
                 <span style={{ fontSize: '12px', color: '#94a3b8' }}>
                   {new Date(bundle.updated_at).toLocaleDateString()}
                 </span>
               </div>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 700 }}>{bundle.title}</h3>
-              <p style={{
-                margin: 0,
-                color: '#64748b',
-                fontSize: '14px',
-                lineHeight: '1.5',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-                minHeight: '42px'
-              }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 700 }}>
+                {bundle.title}
+              </h3>
+              <p
+                style={{
+                  margin: 0,
+                  color: '#64748b',
+                  fontSize: '14px',
+                  lineHeight: '1.5',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  minHeight: '42px',
+                }}
+              >
                 {bundle.description || 'No description provided.'}
               </p>
-              <div style={{
-                marginTop: '20px',
-                paddingTop: '16px',
-                borderTop: '1px solid #f1f5f9',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: '#2563eb',
-                fontSize: '13px',
-                fontWeight: 600
-              }}>
+              <div
+                style={{
+                  marginTop: '20px',
+                  paddingTop: '16px',
+                  borderTop: '1px solid #f1f5f9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: '#2563eb',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                }}
+              >
                 Open Bundle <Icon name="ArrowRight" size={14} />
               </div>
             </div>
@@ -352,15 +372,17 @@ function BundleListView({ onSelect }: { onSelect: (id: string) => void }) {
 
       {!!showCreate && (
         <div style={STYLES.modalOverlay} onClick={() => setShowCreate(false)}>
-          <div style={STYLES.modalContent} onClick={e => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: 700 }}>New Hearing Bundle</h2>
+          <div style={STYLES.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: 700 }}>
+              New Hearing Bundle
+            </h2>
 
             <label style={STYLES.label}>Bundle Title</label>
             <input
               style={STYLES.input}
               placeholder="e.g. Claimant Hearing Bundle - R v S"
               value={newTitle}
-              onChange={e => setNewTitle(e.target.value)}
+              onChange={(e) => setNewTitle(e.target.value)}
               autoFocus
             />
 
@@ -369,21 +391,14 @@ function BundleListView({ onSelect }: { onSelect: (id: string) => void }) {
               style={{ ...STYLES.input, minHeight: '100px', resize: 'vertical' }}
               placeholder="Provide context for this bundle..."
               value={newDesc}
-              onChange={e => setNewDesc(e.target.value)}
+              onChange={(e) => setNewDesc(e.target.value)}
             />
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                style={STYLES.buttonSecondary}
-                onClick={() => setShowCreate(false)}
-              >
+              <button style={STYLES.buttonSecondary} onClick={() => setShowCreate(false)}>
                 Cancel
               </button>
-              <button
-                style={STYLES.buttonPrimary}
-                onClick={handleCreate}
-                disabled={creating}
-              >
+              <button style={STYLES.buttonPrimary} onClick={handleCreate} disabled={creating}>
                 {creating ? 'Creating...' : 'Create Bundle'}
               </button>
             </div>
@@ -419,19 +434,21 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
         id: String(bundleData.id || bundleData.bundle_id || ''),
         title: String(bundleData.title || ''),
         description: String(bundleData.description || ''),
-        status: (String(bundleData.status || 'draft') as BundleStatus),
+        status: String(bundleData.status || 'draft') as BundleStatus,
         created_at: String(bundleData.created_at || ''),
         updated_at: String(bundleData.updated_at || ''),
       };
 
-      const mappedVersions = (versionsData.versions || []).map((v: Record<string, unknown>) => ({
-        id: String(v.id || v.version_id || ''),
-        version_number: Number(v.version_number || 0),
-        created_at: String(v.created_at || ''),
-        total_pages: Number(v.total_pages || 0),
-        compiled_by: String(v.compiled_by || ''),
-        change_notes: String(v.change_notes || ''),
-      })).sort((a: BundleVersion, b: BundleVersion) => b.version_number - a.version_number);
+      const mappedVersions = (versionsData.versions || [])
+        .map((v: Record<string, unknown>) => ({
+          id: String(v.id || v.version_id || ''),
+          version_number: Number(v.version_number || 0),
+          created_at: String(v.created_at || ''),
+          total_pages: Number(v.total_pages || 0),
+          compiled_by: String(v.compiled_by || ''),
+          change_notes: String(v.change_notes || ''),
+        }))
+        .sort((a: BundleVersion, b: BundleVersion) => b.version_number - a.version_number);
 
       setBundle(mappedBundle);
       setVersions(mappedVersions);
@@ -446,35 +463,38 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
     }
   }, [bundleId, toast]);
 
-  const loadVersionContent = useCallback(async (versionId: string) => {
-    try {
-      const [pagesData, indexData] = await Promise.all([
-        api.getVersionPages(versionId),
-        api.getVersionIndex(versionId),
-      ]);
+  const loadVersionContent = useCallback(
+    async (versionId: string) => {
+      try {
+        const [pagesData, indexData] = await Promise.all([
+          api.getVersionPages(versionId),
+          api.getVersionIndex(versionId),
+        ]);
 
-      const mappedDocs = (pagesData.pages || []).map((p: Record<string, unknown>) => ({
-        id: String(p.id || p.document_id || ''),
-        title: String(p.title || 'Untitled Document'),
-        start_page: Number(p.start_page || 0),
-        end_page: Number(p.end_page || 0),
-        status: (String(p.status || 'pending') as DocStatus),
-        metadata: (p.metadata as Record<string, unknown>) || {},
-      }));
+        const mappedDocs = (pagesData.pages || []).map((p: Record<string, unknown>) => ({
+          id: String(p.id || p.document_id || ''),
+          title: String(p.title || 'Untitled Document'),
+          start_page: Number(p.start_page || 0),
+          end_page: Number(p.end_page || 0),
+          status: String(p.status || 'pending') as DocStatus,
+          metadata: (p.metadata as Record<string, unknown>) || {},
+        }));
 
-      const mappedIndex = (Object.entries(indexData || {})).map(([id, entry]: [string, any]) => ({
-        id: String(id),
-        label: String(entry.label || ''),
-        page_number: Number(entry.page_number || 0),
-        section: String(entry.section || ''),
-      }));
+        const mappedIndex = Object.entries(indexData || {}).map(([id, entry]: [string, any]) => ({
+          id: String(id),
+          label: String(entry.label || ''),
+          page_number: Number(entry.page_number || 0),
+          section: String(entry.section || ''),
+        }));
 
-      setDocuments(mappedDocs);
-      setIndexEntries(mappedIndex);
-    } catch (err) {
-      toast.error(`Failed to load version content: ${err}`);
-    }
-  }, [toast]);
+        setDocuments(mappedDocs);
+        setIndexEntries(mappedIndex);
+      } catch (err) {
+        toast.error(`Failed to load version content: ${err}`);
+      }
+    },
+    [toast]
+  );
 
   useEffect(() => {
     loadBundleDetails();
@@ -493,7 +513,7 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
       toast.info('Compilation started. This may take a moment...');
 
       await api.compileBundle(bundle.id, {
-        document_ids: documents.map(d => d.id),
+        document_ids: documents.map((d) => d.id),
         change_notes: 'Automated compilation',
       });
 
@@ -525,8 +545,19 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
 
   return (
     <div style={STYLES.container}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', fontSize: '14px', color: '#64748b' }}>
-        <span style={{ cursor: 'pointer' }} onClick={onBack}>Bundles</span>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '20px',
+          fontSize: '14px',
+          color: '#64748b',
+        }}
+      >
+        <span style={{ cursor: 'pointer' }} onClick={onBack}>
+          Bundles
+        </span>
         <Icon name="ChevronRight" size={14} />
         <span style={{ color: '#1e293b', fontWeight: 600 }}>{bundle.title}</span>
       </div>
@@ -535,27 +566,26 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
         <div>
           <header style={{ ...STYLES.header, marginBottom: '24px' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}
+              >
                 <h1 style={{ ...STYLES.title, fontSize: '28px' }}>{bundle.title}</h1>
                 <StatusBadge status={bundle.status} />
               </div>
               <p style={{ color: '#64748b', margin: 0, fontSize: '15px' }}>{bundle.description}</p>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                style={STYLES.buttonSecondary}
-                onClick={() => setShowDeleteConfirm(true)}
-              >
+              <button style={STYLES.buttonSecondary} onClick={() => setShowDeleteConfirm(true)}>
                 <Icon name="Trash" size={16} /> Delete
               </button>
-              <button
-                style={STYLES.buttonPrimary}
-                onClick={handleCompile}
-                disabled={compiling}
-              >
+              <button style={STYLES.buttonPrimary} onClick={handleCompile} disabled={compiling}>
                 {compiling ? (
                   <>
-                    <Icon name="Loader2" size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                    <Icon
+                      name="Loader2"
+                      size={16}
+                      style={{ animation: 'spin 1s linear infinite' }}
+                    />
                     Compiling...
                   </>
                 ) : (
@@ -567,13 +597,25 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
             </div>
           </header>
 
-          <div style={{ display: 'flex', gap: '32px', borderBottom: '1px solid #e2e8f0', marginBottom: '24px' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '32px',
+              borderBottom: '1px solid #e2e8f0',
+              marginBottom: '24px',
+            }}
+          >
             <button
               style={{
-                background: 'none', border: 'none', padding: '12px 0', fontSize: '15px', fontWeight: 600,
+                background: 'none',
+                border: 'none',
+                padding: '12px 0',
+                fontSize: '15px',
+                fontWeight: 600,
                 color: viewTab === 'documents' ? '#2563eb' : '#64748b',
-                borderBottom: viewTab === 'documents' ? '2px solid #2563eb' : '2px solid transparent',
-                cursor: 'pointer'
+                borderBottom:
+                  viewTab === 'documents' ? '2px solid #2563eb' : '2px solid transparent',
+                cursor: 'pointer',
               }}
               onClick={() => setViewTab('documents')}
             >
@@ -581,10 +623,14 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
             </button>
             <button
               style={{
-                background: 'none', border: 'none', padding: '12px 0', fontSize: '15px', fontWeight: 600,
+                background: 'none',
+                border: 'none',
+                padding: '12px 0',
+                fontSize: '15px',
+                fontWeight: 600,
                 color: viewTab === 'index' ? '#2563eb' : '#64748b',
                 borderBottom: viewTab === 'index' ? '2px solid #2563eb' : '2px solid transparent',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
               onClick={() => setViewTab('index')}
             >
@@ -593,28 +639,62 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
           </div>
 
           {viewTab === 'documents' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: '#e2e8f0', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1px',
+                background: '#e2e8f0',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                border: '1px solid #e2e8f0',
+              }}
+            >
               {documents.length === 0 ? (
-                <div style={{ background: 'white', padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                <div
+                  style={{
+                    background: 'white',
+                    padding: '40px',
+                    textAlign: 'center',
+                    color: '#94a3b8',
+                  }}
+                >
                   No documents in this version.
                 </div>
               ) : (
                 documents.map((doc, idx) => (
-                  <div key={doc.id} style={{
-                    background: 'white', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  }}>
+                  <div
+                    key={doc.id}
+                    style={{
+                      background: 'white',
+                      padding: '16px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <span style={{ color: '#94a3b8', fontSize: '13px', width: '20px' }}>{idx + 1}</span>
+                      <span style={{ color: '#94a3b8', fontSize: '13px', width: '20px' }}>
+                        {idx + 1}
+                      </span>
                       <div>
                         <div style={{ fontWeight: 600, fontSize: '14px' }}>{doc.title}</div>
                         <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                          Pages {doc.start_page} – {doc.end_page} ({doc.end_page - doc.start_page + 1} total)
+                          Pages {doc.start_page} – {doc.end_page} (
+                          {doc.end_page - doc.start_page + 1} total)
                         </div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                       <StatusBadge status={doc.status} />
-                      <button style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                      <button
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#94a3b8',
+                          cursor: 'pointer',
+                        }}
+                      >
                         <Icon name="MoreHorizontal" size={18} />
                       </button>
                     </div>
@@ -623,16 +703,42 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
               )}
             </div>
           ) : (
-            <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '32px' }}>
+            <div
+              style={{
+                background: 'white',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '32px',
+              }}
+            >
               <h3 style={{ margin: '0 0 24px 0', fontSize: '18px' }}>Index of Evidence</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {indexEntries.length === 0 ? (
-                  <p style={{ color: '#94a3b8', textAlign: 'center' }}>Index not yet generated. Compile the bundle to build the table of contents.</p>
+                  <p style={{ color: '#94a3b8', textAlign: 'center' }}>
+                    Index not yet generated. Compile the bundle to build the table of contents.
+                  </p>
                 ) : (
-                  indexEntries.map(entry => (
-                    <div key={entry.id} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dotted #e2e8f0', paddingBottom: '4px' }}>
-                      <span style={{ background: 'white', paddingRight: '8px' }}>{entry.label}</span>
-                      <span style={{ background: 'white', paddingLeft: '8px', fontWeight: 600, fontFamily: 'monospace' }}>
+                  indexEntries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        borderBottom: '1px dotted #e2e8f0',
+                        paddingBottom: '4px',
+                      }}
+                    >
+                      <span style={{ background: 'white', paddingRight: '8px' }}>
+                        {entry.label}
+                      </span>
+                      <span
+                        style={{
+                          background: 'white',
+                          paddingLeft: '8px',
+                          fontWeight: 600,
+                          fontFamily: 'monospace',
+                        }}
+                      >
                         {entry.page_number}
                       </span>
                     </div>
@@ -644,14 +750,37 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div style={{ background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div
+            style={{
+              background: '#f8fafc',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              padding: '24px',
+            }}
+          >
+            <h3
+              style={{
+                margin: '0 0 16px 0',
+                fontSize: '16px',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
               <Icon name="History" size={18} /> Version History
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {versions.length === 0 ? (
-                <div style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>
+                <div
+                  style={{
+                    fontSize: '13px',
+                    color: '#94a3b8',
+                    textAlign: 'center',
+                    padding: '20px 0',
+                  }}
+                >
                   No versions compiled yet.
                 </div>
               ) : (
@@ -663,12 +792,21 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
                       padding: '12px',
                       borderRadius: '8px',
                       background: activeVersion?.id === v.id ? 'white' : 'transparent',
-                      border: activeVersion?.id === v.id ? '1px solid #3b82f6' : '1px solid transparent',
-                      boxShadow: activeVersion?.id === v.id ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
-                      cursor: 'pointer'
+                      border:
+                        activeVersion?.id === v.id ? '1px solid #3b82f6' : '1px solid transparent',
+                      boxShadow:
+                        activeVersion?.id === v.id ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
+                      cursor: 'pointer',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '4px',
+                      }}
+                    >
                       <span style={{ fontWeight: 700, fontSize: '14px' }}>v{v.version_number}</span>
                       <span style={{ fontSize: '11px', color: '#64748b' }}>
                         {new Date(v.created_at).toLocaleDateString()}
@@ -683,12 +821,30 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
             </div>
           </div>
 
-          <div style={{ background: '#fffbeb', borderRadius: '16px', border: '1px solid #fde68a', padding: '20px' }}>
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div
+            style={{
+              background: '#fffbeb',
+              borderRadius: '16px',
+              border: '1px solid #fde68a',
+              padding: '20px',
+            }}
+          >
+            <h4
+              style={{
+                margin: '0 0 8px 0',
+                fontSize: '14px',
+                fontWeight: 700,
+                color: '#92400e',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
               <Icon name="Info" size={14} /> Drafting Tip
             </h4>
             <p style={{ margin: 0, fontSize: '13px', color: '#b45309', lineHeight: '1.5' }}>
-              Ensure all "Disputed" documents have clear reasons noted in the metadata before finalization for the judge.
+              Ensure all "Disputed" documents have clear reasons noted in the metadata before
+              finalization for the judge.
             </p>
           </div>
         </div>
@@ -696,27 +852,30 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
 
       {!!showDeleteConfirm && (
         <div style={STYLES.modalOverlay} onClick={() => setShowDeleteConfirm(false)}>
-          <div style={STYLES.modalContent} onClick={e => e.stopPropagation()}>
+          <div style={STYLES.modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={{ color: '#ef4444', marginBottom: '16px' }}>
               <Icon name="AlertTriangle" size={48} />
             </div>
-            <h2 style={{ margin: '0 0 12px 0', fontSize: '20px', fontWeight: 700 }}>Delete Bundle?</h2>
-            <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px', lineHeight: '1.5' }}>
-              Are you sure you want to delete <strong>{bundle.title}</strong>? This action cannot be undone and all version history will be lost.
+            <h2 style={{ margin: '0 0 12px 0', fontSize: '20px', fontWeight: 700 }}>
+              Delete Bundle?
+            </h2>
+            <p
+              style={{
+                color: '#64748b',
+                fontSize: '14px',
+                marginBottom: '24px',
+                lineHeight: '1.5',
+              }}
+            >
+              Are you sure you want to delete <strong>{bundle.title}</strong>? This action cannot be
+              undone and all version history will be lost.
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                style={STYLES.buttonSecondary}
-                onClick={() => setShowDeleteConfirm(false)}
-              >
+              <button style={STYLES.buttonSecondary} onClick={() => setShowDeleteConfirm(false)}>
                 Cancel
               </button>
-              <button
-                style={STYLES.buttonDanger}
-                onClick={handleDelete}
-                disabled={deleting}
-              >
+              <button style={STYLES.buttonDanger} onClick={handleDelete} disabled={deleting}>
                 {deleting ? 'Deleting...' : 'Delete Permanently'}
               </button>
             </div>

@@ -127,6 +127,7 @@ class BasicScheduler:
     def __init__(self):
         self._jobs: Dict[str, Dict] = {}
         self._tasks: Dict[str, asyncio.Task] = {}
+        self._paused: set = set()
         self._running = False
 
     async def start(self):
@@ -149,7 +150,7 @@ class BasicScheduler:
         **kwargs,
     ) -> str:
         """Add a job to the scheduler."""
-        job_id = str(uuid.uuid4())[:8]
+        job_id = kwargs.pop("job_id", None) or str(uuid.uuid4())[:8]
 
         job_data = {
             "id": job_id,
@@ -191,6 +192,8 @@ class BasicScheduler:
             await asyncio.sleep(interval)
             if not self._running:
                 break
+            if job_id in self._paused:
+                continue
             try:
                 if asyncio.iscoroutinefunction(func):
                     await func()
@@ -231,6 +234,7 @@ class BasicScheduler:
             del self._tasks[job_id]
         if job_id in self._jobs:
             del self._jobs[job_id]
+            self._paused.discard(job_id)
             return True
         return False
 
@@ -239,17 +243,12 @@ class BasicScheduler:
         return list(self._jobs.values())
 
     def pause_job(self, job_id: str):
-        """Pause a job."""
-        if job_id in self._tasks:
-            self._tasks[job_id].cancel()
+        """Pause a job by marking it so the loop skips execution."""
+        self._paused.add(job_id)
 
     def resume_job(self, job_id: str):
         """Resume a paused job."""
-        if job_id in self._jobs:
-            job = self._jobs[job_id]
-            if job["trigger"] == "interval":
-                task = asyncio.create_task(self._run_interval_job(job_id, job["func"], job["interval"]))
-                self._tasks[job_id] = task
+        self._paused.discard(job_id)
 
 
 # ============================================
@@ -434,7 +433,7 @@ class SchedulerService:
         else:
             # Basic scheduler doesn't support cron, use interval as fallback
             logger.warning("Cron triggers require APScheduler, using hourly interval instead")
-            self._scheduler.add_job(func, "interval", seconds=3600)
+            self._scheduler.add_job(wrapped_func, "interval", seconds=3600, job_id=job_id)
 
         self._jobs[job_id] = job
         logger.info(f"Scheduled cron job: {name} ({job_id})")
@@ -526,7 +525,7 @@ class SchedulerService:
                 name=name,
             )
         else:
-            self._scheduler.add_job(func, "interval", seconds=total_seconds)
+            self._scheduler.add_job(wrapped_func, "interval", seconds=total_seconds, job_id=job_id)
 
         self._jobs[job_id] = job
         logger.info(f"Scheduled interval job: {name} ({job_id}) every {total_seconds}s")
@@ -587,7 +586,7 @@ class SchedulerService:
                 name=name,
             )
         else:
-            self._scheduler.add_job(func, "date", run_date=run_date)
+            self._scheduler.add_job(wrapped_func, "date", run_date=run_date, job_id=job_id)
 
         self._jobs[job_id] = job
         logger.info(f"Scheduled one-time job: {name} ({job_id}) at {run_date}")

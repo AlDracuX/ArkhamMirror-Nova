@@ -75,6 +75,7 @@ def client(
         semantic_engine=mock_semantic_engine,
         keyword_engine=mock_keyword_engine,
         hybrid_engine=mock_hybrid_engine,
+        regex_engine=MagicMock(),
         filter_optimizer=mock_filter_optimizer,
         event_bus=mock_event_bus,
     )
@@ -248,6 +249,7 @@ class TestSearchNotInitialized:
             semantic_engine=None,
             keyword_engine=None,
             hybrid_engine=None,
+            regex_engine=None,
             filter_optimizer=None,
             event_bus=None,
         )
@@ -337,6 +339,7 @@ class TestSuggestNotInitialized:
             semantic_engine=MagicMock(),
             keyword_engine=None,
             hybrid_engine=MagicMock(),
+            regex_engine=MagicMock(),
             filter_optimizer=MagicMock(),
             event_bus=MagicMock(),
         )
@@ -395,6 +398,7 @@ class TestSimilarNotInitialized:
             semantic_engine=None,
             keyword_engine=MagicMock(),
             hybrid_engine=MagicMock(),
+            regex_engine=MagicMock(),
             filter_optimizer=MagicMock(),
             event_bus=MagicMock(),
         )
@@ -441,6 +445,7 @@ class TestFiltersNotInitialized:
             semantic_engine=MagicMock(),
             keyword_engine=MagicMock(),
             hybrid_engine=MagicMock(),
+            regex_engine=MagicMock(),
             filter_optimizer=None,
             event_bus=MagicMock(),
         )
@@ -468,6 +473,7 @@ class TestSearchErrorHandling:
             semantic_engine=mock_semantic_engine,
             keyword_engine=mock_keyword_engine,
             hybrid_engine=mock_hybrid_engine,
+            regex_engine=MagicMock(),
             filter_optimizer=mock_filter_optimizer,
             event_bus=mock_event_bus,
         )
@@ -494,6 +500,7 @@ class TestSearchErrorHandling:
             semantic_engine=mock_semantic_engine,
             keyword_engine=mock_keyword_engine,
             hybrid_engine=mock_hybrid_engine,
+            regex_engine=MagicMock(),
             filter_optimizer=mock_filter_optimizer,
             event_bus=mock_event_bus,
         )
@@ -517,6 +524,7 @@ class TestSearchErrorHandling:
             semantic_engine=mock_semantic_engine,
             keyword_engine=mock_keyword_engine,
             hybrid_engine=mock_hybrid_engine,
+            regex_engine=MagicMock(),
             filter_optimizer=mock_filter_optimizer,
             event_bus=mock_event_bus,
         )

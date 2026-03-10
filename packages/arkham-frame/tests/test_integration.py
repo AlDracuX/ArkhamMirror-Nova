@@ -99,7 +99,7 @@ async def enqueue_job(pool, pool_name: str, job_id: str, payload: dict, priority
 # =============================================================================
 
 
-async def test_light_worker(pool) -> bool:
+async def _test_light_worker(pool) -> bool:
     """Test LightWorker text processing."""
     print("\n--- Testing LightWorker (cpu-light) ---")
 
@@ -146,7 +146,7 @@ async def test_light_worker(pool) -> bool:
 # =============================================================================
 
 
-async def test_ner_worker(pool) -> bool:
+async def _test_ner_worker(pool) -> bool:
     """Test NERWorker entity extraction."""
     print("\n--- Testing NERWorker (cpu-ner) ---")
 
@@ -200,7 +200,7 @@ async def test_ner_worker(pool) -> bool:
 # =============================================================================
 
 
-async def test_embed_worker(pool) -> bool:
+async def _test_embed_worker(pool) -> bool:
     """Test EmbedWorker embedding generation."""
     print("\n--- Testing EmbedWorker (gpu-embed) ---")
 
@@ -245,7 +245,7 @@ async def test_embed_worker(pool) -> bool:
 # =============================================================================
 
 
-async def test_extract_worker(pool) -> bool:
+async def _test_extract_worker(pool) -> bool:
     """Test ExtractWorker text extraction."""
     print("\n--- Testing ExtractWorker (cpu-extract) ---")
 
@@ -344,10 +344,10 @@ async def run_tests(workers: list[str] = None, with_workers: bool = False):
     results = {}
 
     test_map = {
-        "light": test_light_worker,
-        "ner": test_ner_worker,
-        "embed": test_embed_worker,
-        "extract": test_extract_worker,
+        "light": _test_light_worker,
+        "ner": _test_ner_worker,
+        "embed": _test_embed_worker,
+        "extract": _test_extract_worker,
     }
 
     for name, test_fn in test_map.items():

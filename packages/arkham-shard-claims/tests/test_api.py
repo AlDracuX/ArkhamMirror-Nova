@@ -48,30 +48,14 @@ def mock_shard():
 
 
 @pytest.fixture
-def mock_frame(mock_shard):
-    """Create a mock Frame that returns the mock shard."""
-    frame = MagicMock()
-    frame.get_shard = MagicMock(return_value=mock_shard)
-    return frame
+def client(mock_shard):
+    """Create test client with shard on app state."""
+    app = FastAPI()
+    app.include_router(router)
+    app.state.claims_shard = mock_shard
 
-
-@pytest.fixture
-def app(mock_frame):
-    """Create test FastAPI app with mocked dependencies."""
-    test_app = FastAPI()
-    test_app.include_router(router)
-
-    # Patch get_frame to return our mock
-    with patch("arkham_shard_claims.api.get_frame", return_value=mock_frame):
-        yield test_app
-
-
-@pytest.fixture
-def client(app, mock_frame):
-    """Create test client with patched get_frame."""
-    with patch("arkham_shard_claims.api.get_frame", return_value=mock_frame):
-        with TestClient(app) as c:
-            yield c
+    with TestClient(app) as c:
+        yield c
 
 
 @pytest.fixture
@@ -156,7 +140,7 @@ class TestListEndpoint:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["claims"] == []
+        assert data["items"] == []
         assert data["total"] == 0
 
     def test_list_claims_with_results(self, client, mock_shard, sample_claim):
@@ -169,8 +153,8 @@ class TestListEndpoint:
 
         assert response.status_code == 200
         data = response.json()
-        assert len(data["claims"]) == 1
-        assert data["claims"][0]["id"] == "claim-1"
+        assert len(data["items"]) == 1
+        assert data["items"][0]["id"] == "claim-1"
 
     def test_list_claims_with_filters(self, client, mock_shard):
         """Test listing claims with query filters."""
@@ -189,12 +173,12 @@ class TestListEndpoint:
         mock_shard.get_count.return_value = 100
 
         with patch("arkham_shard_claims.api._get_shard", return_value=mock_shard):
-            response = client.get("/api/claims/?limit=10&offset=20")
+            response = client.get("/api/claims/?page=2&page_size=10")
 
         assert response.status_code == 200
         data = response.json()
-        assert data["limit"] == 10
-        assert data["offset"] == 20
+        assert data["page"] == 2
+        assert data["page_size"] == 10
 
 
 # === Create Endpoint Tests ===

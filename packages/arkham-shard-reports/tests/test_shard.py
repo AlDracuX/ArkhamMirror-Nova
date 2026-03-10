@@ -107,7 +107,8 @@ class TestReportGeneration:
         assert report is not None
         assert report.report_type == ReportType.SUMMARY
         assert report.title == "Test Summary Report"
-        assert report.status == ReportStatus.PENDING
+        # Report generation runs inline, so status is COMPLETED (not PENDING)
+        assert report.status == ReportStatus.COMPLETED
         assert report.parameters["date_range"] == "last_7_days"
 
     @pytest.mark.asyncio

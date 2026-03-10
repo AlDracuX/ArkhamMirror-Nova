@@ -20,6 +20,7 @@ from arkham_frame.services.events import (
     Event,
     EventBus,
     EventDeliveryError,
+    EventResult,
     EventValidationError,
 )
 
@@ -42,11 +43,15 @@ class TestSubscriptionManagement:
         def handler(event):
             received_events.append(event)
 
-        bus.subscribe("test.event", handler)
+        await bus.subscribe("test.event", handler)
 
-        await bus.emit("test.event", {"data": "value"}, source="test")
+        result = await bus.emit("test.event", {"data": "value"}, source="test")
 
         await asyncio.sleep(0.1)  # Allow async processing
+        assert isinstance(result, EventResult)
+        assert result.event_type == "test.event"
+        assert result.delivered == 1
+        assert result.success
         assert len(received_events) == 1
         assert received_events[0]["event_type"] == "test.event"
         assert received_events[0]["payload"]["data"] == "value"
@@ -62,12 +67,14 @@ class TestSubscriptionManagement:
         def handler(event):
             received_events.append(event)
 
-        bus.subscribe("test.event", handler)
-        bus.unsubscribe("test.event", handler)
+        await bus.subscribe("test.event", handler)
+        await bus.unsubscribe("test.event", handler)
 
-        await bus.emit("test.event", {"data": "value"}, source="test")
+        result = await bus.emit("test.event", {"data": "value"}, source="test")
 
         await asyncio.sleep(0.1)
+        assert isinstance(result, EventResult)
+        assert result.delivered == 0
         assert len(received_events) == 0
 
     @pytest.mark.asyncio
@@ -89,11 +96,13 @@ class TestSubscriptionManagement:
         def handler3(event):
             handler3_events.append(event)
 
-        bus.subscribe("multi.test", handler1)
-        bus.subscribe("multi.test", handler2)
-        bus.subscribe("multi.test", handler3)
+        await bus.subscribe("multi.test", handler1)
+        await bus.subscribe("multi.test", handler2)
+        await bus.subscribe("multi.test", handler3)
 
-        await bus.emit("multi.test", {"msg": "broadcast"}, source="test")
+        result = await bus.emit("multi.test", {"msg": "broadcast"}, source="test")
+        assert result.delivered == 3
+        assert result.success
 
         await asyncio.sleep(0.1)
         assert len(handler1_events) == 1
@@ -115,7 +124,7 @@ class TestSubscriptionManagement:
             received_events.append(event)
 
         # Subscribe with wildcard
-        bus.subscribe("user.*", handler)
+        await bus.subscribe("user.*", handler)
 
         await bus.emit("user.created", {"id": 1}, source="test")
         await bus.emit("user.updated", {"id": 2}, source="test")
@@ -138,7 +147,7 @@ class TestSubscriptionManagement:
             pass
 
         # Should not raise error
-        bus.unsubscribe("test.event", handler)
+        await bus.unsubscribe("test.event", handler)
 
     @pytest.mark.asyncio
     async def test_subscribe_multiple_patterns(self):
@@ -151,8 +160,8 @@ class TestSubscriptionManagement:
         def handler(event):
             received_events.append(event)
 
-        bus.subscribe("pattern1.*", handler)
-        bus.subscribe("pattern2.*", handler)
+        await bus.subscribe("pattern1.*", handler)
+        await bus.subscribe("pattern2.*", handler)
 
         await bus.emit("pattern1.event", {"id": 1}, source="test")
         await bus.emit("pattern2.event", {"id": 2}, source="test")
@@ -181,7 +190,7 @@ class TestEventPublishing:
             nonlocal received_event
             received_event = event
 
-        bus.subscribe("data.event", handler)
+        await bus.subscribe("data.event", handler)
 
         test_payload = {
             "id": 123,
@@ -189,7 +198,9 @@ class TestEventPublishing:
             "metadata": {"key": "value"},
         }
 
-        await bus.emit("data.event", test_payload, source="test-service")
+        result = await bus.emit("data.event", test_payload, source="test-service")
+        assert isinstance(result, EventResult)
+        assert result.delivered == 1
 
         await asyncio.sleep(0.1)
         assert received_event is not None
@@ -216,11 +227,12 @@ class TestEventPublishing:
         def handler3(event):
             handler3_count[0] += 1
 
-        bus.subscribe("broadcast.*", handler1)
-        bus.subscribe("broadcast.test", handler2)
-        bus.subscribe("*", handler3)
+        await bus.subscribe("broadcast.*", handler1)
+        await bus.subscribe("broadcast.test", handler2)
+        await bus.subscribe("*", handler3)
 
-        await bus.emit("broadcast.test", {"msg": "hello"}, source="test")
+        result = await bus.emit("broadcast.test", {"msg": "hello"}, source="test")
+        assert result.delivered == 3
 
         await asyncio.sleep(0.1)
         assert handler1_count[0] == 1  # Matches broadcast.*
@@ -234,10 +246,11 @@ class TestEventPublishing:
         await bus.initialize()
 
         # Should not raise error
-        await bus.emit("orphan.event", {"data": "value"}, source="test")
+        result = await bus.emit("orphan.event", {"data": "value"}, source="test")
 
-        await asyncio.sleep(0.1)
-        # Just verify no crash
+        assert isinstance(result, EventResult)
+        assert result.delivered == 0
+        assert result.success
 
     @pytest.mark.asyncio
     async def test_event_sequence_numbers(self):
@@ -250,7 +263,7 @@ class TestEventPublishing:
         def handler(event):
             sequences.append(event)
 
-        bus.subscribe("seq.*", handler)
+        await bus.subscribe("seq.*", handler)
 
         await bus.emit("seq.1", {}, source="test")
         await bus.emit("seq.2", {}, source="test")
@@ -262,9 +275,9 @@ class TestEventPublishing:
         events = bus.get_events(limit=10)
         assert len(events) >= 3
 
-        # Sequences should be increasing
+        # Events are newest-first, so sequences should be decreasing
         seqs = [e.sequence for e in events[:3]]
-        assert seqs[0] < seqs[1] < seqs[2]
+        assert seqs[0] > seqs[1] > seqs[2]
 
 
 # =============================================================================
@@ -287,9 +300,10 @@ class TestAsyncHandlerExecution:
             await asyncio.sleep(0.05)
             executed.append("async")
 
-        bus.subscribe("async.test", async_handler)
+        await bus.subscribe("async.test", async_handler)
 
-        await bus.emit("async.test", {"data": "value"}, source="test")
+        result = await bus.emit("async.test", {"data": "value"}, source="test")
+        assert result.delivered == 1
 
         await asyncio.sleep(0.2)  # Give time for async handler
         assert "async" in executed
@@ -312,11 +326,15 @@ class TestAsyncHandlerExecution:
         def good_handler2(event):
             executed.append("good2")
 
-        bus.subscribe("error.test", good_handler1)
-        bus.subscribe("error.test", bad_handler)
-        bus.subscribe("error.test", good_handler2)
+        await bus.subscribe("error.test", good_handler1)
+        await bus.subscribe("error.test", bad_handler)
+        await bus.subscribe("error.test", good_handler2)
 
-        await bus.emit("error.test", {"data": "value"}, source="test")
+        result = await bus.emit("error.test", {"data": "value"}, source="test")
+        assert result.delivered == 2
+        assert result.failed == 1
+        assert not result.success
+        assert len(result.errors) == 1
 
         await asyncio.sleep(0.1)
 
@@ -337,7 +355,7 @@ class TestAsyncHandlerExecution:
             nonlocal received
             received = event
 
-        bus.subscribe("payload.test", handler)
+        await bus.subscribe("payload.test", handler)
 
         test_payload = {
             "user_id": 42,
@@ -371,8 +389,8 @@ class TestAsyncHandlerExecution:
             await asyncio.sleep(0.05)
             async_executed.append(event["payload"]["id"])
 
-        bus.subscribe("mixed.*", sync_handler)
-        bus.subscribe("mixed.*", async_handler)
+        await bus.subscribe("mixed.*", sync_handler)
+        await bus.subscribe("mixed.*", async_handler)
 
         await bus.emit("mixed.test", {"id": 1}, source="test")
         await bus.emit("mixed.test", {"id": 2}, source="test")
@@ -482,7 +500,7 @@ class TestEventHistory:
         def handler(event):
             received.append(event)
 
-        bus.subscribe("shutdown.test", handler)
+        await bus.subscribe("shutdown.test", handler)
 
         await bus.shutdown()
 
@@ -533,10 +551,10 @@ class TestIntegrationScenarios:
             doc_id = event["payload"]["document_id"]
             pipeline_state["indexed"].append(doc_id)
 
-        bus.subscribe("document.ingested", on_document_ingested)
-        bus.subscribe("document.parsed", on_document_parsed)
-        bus.subscribe("document.embedded", on_document_embedded)
-        bus.subscribe("document.indexed", on_document_indexed)
+        await bus.subscribe("document.ingested", on_document_ingested)
+        await bus.subscribe("document.parsed", on_document_parsed)
+        await bus.subscribe("document.embedded", on_document_embedded)
+        await bus.subscribe("document.indexed", on_document_indexed)
 
         # Start pipeline
         await bus.emit("document.ingested", {"document_id": "doc-123"}, source="ingest")
@@ -575,8 +593,8 @@ class TestIntegrationScenarios:
             matrix_id = event["payload"]["matrix_id"]
             search_state["queries"].append(f"query-{matrix_id}")
 
-        bus.subscribe("document.processed", ach_handler)
-        bus.subscribe("ach.matrix.created", search_handler)
+        await bus.subscribe("document.processed", ach_handler)
+        await bus.subscribe("ach.matrix.created", search_handler)
 
         # Simulate document processing
         await bus.emit(
@@ -601,7 +619,7 @@ class TestIntegrationScenarios:
         def handler(event):
             received_count[0] += 1
 
-        bus.subscribe("throughput.*", handler)
+        await bus.subscribe("throughput.*", handler)
 
         # Emit 100 events rapidly
         for i in range(100):
@@ -634,7 +652,7 @@ async def smoke_test():
     def handler(event):
         received.append(event)
 
-    bus.subscribe("test.*", handler)
+    await bus.subscribe("test.*", handler)
     print("   OK - Subscribed to test.*")
 
     print("\n3. Testing event publishing...")
@@ -659,7 +677,7 @@ async def smoke_test():
         await asyncio.sleep(0.05)
         async_received.append(event)
 
-    bus.subscribe("async.test", async_handler)
+    await bus.subscribe("async.test", async_handler)
     await bus.emit("async.test", {"async": True}, source="smoke-test")
     await asyncio.sleep(0.2)
 

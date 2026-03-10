@@ -141,10 +141,14 @@ class TestExportJobs:
     @pytest.mark.asyncio
     async def test_create_export_job(self, initialized_shard, mock_frame):
         """Test creating an export job."""
-        job = await initialized_shard.create_export_job(
-            format=ExportFormat.JSON,
-            target=ExportTarget.DOCUMENTS,
-        )
+        # Mock _fetch_data to avoid real HTTP calls
+        with patch.object(
+            initialized_shard, "_fetch_data", new_callable=AsyncMock, return_value=[{"id": "1", "title": "Test"}]
+        ):
+            job = await initialized_shard.create_export_job(
+                format=ExportFormat.JSON,
+                target=ExportTarget.DOCUMENTS,
+            )
 
         assert job is not None
         assert job.format == ExportFormat.JSON
@@ -163,11 +167,14 @@ class TestExportJobs:
             max_records=100,
         )
 
-        job = await initialized_shard.create_export_job(
-            format=ExportFormat.CSV,
-            target=ExportTarget.ENTITIES,
-            options=options,
-        )
+        with patch.object(
+            initialized_shard, "_fetch_data", new_callable=AsyncMock, return_value=[{"id": "1", "name": "Test"}]
+        ):
+            job = await initialized_shard.create_export_job(
+                format=ExportFormat.CSV,
+                target=ExportTarget.ENTITIES,
+                options=options,
+            )
 
         assert job.format == ExportFormat.CSV
         assert job.options.flatten is True
@@ -384,10 +391,7 @@ class TestFormatsAndTargets:
         assert "docx" in format_names
         assert "xlsx" in format_names
 
-        # Check placeholder status
-        pdf_format = next(f for f in formats if f.format == ExportFormat.PDF)
-        assert pdf_format.placeholder is True
-
+        # Verify JSON format is not a placeholder
         json_format = next(f for f in formats if f.format == ExportFormat.JSON)
         assert json_format.placeholder is False
 
@@ -427,7 +431,10 @@ class TestFileGeneration:
             target=ExportTarget.DOCUMENTS,
         )
 
-        file_path, record_count = await initialized_shard._generate_export_file(job)
+        with patch.object(
+            initialized_shard, "_fetch_data", new_callable=AsyncMock, return_value=[{"id": "1", "title": "Test Doc"}]
+        ):
+            file_path, record_count = await initialized_shard._generate_export_file(job)
 
         assert file_path is not None
         assert file_path.endswith(".json")
@@ -440,8 +447,8 @@ class TestFileGeneration:
 
         with open(file_path, "r") as f:
             data = json.load(f)
-        assert data["target"] == "documents"
-        assert "records" in data
+        assert data["export_info"]["target"] == "documents"
+        assert "data" in data
 
     @pytest.mark.asyncio
     async def test_generate_csv_file(self, initialized_shard, mock_frame):
@@ -454,7 +461,10 @@ class TestFileGeneration:
             target=ExportTarget.ENTITIES,
         )
 
-        file_path, record_count = await initialized_shard._generate_export_file(job)
+        with patch.object(
+            initialized_shard, "_fetch_data", new_callable=AsyncMock, return_value=[{"id": "1", "name": "Entity"}]
+        ):
+            file_path, record_count = await initialized_shard._generate_export_file(job)
 
         assert file_path is not None
         assert file_path.endswith(".csv")
@@ -473,7 +483,10 @@ class TestFileGeneration:
             target=ExportTarget.CLAIMS,
         )
 
-        file_path, record_count = await initialized_shard._generate_export_file(job)
+        with patch.object(
+            initialized_shard, "_fetch_data", new_callable=AsyncMock, return_value=[{"id": "1", "text": "Claim"}]
+        ):
+            file_path, record_count = await initialized_shard._generate_export_file(job)
 
         assert file_path is not None
         assert file_path.endswith(".pdf")

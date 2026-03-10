@@ -34,7 +34,7 @@ class TestProjectStatusEnum:
     def test_string_inheritance(self):
         """Verify enum values can be used as strings."""
         assert ProjectStatus.ACTIVE == "active"
-        assert str(ProjectStatus.ACTIVE) == "active"
+        assert ProjectStatus.ACTIVE.value == "active"
 
     def test_enum_count(self):
         """Verify total number of statuses."""

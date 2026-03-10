@@ -22,17 +22,34 @@ from arkham_shard_packets.shard import PacketsShard
 def mock_frame():
     """Create a mock frame with required services."""
     frame = MagicMock()
-    frame.database = MagicMock()
-    frame.events = MagicMock()
+
+    # Create mock services
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock()
+    mock_db.fetch_one = AsyncMock(return_value=None)
+    mock_db.fetch_all = AsyncMock(return_value=[])
+
+    mock_events = AsyncMock()
+    mock_events.emit = AsyncMock()
+    mock_events.subscribe = AsyncMock()
+    mock_events.unsubscribe = AsyncMock()
+
+    frame.database = mock_db
+    frame.events = mock_events
     frame.storage = None
+    frame.app = None
 
-    # Mock database methods
-    frame.database.execute = AsyncMock()
-    frame.database.fetch_one = AsyncMock(return_value=None)
-    frame.database.fetch_all = AsyncMock(return_value=[])
+    # get_service returns the correct service by name
+    def _get_service(name):
+        if name == "database":
+            return mock_db
+        elif name == "events":
+            return mock_events
+        elif name == "storage":
+            return None
+        return None
 
-    # Mock event methods
-    frame.events.emit = AsyncMock()
+    frame.get_service = MagicMock(side_effect=_get_service)
 
     return frame
 

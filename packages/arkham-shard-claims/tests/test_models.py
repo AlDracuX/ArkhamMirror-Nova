@@ -40,7 +40,7 @@ class TestClaimStatusEnum:
     def test_string_inheritance(self):
         """Verify enum values can be used as strings."""
         assert ClaimStatus.VERIFIED == "verified"
-        assert str(ClaimStatus.VERIFIED) == "verified"
+        assert ClaimStatus.VERIFIED.value == "verified"
 
     def test_enum_count(self):
         """Verify total number of statuses."""

@@ -103,6 +103,20 @@ def mock_event_bus():
 
 
 @pytest.fixture
+def mock_parse_shard():
+    """Create mock parse shard for endpoints that need it."""
+    shard = MagicMock()
+    shard._frame = MagicMock()
+    # For /entities/{doc_id} - entities shard not available, returns empty
+    shard._frame.shards = {}
+    # For /chunks/{doc_id} - doc service returns empty
+    mock_doc_service = MagicMock()
+    mock_doc_service.get_document_chunks = AsyncMock(return_value=[])
+    shard._frame.get_service.return_value = mock_doc_service
+    return shard
+
+
+@pytest.fixture
 def client(
     mock_ner_extractor,
     mock_date_extractor,
@@ -113,6 +127,7 @@ def client(
     mock_chunker,
     mock_worker_service,
     mock_event_bus,
+    mock_parse_shard,
 ):
     """Create test client with mocked dependencies."""
     init_api(
@@ -125,6 +140,7 @@ def client(
         chunker=mock_chunker,
         worker_service=mock_worker_service,
         event_bus=mock_event_bus,
+        parse_shard=mock_parse_shard,
     )
 
     app = FastAPI()

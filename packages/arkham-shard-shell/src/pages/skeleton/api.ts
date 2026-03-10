@@ -4,12 +4,7 @@
  * API client for the Legal Argument Builder shard backend.
  */
 
-import type {
-  SkeletonItem,
-  SkeletonListResponse,
-  ArgumentStatus,
-  SubmissionType,
-} from './types';
+import type { SkeletonItem, SkeletonListResponse, ArgumentStatus, SubmissionType } from './types';
 
 const API_PREFIX = '/api/skeleton';
 
@@ -83,9 +78,7 @@ export async function updateItem(
   });
 }
 
-export async function deleteItem(
-  itemId: string
-): Promise<{ status: string; item_id: string }> {
+export async function deleteItem(itemId: string): Promise<{ status: string; item_id: string }> {
   return fetchAPI(`/items/${itemId}`, {
     method: 'DELETE',
   });

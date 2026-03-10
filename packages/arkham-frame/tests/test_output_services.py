@@ -538,34 +538,43 @@ class TestNotificationService:
     @pytest.mark.asyncio
     async def test_configure_webhook_channel(self, notification_service):
         """Test configuring a webhook channel."""
-        notification_service.configure_webhook(
-            name="test_webhook", url="https://example.com/webhook", method="POST", headers={"X-Custom": "header"}
-        )
+        with patch("arkham_frame.services.notifications.AIOHTTP_AVAILABLE", True):
+            notification_service.configure_webhook(
+                name="test_webhook", url="https://example.com/webhook", method="POST", headers={"X-Custom": "header"}
+            )
 
-        channels = notification_service.list_channels()
-        assert "test_webhook" in channels
+            channels = notification_service.list_channels()
+            assert "test_webhook" in channels
 
     @pytest.mark.asyncio
     async def test_send_webhook_notification_mock(self, notification_service):
         """Test sending webhook notification with mocked HTTP client."""
         from arkham_frame.services.notifications import NotificationType
 
-        # Configure webhook
-        notification_service.configure_webhook(name="mock_webhook", url="https://example.com/webhook")
+        # Create a mock aiohttp module
+        mock_aiohttp = MagicMock()
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.text = AsyncMock(return_value="OK")
 
-        # Mock aiohttp to avoid real HTTP calls
-        with patch("arkham_frame.services.notifications.aiohttp.ClientSession") as mock_session:
-            mock_response = AsyncMock()
-            mock_response.status = 200
-            mock_response.text = AsyncMock(return_value="OK")
+        mock_request_context = AsyncMock()
+        mock_request_context.__aenter__.return_value = mock_response
+        mock_request_context.__aexit__.return_value = None
 
-            mock_context = AsyncMock()
-            mock_context.__aenter__.return_value = mock_response
-            mock_context.__aexit__.return_value = None
+        mock_session_instance = AsyncMock()
+        mock_session_instance.post = MagicMock(return_value=mock_request_context)
 
-            mock_post = MagicMock(return_value=mock_context)
-            mock_session.return_value.__aenter__.return_value.post = mock_post
-            mock_session.return_value.__aexit__.return_value = None
+        mock_session_context = AsyncMock()
+        mock_session_context.__aenter__.return_value = mock_session_instance
+        mock_session_context.__aexit__.return_value = None
+
+        mock_aiohttp.ClientSession.return_value = mock_session_context
+
+        with (
+            patch("arkham_frame.services.notifications.AIOHTTP_AVAILABLE", True),
+            patch("arkham_frame.services.notifications.aiohttp", mock_aiohttp, create=True),
+        ):
+            notification_service.configure_webhook(name="mock_webhook", url="https://example.com/webhook")
 
             notification = await notification_service.send(
                 title="Test Webhook",
@@ -646,8 +655,9 @@ class TestNotificationService:
     @pytest.mark.asyncio
     async def test_remove_channel(self, notification_service):
         """Test removing a notification channel."""
-        # Configure a channel
-        notification_service.configure_webhook(name="removable", url="https://example.com/hook")
+        # Configure a channel (mock aiohttp availability)
+        with patch("arkham_frame.services.notifications.AIOHTTP_AVAILABLE", True):
+            notification_service.configure_webhook(name="removable", url="https://example.com/hook")
 
         assert "removable" in notification_service.list_channels()
 

@@ -38,7 +38,8 @@ class TestShardInitialization:
     def mock_frame(self):
         """Create mock Frame."""
         frame = MagicMock()
-        frame.get_service = MagicMock()
+        frame.database = None
+        frame.get_service = MagicMock(return_value=None)
         return frame
 
     @pytest.fixture
@@ -62,13 +63,15 @@ class TestShardInitialization:
     @pytest.fixture
     def mock_db_service(self):
         """Create mock database service."""
-        return MagicMock()
+        mock = AsyncMock()
+        mock.execute = AsyncMock()
+        mock.fetch_one = AsyncMock(return_value=None)
+        mock.fetch_all = AsyncMock(return_value=[])
+        return mock
 
     @pytest.mark.asyncio
     async def test_initialize_creates_detector(self, mock_frame):
         """Test that initialization creates detector."""
-        mock_frame.get_service.return_value = None
-
         shard = ContradictionsShard()
         await shard.initialize(mock_frame)
 
@@ -77,8 +80,6 @@ class TestShardInitialization:
     @pytest.mark.asyncio
     async def test_initialize_creates_chain_detector(self, mock_frame):
         """Test that initialization creates chain detector."""
-        mock_frame.get_service.return_value = None
-
         shard = ContradictionsShard()
         await shard.initialize(mock_frame)
 
@@ -87,8 +88,6 @@ class TestShardInitialization:
     @pytest.mark.asyncio
     async def test_initialize_creates_storage(self, mock_frame):
         """Test that initialization creates storage."""
-        mock_frame.get_service.return_value = None
-
         shard = ContradictionsShard()
         await shard.initialize(mock_frame)
 
@@ -143,15 +142,13 @@ class TestShardInitialization:
         # Should subscribe to 3 events
         assert mock_event_bus.subscribe.call_count == 3
         event_names = [call[0][0] for call in mock_event_bus.subscribe.call_args_list]
-        assert "document.ingested" in event_names
-        assert "document.updated" in event_names
-        assert "llm.analysis.completed" in event_names
+        assert "documents.document.created" in event_names
+        assert "documents.document.updated" in event_names
+        assert "embed.document.completed" in event_names
 
     @pytest.mark.asyncio
     async def test_initialize_without_services(self, mock_frame):
         """Test initialization when services unavailable."""
-        mock_frame.get_service.return_value = None
-
         shard = ContradictionsShard()
         await shard.initialize(mock_frame)
 
@@ -167,7 +164,8 @@ class TestShardShutdown:
     def mock_frame(self):
         """Create mock Frame."""
         frame = MagicMock()
-        frame.get_service = MagicMock()
+        frame.database = None
+        frame.get_service = MagicMock(return_value=None)
         return frame
 
     @pytest.mark.asyncio
@@ -191,8 +189,6 @@ class TestShardShutdown:
     @pytest.mark.asyncio
     async def test_shutdown_clears_components(self, mock_frame):
         """Test that shutdown clears all components."""
-        mock_frame.get_service.return_value = None
-
         shard = ContradictionsShard()
         await shard.initialize(mock_frame)
         await shard.shutdown()
@@ -223,25 +219,28 @@ class TestEventHandlers:
         shard.detector = MagicMock()
         shard.chain_detector = MagicMock()
         shard.storage = MagicMock()
+        shard.storage.get_by_document = AsyncMock(return_value=[])
+        shard.storage.add_note = AsyncMock()
         shard._event_bus = MagicMock()
         shard._worker_service = None
+        shard._db_service = None
         return shard
 
     @pytest.mark.asyncio
-    async def test_on_document_ingested(self, initialized_shard):
-        """Test handling document ingested event."""
+    async def test_on_document_created(self, initialized_shard):
+        """Test handling document created event."""
         event = {"document_id": "doc-123"}
 
         # Should not raise
-        await initialized_shard._on_document_ingested(event)
+        await initialized_shard._on_document_created(event)
 
     @pytest.mark.asyncio
-    async def test_on_document_ingested_no_doc_id(self, initialized_shard):
+    async def test_on_document_created_no_doc_id(self, initialized_shard):
         """Test handling event with no document_id."""
         event = {}
 
         # Should not raise
-        await initialized_shard._on_document_ingested(event)
+        await initialized_shard._on_document_created(event)
 
     @pytest.mark.asyncio
     async def test_on_document_updated(self, initialized_shard):
@@ -252,12 +251,12 @@ class TestEventHandlers:
         await initialized_shard._on_document_updated(event)
 
     @pytest.mark.asyncio
-    async def test_on_llm_analysis_completed(self, initialized_shard):
-        """Test handling LLM analysis completed event."""
-        event = {"job_id": "job-123", "result": {}}
+    async def test_on_document_embedded(self, initialized_shard):
+        """Test handling document embedded event."""
+        event = {"document_id": "doc-123"}
 
         # Should not raise
-        await initialized_shard._on_llm_analysis_completed(event)
+        await initialized_shard._on_document_embedded(event)
 
 
 class TestPublicAnalyzePairAPI:
@@ -265,7 +264,7 @@ class TestPublicAnalyzePairAPI:
 
     @pytest.fixture
     def initialized_shard(self):
-        """Create shard with mock detector and storage."""
+        """Create shard with mock detector, storage, and db."""
         shard = ContradictionsShard()
         shard._frame = MagicMock()
         shard.detector = MagicMock()
@@ -274,7 +273,11 @@ class TestPublicAnalyzePairAPI:
         shard.detector.find_similar_claims = AsyncMock(return_value=[])
         shard.detector.verify_contradiction = AsyncMock(return_value=None)
         shard.storage = MagicMock()
+        shard.storage.create = AsyncMock()
         shard._llm_service = None
+        shard._db_service = AsyncMock()
+        shard._db_service.fetch_one = AsyncMock(return_value={"id": "doc-1", "filename": "test.pdf"})
+        shard._db_service.fetch_all = AsyncMock(return_value=[{"text": "Sample text for testing."}])
         return shard
 
     @pytest.mark.asyncio
@@ -308,19 +311,21 @@ class TestPublicGetDocumentContradictionsAPI:
         shard._frame = MagicMock()
         shard.detector = MagicMock()
         shard.storage = MagicMock()
-        shard.storage.get_by_document = MagicMock(return_value=[])
+        shard.storage.get_by_document = AsyncMock(return_value=[])
         return shard
 
-    def test_get_document_contradictions_requires_init(self):
+    @pytest.mark.asyncio
+    async def test_get_document_contradictions_requires_init(self):
         """Test get_document_contradictions requires initialization."""
         shard = ContradictionsShard()
 
         with pytest.raises(RuntimeError, match="not initialized"):
-            shard.get_document_contradictions("doc-123")
+            await shard.get_document_contradictions("doc-123")
 
-    def test_get_document_contradictions_basic(self, initialized_shard):
+    @pytest.mark.asyncio
+    async def test_get_document_contradictions_basic(self, initialized_shard):
         """Test basic get_document_contradictions call."""
-        result = initialized_shard.get_document_contradictions("doc-123")
+        result = await initialized_shard.get_document_contradictions("doc-123")
         initialized_shard.storage.get_by_document.assert_called_with("doc-123")
         assert result == []
 
@@ -335,7 +340,7 @@ class TestPublicGetStatisticsAPI:
         shard._frame = MagicMock()
         shard.detector = MagicMock()
         shard.storage = MagicMock()
-        shard.storage.get_statistics = MagicMock(
+        shard.storage.get_statistics = AsyncMock(
             return_value={
                 "total_contradictions": 50,
                 "by_status": {"detected": 30, "confirmed": 20},
@@ -347,16 +352,18 @@ class TestPublicGetStatisticsAPI:
         )
         return shard
 
-    def test_get_statistics_requires_init(self):
+    @pytest.mark.asyncio
+    async def test_get_statistics_requires_init(self):
         """Test get_statistics requires initialization."""
         shard = ContradictionsShard()
 
         with pytest.raises(RuntimeError, match="not initialized"):
-            shard.get_statistics()
+            await shard.get_statistics()
 
-    def test_get_statistics_basic(self, initialized_shard):
+    @pytest.mark.asyncio
+    async def test_get_statistics_basic(self, initialized_shard):
         """Test basic get_statistics call."""
-        result = initialized_shard.get_statistics()
+        result = await initialized_shard.get_statistics()
 
         assert result["total_contradictions"] == 50
         assert result["by_status"]["confirmed"] == 20
@@ -375,8 +382,8 @@ class TestPublicDetectChainsAPI:
         shard.chain_detector = MagicMock()
         shard.chain_detector.detect_chains = MagicMock(return_value=[])
         shard.storage = MagicMock()
-        shard.storage.search = MagicMock(return_value=[])
-        shard.storage.create_chain = MagicMock(side_effect=lambda c: c)
+        shard.storage.search = AsyncMock(return_value=[])
+        shard.storage.create_chain = AsyncMock(side_effect=lambda c: c)
         return shard
 
     @pytest.mark.asyncio

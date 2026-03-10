@@ -12,7 +12,16 @@ async def mock_frame():
     """Create a mock Frame instance."""
     frame = MagicMock()
     frame.config = MagicMock()
-    frame.config.get = MagicMock(return_value="paddle")
+
+    config_values = {
+        "ocr_default_engine": "paddle",
+        "ocr_parallel_pages": 4,
+        "ocr_confidence_threshold": 0.8,
+        "ocr_enable_escalation": True,
+        "ocr_enable_cache": True,
+        "ocr_cache_ttl_days": 7,
+    }
+    frame.config.get = MagicMock(side_effect=lambda key, default=None: config_values.get(key, default))
 
     # Mock services
     worker_service = MagicMock()
@@ -20,6 +29,7 @@ async def mock_frame():
     worker_service.unregister_worker = MagicMock()
     worker_service.enqueue = AsyncMock(return_value="job-123")
     worker_service.wait_for_result = AsyncMock(return_value={"text": "result"})
+    worker_service.enqueue_and_wait = AsyncMock(return_value={"text": "result"})
 
     event_bus = MagicMock()
     event_bus.subscribe = AsyncMock()
@@ -27,6 +37,11 @@ async def mock_frame():
     event_bus.emit = AsyncMock()
 
     doc_service = MagicMock()
+    # Create mock pages for document OCR tests
+    mock_page = MagicMock()
+    mock_page.image_path = "/path/to/page1.png"
+    mock_page.page_number = 1
+    doc_service.get_document_pages = AsyncMock(return_value=[mock_page])
 
     def get_service(name):
         if name == "workers":
@@ -90,13 +105,21 @@ class TestOCRShardInitialization:
     @pytest.mark.asyncio
     async def test_initialize_sets_default_engine(self, mock_frame):
         """Test initialization sets default engine from config."""
-        mock_frame.config.get = MagicMock(return_value="qwen")
+        config_values = {
+            "ocr_default_engine": "qwen",
+            "ocr_parallel_pages": 4,
+            "ocr_confidence_threshold": 0.8,
+            "ocr_enable_escalation": True,
+            "ocr_enable_cache": True,
+            "ocr_cache_ttl_days": 7,
+        }
+        mock_frame.config.get = MagicMock(side_effect=lambda key, default=None: config_values.get(key, default))
 
         shard = OCRShard()
         await shard.initialize(mock_frame)
 
         assert shard._default_engine == "qwen"
-        mock_frame.config.get.assert_called_with("ocr.default_engine", "paddle")
+        mock_frame.config.get.assert_any_call("ocr_default_engine", "paddle")
 
     @pytest.mark.asyncio
     async def test_initialize_registers_workers(self, mock_frame):
@@ -225,15 +248,15 @@ class TestOCRShardRoutes:
     def test_routes_has_endpoints(self):
         """Test router has expected endpoints."""
         shard = OCRShard()
-        router = shard.get_routes()
+        routes = shard.get_routes()
 
-        # Get route paths
-        paths = [route.path for route in router.routes]
+        # Get route paths (router prefix is /api/ocr)
+        paths = [route.path for route in routes.routes]
 
-        assert "/health" in paths
-        assert "/page" in paths
-        assert "/document" in paths
-        assert "/upload" in paths
+        assert "/api/ocr/health" in paths
+        assert "/api/ocr/page" in paths
+        assert "/api/ocr/document" in paths
+        assert "/api/ocr/upload" in paths
 
 
 class TestOCRPageMethod:
@@ -245,20 +268,18 @@ class TestOCRPageMethod:
         shard = OCRShard()
         await shard.initialize(mock_frame)
 
-        result = await shard.ocr_page(image_path="/path/to/image.png")
+        result = await shard.ocr_page(image_path="/path/to/image.png", use_cache=False)
 
-        # Verify worker was enqueued
+        # Verify enqueue_and_wait was called
         worker_service = mock_frame.get_service("workers")
-        worker_service.enqueue.assert_called_once()
+        worker_service.enqueue_and_wait.assert_called_once()
 
-        call_args = worker_service.enqueue.call_args
+        call_args = worker_service.enqueue_and_wait.call_args
         assert call_args.kwargs["pool"] == "gpu-paddle"
         assert call_args.kwargs["payload"]["image_path"] == "/path/to/image.png"
         assert call_args.kwargs["payload"]["lang"] == "en"
 
-        # Verify result was awaited
-        worker_service.wait_for_result.assert_called_once_with("job-123")
-        assert result == {"text": "result"}
+        assert result["text"] == "result"
 
     @pytest.mark.asyncio
     async def test_ocr_page_with_qwen_engine(self, mock_frame):
@@ -269,10 +290,11 @@ class TestOCRPageMethod:
         await shard.ocr_page(
             image_path="/path/to/image.png",
             engine="qwen",
+            use_cache=False,
         )
 
         worker_service = mock_frame.get_service("workers")
-        call_args = worker_service.enqueue.call_args
+        call_args = worker_service.enqueue_and_wait.call_args
         assert call_args.kwargs["pool"] == "gpu-qwen"
 
     @pytest.mark.asyncio
@@ -284,10 +306,11 @@ class TestOCRPageMethod:
         await shard.ocr_page(
             image_path="/path/to/image.png",
             language="zh",
+            use_cache=False,
         )
 
         worker_service = mock_frame.get_service("workers")
-        call_args = worker_service.enqueue.call_args
+        call_args = worker_service.enqueue_and_wait.call_args
         assert call_args.kwargs["payload"]["lang"] == "zh"
 
     @pytest.mark.asyncio
@@ -304,16 +327,24 @@ class TestOCRPageMethod:
     @pytest.mark.asyncio
     async def test_ocr_page_uses_default_engine(self, mock_frame):
         """Test OCR page uses configured default engine."""
-        mock_frame.config.get = MagicMock(return_value="qwen")
+        config_values = {
+            "ocr_default_engine": "qwen",
+            "ocr_parallel_pages": 4,
+            "ocr_confidence_threshold": 0.8,
+            "ocr_enable_escalation": True,
+            "ocr_enable_cache": True,
+            "ocr_cache_ttl_days": 7,
+        }
+        mock_frame.config.get = MagicMock(side_effect=lambda key, default=None: config_values.get(key, default))
 
         shard = OCRShard()
         await shard.initialize(mock_frame)
 
-        await shard.ocr_page(image_path="/path/to/image.png")
+        await shard.ocr_page(image_path="/path/to/image.png", use_cache=False)
 
         # Should use qwen pool since default is qwen
         worker_service = mock_frame.get_service("workers")
-        call_args = worker_service.enqueue.call_args
+        call_args = worker_service.enqueue_and_wait.call_args
         assert call_args.kwargs["pool"] == "gpu-qwen"
 
 
@@ -325,6 +356,9 @@ class TestOCRDocumentMethod:
         """Test OCR document processing."""
         shard = OCRShard()
         await shard.initialize(mock_frame)
+
+        # Mock ocr_page to avoid actual worker calls
+        shard.ocr_page = AsyncMock(return_value={"text": "page text", "boxes": [], "confidence": 0.95})
 
         result = await shard.ocr_document(document_id="doc123")
 
@@ -338,6 +372,8 @@ class TestOCRDocumentMethod:
         shard = OCRShard()
         await shard.initialize(mock_frame)
 
+        shard.ocr_page = AsyncMock(return_value={"text": "page text", "boxes": [], "confidence": 0.95})
+
         result = await shard.ocr_document(
             document_id="doc123",
             engine="qwen",
@@ -350,6 +386,8 @@ class TestOCRDocumentMethod:
         """Test OCR document emits start event."""
         shard = OCRShard()
         await shard.initialize(mock_frame)
+
+        shard.ocr_page = AsyncMock(return_value={"text": "page text", "boxes": [], "confidence": 0.95})
 
         await shard.ocr_document(document_id="doc123")
 
@@ -369,6 +407,8 @@ class TestOCRDocumentMethod:
         shard = OCRShard()
         await shard.initialize(mock_frame)
 
+        shard.ocr_page = AsyncMock(return_value={"text": "page text", "boxes": [], "confidence": 0.95})
+
         result = await shard.ocr_document(document_id="doc123")
 
         event_bus = mock_frame.get_service("events")
@@ -381,16 +421,30 @@ class TestOCRDocumentMethod:
     @pytest.mark.asyncio
     async def test_ocr_document_without_event_bus(self, mock_frame):
         """Test OCR document when event bus unavailable."""
+        worker_service = MagicMock()
+        worker_service.register_worker = MagicMock()
+        worker_service.enqueue_and_wait = AsyncMock(return_value={"text": "result"})
+
+        doc_service = MagicMock()
+        mock_page = MagicMock()
+        mock_page.image_path = "/path/to/page1.png"
+        mock_page.page_number = 1
+        doc_service.get_document_pages = AsyncMock(return_value=[mock_page])
 
         def get_service(name):
             if name == "events":
                 return None
+            if name == "workers":
+                return worker_service
+            if name == "documents":
+                return doc_service
             return MagicMock()
 
         mock_frame.get_service = MagicMock(side_effect=get_service)
 
         shard = OCRShard()
         await shard.initialize(mock_frame)
+        shard.ocr_page = AsyncMock(return_value={"text": "page text", "boxes": [], "confidence": 0.95})
 
         # Should not raise error
         result = await shard.ocr_document(document_id="doc123")
@@ -420,7 +474,7 @@ class TestOCRDocumentMethod:
         await shard.initialize(mock_frame)
 
         # Should raise error when doc service unavailable
-        with pytest.raises(RuntimeError, match="Document service not available"):
+        with pytest.raises(RuntimeError, match="Document.* service not available"):
             await shard.ocr_document(document_id="doc123")
 
 
@@ -531,10 +585,11 @@ class TestShardIntegration:
         assert shard._frame is not None
 
         # Process page
-        result = await shard.ocr_page(image_path="/test.png")
+        result = await shard.ocr_page(image_path="/test.png", use_cache=False)
         assert "text" in result
 
-        # Process document
+        # Process document (mock ocr_page to avoid nested enqueue_and_wait)
+        shard.ocr_page = AsyncMock(return_value={"text": "page text", "boxes": [], "confidence": 0.95})
         doc_result = await shard.ocr_document(document_id="doc123")
         assert doc_result["document_id"] == "doc123"
 
@@ -548,10 +603,9 @@ class TestShardIntegration:
         await shard.initialize(mock_frame)
 
         # Process multiple pages
-        await shard.ocr_page(image_path="/page1.png")
-        await shard.ocr_page(image_path="/page2.png")
-        await shard.ocr_page(image_path="/page3.png")
+        await shard.ocr_page(image_path="/page1.png", use_cache=False)
+        await shard.ocr_page(image_path="/page2.png", use_cache=False)
+        await shard.ocr_page(image_path="/page3.png", use_cache=False)
 
         worker_service = mock_frame.get_service("workers")
-        assert worker_service.enqueue.call_count == 3
-        assert worker_service.wait_for_result.call_count == 3
+        assert worker_service.enqueue_and_wait.call_count == 3

@@ -26,8 +26,8 @@ def mock_database():
     """Mock database service."""
     db = AsyncMock()
     db.execute = AsyncMock()
-    db.fetch_one = AsyncMock()
-    db.fetch_all = AsyncMock()
+    db.fetch_one = AsyncMock(return_value={"count": 0})
+    db.fetch_all = AsyncMock(return_value=[])
     return db
 
 
@@ -428,7 +428,8 @@ class TestShardIntegration:
 
         # Shutdown
         await shard.shutdown()
-        assert shard._frame is None
+        # Shutdown clears service references but not _frame
+        assert shard._db is None
 
     @pytest.mark.asyncio
     async def test_initialize_twice(self, shard, mock_frame):

@@ -43,29 +43,14 @@ def mock_shard():
 
 
 @pytest.fixture
-def mock_frame(mock_shard):
-    """Create a mock Frame that returns the mock shard."""
-    frame = MagicMock()
-    frame.get_shard = MagicMock(return_value=mock_shard)
-    return frame
+def client(mock_shard):
+    """Create test client with shard on app state."""
+    app = FastAPI()
+    app.include_router(router)
+    app.state.projects_shard = mock_shard
 
-
-@pytest.fixture
-def app(mock_frame):
-    """Create test FastAPI app with mocked dependencies."""
-    test_app = FastAPI()
-    test_app.include_router(router)
-
-    with patch("arkham_shard_projects.api.get_frame", return_value=mock_frame):
-        yield test_app
-
-
-@pytest.fixture
-def client(app, mock_frame):
-    """Create test client with patched get_frame."""
-    with patch("arkham_shard_projects.api.get_frame", return_value=mock_frame):
-        with TestClient(app) as c:
-            yield c
+    with TestClient(app) as c:
+        yield c
 
 
 @pytest.fixture

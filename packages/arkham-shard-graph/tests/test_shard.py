@@ -61,7 +61,8 @@ class TestGraphShardInitialization:
 
         entities_service = MagicMock()
         documents_service = MagicMock()
-        db_service = MagicMock()
+        db_service = AsyncMock()
+        db_service.execute = AsyncMock()
 
         def get_service(name):
             services = {

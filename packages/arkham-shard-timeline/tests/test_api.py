@@ -25,18 +25,53 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 
-@pytest.fixture
-def app():
-    """Create FastAPI app for testing."""
-    app = FastAPI()
-    app.include_router(router)
-    return app
+def _make_mock_shard(
+    extractor=None,
+    merger=None,
+    conflict_detector=None,
+    database_service=None,
+    documents_service=None,
+    entities_service=None,
+    event_bus=None,
+):
+    """Create a mock shard with the given services."""
+    shard = MagicMock()
+    shard.extractor = extractor
+    shard.merger = merger
+    shard.conflict_detector = conflict_detector
+    shard.database_service = database_service
+    shard.documents_service = documents_service
+    shard.entities_service = entities_service
+    shard.event_bus = event_bus
 
+    # Default async methods
+    shard.get_document_timeline = AsyncMock(return_value=[])
+    shard.get_count = AsyncMock(return_value=0)
+    shard.get_events = AsyncMock(return_value=[])
+    shard.get_event_count = AsyncMock(return_value=0)
+    shard.merge_timelines = AsyncMock(return_value=None)
+    shard.detect_conflicts = AsyncMock(return_value=[])
+    shard.get_entity_timeline = AsyncMock(
+        return_value=MagicMock(
+            entity_id="",
+            events=[],
+            count=0,
+            date_range=None,
+        )
+    )
+    shard.get_range_events = AsyncMock(return_value=[])
+    shard.get_range_count = AsyncMock(return_value=0)
+    shard.get_statistics = AsyncMock(
+        return_value={
+            "total_events": 0,
+            "total_documents": 0,
+            "by_precision": {},
+            "by_type": {},
+            "avg_confidence": 0.0,
+        }
+    )
 
-@pytest.fixture
-def client(app):
-    """Create test client."""
-    return TestClient(app)
+    return shard
 
 
 @pytest.fixture
@@ -94,7 +129,11 @@ def mock_conflict_detector():
 @pytest.fixture
 def mock_database_service():
     """Create mock database service."""
-    return MagicMock()
+    mock = AsyncMock()
+    mock.fetch_all = AsyncMock(return_value=[])
+    mock.fetch_one = AsyncMock(return_value=None)
+    mock.execute = AsyncMock()
+    return mock
 
 
 @pytest.fixture
@@ -114,7 +153,22 @@ def mock_event_bus():
 
 
 @pytest.fixture
+def app():
+    """Create FastAPI app for testing."""
+    app = FastAPI()
+    app.include_router(router)
+    return app
+
+
+@pytest.fixture
+def client(app):
+    """Create test client."""
+    return TestClient(app)
+
+
+@pytest.fixture
 def initialized_api(
+    app,
     mock_extractor,
     mock_merger,
     mock_conflict_detector,
@@ -122,7 +176,8 @@ def initialized_api(
     mock_documents_service,
     mock_event_bus,
 ):
-    """Initialize API with mocks."""
+    """Initialize API with mocks and set shard on app state."""
+    # Set module-level globals for extract endpoint
     init_api(
         extractor=mock_extractor,
         merger=mock_merger,
@@ -132,6 +187,18 @@ def initialized_api(
         entities_service=None,
         event_bus=mock_event_bus,
     )
+
+    # Set app state for get_shard()-based endpoints
+    mock_shard = _make_mock_shard(
+        extractor=mock_extractor,
+        merger=mock_merger,
+        conflict_detector=mock_conflict_detector,
+        database_service=mock_database_service,
+        documents_service=mock_documents_service,
+        event_bus=mock_event_bus,
+    )
+    app.state.timeline_shard = mock_shard
+    return mock_shard
 
 
 class TestExtractEndpoint:
@@ -166,19 +233,17 @@ class TestExtractEndpoint:
 
 
 class TestDocumentTimelineEndpoint:
-    """Tests for GET /api/timeline/{document_id} endpoint."""
+    """Tests for GET /api/timeline/document/{document_id} endpoint."""
 
     def test_get_document_timeline_not_initialized(self, client):
         """Test get timeline fails when not initialized."""
-        init_api(None, None, None, None, None, None, None)
-
-        response = client.get("/api/timeline/doc-123")
-
+        # No shard on app state
+        response = client.get("/api/timeline/document/doc-123")
         assert response.status_code == 503
 
     def test_get_document_timeline(self, client, initialized_api):
         """Test getting document timeline."""
-        response = client.get("/api/timeline/doc-123")
+        response = client.get("/api/timeline/document/doc-123")
 
         assert response.status_code == 200
         data = response.json()
@@ -189,12 +254,10 @@ class TestDocumentTimelineEndpoint:
     def test_get_document_timeline_with_filters(self, client, initialized_api):
         """Test getting document timeline with filters."""
         response = client.get(
-            "/api/timeline/doc-123",
+            "/api/timeline/document/doc-123",
             params={
                 "start_date": "2024-01-01",
                 "end_date": "2024-12-31",
-                "event_type": "occurrence",
-                "min_confidence": 0.8,
             },
         )
 
@@ -206,10 +269,7 @@ class TestMergeEndpoint:
 
     def test_merge_not_initialized(self, client):
         """Test merge fails when not initialized."""
-        init_api(None, None, None, None, None, None, None)
-
         response = client.post("/api/timeline/merge", json={"document_ids": ["doc-1", "doc-2"]})
-
         assert response.status_code == 503
 
     def test_merge_basic(self, client, initialized_api, mock_merger):
@@ -279,8 +339,6 @@ class TestRangeEndpoint:
 
     def test_range_not_initialized(self, client):
         """Test range fails when not initialized."""
-        init_api(None, None, None, None, None, None, None)
-
         response = client.get(
             "/api/timeline/range",
             params={
@@ -288,7 +346,6 @@ class TestRangeEndpoint:
                 "end_date": "2024-12-31",
             },
         )
-
         assert response.status_code == 503
 
     def test_range_query(self, client, initialized_api):
@@ -330,10 +387,7 @@ class TestConflictsEndpoint:
 
     def test_conflicts_not_initialized(self, client):
         """Test conflicts fails when not initialized."""
-        init_api(None, None, None, None, None, None, None)
-
         response = client.post("/api/timeline/conflicts", json={"document_ids": ["doc-1", "doc-2"]})
-
         assert response.status_code == 503
 
     def test_conflicts_basic(self, client, initialized_api, mock_conflict_detector):
@@ -388,10 +442,7 @@ class TestEntityTimelineEndpoint:
 
     def test_entity_timeline_not_initialized(self, client):
         """Test entity timeline fails when not initialized."""
-        init_api(None, None, None, None, None, None, None)
-
         response = client.get("/api/timeline/entity/entity-123")
-
         assert response.status_code == 503
 
     def test_entity_timeline_basic(self, client, initialized_api):
@@ -469,10 +520,7 @@ class TestStatsEndpoint:
 
     def test_stats_not_initialized(self, client):
         """Test stats fails when not initialized."""
-        init_api(None, None, None, None, None, None, None)
-
         response = client.get("/api/timeline/stats")
-
         assert response.status_code == 503
 
     def test_stats_basic(self, client, initialized_api):
@@ -504,7 +552,7 @@ class TestStatsEndpoint:
 class TestHelperFunctions:
     """Tests for API helper functions."""
 
-    def test_event_to_dict(self, initialized_api):
+    def test_event_to_dict(self):
         """Test _event_to_dict conversion."""
         from arkham_shard_timeline.api import _event_to_dict
 
@@ -536,7 +584,7 @@ class TestHelperFunctions:
         assert result["span"] == (10, 50)
         assert result["metadata"] == {"key": "value"}
 
-    def test_conflict_to_dict(self, initialized_api):
+    def test_conflict_to_dict(self):
         """Test _conflict_to_dict conversion."""
         from arkham_shard_timeline.api import _conflict_to_dict
 

@@ -40,15 +40,11 @@ export async function generateBriefing(data: {
   });
 }
 
-export async function getBriefing(
-  briefId: string
-): Promise<Record<string, unknown>> {
+export async function getBriefing(briefId: string): Promise<Record<string, unknown>> {
   return fetchAPI(`/briefings/${briefId}`);
 }
 
-export async function listBriefings(
-  projectId: string
-): Promise<Record<string, unknown>[]> {
+export async function listBriefings(projectId: string): Promise<Record<string, unknown>[]> {
   return fetchAPI(`/project/${projectId}/briefings`);
 }
 
@@ -67,16 +63,15 @@ export async function getChangelog(
   return fetchAPI(`/project/${projectId}/changes${query ? `?${query}` : ''}`);
 }
 
-
 export async function listItems(
   projectId?: string,
   status?: string
 ): Promise<{ count: number; items: Record<string, unknown>[] }> {
   const params = new URLSearchParams();
-  if (projectId) params.set("project_id", projectId);
-  if (status) params.set("status", status);
+  if (projectId) params.set('project_id', projectId);
+  if (status) params.set('status', status);
   const query = params.toString();
-  return fetchAPI(`/items${query ? `?${query}` : ""}`);
+  return fetchAPI(`/items${query ? `?${query}` : ''}`);
 }
 
 export async function getItem(itemId: string): Promise<Record<string, unknown>> {
@@ -90,8 +85,8 @@ export async function createItem(data: {
   metadata?: Record<string, unknown>;
   created_by?: string;
 }): Promise<{ id: string; status: string }> {
-  return fetchAPI("/items", {
-    method: "POST",
+  return fetchAPI('/items', {
+    method: 'POST',
     body: JSON.stringify(data),
   });
 }
@@ -101,11 +96,11 @@ export async function updateItem(
   data: Record<string, unknown>
 ): Promise<{ id: string; status: string }> {
   return fetchAPI(`/items/${itemId}`, {
-    method: "PUT",
+    method: 'PUT',
     body: JSON.stringify(data),
   });
 }
 
 export async function deleteItem(itemId: string): Promise<{ status: string }> {
-  return fetchAPI(`/items/${itemId}`, { method: "DELETE" });
+  return fetchAPI(`/items/${itemId}`, { method: 'DELETE' });
 }

@@ -4,11 +4,7 @@
  * API client for the Procedural Rules Engine shard backend.
  */
 
-import type {
-  RulesItem,
-  RulesListResponse,
-  RuleCategory,
-} from './types';
+import type { RulesItem, RulesListResponse, RuleCategory } from './types';
 
 const API_PREFIX = '/api/rules';
 
@@ -34,10 +30,7 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 // Rules (Items) Operations
 // ============================================
 
-export async function listItems(
-  projectId?: string,
-  status?: string
-): Promise<RulesListResponse> {
+export async function listItems(projectId?: string, status?: string): Promise<RulesListResponse> {
   const params = new URLSearchParams();
   if (projectId) params.set('project_id', projectId);
   if (status) params.set('status', status);
@@ -84,9 +77,7 @@ export async function updateItem(
   });
 }
 
-export async function deleteItem(
-  itemId: string
-): Promise<{ status: string; item_id: string }> {
+export async function deleteItem(itemId: string): Promise<{ status: string; item_id: string }> {
   return fetchAPI(`/items/${itemId}`, {
     method: 'DELETE',
   });

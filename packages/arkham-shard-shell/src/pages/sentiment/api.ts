@@ -112,9 +112,7 @@ export async function updateItem(
   });
 }
 
-export async function deleteItem(
-  itemId: string
-): Promise<{ status: string; item_id: string }> {
+export async function deleteItem(itemId: string): Promise<{ status: string; item_id: string }> {
   return fetchAPI(`/items/${itemId}`, {
     method: 'DELETE',
   });

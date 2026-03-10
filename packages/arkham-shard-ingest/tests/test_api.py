@@ -21,10 +21,22 @@ from arkham_shard_ingest.models import (
     JobPriority,
     JobStatus,
 )
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
+from arkham_frame.auth import current_active_user
+
 # === Test Setup ===
+
+
+def _mock_current_user():
+    """Override auth dependency with a mock user."""
+    user = MagicMock()
+    user.id = "test-user-id"
+    user.email = "test@example.com"
+    user.is_active = True
+    user.is_superuser = False
+    return user
 
 
 @pytest.fixture
@@ -149,6 +161,7 @@ def mock_event_bus():
 def app(mock_intake_manager, mock_job_dispatcher, mock_event_bus):
     """Create test FastAPI app with mocked dependencies."""
     test_app = FastAPI()
+    test_app.dependency_overrides[current_active_user] = _mock_current_user
     test_app.include_router(router)
 
     init_api(
@@ -309,16 +322,16 @@ class TestIngestPathEndpoint:
         assert data["batch_id"] == "batch-789"
 
     def test_ingest_path_not_found(self, client, mock_intake_manager):
-        """Test ingesting from a non-existent path."""
-        with patch("arkham_shard_ingest.api.Path") as mock_path:
-            mock_path.return_value.exists.return_value = False
+        """Test ingesting from a non-existent path returns 403 (path not allowed)."""
+        with patch("arkham_shard_ingest.api.validate_ingest_path") as mock_validate:
+            mock_validate.side_effect = HTTPException(status_code=403, detail="Access denied")
 
             response = client.post(
                 "/api/ingest/ingest-path",
                 json={"path": "/nonexistent/path"},
             )
 
-        assert response.status_code == 404
+        assert response.status_code == 403
 
 
 # === Job Status Endpoint Tests ===
@@ -547,10 +560,15 @@ class TestPendingJobsEndpoint:
 class TestServiceUnavailable:
     """Tests for service unavailable scenarios."""
 
-    def test_upload_service_unavailable(self, client):
+    def test_upload_service_unavailable(self):
         """Test upload when service not initialized."""
         # Reset API state
         init_api(None, None, None)
+
+        test_app = FastAPI()
+        test_app.dependency_overrides[current_active_user] = _mock_current_user
+        test_app.include_router(router)
+        client = TestClient(test_app)
 
         response = client.post(
             "/api/ingest/upload",
@@ -560,9 +578,14 @@ class TestServiceUnavailable:
         assert response.status_code == 503
         assert "not initialized" in response.json()["detail"]
 
-    def test_batch_service_unavailable(self, client):
+    def test_batch_service_unavailable(self):
         """Test batch upload when service not initialized."""
         init_api(None, None, None)
+
+        test_app = FastAPI()
+        test_app.dependency_overrides[current_active_user] = _mock_current_user
+        test_app.include_router(router)
+        client = TestClient(test_app)
 
         response = client.post(
             "/api/ingest/upload/batch",

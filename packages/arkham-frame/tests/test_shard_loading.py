@@ -67,8 +67,8 @@ VALID_STATE_STRATEGIES = ["url", "local", "session", "none"]
 @pytest.fixture
 def packages_dir() -> Path:
     """Get the packages directory."""
-    # Navigate from tests/ to packages/
-    return Path(__file__).parent.parent.parent.parent
+    # Navigate from tests/ -> arkham-frame/ -> packages/
+    return Path(__file__).parent.parent.parent
 
 
 @pytest.fixture

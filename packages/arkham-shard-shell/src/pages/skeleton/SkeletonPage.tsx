@@ -54,15 +54,16 @@ function SubmissionListView() {
     loadItems();
   }, [loadItems]);
 
-  const filteredItems = filterStatus === 'all'
-    ? items
-    : items.filter(it => it.metadata?.argument_status === filterStatus);
+  const filteredItems =
+    filterStatus === 'all'
+      ? items
+      : items.filter((it) => it.metadata?.argument_status === filterStatus);
 
   const statusCounts = {
     all: items.length,
-    draft: items.filter(it => it.metadata?.argument_status === 'draft').length,
-    structured: items.filter(it => it.metadata?.argument_status === 'structured').length,
-    final: items.filter(it => it.metadata?.argument_status === 'final').length,
+    draft: items.filter((it) => it.metadata?.argument_status === 'draft').length,
+    structured: items.filter((it) => it.metadata?.argument_status === 'structured').length,
+    final: items.filter((it) => it.metadata?.argument_status === 'final').length,
   };
 
   if (loading) {
@@ -72,21 +73,50 @@ function SubmissionListView() {
   return (
     <div style={{ padding: '24px', maxWidth: '1200px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '24px',
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+          <h1
+            style={{
+              fontSize: '24px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              margin: 0,
+            }}
+          >
             <Icon name="Scale" size={24} /> Skeleton Arguments
           </h1>
-          <p style={{ color: 'var(--arkham-text-muted, #6b7280)', marginTop: '4px', fontSize: '14px' }}>
+          <p
+            style={{
+              color: 'var(--arkham-text-muted, #6b7280)',
+              marginTop: '4px',
+              fontSize: '14px',
+            }}
+          >
             Structure legal arguments in ET-compliant format with authority citations
           </p>
         </div>
         <button
           onClick={() => setShowCreateDialog(true)}
           style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '8px 16px', background: '#3b82f6', color: 'white',
-            border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 16px',
+            background: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: 500,
           }}
         >
           <Icon name="Plus" size={16} /> New Submission
@@ -94,7 +124,14 @@ function SubmissionListView() {
       </div>
 
       {/* Status Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '12px',
+          marginBottom: '24px',
+        }}
+      >
         {[
           { key: 'all' as const, label: 'Total', color: '#6b7280', icon: 'FileText' },
           { key: 'draft' as const, label: 'Draft', color: '#6b7280', icon: 'Pencil' },
@@ -105,37 +142,62 @@ function SubmissionListView() {
             key={s.key}
             onClick={() => setFilterStatus(s.key)}
             style={{
-              padding: '16px', borderRadius: '8px',
+              padding: '16px',
+              borderRadius: '8px',
               border: `1px solid ${filterStatus === s.key ? s.color : 'var(--arkham-border, #e5e7eb)'}`,
-              background: filterStatus === s.key ? `${s.color}08` : 'var(--arkham-bg-secondary, white)',
-              cursor: 'pointer', transition: 'all 0.15s',
+              background:
+                filterStatus === s.key ? `${s.color}08` : 'var(--arkham-bg-secondary, white)',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--arkham-text-muted, #6b7280)' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '13px',
+                color: 'var(--arkham-text-muted, #6b7280)',
+              }}
+            >
               <Icon name={s.icon} size={14} /> {s.label}
             </div>
-            <div style={{ fontSize: '28px', fontWeight: 700, color: s.color }}>{statusCounts[s.key]}</div>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: s.color }}>
+              {statusCounts[s.key]}
+            </div>
           </div>
         ))}
       </div>
 
       {/* Submission List */}
       {filteredItems.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '48px', color: 'var(--arkham-text-muted, #6b7280)' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '48px',
+            color: 'var(--arkham-text-muted, #6b7280)',
+          }}
+        >
           <Icon name="Scale" size={48} />
           <p>No submissions found. Create your first skeleton argument to begin.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {filteredItems.map((item) => {
-            const argStatus = ARGUMENT_STATUS_OPTIONS.find(o => o.value === item.metadata?.argument_status);
-            const subType = SUBMISSION_TYPE_OPTIONS.find(o => o.value === item.metadata?.submission_type);
+            const argStatus = ARGUMENT_STATUS_OPTIONS.find(
+              (o) => o.value === item.metadata?.argument_status
+            );
+            const subType = SUBMISSION_TYPE_OPTIONS.find(
+              (o) => o.value === item.metadata?.submission_type
+            );
 
             return (
               <div
                 key={item.id}
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                   padding: '14px 16px',
                   border: '1px solid var(--arkham-border, #e5e7eb)',
                   borderLeft: `4px solid ${argStatus?.color || '#6b7280'}`,
@@ -148,16 +210,27 @@ function SubmissionListView() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontWeight: 600 }}>{item.title}</span>
                     {item.metadata?.claim_reference && (
-                      <span style={{
-                        padding: '1px 6px', borderRadius: '4px', fontSize: '11px',
-                        background: 'var(--arkham-bg-tertiary, #f3f4f6)', color: 'var(--arkham-text-muted, #6b7280)',
-                        fontFamily: 'monospace',
-                      }}>
+                      <span
+                        style={{
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          background: 'var(--arkham-bg-tertiary, #f3f4f6)',
+                          color: 'var(--arkham-text-muted, #6b7280)',
+                          fontFamily: 'monospace',
+                        }}
+                      >
                         {item.metadata.claim_reference}
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '13px', color: 'var(--arkham-text-muted, #6b7280)', marginTop: '4px' }}>
+                  <div
+                    style={{
+                      fontSize: '13px',
+                      color: 'var(--arkham-text-muted, #6b7280)',
+                      marginTop: '4px',
+                    }}
+                  >
                     {item.description || 'No description'}
                   </div>
                 </div>
@@ -169,15 +242,29 @@ function SubmissionListView() {
                     </span>
                   )}
                   {item.metadata?.authority_count != null && item.metadata.authority_count > 0 && (
-                    <span style={{ fontSize: '12px', color: 'var(--arkham-text-muted, #6b7280)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        color: 'var(--arkham-text-muted, #6b7280)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}
+                    >
                       <Icon name="BookMarked" size={12} /> {item.metadata.authority_count}
                     </span>
                   )}
                   {argStatus && (
-                    <span style={{
-                      padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-                      background: `${argStatus.color}15`, color: argStatus.color,
-                    }}>
+                    <span
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        background: `${argStatus.color}15`,
+                        color: argStatus.color,
+                      }}
+                    >
                       {argStatus.label}
                     </span>
                   )}
@@ -193,7 +280,10 @@ function SubmissionListView() {
       {showCreateDialog && (
         <CreateSubmissionDialog
           onClose={() => setShowCreateDialog(false)}
-          onCreated={() => { setShowCreateDialog(false); loadItems(); }}
+          onCreated={() => {
+            setShowCreateDialog(false);
+            loadItems();
+          }}
         />
       )}
     </div>
@@ -204,7 +294,13 @@ function SubmissionListView() {
 // Create Dialog
 // ============================================
 
-function CreateSubmissionDialog({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function CreateSubmissionDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -213,7 +309,10 @@ function CreateSubmissionDialog({ onClose, onCreated }: { onClose: () => void; o
   const [saving, setSaving] = useState(false);
 
   const handleCreate = async () => {
-    if (!title.trim()) { toast.error('Title is required'); return; }
+    if (!title.trim()) {
+      toast.error('Title is required');
+      return;
+    }
     try {
       setSaving(true);
       await api.createItem({
@@ -235,76 +334,142 @@ function CreateSubmissionDialog({ onClose, onCreated }: { onClose: () => void; o
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-    }} onClick={onClose}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+      onClick={onClose}
+    >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'var(--arkham-bg-primary, white)', borderRadius: '12px',
-          padding: '24px', width: '480px', maxWidth: '90vw',
+          background: 'var(--arkham-bg-primary, white)',
+          borderRadius: '12px',
+          padding: '24px',
+          width: '480px',
+          maxWidth: '90vw',
           border: '1px solid var(--arkham-border, #e5e7eb)',
         }}
       >
-        <h2 style={{ margin: '0 0 16px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <h2
+          style={{
+            margin: '0 0 16px 0',
+            fontSize: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
           <Icon name="Scale" size={20} /> New Submission
         </h2>
 
         <label style={{ display: 'block', marginBottom: '12px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Title</span>
+          <span
+            style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}
+          >
+            Title
+          </span>
           <input
-            value={title} onChange={(e) => setTitle(e.target.value)}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Skeleton Argument — Direct Discrimination (s.13 EA 2010)"
             style={{
-              width: '100%', padding: '8px 12px', borderRadius: '6px',
-              border: '1px solid var(--arkham-border, #d1d5db)', fontSize: '14px',
-              background: 'var(--arkham-bg-primary, white)', color: 'inherit',
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--arkham-border, #d1d5db)',
+              fontSize: '14px',
+              background: 'var(--arkham-bg-primary, white)',
+              color: 'inherit',
               boxSizing: 'border-box',
             }}
           />
         </label>
 
         <label style={{ display: 'block', marginBottom: '12px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Description</span>
+          <span
+            style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}
+          >
+            Description
+          </span>
           <textarea
-            value={description} onChange={(e) => setDescription(e.target.value)}
-            rows={3} placeholder="Brief summary of the argument..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            placeholder="Brief summary of the argument..."
             style={{
-              width: '100%', padding: '8px 12px', borderRadius: '6px',
-              border: '1px solid var(--arkham-border, #d1d5db)', fontSize: '14px', resize: 'vertical',
-              background: 'var(--arkham-bg-primary, white)', color: 'inherit',
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--arkham-border, #d1d5db)',
+              fontSize: '14px',
+              resize: 'vertical',
+              background: 'var(--arkham-bg-primary, white)',
+              color: 'inherit',
               boxSizing: 'border-box',
             }}
           />
         </label>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '12px',
+            marginBottom: '16px',
+          }}
+        >
           <label>
-            <span style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Type</span>
+            <span
+              style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}
+            >
+              Type
+            </span>
             <select
-              value={submissionType} onChange={(e) => setSubmissionType(e.target.value as SubmissionType)}
+              value={submissionType}
+              onChange={(e) => setSubmissionType(e.target.value as SubmissionType)}
               style={{
-                width: '100%', padding: '8px 12px', borderRadius: '6px',
-                border: '1px solid var(--arkham-border, #d1d5db)', fontSize: '14px',
-                background: 'var(--arkham-bg-primary, white)', color: 'inherit',
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid var(--arkham-border, #d1d5db)',
+                fontSize: '14px',
+                background: 'var(--arkham-bg-primary, white)',
+                color: 'inherit',
               }}
             >
-              {SUBMISSION_TYPE_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+              {SUBMISSION_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
               ))}
             </select>
           </label>
 
           <label>
-            <span style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Claim Reference</span>
+            <span
+              style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}
+            >
+              Claim Reference
+            </span>
             <input
-              value={claimRef} onChange={(e) => setClaimRef(e.target.value)}
+              value={claimRef}
+              onChange={(e) => setClaimRef(e.target.value)}
               placeholder="e.g. s.13 EA 2010"
               style={{
-                width: '100%', padding: '8px 12px', borderRadius: '6px',
-                border: '1px solid var(--arkham-border, #d1d5db)', fontSize: '14px',
-                background: 'var(--arkham-bg-primary, white)', color: 'inherit',
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid var(--arkham-border, #d1d5db)',
+                fontSize: '14px',
+                background: 'var(--arkham-bg-primary, white)',
+                color: 'inherit',
                 boxSizing: 'border-box',
               }}
             />
@@ -312,17 +477,33 @@ function CreateSubmissionDialog({ onClose, onCreated }: { onClose: () => void; o
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-          <button onClick={onClose} style={{
-            padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--arkham-border, #d1d5db)',
-            background: 'transparent', cursor: 'pointer', color: 'inherit',
-          }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: '1px solid var(--arkham-border, #d1d5db)',
+              background: 'transparent',
+              cursor: 'pointer',
+              color: 'inherit',
+            }}
+          >
             Cancel
           </button>
-          <button onClick={handleCreate} disabled={saving} style={{
-            padding: '8px 16px', borderRadius: '6px', border: 'none',
-            background: '#3b82f6', color: 'white', cursor: 'pointer', fontWeight: 500,
-            opacity: saving ? 0.6 : 1,
-          }}>
+          <button
+            onClick={handleCreate}
+            disabled={saving}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              background: '#3b82f6',
+              color: 'white',
+              cursor: 'pointer',
+              fontWeight: 500,
+              opacity: saving ? 0.6 : 1,
+            }}
+          >
             {saving ? 'Creating...' : 'Create Submission'}
           </button>
         </div>
@@ -359,51 +540,106 @@ function SubmissionDetailView({ itemId }: { itemId: string }) {
   if (!item) return <div style={{ padding: '24px' }}>Submission not found</div>;
 
   const metadata = (item.metadata || {}) as Record<string, unknown>;
-  const argStatus = ARGUMENT_STATUS_OPTIONS.find(o => o.value === metadata.argument_status);
-  const subType = SUBMISSION_TYPE_OPTIONS.find(o => o.value === metadata.submission_type);
+  const argStatus = ARGUMENT_STATUS_OPTIONS.find((o) => o.value === metadata.argument_status);
+  const subType = SUBMISSION_TYPE_OPTIONS.find((o) => o.value === metadata.submission_type);
   const authorities = (metadata.authorities || []) as Array<Record<string, unknown>>;
   const argumentTree = (metadata.argument_tree || []) as Array<Record<string, unknown>>;
 
   const tabs = [
     { key: 'tree' as const, label: 'Argument Tree', icon: 'GitBranch' },
-    { key: 'authorities' as const, label: `Authorities (${authorities.length})`, icon: 'BookMarked' },
+    {
+      key: 'authorities' as const,
+      label: `Authorities (${authorities.length})`,
+      icon: 'BookMarked',
+    },
     { key: 'preview' as const, label: 'Preview', icon: 'Eye' },
   ];
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '20px',
+        }}
+      >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <a href="/skeleton" style={{ color: 'var(--arkham-text-muted, #6b7280)', textDecoration: 'none', fontSize: '13px' }}>
+            <a
+              href="/skeleton"
+              style={{
+                color: 'var(--arkham-text-muted, #6b7280)',
+                textDecoration: 'none',
+                fontSize: '13px',
+              }}
+            >
               Skeleton Arguments
             </a>
             <Icon name="ChevronRight" size={12} />
           </div>
-          <h1 style={{ fontSize: '22px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+          <h1
+            style={{
+              fontSize: '22px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              margin: 0,
+            }}
+          >
             <Icon name="Scale" size={22} /> {String(item.title)}
           </h1>
-          <p style={{ color: 'var(--arkham-text-muted, #6b7280)', marginTop: '4px', fontSize: '14px' }}>
+          <p
+            style={{
+              color: 'var(--arkham-text-muted, #6b7280)',
+              marginTop: '4px',
+              fontSize: '14px',
+            }}
+          >
             {String(item.description || 'No description')}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {subType && (
-            <span style={{ fontSize: '12px', color: 'var(--arkham-text-muted, #6b7280)', padding: '4px 8px', background: 'var(--arkham-bg-tertiary, #f3f4f6)', borderRadius: '4px' }}>
+            <span
+              style={{
+                fontSize: '12px',
+                color: 'var(--arkham-text-muted, #6b7280)',
+                padding: '4px 8px',
+                background: 'var(--arkham-bg-tertiary, #f3f4f6)',
+                borderRadius: '4px',
+              }}
+            >
               {subType.label}
             </span>
           )}
           {metadata.claim_reference ? (
-            <span style={{ fontSize: '12px', fontFamily: 'monospace', padding: '4px 8px', background: 'var(--arkham-bg-tertiary, #f3f4f6)', borderRadius: '4px' }}>
+            <span
+              style={{
+                fontSize: '12px',
+                fontFamily: 'monospace',
+                padding: '4px 8px',
+                background: 'var(--arkham-bg-tertiary, #f3f4f6)',
+                borderRadius: '4px',
+              }}
+            >
               {String(metadata.claim_reference)}
             </span>
           ) : null}
           {argStatus && (
-            <span style={{
-              padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 700,
-              background: `${argStatus.color}15`, color: argStatus.color,
-            }}>
+            <span
+              style={{
+                padding: '4px 10px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                fontWeight: 700,
+                background: `${argStatus.color}15`,
+                color: argStatus.color,
+              }}
+            >
               {argStatus.label}
             </span>
           )}
@@ -411,15 +647,28 @@ function SubmissionDetailView({ itemId }: { itemId: string }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '2px', borderBottom: '1px solid var(--arkham-border, #e5e7eb)', marginBottom: '20px' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '2px',
+          borderBottom: '1px solid var(--arkham-border, #e5e7eb)',
+          marginBottom: '20px',
+        }}
+      >
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '10px 16px', border: 'none', cursor: 'pointer',
-              background: 'transparent', fontSize: '14px', fontWeight: activeTab === tab.key ? 600 : 400,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '10px 16px',
+              border: 'none',
+              cursor: 'pointer',
+              background: 'transparent',
+              fontSize: '14px',
+              fontWeight: activeTab === tab.key ? 600 : 400,
               color: activeTab === tab.key ? '#3b82f6' : 'var(--arkham-text-muted, #6b7280)',
               borderBottom: activeTab === tab.key ? '2px solid #3b82f6' : '2px solid transparent',
               marginBottom: '-1px',
@@ -431,14 +680,15 @@ function SubmissionDetailView({ itemId }: { itemId: string }) {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'tree' && (
-        <ArgumentTreePanel tree={argumentTree} />
-      )}
-      {activeTab === 'authorities' && (
-        <AuthoritiesPanel authorities={authorities} />
-      )}
+      {activeTab === 'tree' && <ArgumentTreePanel tree={argumentTree} />}
+      {activeTab === 'authorities' && <AuthoritiesPanel authorities={authorities} />}
       {activeTab === 'preview' && (
-        <PreviewPanel item={item} metadata={metadata} authorities={authorities} tree={argumentTree} />
+        <PreviewPanel
+          item={item}
+          metadata={metadata}
+          authorities={authorities}
+          tree={argumentTree}
+        />
       )}
     </div>
   );
@@ -451,10 +701,14 @@ function SubmissionDetailView({ itemId }: { itemId: string }) {
 function ArgumentTreePanel({ tree }: { tree: Array<Record<string, unknown>> }) {
   if (tree.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '48px', color: 'var(--arkham-text-muted, #6b7280)' }}>
+      <div
+        style={{ textAlign: 'center', padding: '48px', color: 'var(--arkham-text-muted, #6b7280)' }}
+      >
         <Icon name="GitBranch" size={48} />
         <p style={{ marginTop: '12px' }}>No argument tree built yet.</p>
-        <p style={{ fontSize: '13px' }}>Structure your argument as: Claim &rarr; Legal Test &rarr; Evidence &rarr; Authority</p>
+        <p style={{ fontSize: '13px' }}>
+          Structure your argument as: Claim &rarr; Legal Test &rarr; Evidence &rarr; Authority
+        </p>
       </div>
     );
   }
@@ -482,25 +736,49 @@ function TreeNode({ node, depth }: { node: Record<string, unknown>; depth: numbe
 
   return (
     <div style={{ marginLeft: depth * 24 }}>
-      <div style={{
-        padding: '10px 14px', borderRadius: '6px',
-        border: `1px solid ${style.color}30`, background: style.bg,
-        borderLeft: `3px solid ${style.color}`,
-      }}>
+      <div
+        style={{
+          padding: '10px 14px',
+          borderRadius: '6px',
+          border: `1px solid ${style.color}30`,
+          background: style.bg,
+          borderLeft: `3px solid ${style.color}`,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Icon name={style.icon} size={14} />
-          <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: style.color }}>
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              color: style.color,
+            }}
+          >
             {type.replace('_', ' ')}
           </span>
         </div>
         <div style={{ fontWeight: 600, marginTop: '4px' }}>{String(node.label || '')}</div>
         {node.detail ? (
-          <div style={{ fontSize: '13px', color: 'var(--arkham-text-muted, #6b7280)', marginTop: '2px' }}>
+          <div
+            style={{
+              fontSize: '13px',
+              color: 'var(--arkham-text-muted, #6b7280)',
+              marginTop: '2px',
+            }}
+          >
             {String(node.detail)}
           </div>
         ) : null}
         {node.bundle_refs ? (
-          <div style={{ fontSize: '11px', color: 'var(--arkham-text-muted, #9ca3af)', marginTop: '4px', fontFamily: 'monospace' }}>
+          <div
+            style={{
+              fontSize: '11px',
+              color: 'var(--arkham-text-muted, #9ca3af)',
+              marginTop: '4px',
+              fontFamily: 'monospace',
+            }}
+          >
             Bundle: {(node.bundle_refs as string[]).join(', ')}
           </div>
         ) : null}
@@ -529,10 +807,14 @@ function AuthoritiesPanel({ authorities }: { authorities: Array<Record<string, u
 
   if (authorities.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '48px', color: 'var(--arkham-text-muted, #6b7280)' }}>
+      <div
+        style={{ textAlign: 'center', padding: '48px', color: 'var(--arkham-text-muted, #6b7280)' }}
+      >
         <Icon name="BookMarked" size={48} />
         <p style={{ marginTop: '12px' }}>No authorities cited yet.</p>
-        <p style={{ fontSize: '13px' }}>Add case law references to support your argument elements.</p>
+        <p style={{ fontSize: '13px' }}>
+          Add case law references to support your argument elements.
+        </p>
       </div>
     );
   }
@@ -547,40 +829,75 @@ function AuthoritiesPanel({ authorities }: { authorities: Array<Record<string, u
           <div
             key={i}
             style={{
-              padding: '14px 16px', borderRadius: '8px',
+              padding: '14px 16px',
+              borderRadius: '8px',
               border: '1px solid var(--arkham-border, #e5e7eb)',
               borderLeft: `4px solid ${color}`,
               background: 'var(--arkham-bg-secondary, white)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+            >
               <div>
-                <div style={{ fontWeight: 600, fontStyle: 'italic' }}>{String(auth.case_name || '')}</div>
-                <div style={{ fontSize: '13px', color: 'var(--arkham-text-muted, #6b7280)', fontFamily: 'monospace', marginTop: '2px' }}>
+                <div style={{ fontWeight: 600, fontStyle: 'italic' }}>
+                  {String(auth.case_name || '')}
+                </div>
+                <div
+                  style={{
+                    fontSize: '13px',
+                    color: 'var(--arkham-text-muted, #6b7280)',
+                    fontFamily: 'monospace',
+                    marginTop: '2px',
+                  }}
+                >
                   {String(auth.citation || '')}
                   {auth.year ? ` (${String(auth.year)})` : null}
                 </div>
               </div>
-              <span style={{
-                padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-                background: `${color}15`, color,
-                textTransform: 'uppercase',
-              }}>
+              <span
+                style={{
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  background: `${color}15`,
+                  color,
+                  textTransform: 'uppercase',
+                }}
+              >
                 {level}
               </span>
             </div>
             {auth.court ? (
-              <div style={{ fontSize: '12px', color: 'var(--arkham-text-muted, #9ca3af)', marginTop: '4px' }}>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: 'var(--arkham-text-muted, #9ca3af)',
+                  marginTop: '4px',
+                }}
+              >
                 {String(auth.court)}
               </div>
             ) : null}
             {auth.ratio ? (
-              <div style={{
-                fontSize: '13px', marginTop: '8px', padding: '8px 12px',
-                background: 'var(--arkham-bg-tertiary, #f9fafb)', borderRadius: '4px',
-                borderLeft: '2px solid var(--arkham-border, #d1d5db)',
-              }}>
-                <strong style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--arkham-text-muted, #6b7280)' }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  marginTop: '8px',
+                  padding: '8px 12px',
+                  background: 'var(--arkham-bg-tertiary, #f9fafb)',
+                  borderRadius: '4px',
+                  borderLeft: '2px solid var(--arkham-border, #d1d5db)',
+                }}
+              >
+                <strong
+                  style={{
+                    fontSize: '11px',
+                    textTransform: 'uppercase',
+                    color: 'var(--arkham-text-muted, #6b7280)',
+                  }}
+                >
                   Ratio Decidendi:
                 </strong>{' '}
                 {String(auth.ratio)}
@@ -598,7 +915,10 @@ function AuthoritiesPanel({ authorities }: { authorities: Array<Record<string, u
 // ============================================
 
 function PreviewPanel({
-  item, metadata, authorities, tree,
+  item,
+  metadata,
+  authorities,
+  tree,
 }: {
   item: Record<string, unknown>;
   metadata: Record<string, unknown>;
@@ -606,14 +926,25 @@ function PreviewPanel({
   tree: Array<Record<string, unknown>>;
 }) {
   return (
-    <div style={{
-      padding: '24px', borderRadius: '8px',
-      border: '1px solid var(--arkham-border, #e5e7eb)',
-      background: 'var(--arkham-bg-secondary, white)',
-      fontFamily: "'Times New Roman', serif", lineHeight: 1.8,
-    }}>
+    <div
+      style={{
+        padding: '24px',
+        borderRadius: '8px',
+        border: '1px solid var(--arkham-border, #e5e7eb)',
+        background: 'var(--arkham-bg-secondary, white)',
+        fontFamily: "'Times New Roman', serif",
+        lineHeight: 1.8,
+      }}
+    >
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--arkham-text-muted, #6b7280)' }}>
+        <div
+          style={{
+            fontSize: '11px',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            color: 'var(--arkham-text-muted, #6b7280)',
+          }}
+        >
           In the Employment Tribunal
         </div>
         <h2 style={{ fontSize: '18px', margin: '8px 0 4px 0' }}>{String(item.title)}</h2>
@@ -625,20 +956,39 @@ function PreviewPanel({
       </div>
 
       {tree.length === 0 && authorities.length === 0 ? (
-        <div style={{ textAlign: 'center', color: 'var(--arkham-text-muted, #6b7280)', padding: '24px', fontFamily: 'inherit' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            color: 'var(--arkham-text-muted, #6b7280)',
+            padding: '24px',
+            fontFamily: 'inherit',
+          }}
+        >
           Add argument tree elements and authorities to see a formatted preview.
         </div>
       ) : (
         <>
           {tree.length > 0 && (
             <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '14px', borderBottom: '1px solid var(--arkham-border, #e5e7eb)', paddingBottom: '4px' }}>
+              <h3
+                style={{
+                  fontSize: '14px',
+                  borderBottom: '1px solid var(--arkham-border, #e5e7eb)',
+                  paddingBottom: '4px',
+                }}
+              >
                 Argument Structure
               </h3>
               {tree.map((node, i) => (
                 <div key={i} style={{ marginBottom: '8px' }}>
-                  <div style={{ fontWeight: 600 }}>{i + 1}. {String(node.label || '')}</div>
-                  {node.detail ? <div style={{ paddingLeft: '16px', fontSize: '14px' }}>{String(node.detail)}</div> : null}
+                  <div style={{ fontWeight: 600 }}>
+                    {i + 1}. {String(node.label || '')}
+                  </div>
+                  {node.detail ? (
+                    <div style={{ paddingLeft: '16px', fontSize: '14px' }}>
+                      {String(node.detail)}
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -646,7 +996,13 @@ function PreviewPanel({
 
           {authorities.length > 0 && (
             <div>
-              <h3 style={{ fontSize: '14px', borderBottom: '1px solid var(--arkham-border, #e5e7eb)', paddingBottom: '4px' }}>
+              <h3
+                style={{
+                  fontSize: '14px',
+                  borderBottom: '1px solid var(--arkham-border, #e5e7eb)',
+                  paddingBottom: '4px',
+                }}
+              >
                 Authorities Cited
               </h3>
               {authorities.map((auth, i) => (

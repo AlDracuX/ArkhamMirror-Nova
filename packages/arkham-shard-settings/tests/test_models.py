@@ -26,7 +26,7 @@ class TestSettingCategory:
         assert SettingCategory.GENERAL.value == "general"
         assert SettingCategory.APPEARANCE.value == "appearance"
         assert SettingCategory.NOTIFICATIONS.value == "notifications"
-        assert SettingCategory.PRIVACY.value == "privacy"
+        assert SettingCategory.DATA.value == "data"
         assert SettingCategory.PERFORMANCE.value == "performance"
         assert SettingCategory.ADVANCED.value == "advanced"
         assert SettingCategory.SHARD.value == "shard"

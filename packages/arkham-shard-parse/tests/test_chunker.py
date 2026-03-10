@@ -147,7 +147,7 @@ class TestSentenceChunking:
         chunks = chunker.chunk_text(text, "doc-123")
 
         assert len(chunks) == 1
-        assert chunks[0].text == "This is a single sentence"
+        assert chunks[0].text == "This is a single sentence."
 
     def test_chunk_multiple_sentences(self):
         """Test chunking multiple sentences."""

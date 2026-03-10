@@ -8,8 +8,11 @@ Run with:
     pytest tests/test_api.py -v
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 from arkham_shard_documents.api import router
+from arkham_shard_documents.models import DocumentRecord, DocumentStatus
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -19,10 +22,70 @@ from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-def app():
-    """Create a FastAPI app with the documents router."""
+def mock_shard():
+    """Create a mock documents shard with all async methods."""
+    shard = AsyncMock()
+
+    # Configure return values for common methods
+    shard.get_document_count = AsyncMock(return_value=0)
+    shard.get_document_stats = AsyncMock(
+        return_value={
+            "total_documents": 0,
+            "processed_documents": 0,
+            "processing_documents": 0,
+            "failed_documents": 0,
+            "total_size_bytes": 0,
+            "total_pages": 0,
+            "total_chunks": 0,
+        }
+    )
+    shard.list_documents = AsyncMock(return_value=[])
+    shard.get_document = AsyncMock(return_value=None)
+    shard.update_document = AsyncMock(return_value=None)
+    shard.delete_document = AsyncMock(return_value=False)
+    shard.get_document_content = AsyncMock(return_value=None)
+    shard.get_document_chunks = AsyncMock(
+        return_value={
+            "items": [],
+            "total": 0,
+            "page": 1,
+            "page_size": 50,
+        }
+    )
+    shard.get_document_entities = AsyncMock(
+        return_value={
+            "items": [],
+            "total": 0,
+        }
+    )
+    shard.get_recently_viewed = AsyncMock(return_value=[])
+    shard.mark_document_viewed = AsyncMock()
+    shard.batch_update_tags = AsyncMock(
+        return_value={
+            "processed": 0,
+            "failed": 0,
+            "details": [],
+        }
+    )
+    shard.batch_delete_documents = AsyncMock(
+        return_value={
+            "processed": 0,
+            "failed": 0,
+            "details": [],
+        }
+    )
+    shard.deduplication = None
+
+    return shard
+
+
+@pytest.fixture
+def app(mock_shard):
+    """Create a FastAPI app with the documents router and mock shard."""
     app = FastAPI()
     app.include_router(router)
+    # Set up app state so get_shard(request) works
+    app.state.documents_shard = mock_shard
     return app
 
 
@@ -271,8 +334,19 @@ class TestDocumentContent:
 class TestDocumentChunks:
     """Test document chunks endpoint."""
 
-    def test_get_document_chunks_default(self, client):
+    def test_get_document_chunks_default(self, client, mock_shard):
         """Test getting document chunks with defaults."""
+        # Must have a document to get its chunks
+        mock_shard.get_document = AsyncMock(return_value=MagicMock(id="doc-123"))
+        mock_shard.get_document_chunks = AsyncMock(
+            return_value={
+                "items": [],
+                "total": 0,
+                "page": 1,
+                "page_size": 50,
+            }
+        )
+
         response = client.get("/api/documents/doc-123/chunks")
         assert response.status_code == 200
 
@@ -285,8 +359,18 @@ class TestDocumentChunks:
         assert data["page"] == 1
         assert data["page_size"] == 50
 
-    def test_get_document_chunks_with_pagination(self, client):
+    def test_get_document_chunks_with_pagination(self, client, mock_shard):
         """Test getting chunks with custom pagination."""
+        mock_shard.get_document = AsyncMock(return_value=MagicMock(id="doc-123"))
+        mock_shard.get_document_chunks = AsyncMock(
+            return_value={
+                "items": [],
+                "total": 0,
+                "page": 2,
+                "page_size": 100,
+            }
+        )
+
         response = client.get("/api/documents/doc-123/chunks?page=2&page_size=100")
         assert response.status_code == 200
 
@@ -294,8 +378,9 @@ class TestDocumentChunks:
         assert data["page"] == 2
         assert data["page_size"] == 100
 
-    def test_get_document_chunks_page_size_limit(self, client):
+    def test_get_document_chunks_page_size_limit(self, client, mock_shard):
         """Test chunks page size is clamped."""
+        mock_shard.get_document = AsyncMock(return_value=MagicMock(id="doc-123"))
         response = client.get("/api/documents/doc-123/chunks?page_size=500")
         # Should either accept or clamp to 200
         assert response.status_code in [200, 422]
@@ -309,8 +394,16 @@ class TestDocumentChunks:
 class TestDocumentEntities:
     """Test document entities endpoint."""
 
-    def test_get_document_entities(self, client):
+    def test_get_document_entities(self, client, mock_shard):
         """Test getting document entities."""
+        mock_shard.get_document = AsyncMock(return_value=MagicMock(id="doc-123"))
+        mock_shard.get_document_entities = AsyncMock(
+            return_value={
+                "items": [],
+                "total": 0,
+            }
+        )
+
         response = client.get("/api/documents/doc-123/entities")
         assert response.status_code == 200
 
@@ -318,13 +411,29 @@ class TestDocumentEntities:
         assert "items" in data
         assert "total" in data
 
-    def test_get_document_entities_with_type_filter(self, client):
+    def test_get_document_entities_with_type_filter(self, client, mock_shard):
         """Test filtering entities by type."""
+        mock_shard.get_document = AsyncMock(return_value=MagicMock(id="doc-123"))
+        mock_shard.get_document_entities = AsyncMock(
+            return_value={
+                "items": [],
+                "total": 0,
+            }
+        )
+
         response = client.get("/api/documents/doc-123/entities?entity_type=PERSON")
         assert response.status_code == 200
 
-    def test_get_document_entities_various_types(self, client):
+    def test_get_document_entities_various_types(self, client, mock_shard):
         """Test filtering by various entity types."""
+        mock_shard.get_document = AsyncMock(return_value=MagicMock(id="doc-123"))
+        mock_shard.get_document_entities = AsyncMock(
+            return_value={
+                "items": [],
+                "total": 0,
+            }
+        )
+
         entity_types = ["PERSON", "ORG", "GPE", "DATE", "EVENT"]
 
         for entity_type in entity_types:
@@ -406,8 +515,15 @@ class TestDocumentStatistics:
 class TestBatchOperations:
     """Test batch operation endpoints."""
 
-    def test_batch_update_tags(self, client):
+    def test_batch_update_tags(self, client, mock_shard):
         """Test batch updating tags."""
+        mock_shard.batch_update_tags = AsyncMock(
+            return_value={
+                "processed": 3,
+                "failed": 0,
+                "details": [],
+            }
+        )
         payload = {"document_ids": ["doc-1", "doc-2", "doc-3"], "add_tags": ["important"], "remove_tags": ["obsolete"]}
         response = client.post("/api/documents/batch/update-tags", json=payload)
         assert response.status_code == 200
@@ -418,26 +534,48 @@ class TestBatchOperations:
         assert "failed" in data
         assert "message" in data
 
-    def test_batch_update_tags_add_only(self, client):
+    def test_batch_update_tags_add_only(self, client, mock_shard):
         """Test batch adding tags."""
+        mock_shard.batch_update_tags = AsyncMock(
+            return_value={
+                "processed": 2,
+                "failed": 0,
+                "details": [],
+            }
+        )
         payload = {"document_ids": ["doc-1", "doc-2"], "add_tags": ["new-tag"]}
         response = client.post("/api/documents/batch/update-tags", json=payload)
         assert response.status_code == 200
 
-    def test_batch_update_tags_remove_only(self, client):
+    def test_batch_update_tags_remove_only(self, client, mock_shard):
         """Test batch removing tags."""
+        mock_shard.batch_update_tags = AsyncMock(
+            return_value={
+                "processed": 2,
+                "failed": 0,
+                "details": [],
+            }
+        )
         payload = {"document_ids": ["doc-1", "doc-2"], "remove_tags": ["old-tag"]}
         response = client.post("/api/documents/batch/update-tags", json=payload)
         assert response.status_code == 200
 
-    def test_batch_update_tags_empty_list(self, client):
+    def test_batch_update_tags_empty_list(self, client, mock_shard):
         """Test batch update with empty document list."""
         payload = {"document_ids": [], "add_tags": ["tag"]}
         response = client.post("/api/documents/batch/update-tags", json=payload)
-        assert response.status_code == 200
+        # API now returns 400 for empty document list
+        assert response.status_code == 400
 
-    def test_batch_delete_documents(self, client):
+    def test_batch_delete_documents(self, client, mock_shard):
         """Test batch deleting documents."""
+        mock_shard.batch_delete_documents = AsyncMock(
+            return_value={
+                "processed": 3,
+                "failed": 0,
+                "details": [],
+            }
+        )
         payload = {"document_ids": ["doc-1", "doc-2", "doc-3"]}
         response = client.post("/api/documents/batch/delete", json=payload)
         assert response.status_code == 200
@@ -448,11 +586,12 @@ class TestBatchOperations:
         assert "failed" in data
         assert "message" in data
 
-    def test_batch_delete_empty_list(self, client):
+    def test_batch_delete_empty_list(self, client, mock_shard):
         """Test batch delete with empty list."""
         payload = {"document_ids": []}
         response = client.post("/api/documents/batch/delete", json=payload)
-        assert response.status_code == 200
+        # API now returns 400 for empty list
+        assert response.status_code == 400
 
 
 # =============================================================================
@@ -508,8 +647,18 @@ class TestResponseSchemas:
         assert isinstance(data["page"], int)
         assert isinstance(data["page_size"], int)
 
-    def test_chunk_list_response_schema(self, client):
+    def test_chunk_list_response_schema(self, client, mock_shard):
         """Test ChunkListResponse schema."""
+        mock_shard.get_document = AsyncMock(return_value=MagicMock(id="doc-123"))
+        mock_shard.get_document_chunks = AsyncMock(
+            return_value={
+                "items": [],
+                "total": 0,
+                "page": 1,
+                "page_size": 50,
+            }
+        )
+
         response = client.get("/api/documents/doc-123/chunks")
         data = response.json()
 
@@ -518,8 +667,16 @@ class TestResponseSchemas:
         assert "page" in data
         assert "page_size" in data
 
-    def test_entity_list_response_schema(self, client):
+    def test_entity_list_response_schema(self, client, mock_shard):
         """Test EntityListResponse schema."""
+        mock_shard.get_document = AsyncMock(return_value=MagicMock(id="doc-123"))
+        mock_shard.get_document_entities = AsyncMock(
+            return_value={
+                "items": [],
+                "total": 0,
+            }
+        )
+
         response = client.get("/api/documents/doc-123/entities")
         data = response.json()
 
@@ -545,8 +702,15 @@ class TestResponseSchemas:
             assert field in data
             assert isinstance(data[field], int)
 
-    def test_batch_result_response_schema(self, client):
+    def test_batch_result_response_schema(self, client, mock_shard):
         """Test batch operation response schema."""
+        mock_shard.batch_delete_documents = AsyncMock(
+            return_value={
+                "processed": 1,
+                "failed": 0,
+                "details": [],
+            }
+        )
         payload = {"document_ids": ["doc-1"]}
         response = client.post("/api/documents/batch/delete", json=payload)
         data = response.json()
@@ -583,7 +747,7 @@ class TestEdgeCases:
 
     def test_unicode_in_search(self, client):
         """Test search with unicode characters."""
-        response = client.get("/api/documents/items?q=café")
+        response = client.get("/api/documents/items?q=caf\u00e9")
         assert response.status_code == 200
 
     def test_negative_page_number(self, client):

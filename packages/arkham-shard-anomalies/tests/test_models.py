@@ -55,7 +55,7 @@ class TestAnomalyTypeEnum:
     def test_all_types_exist(self):
         """Test all expected types exist."""
         types = [t.value for t in AnomalyType]
-        assert len(types) == 6
+        assert len(types) == 10
 
 
 class TestAnomalyStatusEnum:

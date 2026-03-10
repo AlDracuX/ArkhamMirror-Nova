@@ -90,7 +90,10 @@ class TestClaimExtractionLLM:
     def detector_with_llm(self):
         """Create detector with mock LLM service."""
         mock_llm = MagicMock()
-        mock_llm.generate = AsyncMock(return_value={"text": '[{"claim": "Test claim", "type": "fact"}]'})
+        # LLM returns a response object with .text attribute (LLMResponse dataclass)
+        mock_response = MagicMock()
+        mock_response.text = '[{"claim": "Test claim", "type": "fact"}]'
+        mock_llm.generate = AsyncMock(return_value=mock_response)
         return ContradictionDetector(llm_service=mock_llm)
 
     @pytest.fixture

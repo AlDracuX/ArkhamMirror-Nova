@@ -25,9 +25,9 @@ class TestAnomalyStoreInit:
     def test_initialization(self):
         """Test store initializes with empty collections."""
         store = AnomalyStore()
-        assert store.anomalies == {}
-        assert store.patterns == {}
-        assert store.notes == {}
+        assert store._anomalies == {}
+        assert store._patterns == {}
+        assert store._notes == {}
 
 
 class TestAnomalyCRUD:
@@ -54,7 +54,7 @@ class TestAnomalyCRUD:
         """Test creating an anomaly."""
         result = await store.create_anomaly(sample_anomaly)
         assert result.id == sample_anomaly.id
-        assert sample_anomaly.id in store.anomalies
+        assert sample_anomaly.id in store._anomalies
 
     @pytest.mark.asyncio
     async def test_get_anomaly(self, store, sample_anomaly):
@@ -86,7 +86,7 @@ class TestAnomalyCRUD:
         await store.create_anomaly(sample_anomaly)
         result = await store.delete_anomaly(sample_anomaly.id)
         assert result is True
-        assert sample_anomaly.id not in store.anomalies
+        assert sample_anomaly.id not in store._anomalies
 
     @pytest.mark.asyncio
     async def test_delete_anomaly_not_found(self, store):
@@ -107,7 +107,7 @@ class TestAnomalyCRUD:
         await store.add_note(note)
 
         await store.delete_anomaly(sample_anomaly.id)
-        assert sample_anomaly.id not in store.notes
+        assert sample_anomaly.id not in store._notes
 
 
 class TestAnomalyListing:
@@ -301,7 +301,7 @@ class TestAnalystNotes:
         )
         result = await store_with_anomaly.add_note(note)
         assert result.id == "note-1"
-        assert "anom-1" in store_with_anomaly.notes
+        assert "anom-1" in store_with_anomaly._notes
 
     @pytest.mark.asyncio
     async def test_add_multiple_notes(self, store_with_anomaly):
@@ -365,7 +365,7 @@ class TestPatternCRUD:
         """Test creating a pattern."""
         result = await store.create_pattern(sample_pattern)
         assert result.id == sample_pattern.id
-        assert sample_pattern.id in store.patterns
+        assert sample_pattern.id in store._patterns
 
     @pytest.mark.asyncio
     async def test_get_pattern(self, store, sample_pattern):

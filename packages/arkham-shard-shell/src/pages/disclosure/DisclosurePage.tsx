@@ -79,12 +79,34 @@ function DisclosureMainView() {
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '24px',
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+          <h1
+            style={{
+              fontSize: '24px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              margin: 0,
+            }}
+          >
             <Icon name="FileSearch" size={28} /> Disclosure Tracker
           </h1>
-          <p style={{ color: 'var(--arkham-text-muted, #6b7280)', marginTop: '4px', fontSize: '14px' }}>
+          <p
+            style={{
+              color: 'var(--arkham-text-muted, #6b7280)',
+              marginTop: '4px',
+              fontSize: '14px',
+            }}
+          >
             Monitor information flow, respondent compliance, and strategic gaps
           </p>
         </div>
@@ -92,9 +114,16 @@ function DisclosureMainView() {
           <button
             onClick={() => setShowRequestDialog(true)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '8px 16px', background: 'var(--arkham-primary, #3b82f6)', color: 'white',
-              border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              background: 'var(--arkham-primary, #3b82f6)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 500,
             }}
           >
             <Icon name="Plus" size={16} /> New Request
@@ -102,9 +131,15 @@ function DisclosureMainView() {
           <button
             onClick={() => setShowResponseDialog(true)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '8px 16px', background: 'var(--arkham-bg-secondary, #f3f4f6)',
-              border: '1px solid var(--arkham-border, #e5e7eb)', borderRadius: '6px', cursor: 'pointer', fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              background: 'var(--arkham-bg-secondary, #f3f4f6)',
+              border: '1px solid var(--arkham-border, #e5e7eb)',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 500,
             }}
           >
             <Icon name="Inbox" size={16} /> Log Response
@@ -113,29 +148,58 @@ function DisclosureMainView() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--arkham-border, #e5e7eb)', marginBottom: '20px' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '4px',
+          borderBottom: '1px solid var(--arkham-border, #e5e7eb)',
+          marginBottom: '20px',
+        }}
+      >
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '12px 20px', border: 'none', cursor: 'pointer',
-              background: 'transparent', fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 20px',
+              border: 'none',
+              cursor: 'pointer',
+              background: 'transparent',
+              fontSize: '14px',
               fontWeight: activeTab === tab.key ? 600 : 400,
-              color: activeTab === tab.key ? 'var(--arkham-primary, #3b82f6)' : 'var(--arkham-text-muted, #6b7280)',
-              borderBottom: activeTab === tab.key ? '2px solid var(--arkham-primary, #3b82f6)' : '2px solid transparent',
+              color:
+                activeTab === tab.key
+                  ? 'var(--arkham-primary, #3b82f6)'
+                  : 'var(--arkham-text-muted, #6b7280)',
+              borderBottom:
+                activeTab === tab.key
+                  ? '2px solid var(--arkham-primary, #3b82f6)'
+                  : '2px solid transparent',
               marginBottom: '-1px',
               transition: 'all 0.2s',
             }}
           >
             <Icon name={tab.icon} size={16} /> {tab.label}
             {!!tab.count && tab.count > 0 && (
-              <span style={{
-                padding: '1px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: 600,
-                background: activeTab === tab.key ? 'rgba(59, 130, 246, 0.1)' : 'var(--arkham-bg-tertiary, #f3f4f6)',
-                color: activeTab === tab.key ? 'var(--arkham-primary, #3b82f6)' : 'var(--arkham-text-muted, #9ca3af)',
-              }}>
+              <span
+                style={{
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  background:
+                    activeTab === tab.key
+                      ? 'rgba(59, 130, 246, 0.1)'
+                      : 'var(--arkham-bg-tertiary, #f3f4f6)',
+                  color:
+                    activeTab === tab.key
+                      ? 'var(--arkham-primary, #3b82f6)'
+                      : 'var(--arkham-text-muted, #9ca3af)',
+                }}
+              >
                 {tab.count}
               </span>
             )}
@@ -155,14 +219,20 @@ function DisclosureMainView() {
       {showRequestDialog && (
         <CreateRequestDialog
           onClose={() => setShowRequestDialog(false)}
-          onCreated={() => { setShowRequestDialog(false); fetchData(); }}
+          onCreated={() => {
+            setShowRequestDialog(false);
+            fetchData();
+          }}
         />
       )}
       {showResponseDialog && (
         <CreateResponseDialog
           requests={requests}
           onClose={() => setShowResponseDialog(false)}
-          onCreated={() => { setShowResponseDialog(false); fetchData(); }}
+          onCreated={() => {
+            setShowResponseDialog(false);
+            fetchData();
+          }}
         />
       )}
     </div>
@@ -174,7 +244,14 @@ function DisclosureMainView() {
 // ============================================
 
 function RequestList({ requests }: { requests: Record<string, unknown>[] }) {
-  if (requests.length === 0) return <EmptyState icon="Send" title="No requests found" desc="Start by creating a disclosure request for a respondent." />;
+  if (requests.length === 0)
+    return (
+      <EmptyState
+        icon="Send"
+        title="No requests found"
+        desc="Start by creating a disclosure request for a respondent."
+      />
+    );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -182,31 +259,52 @@ function RequestList({ requests }: { requests: Record<string, unknown>[] }) {
         <div
           key={String(req.request_id || req.id)}
           style={{
-            padding: '16px', borderRadius: '8px', border: '1px solid var(--arkham-border, #e5e7eb)',
-            background: 'var(--arkham-bg-secondary, white)', display: 'flex', justifyContent: 'space-between',
+            padding: '16px',
+            borderRadius: '8px',
+            border: '1px solid var(--arkham-border, #e5e7eb)',
+            background: 'var(--arkham-bg-secondary, white)',
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
           }}
         >
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--arkham-text-primary)' }}>{String(req.request_text || 'Untitled Request')}</div>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '4px', fontSize: '13px', color: 'var(--arkham-text-muted, #6b7280)' }}>
+            <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--arkham-text-primary)' }}>
+              {String(req.request_text || 'Untitled Request')}
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                gap: '12px',
+                marginTop: '4px',
+                fontSize: '13px',
+                color: 'var(--arkham-text-muted, #6b7280)',
+              }}
+            >
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Icon name="User" size={14} /> {String(req.respondent_name || req.respondent_id || 'Unknown')}
+                <Icon name="User" size={14} />{' '}
+                {String(req.respondent_name || req.respondent_id || 'Unknown')}
               </span>
               {!!req.deadline && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Icon name="Calendar" size={14} /> Due: {new Date(String(req.deadline)).toLocaleDateString()}
+                  <Icon name="Calendar" size={14} /> Due:{' '}
+                  {new Date(String(req.deadline)).toLocaleDateString()}
                 </span>
               )}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{
-              padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600,
-              background: String(req.status) === 'completed' ? '#dcfce7' : '#fef9c3',
-              color: String(req.status) === 'completed' ? '#166534' : '#854d0e',
-              textTransform: 'uppercase',
-            }}>
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontSize: '11px',
+                fontWeight: 600,
+                background: String(req.status) === 'completed' ? '#dcfce7' : '#fef9c3',
+                color: String(req.status) === 'completed' ? '#166534' : '#854d0e',
+                textTransform: 'uppercase',
+              }}
+            >
               {String(req.status || 'pending')}
             </span>
             <Icon name="ChevronRight" size={16} color="#9ca3af" />
@@ -222,7 +320,14 @@ function RequestList({ requests }: { requests: Record<string, unknown>[] }) {
 // ============================================
 
 function ResponseList({ responses }: { responses: Record<string, unknown>[] }) {
-  if (responses.length === 0) return <EmptyState icon="Inbox" title="No responses logged" desc="Log responses received from respondents to track compliance." />;
+  if (responses.length === 0)
+    return (
+      <EmptyState
+        icon="Inbox"
+        title="No responses logged"
+        desc="Log responses received from respondents to track compliance."
+      />
+    );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -230,15 +335,30 @@ function ResponseList({ responses }: { responses: Record<string, unknown>[] }) {
         <div
           key={String(res.response_id || res.id)}
           style={{
-            padding: '16px', borderRadius: '8px', border: '1px solid var(--arkham-border, #e5e7eb)',
+            padding: '16px',
+            borderRadius: '8px',
+            border: '1px solid var(--arkham-border, #e5e7eb)',
             background: 'var(--arkham-bg-secondary, white)',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+          >
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '15px' }}>{String(res.response_text || 'Disclosure Response')}</div>
-              <div style={{ fontSize: '13px', color: 'var(--arkham-text-muted, #6b7280)', marginTop: '4px' }}>
-                Relates to: <span style={{ color: 'var(--arkham-text-primary)' }}>{String(res.request_text || 'Unknown Request')}</span>
+              <div style={{ fontWeight: 600, fontSize: '15px' }}>
+                {String(res.response_text || 'Disclosure Response')}
+              </div>
+              <div
+                style={{
+                  fontSize: '13px',
+                  color: 'var(--arkham-text-muted, #6b7280)',
+                  marginTop: '4px',
+                }}
+              >
+                Relates to:{' '}
+                <span style={{ color: 'var(--arkham-text-primary)' }}>
+                  {String(res.request_text || 'Unknown Request')}
+                </span>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -249,15 +369,9 @@ function ResponseList({ responses }: { responses: Record<string, unknown>[] }) {
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-            {!!res.is_partial && (
-              <Indicator label="Partial" color="#f97316" icon="ShieldAlert" />
-            )}
-            {!!res.is_redacted && (
-              <Indicator label="Redacted" color="#8b5cf6" icon="EyeOff" />
-            )}
-            {!!res.is_delayed && (
-              <Indicator label="Delayed" color="#ef4444" icon="Clock" />
-            )}
+            {!!res.is_partial && <Indicator label="Partial" color="#f97316" icon="ShieldAlert" />}
+            {!!res.is_redacted && <Indicator label="Redacted" color="#8b5cf6" icon="EyeOff" />}
+            {!!res.is_delayed && <Indicator label="Delayed" color="#ef4444" icon="Clock" />}
             {!res.is_partial && !res.is_redacted && !res.is_delayed && (
               <Indicator label="Compliant" color="#10b981" icon="CheckCircle" />
             )}
@@ -273,34 +387,84 @@ function ResponseList({ responses }: { responses: Record<string, unknown>[] }) {
 // ============================================
 
 function GapList({ gaps }: { gaps: Record<string, unknown>[] }) {
-  if (gaps.length === 0) return <EmptyState icon="SearchCode" title="No gaps detected" desc="Gaps are identified when requested items are not provided in responses." />;
+  if (gaps.length === 0)
+    return (
+      <EmptyState
+        icon="SearchCode"
+        title="No gaps detected"
+        desc="Gaps are identified when requested items are not provided in responses."
+      />
+    );
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '16px' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+        gap: '16px',
+      }}
+    >
       {gaps.map((gap) => (
         <div
           key={String(gap.gap_id || gap.id)}
           style={{
-            padding: '16px', borderRadius: '8px', border: '1px solid #fee2e2',
-            background: '#fffafb', borderLeft: '4px solid #ef4444',
+            padding: '16px',
+            borderRadius: '8px',
+            border: '1px solid #fee2e2',
+            background: '#fffafb',
+            borderLeft: '4px solid #ef4444',
           }}
         >
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', color: '#dc2626', marginBottom: '8px' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '8px',
+              alignItems: 'center',
+              color: '#dc2626',
+              marginBottom: '8px',
+            }}
+          >
             <Icon name="AlertCircle" size={18} />
-            <span style={{ fontWeight: 700, fontSize: '14px', textTransform: 'uppercase' }}>Strategic Gap</span>
+            <span style={{ fontWeight: 700, fontSize: '14px', textTransform: 'uppercase' }}>
+              Strategic Gap
+            </span>
           </div>
-          <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '6px' }}>{String(gap.missing_items_description || 'Missing Items')}</div>
+          <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '6px' }}>
+            {String(gap.missing_items_description || 'Missing Items')}
+          </div>
           <div style={{ fontSize: '13px', color: 'var(--arkham-text-muted, #6b7280)' }}>
             <strong>Source Request:</strong> {String(gap.request_text || 'Unknown')}
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', color: '#991b1b', background: '#fef2f2', padding: '2px 8px', borderRadius: '4px' }}>
+          <div
+            style={{
+              marginTop: '12px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '12px',
+                color: '#991b1b',
+                background: '#fef2f2',
+                padding: '2px 8px',
+                borderRadius: '4px',
+              }}
+            >
               Status: {String(gap.status || 'Open')}
             </span>
-            <button style={{
-              fontSize: '12px', background: 'transparent', border: '1px solid #dc2626',
-              color: '#dc2626', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer'
-            }}>
+            <button
+              style={{
+                fontSize: '12px',
+                background: 'transparent',
+                border: '1px solid #dc2626',
+                color: '#dc2626',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
               Pursue Gap
             </button>
           </div>
@@ -315,35 +479,85 @@ function GapList({ gaps }: { gaps: Record<string, unknown>[] }) {
 // ============================================
 
 function ComplianceDashboard({ respondents }: { respondents: Record<string, unknown>[] }) {
-  if (respondents.length === 0) return <EmptyState icon="LayoutDashboard" title="Dashboard empty" desc="Compliance metrics will appear as respondents interact with requests." />;
+  if (respondents.length === 0)
+    return (
+      <EmptyState
+        icon="LayoutDashboard"
+        title="Dashboard empty"
+        desc="Compliance metrics will appear as respondents interact with requests."
+      />
+    );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        <DashboardStatCard label="Total Respondents" value={String(respondents.length)} icon="Users" color="#3b82f6" />
+        <DashboardStatCard
+          label="Total Respondents"
+          value={String(respondents.length)}
+          icon="Users"
+          color="#3b82f6"
+        />
         <DashboardStatCard label="Avg. Compliance" value="64%" icon="Percent" color="#10b981" />
       </div>
 
-      <div style={{
-        padding: '20px', borderRadius: '12px', border: '1px solid var(--arkham-border, #e5e7eb)',
-        background: 'var(--arkham-bg-secondary, white)'
-      }}>
-        <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600 }}>Respondent Compliance Leaderboard</h3>
+      <div
+        style={{
+          padding: '20px',
+          borderRadius: '12px',
+          border: '1px solid var(--arkham-border, #e5e7eb)',
+          background: 'var(--arkham-bg-secondary, white)',
+        }}
+      >
+        <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600 }}>
+          Respondent Compliance Leaderboard
+        </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {respondents.slice(0, 17).map((res, i) => {
-            const score = Number(res.compliance_score || ((i * 37 + 13) % 100));
-            const evasion = Number(res.evasion_score || ((i * 23 + 7) % 40));
+            const score = Number(res.compliance_score || (i * 37 + 13) % 100);
+            const evasion = Number(res.evasion_score || (i * 23 + 7) % 40);
             return (
               <div key={String(res.respondent_id || i)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
-                  <span style={{ fontWeight: 500 }}>{String(res.respondent_name || 'Respondent ' + (i + 1))}</span>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginBottom: '6px',
+                    fontSize: '13px',
+                  }}
+                >
+                  <span style={{ fontWeight: 500 }}>
+                    {String(res.respondent_name || 'Respondent ' + (i + 1))}
+                  </span>
                   <span>{score}% Compliance</span>
                 </div>
-                <div style={{ height: '8px', width: '100%', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
-                  <div style={{ height: '100%', width: `${score}%`, background: score > 70 ? '#10b981' : score > 40 ? '#f59e0b' : '#ef4444' }} />
+                <div
+                  style={{
+                    height: '8px',
+                    width: '100%',
+                    background: '#f3f4f6',
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                  }}
+                >
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${score}%`,
+                      background: score > 70 ? '#10b981' : score > 40 ? '#f59e0b' : '#ef4444',
+                    }}
+                  />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                  <span style={{ fontSize: '11px', color: evasion > 20 ? '#ef4444' : '#6b7280', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: evasion > 20 ? '#ef4444' : '#6b7280',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
                     <Icon name="Skull" size={10} /> Evasion Risk: {evasion}%
                   </span>
                 </div>
@@ -362,9 +576,17 @@ function ComplianceDashboard({ respondents }: { respondents: Record<string, unkn
 
 function EmptyState({ icon, title, desc }: { icon: string; title: string; desc: string }) {
   return (
-    <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--arkham-text-muted, #6b7280)' }}>
+    <div
+      style={{
+        textAlign: 'center',
+        padding: '60px 20px',
+        color: 'var(--arkham-text-muted, #6b7280)',
+      }}
+    >
       <Icon name={icon} size={48} color="#d1d5db" />
-      <h3 style={{ marginTop: '16px', fontWeight: 600, color: 'var(--arkham-text-primary)' }}>{title}</h3>
+      <h3 style={{ marginTop: '16px', fontWeight: 600, color: 'var(--arkham-text-primary)' }}>
+        {title}
+      </h3>
       <p style={{ fontSize: '14px', maxWidth: '300px', margin: '8px auto 0' }}>{desc}</p>
     </div>
   );
@@ -372,23 +594,60 @@ function EmptyState({ icon, title, desc }: { icon: string; title: string; desc: 
 
 function Indicator({ label, color, icon }: { label: string; color: string; icon: string }) {
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: '4px',
-      padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600,
-      background: `${color}15`, color: color, border: `1px solid ${color}30`
-    }}>
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '2px 8px',
+        borderRadius: '4px',
+        fontSize: '11px',
+        fontWeight: 600,
+        background: `${color}15`,
+        color: color,
+        border: `1px solid ${color}30`,
+      }}
+    >
       <Icon name={icon} size={12} /> {label}
     </span>
   );
 }
 
-function DashboardStatCard({ label, value, icon, color }: { label: string; value: string; icon: string; color: string }) {
+function DashboardStatCard({
+  label,
+  value,
+  icon,
+  color,
+}: {
+  label: string;
+  value: string;
+  icon: string;
+  color: string;
+}) {
   return (
-    <div style={{
-      padding: '20px', borderRadius: '12px', border: '1px solid var(--arkham-border, #e5e7eb)',
-      background: 'var(--arkham-bg-secondary, white)', display: 'flex', alignItems: 'center', gap: '16px'
-    }}>
-      <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: color }}>
+    <div
+      style={{
+        padding: '20px',
+        borderRadius: '12px',
+        border: '1px solid var(--arkham-border, #e5e7eb)',
+        background: 'var(--arkham-bg-secondary, white)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+      }}
+    >
+      <div
+        style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '12px',
+          background: `${color}15`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: color,
+        }}
+      >
         <Icon name={icon} size={24} />
       </div>
       <div>
@@ -403,7 +662,13 @@ function DashboardStatCard({ label, value, icon, color }: { label: string; value
 // Create Dialogs
 // ============================================
 
-function CreateRequestDialog({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function CreateRequestDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const { toast } = useToast();
   const [text, setText] = useState('');
   const [respondent, setRespondent] = useState('');
@@ -428,38 +693,61 @@ function CreateRequestDialog({ onClose, onCreated }: { onClose: () => void; onCr
     <Dialog title="New Disclosure Request" icon="Send" onClose={onClose}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <label>
-          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Respondent ID / Name</div>
+          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+            Respondent ID / Name
+          </div>
           <input
-            value={respondent} onChange={(e) => setRespondent(e.target.value)}
+            value={respondent}
+            onChange={(e) => setRespondent(e.target.value)}
             placeholder="e.g. Legal Dept A"
             style={inputStyle}
           />
         </label>
         <label>
-          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>What are you requesting?</div>
+          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+            What are you requesting?
+          </div>
           <textarea
-            value={text} onChange={(e) => setText(e.target.value)}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
             placeholder="Specify documents or information categories..."
-            rows={4} style={{ ...inputStyle, resize: 'vertical' }}
+            rows={4}
+            style={{ ...inputStyle, resize: 'vertical' }}
           />
         </label>
         <label>
           <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Deadline</div>
           <input
-            type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)}
+            type="date"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
             style={inputStyle}
           />
         </label>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-          <button onClick={onClose} style={btnSecondary}>Cancel</button>
-          <button onClick={handleSubmit} disabled={saving} style={btnPrimary}>{saving ? 'Saving...' : 'Create Request'}</button>
+        <div
+          style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}
+        >
+          <button onClick={onClose} style={btnSecondary}>
+            Cancel
+          </button>
+          <button onClick={handleSubmit} disabled={saving} style={btnPrimary}>
+            {saving ? 'Saving...' : 'Create Request'}
+          </button>
         </div>
       </div>
     </Dialog>
   );
 }
 
-function CreateResponseDialog({ requests, onClose, onCreated }: { requests: Record<string, unknown>[]; onClose: () => void; onCreated: () => void }) {
+function CreateResponseDialog({
+  requests,
+  onClose,
+  onCreated,
+}: {
+  requests: Record<string, unknown>[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const { toast } = useToast();
   const [requestId, setRequestId] = useState('');
   const [text, setText] = useState('');
@@ -484,10 +772,16 @@ function CreateResponseDialog({ requests, onClose, onCreated }: { requests: Reco
     <Dialog title="Log Disclosure Response" icon="Inbox" onClose={onClose}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <label>
-          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Related Request</div>
-          <select value={requestId} onChange={(e) => setRequestId(e.target.value)} style={inputStyle}>
+          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+            Related Request
+          </div>
+          <select
+            value={requestId}
+            onChange={(e) => setRequestId(e.target.value)}
+            style={inputStyle}
+          >
             <option value="">Select a request...</option>
-            {requests.map(r => (
+            {requests.map((r) => (
               <option key={String(r.request_id || r.id)} value={String(r.request_id || r.id)}>
                 {String(r.respondent_name || 'Unknown')} — {String(r.request_text).slice(0, 40)}...
               </option>
@@ -495,41 +789,77 @@ function CreateResponseDialog({ requests, onClose, onCreated }: { requests: Reco
           </select>
         </label>
         <label>
-          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Response Details</div>
+          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+            Response Details
+          </div>
           <textarea
-            value={text} onChange={(e) => setText(e.target.value)}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
             placeholder="What did they provide? Note any redactions or missing items."
-            rows={4} style={{ ...inputStyle, resize: 'vertical' }}
+            rows={4}
+            style={{ ...inputStyle, resize: 'vertical' }}
           />
         </label>
         <label>
-          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Date Received</div>
+          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+            Date Received
+          </div>
           <input
-            type="date" value={date} onChange={(e) => setDate(e.target.value)}
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
             style={inputStyle}
           />
         </label>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-          <button onClick={onClose} style={btnSecondary}>Cancel</button>
-          <button onClick={handleSubmit} disabled={saving} style={btnPrimary}>{saving ? 'Saving...' : 'Log Response'}</button>
+        <div
+          style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}
+        >
+          <button onClick={onClose} style={btnSecondary}>
+            Cancel
+          </button>
+          <button onClick={handleSubmit} disabled={saving} style={btnPrimary}>
+            {saving ? 'Saving...' : 'Log Response'}
+          </button>
         </div>
       </div>
     </Dialog>
   );
 }
 
-function Dialog({ title, icon, children, onClose }: { title: string; icon: string; children: React.ReactNode; onClose: () => void }) {
+function Dialog({
+  title,
+  icon,
+  children,
+  onClose,
+}: {
+  title: string;
+  icon: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
-    }} onClick={onClose}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 100,
+      }}
+      onClick={onClose}
+    >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'var(--arkham-bg-primary, white)', borderRadius: '12px', padding: '24px',
-          width: '500px', maxWidth: '90vw', border: '1px solid var(--arkham-border, #e5e7eb)',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          background: 'var(--arkham-bg-primary, white)',
+          borderRadius: '12px',
+          padding: '24px',
+          width: '500px',
+          maxWidth: '90vw',
+          border: '1px solid var(--arkham-border, #e5e7eb)',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
@@ -547,22 +877,36 @@ function Dialog({ title, icon, children, onClose }: { title: string; icon: strin
 // ============================================
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 12px', borderRadius: '6px',
-  border: '1px solid var(--arkham-border, #d1d5db)', fontSize: '14px',
-  background: 'var(--arkham-bg-primary, white)', color: 'inherit',
+  width: '100%',
+  padding: '10px 12px',
+  borderRadius: '6px',
+  border: '1px solid var(--arkham-border, #d1d5db)',
+  fontSize: '14px',
+  background: 'var(--arkham-bg-primary, white)',
+  color: 'inherit',
   boxSizing: 'border-box',
 };
 
 const btnPrimary: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: '6px', border: 'none',
-  background: 'var(--arkham-primary, #3b82f6)', color: 'white',
-  cursor: 'pointer', fontWeight: 600, fontSize: '14px'
+  padding: '10px 20px',
+  borderRadius: '6px',
+  border: 'none',
+  background: 'var(--arkham-primary, #3b82f6)',
+  color: 'white',
+  cursor: 'pointer',
+  fontWeight: 600,
+  fontSize: '14px',
 };
 
 const btnSecondary: React.CSSProperties = {
-  padding: '10px 20px', borderRadius: '6px', border: '1px solid var(--arkham-border, #d1d5db)',
-  background: 'transparent', cursor: 'pointer', fontWeight: 500, fontSize: '14px',
-  color: 'var(--arkham-text-primary)'
+  padding: '10px 20px',
+  borderRadius: '6px',
+  border: '1px solid var(--arkham-border, #d1d5db)',
+  background: 'transparent',
+  cursor: 'pointer',
+  fontWeight: 500,
+  fontSize: '14px',
+  color: 'var(--arkham-text-primary)',
 };
 
 // ============================================
@@ -574,7 +918,16 @@ function DisclosureDetailView({ itemId }: { itemId: string }) {
     <div style={{ padding: '24px' }}>
       <button
         onClick={() => window.history.back()}
-        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--arkham-text-muted)', marginBottom: '20px' }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'var(--arkham-text-muted)',
+          marginBottom: '20px',
+        }}
       >
         <Icon name="ArrowLeft" size={16} /> Back to Tracker
       </button>

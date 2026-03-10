@@ -80,22 +80,45 @@ function StrategistListView() {
   return (
     <div style={{ padding: '24px', maxWidth: '1200px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '24px',
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+          <h1
+            style={{
+              fontSize: '24px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              margin: 0,
+            }}
+          >
             <Icon name="Zap" size={24} /> Strategist
           </h1>
           <p style={{ color: '#6b7280', marginTop: '4px', fontSize: '14px' }}>
-            AI adversarial modeling: Predict arguments, red-team submissions, and map procedural moves.
+            AI adversarial modeling: Predict arguments, red-team submissions, and map procedural
+            moves.
           </p>
         </div>
         <button
           onClick={() => setShowGenerate(true)}
           style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '10px 16px', borderRadius: '8px',
-            background: '#2563eb', color: 'white',
-            border: 'none', fontWeight: 600, cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 16px',
+            borderRadius: '8px',
+            background: '#2563eb',
+            color: 'white',
+            border: 'none',
+            fontWeight: 600,
+            cursor: 'pointer',
           }}
         >
           <Icon name="Plus" size={16} /> New Prediction
@@ -103,15 +126,27 @@ function StrategistListView() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '2px', borderBottom: '1px solid #e5e7eb', marginBottom: '20px' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '2px',
+          borderBottom: '1px solid #e5e7eb',
+          marginBottom: '20px',
+        }}
+      >
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '10px 16px', border: 'none', cursor: 'pointer',
-              background: 'transparent', fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '10px 16px',
+              border: 'none',
+              cursor: 'pointer',
+              background: 'transparent',
+              fontSize: '14px',
               fontWeight: activeTab === tab.key ? 600 : 400,
               color: activeTab === tab.key ? '#2563eb' : '#6b7280',
               borderBottom: activeTab === tab.key ? '2px solid #2563eb' : '2px solid transparent',
@@ -129,9 +164,7 @@ function StrategistListView() {
       {activeTab === 'tactical' && <TacticalTab />}
 
       {/* Generate Dialog */}
-      {showGenerate && (
-        <GeneratePredictionDialog onClose={() => setShowGenerate(false)} />
-      )}
+      {showGenerate && <GeneratePredictionDialog onClose={() => setShowGenerate(false)} />}
     </div>
   );
 }
@@ -150,11 +183,13 @@ function PredictionsTab() {
       setLoading(true);
       const data = await api.listItems({ type: 'prediction' });
       // Map generic items to Prediction interface
-      const mapped = (data.items || []).map(item => ({
+      const mapped = (data.items || []).map((item) => ({
         id: String(item.id),
         claim_text: String(item.title || ''),
         respondent_context: String(item.description || ''),
-        predicted_arguments: ((item.metadata as Record<string, unknown> | undefined)?.predicted_arguments as Prediction['predicted_arguments']) || [],
+        predicted_arguments:
+          ((item.metadata as Record<string, unknown> | undefined)
+            ?.predicted_arguments as Prediction['predicted_arguments']) || [],
         created_at: String(item.created_at || ''),
       }));
       setPredictions(mapped);
@@ -172,11 +207,23 @@ function PredictionsTab() {
   if (loading) return <LoadingSkeleton />;
 
   if (predictions.length === 0) {
-    return <EmptyState icon="BrainCircuit" label="No predictions yet" description="Generate an adversarial prediction to see potential respondent arguments." />;
+    return (
+      <EmptyState
+        icon="BrainCircuit"
+        label="No predictions yet"
+        description="Generate an adversarial prediction to see potential respondent arguments."
+      />
+    );
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))', gap: '20px' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))',
+        gap: '20px',
+      }}
+    >
       {predictions.map((pred) => (
         <PredictionCard key={pred.id} prediction={pred} />
       ))}
@@ -189,16 +236,25 @@ function PredictionCard({ prediction }: { prediction: Prediction }) {
     <div
       onClick={() => window.history.pushState(null, '', `?itemId=${prediction.id}`)}
       style={{
-        padding: '20px', borderRadius: '12px',
+        padding: '20px',
+        borderRadius: '12px',
         border: '1px solid #e5e7eb',
-        background: 'white', cursor: 'pointer',
+        background: 'white',
+        cursor: 'pointer',
         transition: 'box-shadow 0.2s',
       }}
-      onMouseOver={(e) => e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}
-      onMouseOut={(e) => e.currentTarget.style.boxShadow = 'none'}
+      onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)')}
+      onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-        <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
+        <div
+          style={{
+            fontSize: '12px',
+            color: '#6b7280',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+          }}
+        >
           Prediction • {formatDate(prediction.created_at)}
         </div>
         <Icon name="ChevronRight" size={16} />
@@ -209,8 +265,18 @@ function PredictionCard({ prediction }: { prediction: Prediction }) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {prediction.predicted_arguments.slice(0, 2).map((arg, i) => (
-          <div key={i} style={{ padding: '12px', borderRadius: '8px', background: '#f9fafb', borderLeft: `4px solid ${getSeverityColor(arg.severity)}` }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px', color: '#374151' }}>
+          <div
+            key={i}
+            style={{
+              padding: '12px',
+              borderRadius: '8px',
+              background: '#f9fafb',
+              borderLeft: `4px solid ${getSeverityColor(arg.severity)}`,
+            }}
+          >
+            <div
+              style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px', color: '#374151' }}
+            >
               Predicted: {arg.argument}
             </div>
             <div style={{ fontSize: '12px', color: '#6b7280', fontStyle: 'italic' }}>
@@ -243,10 +309,15 @@ function RedTeamTab() {
       const params = new URLSearchParams(window.location.search);
       const projectId = params.get('project_id') || params.get('projectId') || 'default';
       const data = await api.listReports(projectId);
-      const mapped = data.map(item => ({
+      const mapped = data.map((item) => ({
         id: String(item.id),
         title: String(item.title || ''),
-        weakness_count: (item.weakness_count as RedTeamReport['weakness_count']) || { critical: 0, high: 0, medium: 0, low: 0 },
+        weakness_count: (item.weakness_count as RedTeamReport['weakness_count']) || {
+          critical: 0,
+          high: 0,
+          medium: 0,
+          low: 0,
+        },
         summary: String(item.summary || ''),
         created_at: String(item.created_at || ''),
       }));
@@ -265,7 +336,13 @@ function RedTeamTab() {
   if (loading) return <LoadingSkeleton />;
 
   if (reports.length === 0) {
-    return <EmptyState icon="ShieldAlert" label="No reports yet" description="Red-team your case strategy to identify critical weaknesses and vulnerabilities." />;
+    return (
+      <EmptyState
+        icon="ShieldAlert"
+        label="No reports yet"
+        description="Red-team your case strategy to identify critical weaknesses and vulnerabilities."
+      />
+    );
   }
 
   return (
@@ -274,13 +351,19 @@ function RedTeamTab() {
         <div
           key={report.id}
           style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '16px 20px', borderRadius: '12px',
-            border: '1px solid #e5e7eb', background: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            background: 'white',
           }}
         >
           <div style={{ flex: 1 }}>
-            <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 600 }}>{report.title}</h3>
+            <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 600 }}>
+              {report.title}
+            </h3>
             <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>{report.summary}</p>
           </div>
           <div style={{ display: 'flex', gap: '8px', marginLeft: '24px' }}>
@@ -298,16 +381,23 @@ function RedTeamTab() {
   );
 }
 
-function WeaknessBadge({ severity, count }: { severity: string, count: number }) {
+function WeaknessBadge({ severity, count }: { severity: string; count: number }) {
   if (count === 0) return null;
   const color = getSeverityColor(severity);
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '4px',
-      padding: '2px 8px', borderRadius: '12px',
-      background: `${color}12`, color: color,
-      fontSize: '11px', fontWeight: 700,
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '2px 8px',
+        borderRadius: '12px',
+        background: `${color}12`,
+        color: color,
+        fontSize: '11px',
+        fontWeight: 700,
+      }}
+    >
       <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: color }} />
       {count} {severity.charAt(0).toUpperCase() + severity.slice(1)}
     </div>
@@ -329,7 +419,7 @@ function TacticalTab() {
       const params = new URLSearchParams(window.location.search);
       const projectId = params.get('project_id') || params.get('projectId') || 'default';
       const data = await api.listTacticalModels(projectId);
-      const mapped = data.map(item => ({
+      const mapped = data.map((item) => ({
         id: String(item.id),
         title: String(item.title || ''),
         predicted_moves: (item.predicted_moves as TacticalModel['predicted_moves']) || [],
@@ -350,26 +440,75 @@ function TacticalTab() {
   if (loading) return <LoadingSkeleton />;
 
   if (models.length === 0) {
-    return <EmptyState icon="Network" label="No models yet" description="Map predicted respondent procedural moves and timeline strategies." />;
+    return (
+      <EmptyState
+        icon="Network"
+        label="No models yet"
+        description="Map predicted respondent procedural moves and timeline strategies."
+      />
+    );
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
+        gap: '20px',
+      }}
+    >
       {models.map((model) => (
-        <div key={model.id} style={{ padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb', background: 'white' }}>
+        <div
+          key={model.id}
+          style={{
+            padding: '20px',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            background: 'white',
+          }}
+        >
           <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 600 }}>{model.title}</h3>
           <div style={{ position: 'relative', paddingLeft: '20px' }}>
-            <div style={{ position: 'absolute', left: '4px', top: '0', bottom: '0', width: '2px', background: '#e5e7eb' }} />
+            <div
+              style={{
+                position: 'absolute',
+                left: '4px',
+                top: '0',
+                bottom: '0',
+                width: '2px',
+                background: '#e5e7eb',
+              }}
+            />
             {model.predicted_moves.map((move, i) => (
               <div key={i} style={{ marginBottom: '16px', position: 'relative' }}>
-                <div style={{
-                  position: 'absolute', left: '-20px', top: '4px',
-                  width: '10px', height: '10px', borderRadius: '50%',
-                  background: '#2563eb', border: '2px solid white',
-                }} />
-                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>{move.timing}</div>
-                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '2px' }}>{move.move}</div>
-                <div style={{ fontSize: '12px', color: '#4b5563', marginTop: '2px' }}>Impact: {move.impact}</div>
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '-20px',
+                    top: '4px',
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    background: '#2563eb',
+                    border: '2px solid white',
+                  }}
+                />
+                <div
+                  style={{
+                    fontSize: '11px',
+                    color: '#6b7280',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {move.timing}
+                </div>
+                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '2px' }}>
+                  {move.move}
+                </div>
+                <div style={{ fontSize: '12px', color: '#4b5563', marginTop: '2px' }}>
+                  Impact: {move.impact}
+                </div>
               </div>
             ))}
           </div>
@@ -405,55 +544,135 @@ function StrategistDetailView({ itemId }: { itemId: string }) {
   if (loading) return <LoadingSkeleton />;
   if (!item) return <div style={{ padding: '24px' }}>Item not found</div>;
 
-  const predictedArgs = (item.metadata?.predicted_arguments as Prediction['predicted_arguments']) || [];
+  const predictedArgs =
+    (item.metadata?.predicted_arguments as Prediction['predicted_arguments']) || [];
 
   return (
     <div style={{ padding: '24px', maxWidth: '1000px' }}>
       <button
         onClick={() => window.history.back()}
         style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          background: 'none', border: 'none', color: '#6b7280',
-          cursor: 'pointer', fontSize: '13px', marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          background: 'none',
+          border: 'none',
+          color: '#6b7280',
+          cursor: 'pointer',
+          fontSize: '13px',
+          marginBottom: '16px',
         }}
       >
         <Icon name="ArrowLeft" size={14} /> Back to Strategist
       </button>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '24px',
+        }}
+      >
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 600, margin: 0 }}>{String(item.title)}</h1>
           <p style={{ color: '#6b7280', marginTop: '4px' }}>{String(item.description)}</p>
         </div>
-        <div style={{ padding: '4px 12px', borderRadius: '12px', background: '#f3f4f6', fontSize: '12px', fontWeight: 600 }}>
+        <div
+          style={{
+            padding: '4px 12px',
+            borderRadius: '12px',
+            background: '#f3f4f6',
+            fontSize: '12px',
+            fontWeight: 600,
+          }}
+        >
           {formatDate(String(item.created_at))}
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
-        <section style={{ padding: '24px', borderRadius: '12px', border: '1px solid #e5e7eb', background: 'white' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 600, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <section
+          style={{
+            padding: '24px',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            background: 'white',
+          }}
+        >
+          <h2
+            style={{
+              fontSize: '18px',
+              fontWeight: 600,
+              margin: '0 0 20px 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
             <Icon name="Zap" size={18} /> Predicted Adversarial Arguments
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {predictedArgs.map((arg, i) => (
-              <div key={i} style={{ padding: '20px', borderRadius: '8px', border: '1px solid #f3f4f6', background: '#f9fafb' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <span style={{
-                    padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-                    background: `${getSeverityColor(arg.severity)}12`, color: getSeverityColor(arg.severity),
-                  }}>
+              <div
+                key={i}
+                style={{
+                  padding: '20px',
+                  borderRadius: '8px',
+                  border: '1px solid #f3f4f6',
+                  background: '#f9fafb',
+                }}
+              >
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}
+                >
+                  <span
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      background: `${getSeverityColor(arg.severity)}12`,
+                      color: getSeverityColor(arg.severity),
+                    }}
+                  >
                     {String(arg.severity).toUpperCase()} PRIORITY
                   </span>
-                  <span style={{ fontSize: '12px', color: '#9ca3af' }}>Probability: {Math.round(arg.probability * 100)}%</span>
+                  <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                    Probability: {Math.round(arg.probability * 100)}%
+                  </span>
                 </div>
                 <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Respondent Argument</div>
-                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>{arg.argument}</div>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#6b7280',
+                      textTransform: 'uppercase',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Respondent Argument
+                  </div>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
+                    {arg.argument}
+                  </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Recommended Counter</div>
-                  <div style={{ fontSize: '14px', lineHeight: 1.6, color: '#374151' }}>{arg.counter_argument}</div>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#6b7280',
+                      textTransform: 'uppercase',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Recommended Counter
+                  </div>
+                  <div style={{ fontSize: '14px', lineHeight: 1.6, color: '#374151' }}>
+                    {arg.counter_argument}
+                  </div>
                 </div>
               </div>
             ))}
@@ -461,17 +680,47 @@ function StrategistDetailView({ itemId }: { itemId: string }) {
         </section>
 
         {!!item.metadata?.weaknesses && (
-          <section style={{ padding: '24px', borderRadius: '12px', border: '1px solid #e5e7eb', background: 'white' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <section
+            style={{
+              padding: '24px',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb',
+              background: 'white',
+            }}
+          >
+            <h2
+              style={{
+                fontSize: '18px',
+                fontWeight: 600,
+                margin: '0 0 20px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
               <Icon name="ShieldAlert" size={18} /> Vulnerability Assessment
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {(item.metadata.weaknesses as any[]).map((w, i) => (
-                <div key={i} style={{ display: 'flex', gap: '12px', padding: '12px', borderRadius: '8px', background: '#fff5f5', border: '1px solid #fed7d7' }}>
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    gap: '12px',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    background: '#fff5f5',
+                    border: '1px solid #fed7d7',
+                  }}
+                >
                   <Icon name="AlertTriangle" size={18} color="#e53e3e" />
                   <div>
-                    <div style={{ fontWeight: 600, color: '#c53030', fontSize: '14px' }}>{w.title}</div>
-                    <div style={{ fontSize: '13px', color: '#7b2d26', marginTop: '2px' }}>{w.mitigation}</div>
+                    <div style={{ fontWeight: 600, color: '#c53030', fontSize: '14px' }}>
+                      {w.title}
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#7b2d26', marginTop: '2px' }}>
+                      {w.mitigation}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -510,7 +759,7 @@ function GeneratePredictionDialog({ onClose }: { onClose: () => void }) {
         metadata: {
           context: context,
           manual_entry: true,
-        }
+        },
       });
 
       toast.success('Prediction task queued successfully');
@@ -523,41 +772,75 @@ function GeneratePredictionDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', zIndex: 1000, padding: '20px',
-    }}>
-      <div style={{
-        background: 'white', borderRadius: '12px', width: '100%',
-        maxWidth: '500px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-      }}>
-        <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 600 }}>Generate Prediction</h2>
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: '20px',
+      }}
+    >
+      <div
+        style={{
+          background: 'white',
+          borderRadius: '12px',
+          width: '100%',
+          maxWidth: '500px',
+          padding: '24px',
+          boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+        }}
+      >
+        <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 600 }}>
+          Generate Prediction
+        </h2>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Claim / Submission Text</label>
+          <label
+            style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}
+          >
+            Claim / Submission Text
+          </label>
           <textarea
             value={claim}
             onChange={(e) => setClaim(e.target.value)}
             placeholder="Describe the claim or legal argument to test..."
             style={{
-              width: '100%', height: '100px', padding: '12px',
-              borderRadius: '8px', border: '1px solid #e5e7eb',
-              fontSize: '14px', resize: 'none',
+              width: '100%',
+              height: '100px',
+              padding: '12px',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb',
+              fontSize: '14px',
+              resize: 'none',
             }}
           />
         </div>
 
         <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Respondent Context (Optional)</label>
+          <label
+            style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}
+          >
+            Respondent Context (Optional)
+          </label>
           <textarea
             value={context}
             onChange={(e) => setContext(e.target.value)}
             placeholder="e.g. respondent history, specific legal precedents, known defense style..."
             style={{
-              width: '100%', height: '80px', padding: '12px',
-              borderRadius: '8px', border: '1px solid #e5e7eb',
-              fontSize: '14px', resize: 'none',
+              width: '100%',
+              height: '80px',
+              padding: '12px',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb',
+              fontSize: '14px',
+              resize: 'none',
             }}
           />
         </div>
@@ -565,7 +848,13 @@ function GeneratePredictionDialog({ onClose }: { onClose: () => void }) {
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
           <button
             onClick={onClose}
-            style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer' }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: '1px solid #e5e7eb',
+              background: 'white',
+              cursor: 'pointer',
+            }}
           >
             Cancel
           </button>
@@ -573,9 +862,14 @@ function GeneratePredictionDialog({ onClose }: { onClose: () => void }) {
             onClick={handleGenerate}
             disabled={loading}
             style={{
-              padding: '8px 24px', borderRadius: '6px', border: 'none',
-              background: '#2563eb', color: 'white', fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
+              padding: '8px 24px',
+              borderRadius: '6px',
+              border: 'none',
+              background: '#2563eb',
+              color: 'white',
+              fontWeight: 600,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1,
             }}
           >
             {loading ? 'Processing...' : 'Generate Model'}
@@ -590,30 +884,68 @@ function GeneratePredictionDialog({ onClose }: { onClose: () => void }) {
 // Helpers
 // ============================================
 
-function EmptyState({ icon, label, description }: { icon: string; label: string; description: string }) {
+function EmptyState({
+  icon,
+  label,
+  description,
+}: {
+  icon: string;
+  label: string;
+  description: string;
+}) {
   return (
-    <div style={{ textAlign: 'center', padding: '60px 24px', background: '#f9fafb', borderRadius: '12px', border: '2px dashed #e5e7eb' }}>
+    <div
+      style={{
+        textAlign: 'center',
+        padding: '60px 24px',
+        background: '#f9fafb',
+        borderRadius: '12px',
+        border: '2px dashed #e5e7eb',
+      }}
+    >
       <Icon name={icon} size={48} color="#9ca3af" />
-      <h3 style={{ margin: '16px 0 8px 0', fontSize: '16px', fontWeight: 600, color: '#374151' }}>{label}</h3>
-      <p style={{ margin: 0, fontSize: '14px', color: '#6b7280', maxWidth: '400px', marginLeft: 'auto', marginRight: 'auto' }}>{description}</p>
+      <h3 style={{ margin: '16px 0 8px 0', fontSize: '16px', fontWeight: 600, color: '#374151' }}>
+        {label}
+      </h3>
+      <p
+        style={{
+          margin: 0,
+          fontSize: '14px',
+          color: '#6b7280',
+          maxWidth: '400px',
+          marginLeft: 'auto',
+          marginRight: 'auto',
+        }}
+      >
+        {description}
+      </p>
     </div>
   );
 }
 
 function getSeverityColor(severity: string): string {
   switch (String(severity).toLowerCase()) {
-    case 'critical': return '#dc2626'; // Red
-    case 'high': return '#ea580c';     // Orange
-    case 'medium': return '#d97706';   // Amber
-    case 'low': return '#16a34a';      // Green
-    default: return '#6b7280';
+    case 'critical':
+      return '#dc2626'; // Red
+    case 'high':
+      return '#ea580c'; // Orange
+    case 'medium':
+      return '#d97706'; // Amber
+    case 'low':
+      return '#16a34a'; // Green
+    default:
+      return '#6b7280';
   }
 }
 
 function formatDate(d: string): string {
   if (!d) return 'n/a';
   try {
-    return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return new Date(d).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
   } catch {
     return d;
   }

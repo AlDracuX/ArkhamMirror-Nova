@@ -123,7 +123,11 @@ export const PATTERN_TYPE_OPTIONS: { value: PatternType; label: string; color: s
   { value: 'comparator_divergence', label: 'Comparator Divergence', color: '#0891b2' },
 ];
 
-export const SENTIMENT_DIRECTION_OPTIONS: { value: SentimentDirection; label: string; color: string }[] = [
+export const SENTIMENT_DIRECTION_OPTIONS: {
+  value: SentimentDirection;
+  label: string;
+  color: string;
+}[] = [
   { value: 'hostile', label: 'Hostile', color: '#dc2626' },
   { value: 'negative', label: 'Negative', color: '#ea580c' },
   { value: 'neutral', label: 'Neutral', color: '#6b7280' },

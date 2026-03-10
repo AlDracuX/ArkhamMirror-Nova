@@ -12,11 +12,11 @@ def mock_frame():
     frame = MagicMock()
 
     # Mock database service
-    frame.db = MagicMock()
+    frame.db = AsyncMock()
     frame.db.execute = AsyncMock()
 
     # Mock event bus
-    frame.events = MagicMock()
+    frame.events = AsyncMock()
     frame.events.subscribe = AsyncMock()
     frame.events.unsubscribe = AsyncMock()
     frame.events.emit = AsyncMock()
@@ -178,9 +178,12 @@ class TestEntitiesShardPublicMethods:
         """Test get_entity stub implementation."""
         await shard.initialize(mock_frame)
 
+        # Mock db to return None (entity not found)
+        shard._db.fetch_one = AsyncMock(return_value=None)
+
         result = await shard.get_entity("test-id")
 
-        # Stub returns None
+        # Returns None when not found
         assert result is None
 
     @pytest.mark.asyncio
@@ -191,12 +194,15 @@ class TestEntitiesShardPublicMethods:
 
     @pytest.mark.asyncio
     async def test_get_entity_mentions_stub(self, shard, mock_frame):
-        """Test get_entity_mentions stub implementation."""
+        """Test get_entity_mentions implementation."""
         await shard.initialize(mock_frame)
+
+        # Mock db to return empty list
+        shard._db.fetch_all = AsyncMock(return_value=[])
 
         result = await shard.get_entity_mentions("test-id")
 
-        # Stub returns empty list
+        # Returns empty list
         assert result == []
 
     @pytest.mark.asyncio
@@ -204,23 +210,42 @@ class TestEntitiesShardPublicMethods:
         """Test merge_entities fails if shard not initialized."""
         with pytest.raises(RuntimeError, match="not initialized"):
             await shard.merge_entities(
-                entity_ids=["id1", "id2"],
-                canonical_id="id1",
+                source_id="id2",
+                target_id="id1",
             )
 
     @pytest.mark.asyncio
     async def test_merge_entities_stub(self, shard, mock_frame):
-        """Test merge_entities stub implementation."""
+        """Test merge_entities implementation."""
         await shard.initialize(mock_frame)
 
-        result = await shard.merge_entities(
-            entity_ids=["id1", "id2"],
-            canonical_id="id1",
-            canonical_name="John Doe",
+        # Mock the entity service link_to_canonical
+        shard._entity_service = AsyncMock()
+        shard._entity_service.link_to_canonical = AsyncMock()
+
+        # Mock get_entity to return a mock entity for the canonical
+        mock_entity = MagicMock()
+        mock_entity.id = "id1"
+        mock_entity.name = "John Doe"
+        mock_entity.entity_type = MagicMock()
+        mock_entity.entity_type.value = "PERSON"
+        shard._db.fetch_one = AsyncMock(
+            return_value={
+                "id": "id1",
+                "text": "John Doe",
+                "entity_type": "PERSON",
+                "canonical_id": None,
+                "metadata": "{}",
+                "created_at": "2024-01-01T00:00:00",
+            }
         )
 
-        # Stub returns empty dict
-        assert result == {}
+        result = await shard.merge_entities(
+            source_id="id2",
+            target_id="id1",
+        )
+
+        assert isinstance(result, dict)
 
     @pytest.mark.asyncio
     async def test_create_relationship_not_initialized(self, shard):
@@ -234,7 +259,7 @@ class TestEntitiesShardPublicMethods:
 
     @pytest.mark.asyncio
     async def test_create_relationship_stub(self, shard, mock_frame):
-        """Test create_relationship stub implementation."""
+        """Test create_relationship implementation."""
         await shard.initialize(mock_frame)
 
         result = await shard.create_relationship(
@@ -245,8 +270,8 @@ class TestEntitiesShardPublicMethods:
             metadata={"position": "Engineer"},
         )
 
-        # Stub returns empty dict
-        assert result == {}
+        # Returns dict with relationship data
+        assert isinstance(result, dict)
 
     @pytest.mark.asyncio
     async def test_create_relationship_default_params(self, shard, mock_frame):
@@ -260,38 +285,48 @@ class TestEntitiesShardPublicMethods:
         )
 
         # Should work with minimal params
-        assert result == {}
+        assert isinstance(result, dict)
 
 
 class TestEntitiesShardEventHandlers:
     """Test shard event handlers."""
 
     @pytest.mark.asyncio
-    async def test_on_entity_created_handler(self, shard, mock_frame):
-        """Test _on_entity_created event handler."""
+    async def test_on_entity_extracted_handler(self, shard, mock_frame):
+        """Test _on_entity_extracted event handler."""
         await shard.initialize(mock_frame)
 
+        # Mock db returns for the handler
+        shard._db.fetch_one = AsyncMock(return_value=None)
+
         event_data = {
-            "entity_id": "test-id",
-            "name": "John Doe",
-            "entity_type": "PERSON",
+            "document_id": "doc-123",
+            "entities": [
+                {
+                    "text": "John Doe",
+                    "entity_type": "PERSON",
+                    "confidence": 0.95,
+                    "start_offset": 0,
+                    "end_offset": 8,
+                }
+            ],
         }
 
-        # Should not raise error (stub implementation)
-        await shard._on_entity_created(event_data)
+        # Should not raise error
+        await shard._on_entity_extracted(event_data)
 
     @pytest.mark.asyncio
-    async def test_on_entity_updated_handler(self, shard, mock_frame):
-        """Test _on_entity_updated event handler."""
+    async def test_on_relationships_extracted_handler(self, shard, mock_frame):
+        """Test _on_relationships_extracted event handler."""
         await shard.initialize(mock_frame)
 
         event_data = {
-            "entity_id": "test-id",
-            "changes": {"name": "Jane Doe"},
+            "document_id": "doc-123",
+            "relationships": [],
         }
 
-        # Should not raise error (stub implementation)
-        await shard._on_entity_updated(event_data)
+        # Should not raise error
+        await shard._on_relationships_extracted(event_data)
 
 
 class TestEntitiesShardSchema:

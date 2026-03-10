@@ -27,8 +27,8 @@ from arkham_shard_ingest.shard import IngestShard
 def mock_events():
     """Create a mock events service."""
     events = MagicMock()
-    events.subscribe = MagicMock()
-    events.unsubscribe = MagicMock()
+    events.subscribe = AsyncMock()
+    events.unsubscribe = AsyncMock()
     events.emit = AsyncMock()
     return events
 
@@ -48,6 +48,13 @@ def mock_config():
     """Create a mock config."""
     return {
         "data_silo_path": "/tmp/test_data_silo",
+        "ingest_ocr_mode": "auto",
+        "ingest_max_file_size_mb": 100,
+        "ingest_min_file_size_bytes": 100,
+        "ingest_enable_validation": True,
+        "ingest_enable_deduplication": True,
+        "ingest_enable_downscale": True,
+        "ingest_skip_blank_pages": True,
     }
 
 
@@ -158,18 +165,24 @@ class TestInitialization:
                 shard = IngestShard()
                 await shard.initialize(mock_frame)
 
-                # Verify IntakeManager was created with correct paths
+                # Verify IntakeManager was created with correct paths and config
                 MockIntake.assert_called_once()
                 call_kwargs = MockIntake.call_args[1]
                 assert "storage_path" in call_kwargs
                 assert "temp_path" in call_kwargs
+                assert "ocr_mode" in call_kwargs
+                assert "shard" in call_kwargs
 
     @pytest.mark.asyncio
     async def test_initialize_without_workers(self, mock_events):
         """Test shard initializes without worker service."""
         frame = MagicMock()
         frame.config = MagicMock()
-        frame.config.get = MagicMock(return_value="/tmp/test")
+        frame.config.get = MagicMock(
+            side_effect=lambda key, default=None: {
+                "data_silo_path": "/tmp/test",
+            }.get(key, default)
+        )
         frame.get_service = MagicMock(
             side_effect=lambda name: {
                 "events": mock_events,
@@ -424,6 +437,7 @@ class TestEventHandlers:
             with patch("arkham_shard_ingest.shard.JobDispatcher") as MockDispatcher:
                 mock_intake = MagicMock()
                 mock_intake.get_job = MagicMock(return_value=sample_job)
+                mock_intake.update_job_status = AsyncMock()
                 MockIntake.return_value = mock_intake
 
                 mock_dispatcher = MagicMock()
@@ -473,7 +487,7 @@ class TestEventHandlers:
             with patch("arkham_shard_ingest.shard.JobDispatcher") as MockDispatcher:
                 mock_intake = MagicMock()
                 mock_intake.get_job = MagicMock(return_value=sample_job)
-                mock_intake.update_job_status = MagicMock()
+                mock_intake.update_job_status = AsyncMock()
                 MockIntake.return_value = mock_intake
 
                 mock_dispatcher = MagicMock()
@@ -501,7 +515,7 @@ class TestEventHandlers:
             with patch("arkham_shard_ingest.shard.JobDispatcher") as MockDispatcher:
                 mock_intake = MagicMock()
                 mock_intake.get_job = MagicMock(return_value=sample_job)
-                mock_intake.update_job_status = MagicMock()
+                mock_intake.update_job_status = AsyncMock()
                 MockIntake.return_value = mock_intake
                 MockDispatcher.return_value = MagicMock()
 
@@ -536,6 +550,7 @@ class TestIntegration:
                 mock_intake = MagicMock()
                 mock_intake.receive_file = AsyncMock(return_value=sample_job)
                 mock_intake.get_job = MagicMock(return_value=sample_job)
+                mock_intake.update_job_status = AsyncMock()
                 MockIntake.return_value = mock_intake
 
                 mock_dispatcher = MagicMock()

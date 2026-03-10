@@ -14,12 +14,14 @@ def mock_frame():
     # Mock database service
     frame.db = MagicMock()
     frame.db.execute = AsyncMock()
+    frame.db.fetch_one = AsyncMock(return_value=None)
+    frame.db.fetch_all = AsyncMock(return_value=[])
 
     # Mock event bus
     frame.events = MagicMock()
     frame.events.subscribe = AsyncMock()
     frame.events.unsubscribe = AsyncMock()
-    frame.events.publish = AsyncMock()
+    frame.events.emit = AsyncMock()
 
     # Mock storage service (optional)
     frame.storage = MagicMock()
@@ -201,24 +203,20 @@ class TestSettingsPublicMethods:
             await shard.update_setting("theme", "dark")
 
     @pytest.mark.asyncio
-    async def test_update_setting_publishes_event(self, shard, mock_frame):
-        """Test update_setting publishes event."""
+    async def test_update_setting_returns_none_when_not_found(self, shard, mock_frame):
+        """Test update_setting returns None when setting not found."""
         await shard.initialize(mock_frame)
-        await shard.update_setting("theme", "dark")
-
-        mock_frame.events.publish.assert_called()
-        call_args = mock_frame.events.publish.call_args[0]
-        assert call_args[0] == "settings.setting.updated"
+        # get_setting returns None (db.fetch_one returns None), so update returns None
+        result = await shard.update_setting("theme", "dark")
+        assert result is None
 
     @pytest.mark.asyncio
-    async def test_reset_setting_publishes_event(self, shard, mock_frame):
-        """Test reset_setting publishes event."""
+    async def test_reset_setting_returns_none_when_not_found(self, shard, mock_frame):
+        """Test reset_setting returns None when setting not found."""
         await shard.initialize(mock_frame)
-        await shard.reset_setting("theme")
-
-        mock_frame.events.publish.assert_called()
-        call_args = mock_frame.events.publish.call_args[0]
-        assert call_args[0] == "settings.setting.reset"
+        # get_setting returns None (db.fetch_one returns None), so reset returns None
+        result = await shard.reset_setting("theme")
+        assert result is None
 
     @pytest.mark.asyncio
     async def test_get_category_settings_stub(self, shard, mock_frame):
@@ -233,17 +231,18 @@ class TestSettingsPublicMethods:
         await shard.initialize(mock_frame)
         await shard.update_category_settings("appearance", {"theme": "dark"})
 
-        mock_frame.events.publish.assert_called()
-        call_args = mock_frame.events.publish.call_args[0]
+        mock_frame.events.emit.assert_called()
+        call_args = mock_frame.events.emit.call_args[0]
         assert call_args[0] == "settings.category.updated"
 
     @pytest.mark.asyncio
-    async def test_validate_setting_always_valid(self, shard, mock_frame):
-        """Test validate_setting stub returns valid."""
+    async def test_validate_setting_not_found(self, shard, mock_frame):
+        """Test validate_setting returns invalid when setting not found."""
         await shard.initialize(mock_frame)
+        # get_setting returns None (no row in mock db), so validation returns invalid
         result = await shard.validate_setting("theme", "dark")
-        assert result.is_valid is True
-        assert result.coerced_value == "dark"
+        assert result.is_valid is False
+        assert any("not found" in e.lower() for e in result.errors)
 
 
 class TestProfileMethods:
@@ -283,8 +282,8 @@ class TestProfileMethods:
         result = await shard.apply_profile("profile-1")
         assert result is True
 
-        mock_frame.events.publish.assert_called()
-        call_args = mock_frame.events.publish.call_args[0]
+        mock_frame.events.emit.assert_called()
+        call_args = mock_frame.events.emit.call_args[0]
         assert call_args[0] == "settings.profile.applied"
 
     @pytest.mark.asyncio
@@ -347,8 +346,8 @@ class TestBackupMethods:
         await shard.initialize(mock_frame)
         await shard.create_backup("test")
 
-        mock_frame.events.publish.assert_called()
-        call_args = mock_frame.events.publish.call_args[0]
+        mock_frame.events.emit.assert_called()
+        call_args = mock_frame.events.emit.call_args[0]
         assert call_args[0] == "settings.backup.created"
 
     @pytest.mark.asyncio
@@ -365,8 +364,8 @@ class TestBackupMethods:
         result = await shard.restore_backup("backup-1")
         assert result is True
 
-        mock_frame.events.publish.assert_called()
-        call_args = mock_frame.events.publish.call_args[0]
+        mock_frame.events.emit.assert_called()
+        call_args = mock_frame.events.emit.call_args[0]
         assert call_args[0] == "settings.backup.restored"
 
     @pytest.mark.asyncio

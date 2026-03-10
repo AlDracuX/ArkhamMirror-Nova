@@ -37,7 +37,7 @@ class TestExportFormatEnum:
     def test_string_inheritance(self):
         """Verify enum values can be used as strings."""
         assert ExportFormat.JSON == "json"
-        assert str(ExportFormat.JSON) == "json"
+        assert ExportFormat.JSON.value == "json"
 
     def test_enum_count(self):
         """Verify total number of formats."""

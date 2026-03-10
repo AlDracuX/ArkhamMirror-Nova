@@ -48,6 +48,11 @@ def mock_llm():
     """Create a mock LLM service."""
     llm = MagicMock()
     llm.is_available = MagicMock(return_value=True)
+    # Shard uses self._llm.generate() which returns an object with .text and .model
+    response_obj = MagicMock()
+    response_obj.text = '[{"text": "Test claim", "type": "factual", "confidence": 0.9}]'
+    response_obj.model = "test-model"
+    llm.generate = AsyncMock(return_value=response_obj)
     llm.complete = AsyncMock(return_value='[{"text": "Test claim", "type": "factual", "confidence": 0.9}]')
     return llm
 
@@ -151,8 +156,8 @@ class TestInitialization:
         # Verify subscribe was called
         assert mock_frame.events.subscribe.called
         subscribed_events = [call[0][0] for call in mock_frame.events.subscribe.call_args_list]
-        assert "document.processed" in subscribed_events
-        assert "entity.created" in subscribed_events
+        assert "parse.document.completed" in subscribed_events
+        assert "parse.entity.extracted" in subscribed_events
 
     @pytest.mark.asyncio
     async def test_shutdown(self, initialized_shard, mock_frame):
@@ -387,12 +392,16 @@ class TestExtraction:
     @pytest.mark.asyncio
     async def test_extract_claims_from_text(self, initialized_shard, mock_frame):
         """Test extracting claims from text with LLM."""
-        mock_frame.llm.complete.return_value = json.dumps(
+        # Shard uses self._llm.generate() which returns an object with .text and .model
+        response_obj = MagicMock()
+        response_obj.text = json.dumps(
             [
-                {"text": "Claim one", "type": "factual", "confidence": 0.9},
-                {"text": "Claim two", "type": "opinion", "confidence": 0.7},
+                {"text": "Claim one is a factual statement about something", "type": "factual", "confidence": 0.9},
+                {"text": "Claim two is an opinion about the matter at hand", "type": "opinion", "confidence": 0.7},
             ]
         )
+        response_obj.model = "test-model"
+        mock_frame.llm.generate.return_value = response_obj
 
         result = await initialized_shard.extract_claims_from_text(
             text="Some text with claims.",
@@ -406,13 +415,15 @@ class TestExtraction:
 
     @pytest.mark.asyncio
     async def test_extract_claims_llm_unavailable(self, initialized_shard, mock_frame):
-        """Test extraction when LLM is unavailable."""
-        mock_frame.llm.is_available.return_value = False
+        """Test extraction when LLM is unavailable - falls back to simple extraction."""
+        # Set _llm to None so the shard reports LLM not available
+        initialized_shard._llm = None
 
         result = await initialized_shard.extract_claims_from_text(
             text="Some text",
         )
 
+        # With _llm = None, shard adds error "LLM service not available..."
         assert result.total_extracted == 0
         assert len(result.errors) > 0
         assert "LLM" in result.errors[0]
@@ -483,8 +494,7 @@ class TestMerge:
     @pytest.mark.asyncio
     async def test_merge_claims(self, initialized_shard, mock_frame):
         """Test merging duplicate claims."""
-        # Mock primary claim
-        mock_frame.database.fetch_one.return_value = {
+        claim_row = {
             "id": "primary",
             "text": "Primary claim",
             "claim_type": "factual",
@@ -505,6 +515,24 @@ class TestMerge:
             "verified_at": None,
             "metadata": "{}",
         }
+        count_row = {"count": 1}
+
+        # fetch_one is called many times: get_claim calls return claim_row,
+        # _update_claim_evidence_counts calls return count dicts.
+        # Use side_effect to return claim dicts for get_claim and count dicts for evidence counts.
+        # Order: get_claim(dup-1), get_claim(dup-1) in update_status, get_claim(dup-2),
+        #         get_claim(dup-2) in update_status, get_claim(primary),
+        #         then 3x count queries from _update_claim_evidence_counts
+        mock_frame.database.fetch_one.side_effect = [
+            claim_row,
+            claim_row,  # dup-1: get_claim + update_claim_status->get_claim
+            claim_row,
+            claim_row,  # dup-2: get_claim + update_claim_status->get_claim
+            claim_row,  # get_claim(primary)
+            count_row,
+            count_row,
+            count_row,  # _update_claim_evidence_counts: total, supporting, refuting
+        ]
 
         # Mock evidence for merged claims
         mock_frame.database.fetch_all.return_value = [
@@ -656,6 +684,14 @@ class TestEventHandlers:
     @pytest.mark.asyncio
     async def test_on_document_processed(self, initialized_shard, mock_frame):
         """Test handling document.processed event."""
+        # Setup documents service with async get_document_chunks
+        mock_documents = MagicMock()
+        mock_chunk = MagicMock()
+        mock_chunk.content = "This is a test document with factual claims about the world."
+        mock_documents.get_document_chunks = AsyncMock(return_value=[mock_chunk])
+        mock_frame.documents = mock_documents
+        initialized_shard.frame = mock_frame
+
         event = {
             "payload": {
                 "document_id": "doc-123",
@@ -664,8 +700,8 @@ class TestEventHandlers:
 
         await initialized_shard._on_document_processed(event)
 
-        # Should enqueue extraction job
-        mock_frame.workers.enqueue.assert_called()
+        # Should have called get_document_chunks to get content
+        mock_documents.get_document_chunks.assert_called_with("doc-123")
 
     @pytest.mark.asyncio
     async def test_on_entity_created(self, initialized_shard, mock_frame):

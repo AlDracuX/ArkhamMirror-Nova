@@ -121,16 +121,14 @@ function CostsListView() {
     applications: 'application',
   };
 
-  const filteredItems = items.filter(
-    it => it.metadata?.entry_type === tabEntryType[activeTab]
-  );
+  const filteredItems = items.filter((it) => it.metadata?.entry_type === tabEntryType[activeTab]);
 
   // Summary stats
   const summary = useMemo(() => {
-    const timeItems = items.filter(it => it.metadata?.entry_type === 'time');
-    const expenseItems = items.filter(it => it.metadata?.entry_type === 'expense');
-    const conductItems = items.filter(it => it.metadata?.entry_type === 'conduct');
-    const appItems = items.filter(it => it.metadata?.entry_type === 'application');
+    const timeItems = items.filter((it) => it.metadata?.entry_type === 'time');
+    const expenseItems = items.filter((it) => it.metadata?.entry_type === 'expense');
+    const conductItems = items.filter((it) => it.metadata?.entry_type === 'conduct');
+    const appItems = items.filter((it) => it.metadata?.entry_type === 'application');
 
     const totalHours = timeItems.reduce((sum, it) => sum + (it.metadata?.hours || 0), 0);
     const totalExpenses = expenseItems.reduce((sum, it) => sum + (it.metadata?.amount || 0), 0);
@@ -157,21 +155,50 @@ function CostsListView() {
   return (
     <div style={{ padding: '24px', maxWidth: '1200px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '24px',
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+          <h1
+            style={{
+              fontSize: '24px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              margin: 0,
+            }}
+          >
             <Icon name="PoundSterling" size={24} /> Costs Tracker
           </h1>
-          <p style={{ color: 'var(--arkham-text-muted, #6b7280)', marginTop: '4px', fontSize: '14px' }}>
+          <p
+            style={{
+              color: 'var(--arkham-text-muted, #6b7280)',
+              marginTop: '4px',
+              fontSize: '14px',
+            }}
+          >
             Track time, expenses, and respondent conduct for Rule 76 costs applications
           </p>
         </div>
         <button
           onClick={() => setShowCreateDialog(true)}
           style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '8px 16px', background: '#3b82f6', color: 'white',
-            border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 16px',
+            background: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: 500,
           }}
         >
           <Icon name="Plus" size={16} /> Add Entry
@@ -179,43 +206,66 @@ function CostsListView() {
       </div>
 
       {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '12px',
+          marginBottom: '24px',
+        }}
+      >
         <SummaryCard
           label="Time Logged"
           value={`${summary.totalHours.toFixed(1)}h`}
           sub={`${summary.timeCount} entries`}
-          color="#2563eb" icon="Clock"
+          color="#2563eb"
+          icon="Clock"
         />
         <SummaryCard
           label="Expenses"
           value={`£${summary.totalExpenses.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           sub={`${summary.expenseCount} receipts`}
-          color="#059669" icon="Receipt"
+          color="#059669"
+          icon="Receipt"
         />
         <SummaryCard
           label="Conduct Instances"
           value={String(summary.conductCount)}
           sub="logged for R.76"
-          color="#dc2626" icon="AlertTriangle"
+          color="#dc2626"
+          icon="AlertTriangle"
         />
         <SummaryCard
           label="Applications"
           value={String(summary.appCount)}
           sub="drafted / filed"
-          color="#7c3aed" icon="FileText"
+          color="#7c3aed"
+          icon="FileText"
         />
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '2px', borderBottom: '1px solid var(--arkham-border, #e5e7eb)', marginBottom: '20px' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '2px',
+          borderBottom: '1px solid var(--arkham-border, #e5e7eb)',
+          marginBottom: '20px',
+        }}
+      >
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '10px 16px', border: 'none', cursor: 'pointer',
-              background: 'transparent', fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '10px 16px',
+              border: 'none',
+              cursor: 'pointer',
+              background: 'transparent',
+              fontSize: '14px',
               fontWeight: activeTab === tab.key ? 600 : 400,
               color: activeTab === tab.key ? '#3b82f6' : 'var(--arkham-text-muted, #6b7280)',
               borderBottom: activeTab === tab.key ? '2px solid #3b82f6' : '2px solid transparent',
@@ -224,11 +274,17 @@ function CostsListView() {
           >
             <Icon name={tab.icon} size={14} /> {tab.label}
             {tab.count > 0 && (
-              <span style={{
-                padding: '0 6px', borderRadius: '10px', fontSize: '11px', fontWeight: 600,
-                background: activeTab === tab.key ? '#3b82f615' : 'var(--arkham-bg-tertiary, #f3f4f6)',
-                color: activeTab === tab.key ? '#3b82f6' : 'var(--arkham-text-muted, #9ca3af)',
-              }}>
+              <span
+                style={{
+                  padding: '0 6px',
+                  borderRadius: '10px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  background:
+                    activeTab === tab.key ? '#3b82f615' : 'var(--arkham-bg-tertiary, #f3f4f6)',
+                  color: activeTab === tab.key ? '#3b82f6' : 'var(--arkham-text-muted, #9ca3af)',
+                }}
+              >
                 {tab.count}
               </span>
             )}
@@ -252,7 +308,10 @@ function CostsListView() {
         <CreateCostDialog
           defaultType={tabEntryType[activeTab]}
           onClose={() => setShowCreateDialog(false)}
-          onCreated={() => { setShowCreateDialog(false); loadItems(); }}
+          onCreated={() => {
+            setShowCreateDialog(false);
+            loadItems();
+          }}
         />
       )}
     </div>
@@ -263,16 +322,37 @@ function CostsListView() {
 // Summary Card
 // ============================================
 
-function SummaryCard({ label, value, sub, color, icon }: {
-  label: string; value: string; sub: string; color: string; icon: string;
+function SummaryCard({
+  label,
+  value,
+  sub,
+  color,
+  icon,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  color: string;
+  icon: string;
 }) {
   return (
-    <div style={{
-      padding: '16px', borderRadius: '8px',
-      border: '1px solid var(--arkham-border, #e5e7eb)',
-      background: 'var(--arkham-bg-secondary, white)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--arkham-text-muted, #6b7280)' }}>
+    <div
+      style={{
+        padding: '16px',
+        borderRadius: '8px',
+        border: '1px solid var(--arkham-border, #e5e7eb)',
+        background: 'var(--arkham-bg-secondary, white)',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontSize: '13px',
+          color: 'var(--arkham-text-muted, #6b7280)',
+        }}
+      >
         <Icon name={icon} size={14} /> {label}
       </div>
       <div style={{ fontSize: '28px', fontWeight: 700, color, marginTop: '4px' }}>{value}</div>
@@ -288,26 +368,41 @@ function SummaryCard({ label, value, sub, color, icon }: {
 function CostEntryRow({ item, tab }: { item: CostsListItem; tab: TabKey }) {
   const formatDate = (d: string) => {
     try {
-      return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    } catch { return d; }
+      return new Date(d).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return d;
+    }
   };
 
-  const entryType = ENTRY_TYPE_OPTIONS.find(e => e.value === item.metadata?.entry_type);
-  const conductCat = CONDUCT_OPTIONS.find(c => c.value === item.metadata?.conduct_category);
-  const appStatus = APPLICATION_STATUS_OPTIONS.find(a => a.value === item.metadata?.application_status);
+  const entryType = ENTRY_TYPE_OPTIONS.find((e) => e.value === item.metadata?.entry_type);
+  const conductCat = CONDUCT_OPTIONS.find((c) => c.value === item.metadata?.conduct_category);
+  const appStatus = APPLICATION_STATUS_OPTIONS.find(
+    (a) => a.value === item.metadata?.application_status
+  );
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '12px 16px', borderRadius: '8px',
-      border: '1px solid var(--arkham-border, #e5e7eb)',
-      borderLeft: `4px solid ${entryType?.color || '#6b7280'}`,
-      background: 'var(--arkham-bg-secondary, white)',
-      cursor: 'pointer',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        border: '1px solid var(--arkham-border, #e5e7eb)',
+        borderLeft: `4px solid ${entryType?.color || '#6b7280'}`,
+        background: 'var(--arkham-bg-secondary, white)',
+        cursor: 'pointer',
+      }}
+    >
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 600 }}>{item.title}</div>
-        <div style={{ fontSize: '13px', color: 'var(--arkham-text-muted, #6b7280)', marginTop: '2px' }}>
+        <div
+          style={{ fontSize: '13px', color: 'var(--arkham-text-muted, #6b7280)', marginTop: '2px' }}
+        >
           {item.description || 'No description'}
         </div>
       </div>
@@ -329,10 +424,16 @@ function CostEntryRow({ item, tab }: { item: CostsListItem; tab: TabKey }) {
 
         {/* Conduct-specific */}
         {tab === 'conduct' && conductCat && (
-          <span style={{
-            padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-            background: `${conductCat.color}12`, color: conductCat.color,
-          }}>
+          <span
+            style={{
+              padding: '2px 8px',
+              borderRadius: '12px',
+              fontSize: '11px',
+              fontWeight: 700,
+              background: `${conductCat.color}12`,
+              color: conductCat.color,
+            }}
+          >
             {conductCat.label}
           </span>
         )}
@@ -346,10 +447,16 @@ function CostEntryRow({ item, tab }: { item: CostsListItem; tab: TabKey }) {
 
         {/* Application-specific */}
         {tab === 'applications' && appStatus && (
-          <span style={{
-            padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-            background: `${appStatus.color}12`, color: appStatus.color,
-          }}>
+          <span
+            style={{
+              padding: '2px 8px',
+              borderRadius: '12px',
+              fontSize: '11px',
+              fontWeight: 700,
+              background: `${appStatus.color}12`,
+              color: appStatus.color,
+            }}
+          >
             {appStatus.label}
           </span>
         )}
@@ -395,7 +502,9 @@ function EmptyTabState({ tab }: { tab: TabKey }) {
   const c = config[tab];
 
   return (
-    <div style={{ textAlign: 'center', padding: '48px', color: 'var(--arkham-text-muted, #6b7280)' }}>
+    <div
+      style={{ textAlign: 'center', padding: '48px', color: 'var(--arkham-text-muted, #6b7280)' }}
+    >
       <Icon name={c.icon} size={48} />
       <p style={{ marginTop: '12px', fontWeight: 500 }}>{c.title}</p>
       <p style={{ fontSize: '13px' }}>{c.desc}</p>
@@ -408,9 +517,13 @@ function EmptyTabState({ tab }: { tab: TabKey }) {
 // ============================================
 
 function CreateCostDialog({
-  defaultType, onClose, onCreated,
+  defaultType,
+  onClose,
+  onCreated,
 }: {
-  defaultType: CostEntryType; onClose: () => void; onCreated: () => void;
+  defaultType: CostEntryType;
+  onClose: () => void;
+  onCreated: () => void;
 }) {
   const { toast } = useToast();
   const [title, setTitle] = useState('');
@@ -423,7 +536,10 @@ function CreateCostDialog({
   const [saving, setSaving] = useState(false);
 
   const handleCreate = async () => {
-    if (!title.trim()) { toast.error('Title is required'); return; }
+    if (!title.trim()) {
+      toast.error('Title is required');
+      return;
+    }
     try {
       setSaving(true);
 
@@ -459,61 +575,119 @@ function CreateCostDialog({
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-    }} onClick={onClose}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+      onClick={onClose}
+    >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'var(--arkham-bg-primary, white)', borderRadius: '12px',
-          padding: '24px', width: '480px', maxWidth: '90vw',
+          background: 'var(--arkham-bg-primary, white)',
+          borderRadius: '12px',
+          padding: '24px',
+          width: '480px',
+          maxWidth: '90vw',
           border: '1px solid var(--arkham-border, #e5e7eb)',
         }}
       >
-        <h2 style={{ margin: '0 0 16px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <h2
+          style={{
+            margin: '0 0 16px 0',
+            fontSize: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
           <Icon name="PoundSterling" size={20} /> Add Cost Entry
         </h2>
 
         <label style={{ display: 'block', marginBottom: '12px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Entry Type</span>
+          <span
+            style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}
+          >
+            Entry Type
+          </span>
           <select
-            value={entryType} onChange={(e) => setEntryType(e.target.value as CostEntryType)}
+            value={entryType}
+            onChange={(e) => setEntryType(e.target.value as CostEntryType)}
             style={{
-              width: '100%', padding: '8px 12px', borderRadius: '6px',
-              border: '1px solid var(--arkham-border, #d1d5db)', fontSize: '14px',
-              background: 'var(--arkham-bg-primary, white)', color: 'inherit',
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--arkham-border, #d1d5db)',
+              fontSize: '14px',
+              background: 'var(--arkham-bg-primary, white)',
+              color: 'inherit',
             }}
           >
-            {ENTRY_TYPE_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+            {ENTRY_TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
         </label>
 
         <label style={{ display: 'block', marginBottom: '12px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Title</span>
+          <span
+            style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}
+          >
+            Title
+          </span>
           <input
-            value={title} onChange={(e) => setTitle(e.target.value)}
-            placeholder={entryType === 'time' ? 'e.g. Bundle preparation' : entryType === 'expense' ? 'e.g. Court filing fee' : entryType === 'conduct' ? 'e.g. Late disclosure — 3 weeks past deadline' : 'e.g. Costs application — unreasonable conduct'}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={
+              entryType === 'time'
+                ? 'e.g. Bundle preparation'
+                : entryType === 'expense'
+                  ? 'e.g. Court filing fee'
+                  : entryType === 'conduct'
+                    ? 'e.g. Late disclosure — 3 weeks past deadline'
+                    : 'e.g. Costs application — unreasonable conduct'
+            }
             style={{
-              width: '100%', padding: '8px 12px', borderRadius: '6px',
-              border: '1px solid var(--arkham-border, #d1d5db)', fontSize: '14px',
-              background: 'var(--arkham-bg-primary, white)', color: 'inherit',
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--arkham-border, #d1d5db)',
+              fontSize: '14px',
+              background: 'var(--arkham-bg-primary, white)',
+              color: 'inherit',
               boxSizing: 'border-box',
             }}
           />
         </label>
 
         <label style={{ display: 'block', marginBottom: '12px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Description</span>
+          <span
+            style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}
+          >
+            Description
+          </span>
           <textarea
-            value={description} onChange={(e) => setDescription(e.target.value)}
-            rows={2} placeholder="Details..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            placeholder="Details..."
             style={{
-              width: '100%', padding: '8px 12px', borderRadius: '6px',
-              border: '1px solid var(--arkham-border, #d1d5db)', fontSize: '14px', resize: 'vertical',
-              background: 'var(--arkham-bg-primary, white)', color: 'inherit',
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--arkham-border, #d1d5db)',
+              fontSize: '14px',
+              resize: 'vertical',
+              background: 'var(--arkham-bg-primary, white)',
+              color: 'inherit',
               boxSizing: 'border-box',
             }}
           />
@@ -522,15 +696,26 @@ function CreateCostDialog({
         {/* Type-specific fields */}
         {entryType === 'time' && (
           <label style={{ display: 'block', marginBottom: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Hours</span>
+            <span
+              style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}
+            >
+              Hours
+            </span>
             <input
-              type="number" step="0.25" min="0" value={hours}
+              type="number"
+              step="0.25"
+              min="0"
+              value={hours}
               onChange={(e) => setHours(e.target.value)}
               placeholder="e.g. 2.5"
               style={{
-                width: '100%', padding: '8px 12px', borderRadius: '6px',
-                border: '1px solid var(--arkham-border, #d1d5db)', fontSize: '14px',
-                background: 'var(--arkham-bg-primary, white)', color: 'inherit',
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid var(--arkham-border, #d1d5db)',
+                fontSize: '14px',
+                background: 'var(--arkham-bg-primary, white)',
+                color: 'inherit',
                 boxSizing: 'border-box',
               }}
             />
@@ -539,15 +724,26 @@ function CreateCostDialog({
 
         {entryType === 'expense' && (
           <label style={{ display: 'block', marginBottom: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Amount (GBP)</span>
+            <span
+              style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}
+            >
+              Amount (GBP)
+            </span>
             <input
-              type="number" step="0.01" min="0" value={amount}
+              type="number"
+              step="0.01"
+              min="0"
+              value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="e.g. 45.00"
               style={{
-                width: '100%', padding: '8px 12px', borderRadius: '6px',
-                border: '1px solid var(--arkham-border, #d1d5db)', fontSize: '14px',
-                background: 'var(--arkham-bg-primary, white)', color: 'inherit',
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid var(--arkham-border, #d1d5db)',
+                fontSize: '14px',
+                background: 'var(--arkham-bg-primary, white)',
+                color: 'inherit',
                 boxSizing: 'border-box',
               }}
             />
@@ -555,31 +751,58 @@ function CreateCostDialog({
         )}
 
         {entryType === 'conduct' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '12px',
+              marginBottom: '12px',
+            }}
+          >
             <label>
-              <span style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Category</span>
+              <span
+                style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}
+              >
+                Category
+              </span>
               <select
-                value={conductCategory} onChange={(e) => setConductCategory(e.target.value as ConductCategory)}
+                value={conductCategory}
+                onChange={(e) => setConductCategory(e.target.value as ConductCategory)}
                 style={{
-                  width: '100%', padding: '8px 12px', borderRadius: '6px',
-                  border: '1px solid var(--arkham-border, #d1d5db)', fontSize: '14px',
-                  background: 'var(--arkham-bg-primary, white)', color: 'inherit',
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--arkham-border, #d1d5db)',
+                  fontSize: '14px',
+                  background: 'var(--arkham-bg-primary, white)',
+                  color: 'inherit',
                 }}
               >
-                {CONDUCT_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+                {CONDUCT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
                 ))}
               </select>
             </label>
             <label>
-              <span style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Respondent</span>
+              <span
+                style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}
+              >
+                Respondent
+              </span>
               <input
-                value={respondent} onChange={(e) => setRespondent(e.target.value)}
+                value={respondent}
+                onChange={(e) => setRespondent(e.target.value)}
                 placeholder="e.g. TLT Solicitors"
                 style={{
-                  width: '100%', padding: '8px 12px', borderRadius: '6px',
-                  border: '1px solid var(--arkham-border, #d1d5db)', fontSize: '14px',
-                  background: 'var(--arkham-bg-primary, white)', color: 'inherit',
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--arkham-border, #d1d5db)',
+                  fontSize: '14px',
+                  background: 'var(--arkham-bg-primary, white)',
+                  color: 'inherit',
                   boxSizing: 'border-box',
                 }}
               />
@@ -588,17 +811,33 @@ function CreateCostDialog({
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
-          <button onClick={onClose} style={{
-            padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--arkham-border, #d1d5db)',
-            background: 'transparent', cursor: 'pointer', color: 'inherit',
-          }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: '1px solid var(--arkham-border, #d1d5db)',
+              background: 'transparent',
+              cursor: 'pointer',
+              color: 'inherit',
+            }}
+          >
             Cancel
           </button>
-          <button onClick={handleCreate} disabled={saving} style={{
-            padding: '8px 16px', borderRadius: '6px', border: 'none',
-            background: '#3b82f6', color: 'white', cursor: 'pointer', fontWeight: 500,
-            opacity: saving ? 0.6 : 1,
-          }}>
+          <button
+            onClick={handleCreate}
+            disabled={saving}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              background: '#3b82f6',
+              color: 'white',
+              cursor: 'pointer',
+              fontWeight: 500,
+              opacity: saving ? 0.6 : 1,
+            }}
+          >
             {saving ? 'Adding...' : 'Add Entry'}
           </button>
         </div>
@@ -617,12 +856,21 @@ function CostDetailView({ itemId }: { itemId: string }) {
   return (
     <div style={{ padding: '24px', maxWidth: '900px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-        <a href="/costs" style={{ color: 'var(--arkham-text-muted, #6b7280)', textDecoration: 'none', fontSize: '13px' }}>
+        <a
+          href="/costs"
+          style={{
+            color: 'var(--arkham-text-muted, #6b7280)',
+            textDecoration: 'none',
+            fontSize: '13px',
+          }}
+        >
           Costs
         </a>
         <Icon name="ChevronRight" size={12} />
       </div>
-      <div style={{ textAlign: 'center', padding: '48px', color: 'var(--arkham-text-muted, #6b7280)' }}>
+      <div
+        style={{ textAlign: 'center', padding: '48px', color: 'var(--arkham-text-muted, #6b7280)' }}
+      >
         <Icon name="PoundSterling" size={48} />
         <p style={{ marginTop: '12px', fontWeight: 500 }}>Entry: {itemId}</p>
         <p style={{ fontSize: '13px' }}>

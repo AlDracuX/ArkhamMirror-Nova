@@ -4,8 +4,26 @@ Tests for the EmbeddingManager.
 These tests verify the core embedding functionality.
 """
 
-import numpy as np
 import pytest
+
+try:
+    import sentence_transformers  # noqa: F401
+
+    HAS_SENTENCE_TRANSFORMERS = True
+except ImportError:
+    HAS_SENTENCE_TRANSFORMERS = False
+
+numpy_available = True
+try:
+    import numpy as np
+except ImportError:
+    numpy_available = False
+
+pytestmark = pytest.mark.skipif(
+    not HAS_SENTENCE_TRANSFORMERS,
+    reason="sentence-transformers not installed",
+)
+
 from arkham_shard_embed.embedder import EmbeddingManager
 from arkham_shard_embed.models import EmbedConfig
 

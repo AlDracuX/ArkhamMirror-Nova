@@ -94,7 +94,7 @@ class TestHealthEndpoint:
 
     def test_health_check(self, client):
         """Test health endpoint returns ok."""
-        response = client.get("/health")
+        response = client.get("/api/ocr/health")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
@@ -111,7 +111,7 @@ class TestOCRPageEndpoint:
         api._shard = None
 
         response = client.post(
-            "/page",
+            "/api/ocr/page",
             json={"image_path": "/path/to/image.png"},
         )
         assert response.status_code == 503
@@ -121,7 +121,7 @@ class TestOCRPageEndpoint:
         """Test OCR page without image_path."""
         init_api(mock_shard)
 
-        response = client.post("/page", json={})
+        response = client.post("/api/ocr/page", json={})
         assert response.status_code == 400
         assert "image_path required" in response.json()["detail"]
 
@@ -134,7 +134,7 @@ class TestOCRPageEndpoint:
         }
 
         response = client.post(
-            "/page",
+            "/api/ocr/page",
             json={"image_path": "/path/to/image.png", "engine": "paddle"},
         )
         assert response.status_code == 200
@@ -157,7 +157,7 @@ class TestOCRPageEndpoint:
         mock_shard.ocr_page.return_value = {"text": "你好", "engine": "paddle"}
 
         response = client.post(
-            "/page",
+            "/api/ocr/page",
             json={
                 "image_path": "/path/to/chinese.png",
                 "language": "zh",
@@ -176,7 +176,7 @@ class TestOCRPageEndpoint:
         mock_shard.ocr_page.side_effect = Exception("OCR failed")
 
         response = client.post(
-            "/page",
+            "/api/ocr/page",
             json={"image_path": "/path/to/image.png"},
         )
         assert response.status_code == 200  # Returns 200 with error in body
@@ -190,7 +190,7 @@ class TestOCRPageEndpoint:
         mock_shard.ocr_page.return_value = {"text": "Text", "engine": "qwen"}
 
         response = client.post(
-            "/page",
+            "/api/ocr/page",
             json={"image_path": "/path/to/image.png", "engine": "qwen"},
         )
         assert response.status_code == 200
@@ -208,7 +208,7 @@ class TestOCRDocumentEndpoint:
         api._shard = None
 
         response = client.post(
-            "/document",
+            "/api/ocr/document",
             json={"document_id": "doc123"},
         )
         assert response.status_code == 503
@@ -218,7 +218,7 @@ class TestOCRDocumentEndpoint:
         """Test OCR document without document_id."""
         init_api(mock_shard)
 
-        response = client.post("/document", json={})
+        response = client.post("/api/ocr/document", json={})
         assert response.status_code == 400
         assert "document_id required" in response.json()["detail"]
 
@@ -232,7 +232,7 @@ class TestOCRDocumentEndpoint:
         }
 
         response = client.post(
-            "/document",
+            "/api/ocr/document",
             json={"document_id": "doc123", "engine": "paddle"},
         )
         assert response.status_code == 200
@@ -259,7 +259,7 @@ class TestOCRDocumentEndpoint:
         }
 
         response = client.post(
-            "/document",
+            "/api/ocr/document",
             json={
                 "document_id": "doc123",
                 "language": "fr",
@@ -278,7 +278,7 @@ class TestOCRDocumentEndpoint:
         mock_shard.ocr_document.side_effect = Exception("Document not found")
 
         response = client.post(
-            "/document",
+            "/api/ocr/document",
             json={"document_id": "doc123"},
         )
         assert response.status_code == 200  # Returns 200 with error in body
@@ -296,7 +296,7 @@ class TestOCRDocumentEndpoint:
         }
 
         response = client.post(
-            "/document",
+            "/api/ocr/document",
             json={"document_id": "empty_doc"},
         )
         assert response.status_code == 200
@@ -316,7 +316,7 @@ class TestOCRUploadEndpoint:
         api._shard = None
 
         response = client.post(
-            "/upload",
+            "/api/ocr/upload",
             files={"file": ("test.png", BytesIO(b"fake image"), "image/png")},
         )
         assert response.status_code == 503
@@ -334,7 +334,7 @@ class TestOCRUploadEndpoint:
         fake_image = BytesIO(b"fake image data")
 
         response = client.post(
-            "/upload",
+            "/api/ocr/upload",
             files={"file": ("test.png", fake_image, "image/png")},
             data={"engine": "paddle", "language": "en"},
         )
@@ -356,7 +356,7 @@ class TestOCRUploadEndpoint:
         fake_image = BytesIO(b"fake image data")
 
         response = client.post(
-            "/upload",
+            "/api/ocr/upload",
             files={"file": ("test.jpg", fake_image, "image/jpeg")},
             data={"engine": "qwen", "language": "en"},
         )
@@ -372,7 +372,7 @@ class TestOCRUploadEndpoint:
         fake_image = BytesIO(b"fake image data")
 
         response = client.post(
-            "/upload",
+            "/api/ocr/upload",
             files={"file": ("test.png", fake_image, "image/png")},
             params={"language": "zh"},  # Query params, not form data
         )
@@ -390,7 +390,7 @@ class TestOCRUploadEndpoint:
         fake_image = BytesIO(b"not an image")
 
         response = client.post(
-            "/upload",
+            "/api/ocr/upload",
             files={"file": ("bad.txt", fake_image, "text/plain")},
         )
         assert response.status_code == 200  # Returns 200 with error in body
@@ -407,7 +407,7 @@ class TestOCRUploadEndpoint:
 
         # Test with a simple filename (FastAPI requires valid filename)
         response = client.post(
-            "/upload",
+            "/api/ocr/upload",
             files={"file": ("image.png", fake_image, "image/png")},
         )
         assert response.status_code == 200
@@ -422,7 +422,7 @@ class TestOCRUploadEndpoint:
         fake_image = BytesIO(b"fake image data")
 
         response = client.post(
-            "/upload",
+            "/api/ocr/upload",
             files={"file": ("test.png", fake_image, "image/png")},
         )
         assert response.status_code == 200
@@ -439,7 +439,7 @@ class TestOCRUploadEndpoint:
         fake_image = BytesIO(b"fake image data")
 
         response = client.post(
-            "/upload",
+            "/api/ocr/upload",
             files={"file": ("test.png", fake_image, "image/png")},
         )
         assert response.status_code == 200

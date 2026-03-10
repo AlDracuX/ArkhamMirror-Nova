@@ -1,12 +1,39 @@
 """Tests for PaddleOCR worker."""
 
 import base64
+import sys
 from io import BytesIO
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
 from arkham_shard_ocr.workers.paddle_worker import PaddleWorker
+
+
+@pytest.fixture(autouse=True)
+def _mock_imaging_deps():
+    """Mock PIL and numpy if not installed."""
+    mocks_added = []
+
+    if "PIL" not in sys.modules:
+        mock_pil = MagicMock()
+        mock_image_mod = MagicMock()
+        sys.modules["PIL"] = mock_pil
+        sys.modules["PIL.Image"] = mock_image_mod
+        mock_pil.Image = mock_image_mod
+        mocks_added.extend(["PIL", "PIL.Image"])
+
+    if "numpy" not in sys.modules:
+        mock_np = MagicMock()
+        # Make np.array return a MagicMock
+        mock_np.array = MagicMock(return_value=MagicMock())
+        sys.modules["numpy"] = mock_np
+        mocks_added.append("numpy")
+
+    yield
+
+    for mod in mocks_added:
+        sys.modules.pop(mod, None)
 
 
 class TestPaddleWorkerMetadata:
@@ -53,7 +80,6 @@ class TestPaddleWorkerEngine:
             mock_paddleocr_class.assert_called_once_with(
                 use_angle_cls=True,
                 lang="en",
-                show_log=False,
             )
 
     def test_get_engine_reuses_instance(self):
@@ -84,7 +110,6 @@ class TestPaddleWorkerEngine:
             mock_paddleocr_class.assert_called_once_with(
                 use_angle_cls=True,
                 lang="zh",
-                show_log=False,
             )
 
     def test_get_engine_reinitializes_on_language_change(self):
@@ -117,7 +142,6 @@ class TestPaddleWorkerEngine:
             mock_paddleocr_class.assert_called_once_with(
                 use_angle_cls=False,
                 lang="en",
-                show_log=False,
             )
 
     def test_get_engine_missing_paddleocr(self):
@@ -338,10 +362,8 @@ class TestPaddleWorkerProcessJob:
 
             result = await worker.process_job("job-123", payload)
 
-            # Verify OCR was called with rec=False
+            # Verify OCR was called (new API doesn't pass rec=False)
             mock_engine.ocr.assert_called_once()
-            call_args = mock_engine.ocr.call_args
-            assert call_args.kwargs.get("rec") is False
             assert result["det_only"] is True
 
     @pytest.mark.asyncio
