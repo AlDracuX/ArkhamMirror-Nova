@@ -83,6 +83,26 @@ COPY packages/arkham-shard-witnesses/ ./packages/arkham-shard-witnesses/
 COPY packages/arkham-shard-deadlines/ ./packages/arkham-shard-deadlines/
 COPY packages/arkham-shard-casemap/ ./packages/arkham-shard-casemap/
 
+# New litigation shards (18)
+COPY packages/arkham-shard-comparator/ ./packages/arkham-shard-comparator/
+COPY packages/arkham-shard-disclosure/ ./packages/arkham-shard-disclosure/
+COPY packages/arkham-shard-chain/ ./packages/arkham-shard-chain/
+COPY packages/arkham-shard-audit-trail/ ./packages/arkham-shard-audit-trail/
+COPY packages/arkham-shard-crossexam/ ./packages/arkham-shard-crossexam/
+COPY packages/arkham-shard-bundle/ ./packages/arkham-shard-bundle/
+COPY packages/arkham-shard-burden-map/ ./packages/arkham-shard-burden-map/
+COPY packages/arkham-shard-comms/ ./packages/arkham-shard-comms/
+COPY packages/arkham-shard-skeleton/ ./packages/arkham-shard-skeleton/
+COPY packages/arkham-shard-rules/ ./packages/arkham-shard-rules/
+COPY packages/arkham-shard-costs/ ./packages/arkham-shard-costs/
+COPY packages/arkham-shard-sentiment/ ./packages/arkham-shard-sentiment/
+COPY packages/arkham-shard-redline/ ./packages/arkham-shard-redline/
+COPY packages/arkham-shard-strategist/ ./packages/arkham-shard-strategist/
+COPY packages/arkham-shard-playbook/ ./packages/arkham-shard-playbook/
+COPY packages/arkham-shard-oracle/ ./packages/arkham-shard-oracle/
+COPY packages/arkham-shard-respondent-intel/ ./packages/arkham-shard-respondent-intel/
+COPY packages/arkham-shard-digest/ ./packages/arkham-shard-digest/
+
 # Install PyTorch - GPU-enabled by default for Legion (NVIDIA)
 # For CPU-only: change to --index-url https://download.pytorch.org/whl/cpu
 ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124
@@ -156,6 +176,24 @@ COPY packages/arkham-shard-media-forensics/shard.yaml /app/manifests/media-foren
 COPY packages/arkham-shard-witnesses/shard.yaml /app/manifests/witnesses.yaml
 COPY packages/arkham-shard-deadlines/shard.yaml /app/manifests/deadlines.yaml
 COPY packages/arkham-shard-casemap/shard.yaml /app/manifests/casemap.yaml
+COPY packages/arkham-shard-comparator/shard.yaml /app/manifests/comparator.yaml
+COPY packages/arkham-shard-disclosure/shard.yaml /app/manifests/disclosure.yaml
+COPY packages/arkham-shard-chain/shard.yaml /app/manifests/chain.yaml
+COPY packages/arkham-shard-audit-trail/shard.yaml /app/manifests/audit-trail.yaml
+COPY packages/arkham-shard-crossexam/shard.yaml /app/manifests/crossexam.yaml
+COPY packages/arkham-shard-bundle/shard.yaml /app/manifests/bundle.yaml
+COPY packages/arkham-shard-burden-map/shard.yaml /app/manifests/burden-map.yaml
+COPY packages/arkham-shard-comms/shard.yaml /app/manifests/comms.yaml
+COPY packages/arkham-shard-skeleton/shard.yaml /app/manifests/skeleton.yaml
+COPY packages/arkham-shard-rules/shard.yaml /app/manifests/rules.yaml
+COPY packages/arkham-shard-costs/shard.yaml /app/manifests/costs.yaml
+COPY packages/arkham-shard-sentiment/shard.yaml /app/manifests/sentiment.yaml
+COPY packages/arkham-shard-redline/shard.yaml /app/manifests/redline.yaml
+COPY packages/arkham-shard-strategist/shard.yaml /app/manifests/strategist.yaml
+COPY packages/arkham-shard-playbook/shard.yaml /app/manifests/playbook.yaml
+COPY packages/arkham-shard-oracle/shard.yaml /app/manifests/oracle.yaml
+COPY packages/arkham-shard-respondent-intel/shard.yaml /app/manifests/respondent-intel.yaml
+COPY packages/arkham-shard-digest/shard.yaml /app/manifests/digest.yaml
 
 WORKDIR /app
 
