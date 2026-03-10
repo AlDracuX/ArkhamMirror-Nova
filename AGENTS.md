@@ -54,7 +54,16 @@ make install-all    # Install frame and all shards in editable mode
 make run-frame      # Start the FastAPI backend (Port 8100)
 make run-shell      # Start the Vite dev server
 make test-shard S=ach # Run tests for a specific shard
+make pmat           # Full quality gate (complexity, SATD, security, entropy)
+make pmat-score     # Repo health score (0-100)
+make pmat-hotspots  # Top complexity hotspots
 ```
+
+## QUALITY TOOLS
+- **PMAT** (`pmat`): Code quality analysis — complexity, tech debt, dead code, security. Config in `.pmat-gates.toml`.
+- **Ruff**: Python linting and formatting. Config in root `pyproject.toml`.
+- **ESLint/Prettier**: TypeScript linting in `packages/arkham-shard-shell/`.
+- When creating or modifying shards, run `make pmat-complexity` to check cyclomatic complexity stays under 50 per function.
 
 ## NOTES
 - **Voltron Philosophy**: Every feature is a shard; the shell is just a lens.

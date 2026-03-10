@@ -53,12 +53,22 @@ make lint                    # ruff check packages/
 make lint-fix                # ruff check packages/ --fix
 make format                  # ruff format packages/
 make test                    # pytest packages/ -v --tb=short
+make test-fast               # pytest fail-fast, quick feedback loop
 make test-shard SHARD=ach    # Test single shard
+make coverage                # pytest with coverage report
 make shell-lint              # ESLint on shell UI
 make shell-format            # Prettier check
 make check                   # All checks (lint + format + shell)
 make fix                     # Auto-fix all
 pre-commit run --all-files   # Pre-commit hooks (ruff + file hygiene)
+
+# PMAT (code quality analysis — thresholds in .pmat-gates.toml)
+make pmat                    # Full quality gate (complexity + SATD + security + entropy)
+make pmat-score              # Repo health score (0-100, currently B grade)
+make pmat-complexity         # Cyclomatic/cognitive complexity analysis
+make pmat-debt               # Self-admitted technical debt scan (TODO/FIXME/HACK)
+make pmat-dead               # Dead code detection
+make pmat-hotspots           # Top complexity hotspots needing refactoring
 ```
 
 ## Testing
@@ -67,11 +77,14 @@ pre-commit run --all-files   # Pre-commit hooks (ruff + file hygiene)
 - Tests live in `packages/arkham-shard-{name}/tests/`
 - Run single test: `python -m pytest packages/arkham-shard-ach/tests/test_logic.py::TestClassName::test_name -v`
 
-## Linting
+## Linting & Quality
 
 - Python: ruff (config in root `pyproject.toml`) — line-length 120, target py310
 - TypeScript: ESLint + Prettier (in `packages/arkham-shard-shell/`)
 - Pre-commit: ruff lint+format, trailing whitespace, YAML/TOML/JSON checks, large file detection
+- PMAT: code quality gate — thresholds in `.pmat-gates.toml`, CI runs advisory checks on PRs
+  - Complexity hotspots: `ingest/extract_worker.py`, `media-forensics/shard.py`, `provenance/shard.py`
+  - Current baseline: 77/100 repo score (B grade), 387 complexity violations, 34 SATD
 
 ## Key Files
 

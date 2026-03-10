@@ -40,6 +40,12 @@ jobs:
           curl -sSf https://raw.githubusercontent.com/paiml/paiml-mcp-agent-toolkit/main/install.sh | sh \
             || cargo install pmat
 
+      - name: PMAT repo score
+        run: pmat repo-score
+
+      - name: PMAT quality gate
+        run: pmat quality-gate
+
       - name: PMAT complexity check
         run: pmat analyze complexity --project-path .
 

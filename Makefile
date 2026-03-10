@@ -4,7 +4,8 @@
 # Run `make help` to see all available targets.
 # =============================================================================
 
-.PHONY: help lint lint-fix format format-check test quality pmat \
+.PHONY: help lint lint-fix format format-check test test-fast coverage quality pmat \
+        pmat-score pmat-complexity pmat-debt pmat-dead pmat-hotspots \
         pre-commit pre-commit-all shell-lint shell-format install clean
 
 SHELL_DIR := packages/arkham-shard-shell
@@ -36,16 +37,25 @@ format-check: ## Check Python formatting without changes
 test: ## Run all Python tests
 	python -m pytest packages/ -v --tb=short
 
+test-fast: ## Run tests without slow markers (quick feedback)
+	python -m pytest packages/ -v --tb=short -x -q
+
 test-frame: ## Run frame tests only
 	python -m pytest packages/arkham-frame/tests/ -v
 
 test-shard: ## Run tests for a specific shard (usage: make test-shard SHARD=ach)
 	python -m pytest packages/arkham-shard-$(SHARD)/tests/ -v
 
+coverage: ## Run tests with coverage report
+	python -m pytest packages/ --cov=packages --cov-report=term-missing --tb=short
+
 # ---- PMAT Quality ----
 
 pmat: ## Run PMAT quality gate
 	pmat quality-gate
+
+pmat-score: ## Show repo health score (0-100)
+	pmat repo-score
 
 pmat-complexity: ## Run PMAT complexity analysis
 	pmat analyze complexity --project-path .
@@ -55,6 +65,9 @@ pmat-debt: ## Run PMAT technical debt analysis
 
 pmat-dead: ## Run PMAT dead code detection
 	pmat analyze dead-code --path .
+
+pmat-hotspots: ## Show top complexity hotspots
+	pmat analyze complexity --project-path . 2>&1 | grep -A 20 "Top Complexity Hotspots"
 
 # ---- Pre-commit ----
 
@@ -93,6 +106,8 @@ all: check test pmat ## Run everything: lint + format + test + quality
 install: ## Install all development dependencies
 	@echo "Installing ruff..."
 	@which ruff > /dev/null 2>&1 || uv tool install ruff
+	@echo "Checking pmat..."
+	@which pmat > /dev/null 2>&1 || (echo "Install pmat: cargo install pmat" && exit 0)
 	@echo "Installing pre-commit hooks..."
 	pre-commit install
 	@echo "Installing shell dependencies..."

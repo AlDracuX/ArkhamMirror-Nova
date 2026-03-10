@@ -1,0 +1,24 @@
+# =============================================================================
+# PMAT Quality Gates — SHATTERED
+# =============================================================================
+# Thresholds based on current baseline (77/100 repo score, 424 violations).
+# Tighten these as code quality improves.
+# =============================================================================
+
+[gates]
+# Max allowed violations per category before gate fails
+complexity = 400        # Baseline: 387 — tighten as hotspots are refactored
+satd = 40               # Baseline: 34 — keep tech debt from growing
+dead_code = 5           # Baseline: 0 (Rust-only scan, not useful for Python yet)
+security = 0            # Zero tolerance for security violations
+duplicates = 10         # Baseline: 0 — keep it low
+entropy = 5             # Baseline: 1
+
+[complexity]
+# Per-function thresholds
+max_cyclomatic = 50     # Flag functions above this (top hotspots are 33-40)
+max_cognitive = 100     # Cognitive complexity ceiling
+
+[project]
+language = "python"
+path = "packages/"
