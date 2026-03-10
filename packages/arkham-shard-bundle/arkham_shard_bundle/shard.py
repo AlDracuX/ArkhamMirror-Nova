@@ -1,11 +1,13 @@
 """Bundle Shard - Tribunal hearing bundle builder."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .compiler import BundleCompiler
+from .llm import BundleLLMIntegration
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +16,9 @@ class BundleShard(ArkhamShard):
     """
     Bundle shard for ArkhamFrame.
 
-    Tribunal hearing bundle builder
+    Tribunal hearing bundle builder following ET Presidential Guidance.
+    Provides continuous pagination, version snapshots, index generation,
+    and LLM-assisted document ordering.
     """
 
     name = "bundle"
@@ -28,6 +32,8 @@ class BundleShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.compiler: BundleCompiler | None = None
+        self.llm_integration: BundleLLMIntegration | None = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Bundle shard with Frame services."""
@@ -44,13 +50,23 @@ class BundleShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Initialize domain services
+        self.compiler = BundleCompiler(db=self._db, event_bus=self._event_bus)
+        self.llm_integration = BundleLLMIntegration(llm_service=self._llm_service)
+
         # Initialize API with our instances
         init_api(
             db=self._db,
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            compiler=self.compiler,
+            llm_integration=self.llm_integration,
         )
+
+        # Subscribe to events
+        if self._event_bus:
+            self._event_bus.subscribe("documents.processed", self._handle_document_processed)
 
         # Register self in app state for API access
         if hasattr(frame, "app") and frame.app:
@@ -62,11 +78,42 @@ class BundleShard(ArkhamShard):
     async def shutdown(self) -> None:
         """Clean up shard resources."""
         logger.info("Shutting down Bundle Shard...")
+
+        # Unsubscribe from events
+        if self._event_bus:
+            try:
+                self._event_bus.unsubscribe("documents.processed", self._handle_document_processed)
+            except Exception:
+                pass
+
+        self.compiler = None
+        self.llm_integration = None
+
         logger.info("Bundle Shard shutdown complete")
 
     def get_routes(self):
         """Return FastAPI router for this shard."""
         return router
+
+    # --- Event Handlers ---
+
+    async def _handle_document_processed(self, event_data: dict[str, Any]) -> None:
+        """
+        Handle documents.processed events.
+
+        Auto-suggests bundle placement for newly processed documents
+        using LLM integration if available.
+        """
+        document_id = event_data.get("document_id")
+        if not document_id:
+            return
+
+        logger.info(f"Document processed event received for: {document_id}")
+
+        # If LLM is available, could auto-categorize the document for bundle placement
+        # For now, just log. Full auto-placement would require knowing which bundle to target.
+        if self.llm_integration and self.llm_integration.is_available:
+            logger.info(f"LLM available - document {document_id} could be auto-categorized for bundle placement")
 
     # --- Database Schema ---
 

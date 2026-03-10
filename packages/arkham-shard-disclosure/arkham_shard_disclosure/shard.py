@@ -1,11 +1,13 @@
 """Disclosure Shard - Disclosure request and gap tracker."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .engine import DisclosureEngine
+from .llm import DisclosureLLMHelper
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,8 @@ class DisclosureShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.engine: Optional[DisclosureEngine] = None
+        self._llm_helper: Optional[DisclosureLLMHelper] = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Disclosure shard with Frame services."""
@@ -45,12 +49,25 @@ class DisclosureShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Initialize LLM helper
+        if self._llm_service:
+            self._llm_helper = DisclosureLLMHelper(self._llm_service)
+
+        # Initialize engine
+        self.engine = DisclosureEngine(
+            db=self._db,
+            event_bus=self._event_bus,
+            llm_helper=self._llm_helper,
+        )
+
         # Initialize API with our instances
         init_api(
             db=self._db,
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            engine=self.engine,
+            llm_helper=self._llm_helper,
         )
 
         # Subscribe to events
@@ -80,12 +97,60 @@ class DisclosureShard(ArkhamShard):
     # --- Event Handlers ---
 
     async def _handle_document_processed(self, event: dict) -> None:
-        """Handle document.processed events for linking documents to requests."""
+        """Handle document.processed events for linking documents to requests.
+
+        Attempts to match the processed document against pending disclosure requests.
+        Emits disclosure.gap.detected if matching reveals new information about gaps.
+        """
         logger.debug(f"Disclosure received document.processed: {event}")
 
+        if not self.engine:
+            return
+
+        document_id = event.get("document_id", "")
+        document_metadata = event.get("metadata", {})
+        if not document_metadata:
+            document_metadata = {
+                "category": event.get("category", ""),
+                "title": event.get("title", ""),
+                "text": event.get("text", ""),
+            }
+
+        try:
+            matched_ids = await self.engine.match_document_to_request(document_id, document_metadata)
+            if matched_ids:
+                logger.info(f"Document {document_id} matched {len(matched_ids)} disclosure requests")
+                if self._event_bus:
+                    await self._event_bus.emit(
+                        "disclosure.document.matched",
+                        {
+                            "document_id": document_id,
+                            "matched_request_ids": matched_ids,
+                        },
+                    )
+        except Exception as e:
+            logger.error(f"Error matching document to requests: {e}")
+
     async def _handle_case_updated(self, event: dict) -> None:
-        """Handle case.updated events for refreshing disclosure state."""
+        """Handle case.updated events for refreshing disclosure state.
+
+        Runs gap detection for the updated case.
+        """
         logger.debug(f"Disclosure received case.updated: {event}")
+
+        if not self.engine:
+            return
+
+        case_id = event.get("case_id", "")
+        if not case_id:
+            return
+
+        try:
+            gaps = await self.engine.detect_gaps(case_id)
+            if gaps:
+                logger.info(f"Case {case_id} update: detected {len(gaps)} disclosure gaps")
+        except Exception as e:
+            logger.error(f"Error detecting gaps for case {case_id}: {e}")
 
     # --- Database Schema ---
 

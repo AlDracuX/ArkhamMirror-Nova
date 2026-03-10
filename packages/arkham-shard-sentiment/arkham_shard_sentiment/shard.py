@@ -6,6 +6,8 @@ from typing import Any, Dict
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .engine import SentimentEngine
+from .llm import SentimentLLM
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,8 @@ class SentimentShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.engine: SentimentEngine | None = None
+        self.llm_integration: SentimentLLM | None = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Sentiment shard with Frame services."""
@@ -44,6 +48,14 @@ class SentimentShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Instantiate domain engine and LLM integration
+        self.llm_integration = SentimentLLM(llm_service=self._llm_service)
+        self.engine = SentimentEngine(
+            db=self._db,
+            event_bus=self._event_bus,
+            llm_service=self._llm_service,
+        )
+
         # Subscribe to events
         if self._event_bus:
             await self._event_bus.subscribe("documents.processed", self.handle_document_processed)
@@ -55,6 +67,7 @@ class SentimentShard(ArkhamShard):
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            engine=self.engine,
         )
 
         # Register self in app state for API access
@@ -70,14 +83,25 @@ class SentimentShard(ArkhamShard):
         if self._event_bus:
             await self._event_bus.unsubscribe("documents.processed", self.handle_document_processed)
             await self._event_bus.unsubscribe("comms.thread.reconstructed", self.handle_thread_reconstructed)
+        self.engine = None
+        self.llm_integration = None
         logger.info("Sentiment Shard shutdown complete")
 
     async def handle_document_processed(self, event_data: Dict[str, Any]) -> None:
-        """Handle document processed event."""
+        """Handle document processed event - trigger automatic analysis."""
         payload = event_data.get("payload", {})
         doc_id = payload.get("document_id")
-        if doc_id:
-            logger.info(f"Sentiment Shard: Notified of document {doc_id}")
+        text = payload.get("text", "")
+        case_id = payload.get("case_id")
+
+        if doc_id and text and self.engine:
+            logger.info(f"Sentiment Shard: Auto-analysing document {doc_id}")
+            try:
+                await self.engine.analyze_document(document_id=doc_id, text=text, case_id=case_id)
+            except Exception as e:
+                logger.error(f"Sentiment auto-analysis failed for {doc_id}: {e}")
+        elif doc_id:
+            logger.info(f"Sentiment Shard: Notified of document {doc_id} (no text for auto-analysis)")
 
     async def handle_thread_reconstructed(self, event_data: Dict[str, Any]) -> None:
         """Handle thread reconstructed event."""

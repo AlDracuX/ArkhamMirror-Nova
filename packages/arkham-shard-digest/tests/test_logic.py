@@ -160,10 +160,11 @@ class TestAPILogic:
     """Test the API module-level handler functions via direct import."""
 
     def setup_method(self):
-        """Reset module-level _db before each test."""
+        """Reset module-level state before each test."""
         import arkham_shard_digest.api as api_mod
 
         self.api = api_mod
+        self.api._engine = None
 
     @pytest.mark.asyncio
     async def test_generate_briefing_no_db(self):

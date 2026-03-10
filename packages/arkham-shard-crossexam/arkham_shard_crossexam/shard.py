@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .builder import QuestionTreeBuilder
+from .llm import CrossExamLLM
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,8 @@ class CrossExamShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.builder: QuestionTreeBuilder | None = None
+        self.llm_integration: CrossExamLLM | None = None
 
     async def initialize(self, frame) -> None:
         """Initialize the CrossExam shard with Frame services."""
@@ -44,13 +48,27 @@ class CrossExamShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Initialize domain components
+        self.llm_integration = CrossExamLLM(llm_service=self._llm_service)
+        self.builder = QuestionTreeBuilder(
+            db=self._db,
+            event_bus=self._event_bus,
+            llm_service=self._llm_service,
+        )
+
         # Initialize API with our instances
         init_api(
             db=self._db,
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            builder=self.builder,
         )
+
+        # Subscribe to cross-shard events
+        if self._event_bus:
+            self._event_bus.subscribe("witnesses.statement.created", self._handle_statement_created)
+            self._event_bus.subscribe("contradictions.contradiction.detected", self._handle_contradiction_detected)
 
         # Register self in app state for API access
         if hasattr(frame, "app") and frame.app:
@@ -62,7 +80,64 @@ class CrossExamShard(ArkhamShard):
     async def shutdown(self) -> None:
         """Clean up shard resources."""
         logger.info("Shutting down CrossExam Shard...")
+
+        # Unsubscribe from events
+        if self._event_bus:
+            try:
+                self._event_bus.unsubscribe("witnesses.statement.created", self._handle_statement_created)
+                self._event_bus.unsubscribe(
+                    "contradictions.contradiction.detected", self._handle_contradiction_detected
+                )
+            except Exception:
+                pass  # Best-effort cleanup
+
+        self.builder = None
+        self.llm_integration = None
         logger.info("CrossExam Shard shutdown complete")
+
+    # --- Event Handlers ---
+
+    async def _handle_statement_created(self, event_data: dict) -> None:
+        """Handle witnesses.statement.created event.
+
+        Automatically builds a question tree when a new witness statement is created.
+        """
+        if not self.builder:
+            logger.warning("Builder not initialized, skipping statement event")
+            return
+
+        witness_id = event_data.get("witness_id", "")
+        statement_text = event_data.get("statement_text", "")
+
+        if not witness_id or not statement_text:
+            logger.warning("Incomplete statement event data, skipping")
+            return
+
+        try:
+            tree_id = await self.builder.build_from_statement(witness_id, statement_text)
+            logger.info(f"Auto-built question tree {tree_id} from statement event for witness {witness_id}")
+        except Exception as e:
+            logger.error(f"Failed to auto-build tree from statement event: {e}")
+
+    async def _handle_contradiction_detected(self, event_data: dict) -> None:
+        """Handle contradictions.contradiction.detected event.
+
+        Automatically generates an impeachment sequence when a contradiction is detected.
+        """
+        if not self.builder:
+            logger.warning("Builder not initialized, skipping contradiction event")
+            return
+
+        contradiction_id = event_data.get("contradiction_id", "")
+        if not contradiction_id:
+            logger.warning("No contradiction_id in event data, skipping")
+            return
+
+        try:
+            seq_id = await self.builder.generate_impeachment_sequence(contradiction_id)
+            logger.info(f"Auto-generated impeachment {seq_id} from contradiction {contradiction_id}")
+        except Exception as e:
+            logger.error(f"Failed to auto-generate impeachment from contradiction event: {e}")
 
     def get_routes(self):
         """Return FastAPI router for this shard."""

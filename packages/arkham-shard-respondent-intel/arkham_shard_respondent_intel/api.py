@@ -17,14 +17,16 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_engine = None
 
 
-def init_api(db, event_bus, llm_service=None, shard=None):
-    global _db, _event_bus, _llm_service, _shard
+def init_api(db, event_bus, llm_service=None, shard=None, engine=None):
+    global _db, _event_bus, _llm_service, _shard, _engine
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _engine = engine
 
 
 # ---------------------------------------------------------------------------
@@ -57,6 +59,11 @@ class UpdateProfileRequest(BaseModel):
     known_positions: Optional[List[str]] = None
     credibility_notes: Optional[str] = None
     document_ids: Optional[List[str]] = None
+
+
+class BuildProfileRequest(BaseModel):
+    case_id: str
+    respondent_name: str
 
 
 # ---------------------------------------------------------------------------
@@ -275,3 +282,48 @@ async def count_items():
         raise HTTPException(status_code=503, detail="Database not available")
     result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_respondent_intel.respondent_profiles")
     return {"count": result["count"] if result else 0}
+
+
+# ---------------------------------------------------------------------------
+# Domain Intelligence Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/profile/build")
+async def build_profile(request: BuildProfileRequest) -> Dict[str, Any]:
+    """Build a respondent profile from entity mentions and documents."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Engine not available")
+
+    result = await _engine.build_profile(
+        case_id=request.case_id,
+        respondent_name=request.respondent_name,
+    )
+    return result
+
+
+@router.get("/profile/{profile_id}/positions")
+async def get_positions(profile_id: str) -> List[Dict[str, Any]]:
+    """Track positions the respondent has taken across documents."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Engine not available")
+
+    return await _engine.track_positions(profile_id)
+
+
+@router.post("/profile/{profile_id}/inconsistencies")
+async def detect_inconsistencies(profile_id: str) -> List[Dict[str, Any]]:
+    """Detect inconsistencies in the respondent's positions across documents."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Engine not available")
+
+    return await _engine.detect_inconsistencies(profile_id)
+
+
+@router.post("/profile/{profile_id}/assess")
+async def assess_strengths_weaknesses(profile_id: str) -> Dict[str, Any]:
+    """Generate a strengths/weaknesses assessment of the respondent's case."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Engine not available")
+
+    return await _engine.assess_strengths_weaknesses(profile_id)

@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
-from .models import AuthorityCreate, AuthoritySearchRequest, AuthorityUpdate
+from .models import AuthorityCreate, AuthoritySearchRequest, AuthorityUpdate, RelevanceRequest, ResearchRequest
 
 logger = logging.getLogger(__name__)
 
@@ -18,19 +18,116 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_authority_search = None
 
 
-def init_api(db, event_bus, llm_service=None, shard=None):
-    global _db, _event_bus, _llm_service, _shard
+def init_api(db, event_bus, llm_service=None, shard=None, authority_search=None):
+    global _db, _event_bus, _llm_service, _shard, _authority_search
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _authority_search = authority_search
 
 
 def _ensure_db():
     if not _db:
         raise HTTPException(status_code=503, detail="Database not available")
+
+
+def _ensure_search():
+    if not _authority_search:
+        raise HTTPException(status_code=503, detail="Authority search service not initialized")
+
+
+# ---------------------------------------------------------------------------
+# Domain Endpoints (BEFORE catch-all /{authority_id} to avoid route conflicts)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/search")
+async def search_authorities(body: AuthoritySearchRequest) -> List[Dict[str, Any]]:
+    """Search authorities using AuthoritySearch engine.
+
+    Uses vector search if available, falls back to SQL ILIKE.
+    Optionally filters by jurisdiction and claim_types.
+    """
+    _ensure_db()
+    _ensure_search()
+
+    return await _authority_search.search(
+        query=body.query,
+        jurisdiction=body.jurisdiction,
+        claim_types=body.claim_types,
+    )
+
+
+@router.post("/summarize/{authority_id}")
+async def summarize_authority(authority_id: str) -> Dict[str, Any]:
+    """Get or generate a case summary for an authority.
+
+    Checks DB cache first; generates via LLM if available.
+    """
+    _ensure_db()
+    _ensure_search()
+
+    return await _authority_search.summarize_case(authority_id=authority_id)
+
+
+@router.post("/relevance")
+async def score_relevance(body: RelevanceRequest) -> Dict[str, Any]:
+    """Score how relevant an authority is to current case facts.
+
+    Returns a 0.0-1.0 relevance score.
+    """
+    _ensure_db()
+    _ensure_search()
+
+    score = await _authority_search.score_relevance(
+        authority_id=body.authority_id,
+        case_facts=body.case_facts,
+    )
+    return {"authority_id": body.authority_id, "relevance_score": score}
+
+
+@router.get("/citations/{authority_id}")
+async def get_citations(authority_id: str) -> List[Dict[str, Any]]:
+    """Get citation chain for an authority (both directions)."""
+    _ensure_db()
+    _ensure_search()
+
+    return await _authority_search.map_citation_chain(authority_id=authority_id)
+
+
+@router.get("/classify/{authority_id}")
+async def classify_authority(authority_id: str) -> Dict[str, Any]:
+    """Classify authority as binding or persuasive based on court hierarchy."""
+    _ensure_db()
+    _ensure_search()
+
+    return await _authority_search.classify_binding_persuasive(authority_id=authority_id)
+
+
+@router.post("/research")
+async def research_query(body: ResearchRequest) -> Dict[str, Any]:
+    """Conduct comprehensive legal research using LLM."""
+    _ensure_db()
+    _ensure_search()
+
+    return await _authority_search.research(query=body.query, context=body.context or "")
+
+
+# ---------------------------------------------------------------------------
+# Badge / Count Endpoint
+# ---------------------------------------------------------------------------
+
+
+@router.get("/items/count")
+async def count_items():
+    """Return count for badge display."""
+    _ensure_db()
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_oracle.legal_authorities")
+    return {"count": result["count"] if result else 0}
 
 
 # ---------------------------------------------------------------------------
@@ -214,48 +311,3 @@ async def delete_authority(authority_id: str) -> Dict[str, Any]:
     )
 
     return {"deleted": True, "id": authority_id}
-
-
-# ---------------------------------------------------------------------------
-# Domain Endpoint: Search
-# ---------------------------------------------------------------------------
-
-
-@router.post("/search")
-async def search_authorities(body: AuthoritySearchRequest) -> List[Dict[str, Any]]:
-    """Search authorities by text match on title, summary, citation.
-
-    Uses ILIKE for case-insensitive partial matching. Optionally filters
-    by jurisdiction and claim_types.
-    """
-    _ensure_db()
-
-    conditions = ["(title ILIKE :query OR summary ILIKE :query OR citation ILIKE :query)"]
-    params: Dict[str, Any] = {"query": f"%{body.query}%"}
-
-    if body.jurisdiction:
-        conditions.append("jurisdiction = :jurisdiction")
-        params["jurisdiction"] = body.jurisdiction
-
-    if body.claim_types:
-        conditions.append("claim_types && :claim_types")
-        params["claim_types"] = body.claim_types
-
-    where = "WHERE " + " AND ".join(conditions)
-    sql = f"SELECT * FROM arkham_oracle.legal_authorities {where} ORDER BY created_at DESC"
-
-    rows = await _db.fetch_all(sql, params)
-    return [dict(r) for r in rows]
-
-
-# ---------------------------------------------------------------------------
-# Badge / Count Endpoint
-# ---------------------------------------------------------------------------
-
-
-@router.get("/items/count")
-async def count_items():
-    """Return count for badge display."""
-    _ensure_db()
-    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_oracle.legal_authorities")
-    return {"count": result["count"] if result else 0}

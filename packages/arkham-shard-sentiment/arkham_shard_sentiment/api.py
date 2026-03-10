@@ -29,14 +29,16 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_engine = None
 
 
-def init_api(db, event_bus, llm_service=None, shard=None):
-    global _db, _event_bus, _llm_service, _shard
+def init_api(db, event_bus, llm_service=None, shard=None, engine=None):
+    global _db, _event_bus, _llm_service, _shard, _engine
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _engine = engine
 
 
 # ---------------------------------------------------------------------------
@@ -215,7 +217,21 @@ async def delete_result(result_id: str):
 
 @router.post("/analyze", response_model=AnalyzeResponse)
 async def analyze_text(request: AnalyzeRequest):
-    """Analyze text for sentiment using keyword-based scoring."""
+    """Analyze text for sentiment using keyword-based scoring + optional LLM."""
+    if _engine:
+        result = await _engine.analyze_document(
+            document_id=str(request.document_id),
+            text=request.text,
+        )
+        return AnalyzeResponse(
+            document_id=str(request.document_id),
+            score=result["overall_score"],
+            label=result["label"],
+            confidence=result["confidence"],
+            key_passages=result["keywords_found"],
+        )
+
+    # Fallback: keyword-only when engine not initialised
     result = analyze_sentiment(request.text)
     return AnalyzeResponse(
         document_id=str(request.document_id),
@@ -224,6 +240,54 @@ async def analyze_text(request: AnalyzeRequest):
         confidence=result["confidence"],
         key_passages=result["key_passages"],
     )
+
+
+# ---------------------------------------------------------------------------
+# Domain: temporal patterns
+# ---------------------------------------------------------------------------
+
+
+@router.get("/patterns/{case_id}")
+async def get_temporal_patterns(case_id: str):
+    """Detect tone changes over time for a case."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Engine not available")
+    patterns = await _engine.detect_temporal_patterns(case_id=case_id)
+    return {"case_id": case_id, "patterns": patterns}
+
+
+# ---------------------------------------------------------------------------
+# Domain: party comparison
+# ---------------------------------------------------------------------------
+
+
+@router.get("/compare/{case_id}")
+async def compare_parties(case_id: str):
+    """Compare claimant vs respondent communication styles."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Engine not available")
+    result = await _engine.compare_parties(case_id=case_id)
+    return {"case_id": case_id, **result}
+
+
+# ---------------------------------------------------------------------------
+# Domain: classify tone categories
+# ---------------------------------------------------------------------------
+
+
+class ClassifyRequest(BaseModel):
+    """Request body for tone classification."""
+
+    text: str
+
+
+@router.post("/classify")
+async def classify_tone(request: ClassifyRequest):
+    """Classify communication tone into categories."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Engine not available")
+    categories = _engine.classify_tone_categories(request.text)
+    return {"categories": categories}
 
 
 # ---------------------------------------------------------------------------

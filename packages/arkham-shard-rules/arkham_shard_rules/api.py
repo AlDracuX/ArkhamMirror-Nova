@@ -30,6 +30,9 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_calculator = None
+_seeder = None
+_rules_llm = None
 
 
 def init_api(
@@ -37,13 +40,19 @@ def init_api(
     event_bus,
     llm_service=None,
     shard=None,
+    calculator=None,
+    seeder=None,
+    rules_llm=None,
 ):
     """Initialize API with shard dependencies."""
-    global _db, _event_bus, _llm_service, _shard
+    global _db, _event_bus, _llm_service, _shard, _calculator, _seeder, _rules_llm
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _calculator = calculator
+    _seeder = seeder
+    _rules_llm = rules_llm
 
 
 # --- Request/Response Models ---
@@ -409,3 +418,108 @@ async def count_items():
         raise HTTPException(status_code=503, detail="Database not available")
     result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_rules.rules")
     return {"count": result["count"] if result else 0}
+
+
+# --- Domain Endpoints ---
+
+
+class CalculateRequest(BaseModel):
+    rule_id: str
+    trigger_date: date
+    trigger_type: str = "custom"
+
+
+class BreachDetectRequest(BaseModel):
+    project_id: str
+
+
+class ComplianceCheckRequest(BaseModel):
+    document_id: str
+    submission_type: str
+
+
+class UnlessOrderRequest(BaseModel):
+    breach_id: str
+
+
+class ExtractDatesRequest(BaseModel):
+    document_text: str
+
+
+@router.post("/seed")
+async def seed_rules():
+    """Seed ET Rules 1-62 and Practice Directions."""
+    if not _seeder or not _db:
+        raise HTTPException(status_code=503, detail="Seeder not available")
+
+    count = await _seeder.seed(_db)
+    return {"status": "seeded", "count": count}
+
+
+@router.post("/calculate")
+async def calculate_deadline(request: CalculateRequest):
+    """Calculate a deadline from a rule and trigger date."""
+    if not _calculator:
+        raise HTTPException(status_code=503, detail="Calculator not available")
+
+    try:
+        result = await _calculator.calculate(request.rule_id, request.trigger_date, request.trigger_type)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/breaches/detect")
+async def detect_breaches(request: BreachDetectRequest):
+    """Detect missed deadlines for a project."""
+    if not _calculator:
+        raise HTTPException(status_code=503, detail="Calculator not available")
+
+    breaches = await _calculator.detect_breaches(request.project_id)
+    return {"breaches": breaches, "count": len(breaches)}
+
+
+@router.post("/compliance/check")
+async def check_compliance(request: ComplianceCheckRequest):
+    """Check document compliance against applicable rules."""
+    if not _calculator:
+        raise HTTPException(status_code=503, detail="Calculator not available")
+
+    result = await _calculator.check_compliance(request.document_id, request.submission_type)
+    return result
+
+
+@router.post("/unless-order/assess")
+async def assess_unless_order(request: UnlessOrderRequest):
+    """Assess unless order risk for a breach."""
+    if not _calculator:
+        raise HTTPException(status_code=503, detail="Calculator not available")
+
+    try:
+        result = await _calculator.assess_unless_order_risk(request.breach_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/extract-dates")
+async def extract_dates(request: ExtractDatesRequest):
+    """Extract dates and legal significance from a document using LLM."""
+    if not _rules_llm:
+        raise HTTPException(status_code=503, detail="LLM service not available")
+
+    dates = await _rules_llm.extract_dates(request.document_text)
+    return {
+        "dates": [
+            {
+                "date": d.date,
+                "description": d.description,
+                "rule_reference": d.rule_reference,
+                "creates_deadline": d.creates_deadline,
+                "deadline_for": d.deadline_for,
+                "notes": d.notes,
+            }
+            for d in dates
+        ],
+        "count": len(dates),
+    }

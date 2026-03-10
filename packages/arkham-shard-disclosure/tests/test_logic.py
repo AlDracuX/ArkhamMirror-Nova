@@ -1,7 +1,7 @@
 """
 Disclosure Shard - Logic Tests
 
-Tests for models, API handler logic, and schema creation.
+Tests for models, API handler logic, schema creation, and engine domain logic.
 All external dependencies are mocked.
 """
 
@@ -10,6 +10,7 @@ from datetime import date, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from arkham_shard_disclosure.engine import DisclosureEngine
 from arkham_shard_disclosure.models import (
     VALID_STATUSES,
     DisclosureRequest,
@@ -482,3 +483,312 @@ class TestAPILogic:
         assert "case_id" in query
         assert "status" in query
         assert "category" in query
+
+
+# ---------------------------------------------------------------------------
+# Engine: Gap Detection Tests
+# ---------------------------------------------------------------------------
+
+
+class TestDetectGaps:
+    """Tests for DisclosureEngine.detect_gaps."""
+
+    @pytest.fixture
+    def mock_db(self):
+        db = AsyncMock()
+        db.execute = AsyncMock()
+        db.fetch_all = AsyncMock(return_value=[])
+        db.fetch_one = AsyncMock(return_value=None)
+        return db
+
+    @pytest.fixture
+    def mock_event_bus(self):
+        bus = AsyncMock()
+        bus.emit = AsyncMock()
+        return bus
+
+    @pytest.mark.asyncio
+    async def test_detect_gaps_finds_unanswered_requests(self, mock_db, mock_event_bus):
+        """3 requests, 1 has a response -- expect 2 gaps for the unanswered ones."""
+        # DB returns 3 pending requests
+        mock_db.fetch_all.return_value = [
+            {"id": "req-1", "category": "financial", "description": "Bank statements", "status": "pending"},
+            {"id": "req-2", "category": "employment", "description": "Contract of employment", "status": "requested"},
+            {"id": "req-3", "category": "emails", "description": "Relevant emails", "status": "pending"},
+        ]
+
+        call_count = 0
+
+        async def fetch_one_side_effect(query, params=None):
+            nonlocal call_count
+            # Response lookups (first call per request)
+            if "responses" in query:
+                req_id = params.get("request_id", "")
+                if req_id == "req-1":
+                    # req-1 has a response with text
+                    return {"id": "resp-1", "response_text": "Here are the bank statements"}
+                return None  # No response for req-2 and req-3
+            # Gap existence check
+            if "gaps" in query:
+                return None  # No existing gaps
+
+        mock_db.fetch_one = AsyncMock(side_effect=fetch_one_side_effect)
+
+        engine = DisclosureEngine(db=mock_db, event_bus=mock_event_bus)
+        gaps = await engine.detect_gaps("case-1")
+
+        assert len(gaps) == 2
+        gap_request_ids = {g["request_id"] for g in gaps}
+        assert "req-2" in gap_request_ids
+        assert "req-3" in gap_request_ids
+        assert "req-1" not in gap_request_ids
+
+        # Verify event was emitted
+        mock_event_bus.emit.assert_called_once()
+        call_args = mock_event_bus.emit.call_args
+        assert call_args[0][0] == "disclosure.gap.detected"
+
+    @pytest.mark.asyncio
+    async def test_detect_gaps_partial_response_flagged(self, mock_db, mock_event_bus):
+        """Request with status 'partial' is flagged as a gap even if a response exists."""
+        mock_db.fetch_all.return_value = [
+            {"id": "req-1", "category": "contracts", "description": "Supply agreements", "status": "partial"},
+        ]
+
+        async def fetch_one_side_effect(query, params=None):
+            if "responses" in query:
+                return {"id": "resp-1", "response_text": "Partial documents"}
+            if "gaps" in query:
+                return None
+
+        mock_db.fetch_one = AsyncMock(side_effect=fetch_one_side_effect)
+
+        engine = DisclosureEngine(db=mock_db, event_bus=mock_event_bus)
+        gaps = await engine.detect_gaps("case-1")
+
+        assert len(gaps) == 1
+        assert gaps[0]["request_id"] == "req-1"
+        assert (
+            "partial" in gaps[0]["missing_items_description"].lower()
+            or "Partial" in gaps[0]["missing_items_description"]
+        )
+
+
+# ---------------------------------------------------------------------------
+# Engine: Evasion Scoring Tests
+# ---------------------------------------------------------------------------
+
+
+class TestEvasionScoring:
+    """Tests for DisclosureEngine.score_evasion."""
+
+    @pytest.fixture
+    def mock_db(self):
+        db = AsyncMock()
+        db.execute = AsyncMock()
+        db.fetch_all = AsyncMock(return_value=[])
+        db.fetch_one = AsyncMock(return_value=None)
+        return db
+
+    @pytest.fixture
+    def mock_event_bus(self):
+        bus = AsyncMock()
+        bus.emit = AsyncMock()
+        return bus
+
+    @pytest.mark.asyncio
+    async def test_evasion_scoring_high_delay_pattern(self, mock_db, mock_event_bus):
+        """5 delays out of 6 requests should produce a high-ish score."""
+        yesterday = date.today() - timedelta(days=1)
+
+        # 6 requests, 5 are overdue
+        mock_db.fetch_all.side_effect = [
+            # First call: requests
+            [
+                {"id": "r1", "status": "overdue", "deadline": yesterday, "created_at": datetime.now()},
+                {"id": "r2", "status": "overdue", "deadline": yesterday, "created_at": datetime.now()},
+                {"id": "r3", "status": "overdue", "deadline": yesterday, "created_at": datetime.now()},
+                {"id": "r4", "status": "overdue", "deadline": yesterday, "created_at": datetime.now()},
+                {"id": "r5", "status": "overdue", "deadline": yesterday, "created_at": datetime.now()},
+                {"id": "r6", "status": "received", "deadline": None, "created_at": datetime.now()},
+            ],
+            # Second call: responses (no redactions)
+            [],
+        ]
+
+        engine = DisclosureEngine(db=mock_db, event_bus=mock_event_bus)
+        result = await engine.score_evasion("resp-1", "case-1")
+
+        assert result["respondent_id"] == "resp-1"
+        assert result["score"] > 0
+        assert result["breakdown"]["delay"] == 5
+        assert result["breakdown"]["total_requests"] == 6
+        assert result["category"] != "none"
+
+    @pytest.mark.asyncio
+    async def test_evasion_scoring_no_evasion_returns_zero(self, mock_db, mock_event_bus):
+        """All requests fully responded -- score should be zero."""
+        mock_db.fetch_all.side_effect = [
+            # First call: all received
+            [
+                {"id": "r1", "status": "received", "deadline": None, "created_at": datetime.now()},
+                {"id": "r2", "status": "received", "deadline": None, "created_at": datetime.now()},
+                {"id": "r3", "status": "received", "deadline": None, "created_at": datetime.now()},
+            ],
+            # Second call: responses (no redactions)
+            [],
+        ]
+
+        engine = DisclosureEngine(db=mock_db, event_bus=mock_event_bus)
+        result = await engine.score_evasion("resp-1", "case-1")
+
+        assert result["respondent_id"] == "resp-1"
+        assert result["score"] == 0.0
+        assert result["category"] == "none"
+        assert result["breakdown"]["delay"] == 0
+        assert result["breakdown"]["partial"] == 0
+        assert result["breakdown"]["refusal"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Engine: Deadline Calculation Tests
+# ---------------------------------------------------------------------------
+
+
+class TestDeadlineCalculation:
+    """Tests for DisclosureEngine.calculate_deadline."""
+
+    @pytest.mark.asyncio
+    async def test_deadline_calculation_calendar_days(self):
+        """order_date + 14 calendar days should be exactly 14 days later."""
+        engine = DisclosureEngine(db=None)
+        order = date(2026, 3, 1)  # Sunday
+        result = await engine.calculate_deadline(order, deadline_days=14, deadline_type="calendar_days")
+        assert result == date(2026, 3, 15)
+
+    @pytest.mark.asyncio
+    async def test_deadline_calculation_working_days(self):
+        """Working days calculation skips weekends."""
+        engine = DisclosureEngine(db=None)
+        # Monday 2 March 2026
+        order = date(2026, 3, 2)
+        result = await engine.calculate_deadline(order, deadline_days=10, deadline_type="working_days")
+        # 10 working days from Monday March 2:
+        # Week 1: Mar 3,4,5,6 (Tu-Fr) = 4
+        # Mar 9,10,11,12,13 (Mo-Fr) = 5 -> 9 total
+        # Mar 16 (Mo) = 10 total
+        assert result == date(2026, 3, 16)
+        # Verify it's a Monday (weekday 0)
+        assert result.weekday() == 0
+
+
+# ---------------------------------------------------------------------------
+# Engine: Document Matching Tests
+# ---------------------------------------------------------------------------
+
+
+class TestDocumentMatching:
+    """Tests for DisclosureEngine.match_document_to_request."""
+
+    @pytest.fixture
+    def mock_db(self):
+        db = AsyncMock()
+        db.execute = AsyncMock()
+        db.fetch_all = AsyncMock(return_value=[])
+        db.fetch_one = AsyncMock(return_value=None)
+        return db
+
+    @pytest.mark.asyncio
+    async def test_document_match_keyword_fallback(self, mock_db):
+        """When LLM is unavailable, falls back to keyword matching on category."""
+        mock_db.fetch_all.return_value = [
+            {"id": "req-1", "category": "financial bank statements", "description": "Monthly bank statements"},
+            {"id": "req-2", "category": "employment contract", "description": "Written terms of employment"},
+            {"id": "req-3", "category": "email correspondence", "description": "All relevant emails"},
+        ]
+
+        # No LLM helper -- keyword fallback
+        engine = DisclosureEngine(db=mock_db, llm_helper=None)
+        matches = await engine.match_document_to_request(
+            document_id="doc-1",
+            document_metadata={
+                "category": "financial",
+                "title": "Bank Statement March 2026",
+                "text": "HSBC bank account statement showing transactions",
+            },
+        )
+
+        assert "req-1" in matches
+        # req-2 and req-3 should not match financial/bank document
+        assert "req-2" not in matches
+
+
+# ---------------------------------------------------------------------------
+# Event Handler Tests
+# ---------------------------------------------------------------------------
+
+
+class TestEventHandlers:
+    """Tests for shard event handlers."""
+
+    @pytest.fixture
+    def mock_events(self):
+        events = AsyncMock()
+        events.emit = AsyncMock()
+        events.subscribe = AsyncMock()
+        events.unsubscribe = AsyncMock()
+        return events
+
+    @pytest.fixture
+    def mock_db(self):
+        db = AsyncMock()
+        db.execute = AsyncMock()
+        db.fetch_all = AsyncMock(return_value=[])
+        db.fetch_one = AsyncMock(return_value=None)
+        return db
+
+    @pytest.fixture
+    def mock_frame(self, mock_events, mock_db):
+        frame = MagicMock()
+        frame.database = mock_db
+        frame.get_service = MagicMock(
+            side_effect=lambda name: {
+                "events": mock_events,
+                "llm": None,
+                "database": mock_db,
+                "vectors": None,
+                "documents": None,
+            }.get(name)
+        )
+        return frame
+
+    @pytest.mark.asyncio
+    async def test_event_handler_auto_matches_document(self, mock_frame, mock_db, mock_events):
+        """document.processed event triggers match_document_to_request on the engine."""
+        # Setup: one pending request that matches the document
+        mock_db.fetch_all.return_value = [
+            {"id": "req-1", "category": "financial statements", "description": "Bank records"},
+        ]
+
+        shard = DisclosureShard()
+        await shard.initialize(mock_frame)
+
+        # Simulate document.processed event
+        event = {
+            "document_id": "doc-abc",
+            "metadata": {
+                "category": "financial",
+                "title": "Bank Statement",
+                "text": "Monthly financial statements from HSBC",
+            },
+        }
+
+        await shard._handle_document_processed(event)
+
+        # The engine should have been called and emitted a match event
+        # Since we have a matching document, the event bus should have disclosure.document.matched
+        emit_calls = mock_events.emit.call_args_list
+        # Filter for our specific event (not the subscribe calls etc)
+        match_events = [c for c in emit_calls if len(c[0]) > 0 and c[0][0] == "disclosure.document.matched"]
+        assert len(match_events) == 1
+        assert "doc-abc" in str(match_events[0])

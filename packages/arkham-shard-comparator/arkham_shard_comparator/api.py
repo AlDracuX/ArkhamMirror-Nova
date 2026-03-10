@@ -40,6 +40,8 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_engine = None
+_comparator_llm = None
 
 
 def init_api(
@@ -47,13 +49,17 @@ def init_api(
     event_bus,
     llm_service=None,
     shard=None,
+    engine=None,
+    comparator_llm=None,
 ):
     """Initialize API with shard dependencies."""
-    global _db, _event_bus, _llm_service, _shard
+    global _db, _event_bus, _llm_service, _shard, _engine, _comparator_llm
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _engine = engine
+    _comparator_llm = comparator_llm
 
 
 # --- Request / Response Models ---
@@ -654,3 +660,84 @@ async def count_items():
         raise HTTPException(status_code=503, detail="Database not available")
     result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_comparator.comparators")
     return {"count": result["count"] if result else 0}
+
+
+# --- Domain Analysis Endpoints ---
+
+
+def _require_engine():
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Comparator engine not initialized")
+
+
+@router.post("/matrix/{incident_id}")
+async def build_treatment_matrix(incident_id: str):
+    """Build side-by-side treatment matrix for an incident."""
+    _require_engine()
+    result = await _engine.build_treatment_matrix(incident_id)
+    return result
+
+
+class ScoreDivergenceRequest(BaseModel):
+    treatment_a_id: str
+    treatment_b_id: str
+
+
+@router.post("/divergence/score")
+async def score_divergence(request: ScoreDivergenceRequest):
+    """Score divergence between two treatments by their IDs."""
+    _require_engine()
+    score = await _engine.score_divergence_by_ids(request.treatment_a_id, request.treatment_b_id)
+    return {"treatment_a_id": request.treatment_a_id, "treatment_b_id": request.treatment_b_id, "score": score}
+
+
+@router.get("/elements/s13/{case_id}")
+async def get_s13_elements(case_id: str):
+    """Get s.13 direct discrimination element checklist for a case."""
+    _require_engine()
+    return await _engine.check_s13_elements(case_id)
+
+
+@router.get("/elements/s26/{case_id}")
+async def get_s26_elements(case_id: str):
+    """Get s.26 harassment element checklist for a case."""
+    _require_engine()
+    return await _engine.check_s26_elements(case_id)
+
+
+@router.get("/significance/{case_id}")
+async def get_significance(case_id: str):
+    """Get aggregate significance across all incidents for a case."""
+    _require_engine()
+    return await _engine.aggregate_significance(case_id)
+
+
+class IdentifyComparatorsRequest(BaseModel):
+    context: str
+    characteristic: str
+    claimant_role: str = ""
+
+
+@router.post("/identify")
+async def identify_comparators(request: IdentifyComparatorsRequest):
+    """Use LLM to identify potential comparators from context."""
+    if not _comparator_llm or not _comparator_llm.available:
+        raise HTTPException(status_code=503, detail="LLM service not available for comparator identification")
+
+    suggestions = await _comparator_llm.identify_comparators(
+        context=request.context,
+        characteristic=request.characteristic,
+        claimant_role=request.claimant_role,
+    )
+    return {
+        "suggestions": [
+            {
+                "name": s.name,
+                "role": s.role,
+                "reasoning": s.reasoning,
+                "comparator_type": s.comparator_type,
+            }
+            for s in suggestions
+        ],
+        "count": len(suggestions),
+    }

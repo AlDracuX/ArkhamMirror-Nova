@@ -499,3 +499,376 @@ class TestCostItemsSummary:
         with pytest.raises(HTTPException) as exc:
             await self.api.get_cost_items_summary()
         assert exc.value.status_code == 503
+
+
+# ---------------------------------------------------------------------------
+# CostsEngine Tests
+# ---------------------------------------------------------------------------
+
+
+class TestAggregateTime:
+    """Tests for CostsEngine.aggregate_time."""
+
+    @pytest.mark.asyncio
+    async def test_aggregate_time_sums_correctly(self, mock_db):
+        """3 entries: 60 + 90 + 30 = 180 minutes = 3.0 hours."""
+        from arkham_shard_costs.engine import CostsEngine
+
+        mock_db.fetch_all.return_value = [
+            {"duration_minutes": 60},
+            {"duration_minutes": 90},
+            {"duration_minutes": 30},
+        ]
+
+        engine = CostsEngine(db=mock_db)
+        result = await engine.aggregate_time("proj-1")
+
+        assert result["total_minutes"] == 180
+        assert result["total_hours"] == 3.0
+        assert result["entries_count"] == 3
+        assert result["total_cost"] == 0.0  # no hourly rate
+
+    @pytest.mark.asyncio
+    async def test_aggregate_time_applies_hourly_rate(self, mock_db):
+        """2 entries totalling 120 min = 2 hours * 50/hr = 100."""
+        from arkham_shard_costs.engine import CostsEngine
+
+        mock_db.fetch_all.return_value = [
+            {"duration_minutes": 60},
+            {"duration_minutes": 60},
+        ]
+
+        engine = CostsEngine(db=mock_db)
+        result = await engine.aggregate_time("proj-1", hourly_rate=50.0)
+
+        assert result["total_hours"] == 2.0
+        assert result["total_cost"] == 100.0
+        assert result["hourly_rate"] == 50.0
+
+    @pytest.mark.asyncio
+    async def test_aggregate_time_empty(self, mock_db):
+        """No entries returns zeroes."""
+        from arkham_shard_costs.engine import CostsEngine
+
+        mock_db.fetch_all.return_value = []
+        engine = CostsEngine(db=mock_db)
+        result = await engine.aggregate_time("proj-empty")
+
+        assert result["total_minutes"] == 0
+        assert result["entries_count"] == 0
+
+
+class TestRollupExpenses:
+    """Tests for CostsEngine.rollup_expenses."""
+
+    @pytest.mark.asyncio
+    async def test_rollup_expenses_by_category(self, mock_db):
+        """Group and sum expenses by description (category proxy)."""
+        from arkham_shard_costs.engine import CostsEngine
+
+        mock_db.fetch_all.return_value = [
+            {"description": "Travel", "amount": 45.50, "currency": "GBP"},
+            {"description": "Travel", "amount": 32.00, "currency": "GBP"},
+            {"description": "Printing", "amount": 15.00, "currency": "GBP"},
+        ]
+
+        engine = CostsEngine(db=mock_db)
+        result = await engine.rollup_expenses("proj-1")
+
+        assert result["total_amount"] == 92.50
+        assert result["items_count"] == 3
+        assert result["by_category"]["Travel"] == 77.50
+        assert result["by_category"]["Printing"] == 15.0
+        assert result["currency"] == "GBP"
+
+
+class TestScoreConduct:
+    """Tests for CostsEngine.score_conduct."""
+
+    @pytest.mark.asyncio
+    async def test_conduct_scoring_severity_weights(self, mock_db):
+        """Critical(5) > high(3) > medium(2) > low(1)."""
+        from arkham_shard_costs.engine import CostsEngine
+
+        mock_db.fetch_all.return_value = [
+            {"conduct_type": "evasion", "significance": "critical"},
+            {"conduct_type": "delay", "significance": "low"},
+            {"conduct_type": "breach_of_order", "significance": "high"},
+        ]
+
+        engine = CostsEngine(db=mock_db)
+        result = await engine.score_conduct("proj-1")
+
+        assert result["conduct_count"] == 3
+        # Each type appears once so frequency multiplier is 1:
+        # evasion: 5*1=5, delay: 1*1=1, breach_of_order: 3*1=3 => total 9
+        assert result["by_type"]["evasion"]["score"] == 5
+        assert result["by_type"]["delay"]["score"] == 1
+        assert result["by_type"]["breach_of_order"]["score"] == 3
+        assert result["total_score"] == 9
+        assert result["costs_basis_strength"] == "medium"
+
+    @pytest.mark.asyncio
+    async def test_conduct_scoring_frequency_multiplier(self, mock_db):
+        """Repeated delay pattern: 3 delays * weight 2 each, freq multiplier 3 = 3*6=18."""
+        from arkham_shard_costs.engine import CostsEngine
+
+        mock_db.fetch_all.return_value = [
+            {"conduct_type": "delay", "significance": "medium"},
+            {"conduct_type": "delay", "significance": "medium"},
+            {"conduct_type": "delay", "significance": "medium"},
+        ]
+
+        engine = CostsEngine(db=mock_db)
+        result = await engine.score_conduct("proj-1")
+
+        # total_weight = 2+2+2 = 6, count = 3, score = 6*3 = 18
+        assert result["by_type"]["delay"]["count"] == 3
+        assert result["by_type"]["delay"]["total_weight"] == 6
+        assert result["by_type"]["delay"]["score"] == 18
+        assert result["total_score"] == 18
+        assert result["costs_basis_strength"] == "high"
+
+
+class TestBuildApplication:
+    """Tests for CostsEngine.build_application."""
+
+    @pytest.mark.asyncio
+    async def test_build_application_calculates_total(self, mock_db):
+        """Sum of time + expenses = total_amount_claimed."""
+        from arkham_shard_costs.engine import CostsEngine
+
+        # Application row with linked IDs
+        mock_db.fetch_one.side_effect = [
+            # First call: fetch the application
+            {
+                "id": "app-1",
+                "project_id": "proj-1",
+                "title": "Test Application",
+                "total_amount_claimed": 0.0,
+                "time_entry_ids": '["te-1", "te-2"]',
+                "expense_ids": '["exp-1"]',
+                "conduct_ids": '["cl-1"]',
+                "status": "draft",
+            },
+            # Second call: time entry 1
+            {"duration_minutes": 120, "hourly_rate": 50.0},
+            # Third call: time entry 2
+            {"duration_minutes": 60, "hourly_rate": 50.0},
+            # Fourth call: expense 1
+            {"amount": 45.50},
+        ]
+
+        engine = CostsEngine(db=mock_db)
+        result = await engine.build_application("app-1")
+
+        # Time: (120/60)*50 + (60/60)*50 = 100 + 50 = 150
+        # Expense: 45.50
+        # Total: 195.50
+        assert result["total_amount_claimed"] == 195.50
+        assert result["time_cost"] == 150.0
+        assert result["expense_total"] == 45.50
+        assert result["conduct_count"] == 1
+
+
+class TestAutoLogConduct:
+    """Tests for CostsEngine.auto_log_conduct_from_event."""
+
+    @pytest.mark.asyncio
+    async def test_auto_log_from_evasion_event(self, mock_db, mock_events):
+        """disclosure.evasion.scored creates a conduct_log entry."""
+        from arkham_shard_costs.engine import CostsEngine
+
+        engine = CostsEngine(db=mock_db, event_bus=mock_events)
+
+        log_id = await engine.auto_log_conduct_from_event(
+            "disclosure.evasion.scored",
+            {
+                "respondent": "Bylor Ltd",
+                "project_id": "proj-1",
+                "score": 7,
+            },
+        )
+
+        assert log_id is not None
+        # Verify INSERT was called
+        mock_db.execute.assert_called_once()
+        call_args = mock_db.execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+        assert "INSERT INTO arkham_costs.conduct_log" in sql
+        assert params["conduct_type"] == "evasion"
+        assert params["party_name"] == "Bylor Ltd"
+        assert params["significance"] == "high"  # score < 8, uses default high
+        # Verify event emitted
+        mock_events.emit.assert_called_once()
+        assert mock_events.emit.call_args[0][0] == "costs.conduct.logged"
+
+    @pytest.mark.asyncio
+    async def test_auto_log_from_unknown_event_returns_none(self, mock_db):
+        """Unknown event types return None and do not insert."""
+        from arkham_shard_costs.engine import CostsEngine
+
+        engine = CostsEngine(db=mock_db)
+        result = await engine.auto_log_conduct_from_event("unknown.event", {})
+
+        assert result is None
+        mock_db.execute.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_auto_log_critical_score_escalation(self, mock_db, mock_events):
+        """Events with score >= 8 escalate significance to critical."""
+        from arkham_shard_costs.engine import CostsEngine
+
+        engine = CostsEngine(db=mock_db, event_bus=mock_events)
+
+        await engine.auto_log_conduct_from_event(
+            "disclosure.evasion.scored",
+            {"respondent": "Bylor Ltd", "project_id": "proj-1", "score": 9},
+        )
+
+        params = mock_db.execute.call_args[0][1]
+        assert params["significance"] == "critical"
+
+
+class TestGenerateSchedule:
+    """Tests for CostsEngine.generate_schedule."""
+
+    @pytest.mark.asyncio
+    async def test_schedule_generation_format(self, mock_db):
+        """Verify text output contains sections, line items, and grand total."""
+        from arkham_shard_costs.engine import CostsEngine
+
+        mock_db.fetch_one.side_effect = [
+            # Application row
+            {
+                "id": "app-1",
+                "title": "Costs v Bylor",
+                "time_entry_ids": '["te-1"]',
+                "expense_ids": '["exp-1"]',
+            },
+            # Time entry
+            {"activity": "Drafting ET1", "duration_minutes": 120, "hourly_rate": 50.0},
+            # Expense
+            {"description": "Train to Bristol", "amount": 45.50},
+        ]
+
+        engine = CostsEngine(db=mock_db)
+        text = await engine.generate_schedule("app-1")
+
+        assert "SCHEDULE OF COSTS" in text
+        assert "COSTS V BYLOR" in text
+        assert "SECTION A: TIME COSTS" in text
+        assert "Drafting ET1" in text
+        assert "120 min" in text
+        assert "SECTION B: EXPENSES" in text
+        assert "Train to Bristol" in text
+        assert "GRAND TOTAL: 145.50" in text
+
+
+# ---------------------------------------------------------------------------
+# LLM Integration Tests
+# ---------------------------------------------------------------------------
+
+
+class TestCostsLLM:
+    """Tests for CostsLLM wrapper."""
+
+    @pytest.mark.asyncio
+    async def test_draft_application_no_llm(self):
+        """Without LLM service, returns failure result."""
+        from arkham_shard_costs.llm import CostsLLM
+
+        llm = CostsLLM(llm_service=None)
+        result = await llm.draft_application("conduct", 100.0, 50.0, 150.0)
+
+        assert result.success is False
+        assert "not available" in result.error
+
+    @pytest.mark.asyncio
+    async def test_draft_application_with_llm(self):
+        """With LLM service, parses response correctly."""
+        from arkham_shard_costs.llm import CostsLLM
+
+        mock_llm = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = json.dumps(
+            {
+                "application_text": "Application under Rule 76...",
+                "rule_references": ["Rule 76(1)(a)"],
+            }
+        )
+        mock_llm.generate = AsyncMock(return_value=mock_response)
+
+        llm = CostsLLM(llm_service=mock_llm)
+        result = await llm.draft_application("conduct summary", 100.0, 50.0, 150.0)
+
+        assert result.success is True
+        assert "Rule 76" in result.text
+        assert "Rule 76(1)(a)" in result.rule_references
+
+    @pytest.mark.asyncio
+    async def test_assess_strength_no_llm(self):
+        """Without LLM service, returns failure with unknown strength."""
+        from arkham_shard_costs.llm import CostsLLM
+
+        llm = CostsLLM(llm_service=None)
+        result = await llm.assess_strength("conduct", 10, 3, "medium", 100.0, 50.0, 150.0)
+
+        assert result.success is False
+        assert result.strength == "unknown"
+
+
+# ---------------------------------------------------------------------------
+# Shard Engine Wiring Tests
+# ---------------------------------------------------------------------------
+
+
+class TestShardEngineWiring:
+    """Verify shard.py wires engine and LLM correctly."""
+
+    @pytest.mark.asyncio
+    async def test_engine_initialized(self, mock_frame):
+        """After initialize(), shard.engine should be a CostsEngine."""
+        from arkham_shard_costs.engine import CostsEngine
+
+        shard = CostsShard()
+        await shard.initialize(mock_frame)
+
+        assert shard.engine is not None
+        assert isinstance(shard.engine, CostsEngine)
+
+    @pytest.mark.asyncio
+    async def test_costs_llm_initialized(self, mock_frame):
+        """After initialize(), shard.costs_llm should be a CostsLLM."""
+        from arkham_shard_costs.llm import CostsLLM
+
+        shard = CostsShard()
+        await shard.initialize(mock_frame)
+
+        assert shard.costs_llm is not None
+        assert isinstance(shard.costs_llm, CostsLLM)
+
+    @pytest.mark.asyncio
+    async def test_shutdown_cleans_engine(self, mock_frame):
+        """After shutdown(), engine and costs_llm should be None."""
+        shard = CostsShard()
+        await shard.initialize(mock_frame)
+        await shard.shutdown()
+
+        assert shard.engine is None
+        assert shard.costs_llm is None
+
+    @pytest.mark.asyncio
+    async def test_event_handler_calls_auto_log(self, mock_frame, mock_db, mock_events):
+        """Event handlers should call engine.auto_log_conduct_from_event."""
+        shard = CostsShard()
+        await shard.initialize(mock_frame)
+
+        event_data = {"respondent": "Bylor Ltd", "project_id": "proj-1"}
+        await shard._on_disclosure_evasion(event_data)
+
+        # The engine should have been called, which executes INSERT
+        # mock_db.execute is called for schema creation + the auto-log INSERT
+        insert_calls = [c for c in mock_db.execute.call_args_list if "INSERT INTO arkham_costs.conduct_log" in str(c)]
+        assert len(insert_calls) == 1

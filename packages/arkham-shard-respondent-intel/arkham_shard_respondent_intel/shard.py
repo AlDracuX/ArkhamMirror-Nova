@@ -6,6 +6,7 @@ from typing import Any, Dict
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .engine import RespondentIntelEngine
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class RespondentIntelShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.engine: RespondentIntelEngine | None = None
 
     async def initialize(self, frame) -> None:
         """Initialize the RespondentIntel shard with Frame services."""
@@ -44,10 +46,17 @@ class RespondentIntelShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Instantiate engine
+        self.engine = RespondentIntelEngine(
+            db=self._db,
+            event_bus=self._event_bus,
+            llm_service=self._llm_service,
+        )
+
         # Subscribe to events
         if self._event_bus:
-            await self._event_bus.subscribe("entities.extracted", self.handle_entities_extracted)
-            await self._event_bus.subscribe("ingest.document.processed", self.handle_document_processed)
+            await self._event_bus.subscribe("entities.extracted", self._on_entities_extracted)
+            await self._event_bus.subscribe("ingest.document.processed", self._on_document_processed)
 
         # Initialize API with our instances
         init_api(
@@ -55,6 +64,7 @@ class RespondentIntelShard(ArkhamShard):
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            engine=self.engine,
         )
 
         # Register self in app state for API access
@@ -68,17 +78,31 @@ class RespondentIntelShard(ArkhamShard):
         """Clean up shard resources."""
         logger.info("Shutting down RespondentIntel Shard...")
         if self._event_bus:
-            await self._event_bus.unsubscribe("entities.extracted", self.handle_entities_extracted)
-            await self._event_bus.unsubscribe("ingest.document.processed", self.handle_document_processed)
+            await self._event_bus.unsubscribe("entities.extracted", self._on_entities_extracted)
+            await self._event_bus.unsubscribe("ingest.document.processed", self._on_document_processed)
+        self.engine = None
         logger.info("RespondentIntel Shard shutdown complete")
 
-    async def handle_entities_extracted(self, event_data: Dict[str, Any]) -> None:
-        """Handle entities extracted event."""
+    async def _on_entities_extracted(self, event_data: Dict[str, Any]) -> None:
+        """Handle entities.extracted event - delegate to engine."""
         logger.info("RespondentIntel Shard: Entities extracted, updating respondent profiles")
+        if self.engine:
+            await self.engine.handle_entities_extracted(event_data)
+
+    async def _on_document_processed(self, event_data: Dict[str, Any]) -> None:
+        """Handle documents.processed event - delegate to engine."""
+        logger.info("RespondentIntel Shard: Document processed, checking for respondent mentions")
+        if self.engine:
+            await self.engine.handle_document_processed(event_data)
+
+    # Keep legacy handlers as public API (backwards compat for existing tests)
+    async def handle_entities_extracted(self, event_data: Dict[str, Any]) -> None:
+        """Handle entities extracted event (legacy, delegates to engine)."""
+        await self._on_entities_extracted(event_data)
 
     async def handle_document_processed(self, event_data: Dict[str, Any]) -> None:
-        """Handle document processed event."""
-        logger.info("RespondentIntel Shard: Document processed, checking for public records")
+        """Handle document processed event (legacy, delegates to engine)."""
+        await self._on_document_processed(event_data)
 
     def get_routes(self):
         """Return FastAPI router for this shard."""
@@ -116,6 +140,33 @@ class RespondentIntelShard(ArkhamShard):
                 )
             """)
 
+            # Create entity_mentions table (populated by entities.extracted events)
+            await self._db.execute("""
+                CREATE TABLE IF NOT EXISTS arkham_respondent_intel.entity_mentions (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    case_id UUID NOT NULL,
+                    document_id UUID NOT NULL,
+                    entity_text TEXT NOT NULL,
+                    context TEXT,
+                    document_date TIMESTAMPTZ,
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+
+            # Create respondent_positions table (tracks positions across documents)
+            await self._db.execute("""
+                CREATE TABLE IF NOT EXISTS arkham_respondent_intel.respondent_positions (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    profile_id UUID NOT NULL REFERENCES arkham_respondent_intel.respondent_profiles(id)
+                        ON DELETE CASCADE,
+                    document_id UUID NOT NULL,
+                    position TEXT NOT NULL,
+                    date TIMESTAMPTZ,
+                    context TEXT,
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+
             # Indexes
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_respondent_profiles_case_id "
@@ -128,6 +179,18 @@ class RespondentIntelShard(ArkhamShard):
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_respondent_profiles_name "
                 "ON arkham_respondent_intel.respondent_profiles(name)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_entity_mentions_case_id "
+                "ON arkham_respondent_intel.entity_mentions(case_id)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_entity_mentions_entity_text "
+                "ON arkham_respondent_intel.entity_mentions(entity_text)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_respondent_positions_profile_id "
+                "ON arkham_respondent_intel.respondent_positions(profile_id)"
             )
 
             logger.info("RespondentIntel database schema created")

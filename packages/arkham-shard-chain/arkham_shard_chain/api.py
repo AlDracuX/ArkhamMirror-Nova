@@ -32,6 +32,7 @@ _event_bus = None
 _storage_service = None
 _llm_service = None
 _shard = None
+_engine = None
 
 
 def init_api(
@@ -40,14 +41,16 @@ def init_api(
     storage_service=None,
     llm_service=None,
     shard=None,
+    engine=None,
 ):
     """Initialize API with shard dependencies."""
-    global _db, _event_bus, _storage_service, _llm_service, _shard
+    global _db, _event_bus, _storage_service, _llm_service, _shard, _engine
     _db = db
     _event_bus = event_bus
     _storage_service = storage_service
     _llm_service = llm_service
     _shard = shard
+    _engine = engine
 
 
 # --- Request/Response Models ---
@@ -212,6 +215,51 @@ async def list_reports(document_id: str):
         {"id": document_id},
     )
     return {"document_id": document_id, "reports": [dict(r) for r in rows]}
+
+
+# --- Domain Endpoints (powered by ChainEngine) ---
+
+
+class VerifyHashRequest(BaseModel):
+    document_id: str
+    current_hash: str
+
+
+@router.post("/verify")
+async def verify_hash(request: VerifyHashRequest):
+    """Verify a document's current hash against the stored hash."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Chain engine not initialized")
+
+    return await _engine.verify_hash(request.document_id, request.current_hash)
+
+
+@router.post("/tampering/{document_id}")
+async def detect_tampering(document_id: str):
+    """Detect tampering across the custody chain for a document."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Chain engine not initialized")
+
+    return await _engine.detect_tampering(document_id)
+
+
+@router.get("/provenance/{document_id}")
+async def get_provenance_report(document_id: str):
+    """Generate a provenance report for a document."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Chain engine not initialized")
+
+    return await _engine.generate_provenance_report(document_id)
+
+
+@router.get("/integrity/{document_id}")
+async def get_integrity_score(document_id: str):
+    """Get the integrity score for a document's custody chain."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Chain engine not initialized")
+
+    score = await _engine.score_integrity(document_id)
+    return {"document_id": document_id, "integrity_score": score}
 
 
 # --- Internal Logic ---

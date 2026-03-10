@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .engine import RedlineEngine
 from .models import Comparison, ComparisonStatus
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ class RedlineShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.engine: RedlineEngine | None = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Redline shard with Frame services."""
@@ -62,6 +64,13 @@ class RedlineShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Create engine
+        self.engine = RedlineEngine(
+            db=self._db,
+            event_bus=self._event_bus,
+            llm_service=self._llm_service,
+        )
+
         # Subscribe to events
         if self._event_bus:
             await self._event_bus.subscribe("documents.processed", self.handle_document_processed)
@@ -73,6 +82,7 @@ class RedlineShard(ArkhamShard):
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            engine=self.engine,
         )
 
         # Register self in app state for API access
@@ -88,6 +98,7 @@ class RedlineShard(ArkhamShard):
         if self._event_bus:
             await self._event_bus.unsubscribe("documents.processed", self.handle_document_processed)
             await self._event_bus.unsubscribe("parse.completed", self.handle_parse_completed)
+        self.engine = None
         logger.info("Redline Shard shutdown complete")
 
     async def handle_document_processed(self, event_data: Dict[str, Any]) -> None:

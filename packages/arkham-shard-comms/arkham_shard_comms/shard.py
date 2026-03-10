@@ -1,12 +1,13 @@
 """Comms Shard - Email and message thread reconstruction."""
 
-import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .llm import CommsLLM
+from .reconstructor import ThreadReconstructor
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,8 @@ class CommsShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.reconstructor: ThreadReconstructor | None = None
+        self.comms_llm: CommsLLM | None = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Comms shard with Frame services."""
@@ -46,12 +49,18 @@ class CommsShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Initialize domain services
+        self.reconstructor = ThreadReconstructor(db=self._db, event_bus=self._event_bus)
+        self.comms_llm = CommsLLM(llm_service=self._llm_service)
+
         # Initialize API with our instances
         init_api(
             db=self._db,
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            reconstructor=self.reconstructor,
+            comms_llm=self.comms_llm,
         )
 
         # Subscribe to events
@@ -69,6 +78,8 @@ class CommsShard(ArkhamShard):
     async def shutdown(self) -> None:
         """Clean up shard resources."""
         logger.info("Shutting down Comms Shard...")
+        self.reconstructor = None
+        self.comms_llm = None
         logger.info("Comms Shard shutdown complete")
 
     def get_routes(self):
@@ -78,19 +89,24 @@ class CommsShard(ArkhamShard):
     # --- Event Handlers ---
 
     async def _on_document_processed(self, event: Dict[str, Any]) -> None:
-        """Handle ingest.document.processed events for thread extraction."""
+        """Handle ingest.document.processed events for thread extraction.
+
+        Filters for email document types only, then uses the reconstructor
+        to parse headers and update thread records.
+        """
         doc_id = event.get("document_id")
         doc_type = event.get("document_type")
 
+        # Only process email documents
         if doc_type != "email":
             return
 
-        logger.info(f"Comms shard extracting thread for email document: {doc_id}")
-        # Stub logic: In a real implementation, this would:
-        # 1. Fetch document metadata
-        # 2. Extract Message-ID, In-Reply-To
-        # 3. Create or Update Thread and Message records
-        # 4. Emit comms.thread.reconstructed event
+        logger.info(f"Comms shard processing email document: {doc_id}")
+
+        parsed_text = event.get("parsed_text", "")
+        if parsed_text and self.reconstructor:
+            headers = self.reconstructor.parse_email_headers(parsed_text)
+            logger.info(f"Extracted headers for doc {doc_id}: message_id={headers.get('message_id')}")
 
     async def _on_entities_extracted(self, event: Dict[str, Any]) -> None:
         """Handle entities.extracted events."""

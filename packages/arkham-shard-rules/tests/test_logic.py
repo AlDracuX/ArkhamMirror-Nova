@@ -616,3 +616,188 @@ class TestRuleCRUD:
         with pytest.raises(HTTPException) as exc:
             await get_applicable_rules(claim_type="unfair_dismissal")
         assert exc.value.status_code == 503
+
+
+# ---------------------------------------------------------------------------
+# DeadlineCalculator Tests
+# ---------------------------------------------------------------------------
+
+
+class TestDeadlineCalculator:
+    """Tests for DeadlineCalculator domain logic."""
+
+    def setup_method(self):
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        self.calc = DeadlineCalculator()
+
+    def test_add_working_days_skips_weekends(self):
+        """Friday + 3 working days = Wednesday."""
+        friday = date(2026, 3, 6)  # Friday
+        result = self.calc.add_working_days(friday, 3)
+        assert result == date(2026, 3, 11)  # Wednesday
+        assert result.weekday() == 2  # Wednesday
+
+    def test_add_working_days_skips_bank_holidays(self):
+        """Working days skip UK bank holidays."""
+        # 2026-04-02 is Thursday before Good Friday (2026-04-03) and Easter Monday (2026-04-06)
+        thursday_before_easter = date(2026, 4, 2)
+        result = self.calc.add_working_days(thursday_before_easter, 1)
+        # Next working day after Thursday is Tuesday 7th April (skips Good Friday, Sat, Sun, Easter Monday)
+        assert result == date(2026, 4, 7)
+
+    def test_add_calendar_days_28(self):
+        """Rule 4: 28 calendar days from trigger date."""
+        trigger = date(2026, 1, 1)
+        result = self.calc.add_calendar_days(trigger, 28)
+        assert result == date(2026, 1, 29)
+
+    @pytest.mark.asyncio
+    async def test_calculate_deadline_calendar_days(self, mock_db):
+        """Calculate deadline using calendar_days type."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db)
+
+        mock_db.fetch_one.return_value = {
+            "id": "r1",
+            "rule_number": "Rule 4",
+            "title": "Time Limits",
+            "deadline_days": 28,
+            "deadline_type": "calendar_days",
+        }
+
+        result = await calc.calculate("r1", date(2026, 1, 1), "date_of_order")
+        assert result["deadline_date"] == "2026-01-29"
+        assert result["rule_number"] == "Rule 4"
+        assert result["deadline_days"] == 28
+        mock_db.execute.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_detect_breach_missed_deadline(self, mock_db):
+        """Detect breaches for missed deadlines."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db)
+
+        mock_db.fetch_all.return_value = [
+            {
+                "id": "calc1",
+                "rule_id": "r1",
+                "rule_number": "Rule 16",
+                "rule_title": "Response to Claim",
+                "deadline_date": date(2026, 1, 1),
+                "metadata": {},
+            },
+        ]
+
+        breaches = await calc.detect_breaches("project-1")
+        assert len(breaches) == 1
+        assert breaches[0]["rule_number"] == "Rule 16"
+        assert breaches[0]["severity"] == "moderate"
+        assert breaches[0]["status"] == "detected"
+
+    @pytest.mark.asyncio
+    async def test_detect_breach_no_breach_when_completed(self, mock_db):
+        """No breach when calculation is marked completed."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db)
+
+        # Completed calculations should not appear in results
+        # because the SQL query filters on (metadata->>'completed') IS NULL
+        mock_db.fetch_all.return_value = []
+
+        breaches = await calc.detect_breaches("project-1")
+        assert len(breaches) == 0
+
+    @pytest.mark.asyncio
+    async def test_compliance_check_et3_response(self, mock_db):
+        """Compliance check for ET3 response submission."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db)
+
+        # Rules matching the submission type
+        mock_db.fetch_all.return_value = [
+            {
+                "id": "r1",
+                "rule_number": "Rule 16",
+                "title": "Response to Claim",
+                "is_mandatory": True,
+            },
+        ]
+
+        # Calculation exists and is compliant (deadline not passed)
+        mock_db.fetch_one.return_value = {
+            "rule_id": "r1",
+            "document_id": "doc1",
+            "deadline_date": date(2099, 1, 1),  # far future
+            "metadata": {},
+        }
+
+        result = await calc.check_compliance("doc1", "date_of_claim")
+        assert result["result"] == "compliant"
+        assert len(result["passed_checks"]) == 1
+        assert result["score"] == 1.0
+
+    @pytest.mark.asyncio
+    async def test_unless_order_risk_high_severity(self, mock_db):
+        """Unless order risk is high for egregious breach with strike-out risk."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db)
+
+        # Setup breach
+        mock_db.fetch_one.side_effect = [
+            # First call: fetch breach
+            {
+                "id": "b1",
+                "rule_id": "r1",
+                "breaching_party": "Respondent",
+                "severity": "egregious",
+                "project_id": "p1",
+            },
+            # Second call: fetch rule
+            {
+                "id": "r1",
+                "is_mandatory": True,
+                "strike_out_risk": True,
+                "unless_order_applicable": True,
+            },
+            # Third call: count prior breaches
+            {"count": 4},
+        ]
+
+        result = await calc.assess_unless_order_risk("b1")
+        assert result["risk_level"] == "high"
+        assert result["risk_score"] >= 0.7
+        assert result["strike_out_risk"] is True
+        assert result["prior_breach_count"] == 4
+
+
+# ---------------------------------------------------------------------------
+# RuleSeeder Tests
+# ---------------------------------------------------------------------------
+
+
+class TestRuleSeeder:
+    """Tests for RuleSeeder."""
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_all_rules(self, mock_db):
+        """Seed inserts all ET rules."""
+        from arkham_shard_rules.seeder import RuleSeeder
+
+        seeder = RuleSeeder()
+        count = await seeder.seed(mock_db)
+
+        assert count == len(seeder.ET_RULES)
+        assert count >= 17  # at minimum the key rules
+        assert mock_db.execute.call_count == count
+
+        # Verify at least Rule 1, Rule 37, Rule 76 are present
+        rule_numbers = [r["rule_number"] for r in seeder.ET_RULES]
+        assert "Rule 1" in rule_numbers
+        assert "Rule 37" in rule_numbers
+        assert "Rule 76" in rule_numbers

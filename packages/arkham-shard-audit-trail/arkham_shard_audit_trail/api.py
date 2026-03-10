@@ -6,6 +6,7 @@ Search and retrieval for the immutable system action log.
 import json
 import logging
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -32,6 +33,7 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_engine = None
 
 
 def init_api(
@@ -39,13 +41,15 @@ def init_api(
     event_bus,
     llm_service=None,
     shard=None,
+    engine=None,
 ):
     """Initialize API with shard dependencies."""
-    global _db, _event_bus, _llm_service, _shard
+    global _db, _event_bus, _llm_service, _shard, _engine
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _engine = engine
 
 
 # --- Request/Response Models ---
@@ -65,6 +69,27 @@ class CreateExportRequest(BaseModel):
     export_format: str
     filters_applied: dict = {}
     row_count: int = 0
+
+
+class SearchRequest(BaseModel):
+    shard: Optional[str] = None
+    user_id: Optional[str] = None
+    entity_id: Optional[str] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+
+
+class ExportRequest(BaseModel):
+    shard: Optional[str] = None
+    user_id: Optional[str] = None
+    entity_id: Optional[str] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    format: str = "json"
+
+
+class RetentionRequest(BaseModel):
+    retention_days: int = 365
 
 
 # --- Endpoints ---
@@ -182,3 +207,74 @@ async def count_items():
         raise HTTPException(status_code=503, detail="Database not available")
     result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_audit_trail.actions")
     return {"count": result["count"] if result else 0}
+
+
+# --- Engine-powered endpoints ---
+
+
+def _parse_datetime(value: str | None) -> datetime | None:
+    """Parse ISO datetime string to datetime object."""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        return None
+
+
+@router.post("/search")
+async def search_actions(request: SearchRequest):
+    """Search audit actions with filters via engine."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Audit engine not initialized")
+
+    results = await _engine.search_actions(
+        shard=request.shard,
+        user_id=request.user_id,
+        entity_id=request.entity_id,
+        date_from=_parse_datetime(request.date_from),
+        date_to=_parse_datetime(request.date_to),
+    )
+    return {"count": len(results), "actions": results}
+
+
+@router.get("/session/{session_id}")
+async def get_session_actions(session_id: str):
+    """Get all actions for a session, ordered chronologically."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Audit engine not initialized")
+
+    results = await _engine.get_session_actions(session_id)
+    return {"count": len(results), "session_id": session_id, "actions": results}
+
+
+@router.post("/export")
+async def export_audit_log(request: ExportRequest):
+    """Export audit log for tribunal submission."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Audit engine not initialized")
+
+    filters = {}
+    if request.shard:
+        filters["shard"] = request.shard
+    if request.user_id:
+        filters["user_id"] = request.user_id
+    if request.entity_id:
+        filters["entity_id"] = request.entity_id
+    if request.date_from:
+        filters["date_from"] = _parse_datetime(request.date_from)
+    if request.date_to:
+        filters["date_to"] = _parse_datetime(request.date_to)
+
+    result = await _engine.export_audit_log(filters=filters, format=request.format)
+    return result
+
+
+@router.post("/retention")
+async def manage_retention(request: RetentionRequest):
+    """Manage audit log retention policy."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Audit engine not initialized")
+
+    deleted_count = await _engine.manage_retention(retention_days=request.retention_days)
+    return {"deleted_count": deleted_count, "retention_days": request.retention_days}

@@ -30,6 +30,8 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_reconstructor = None
+_comms_llm = None
 
 
 def init_api(
@@ -37,13 +39,17 @@ def init_api(
     event_bus,
     llm_service=None,
     shard=None,
+    reconstructor=None,
+    comms_llm=None,
 ):
     """Initialize API with shard dependencies."""
-    global _db, _event_bus, _llm_service, _shard
+    global _db, _event_bus, _llm_service, _shard, _reconstructor, _comms_llm
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _reconstructor = reconstructor
+    _comms_llm = comms_llm
 
 
 # --- Request/Response Models ---
@@ -68,6 +74,14 @@ class MessageCreate(BaseModel):
     bcc_addresses: list[str] = Field(default_factory=list)
     source_document_id: Optional[str] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ParseHeadersRequest(BaseModel):
+    parsed_text: str
+
+
+class ReconstructRequest(BaseModel):
+    messages: list[dict[str, Any]]
 
 
 # --- Threads Endpoints ---
@@ -224,6 +238,59 @@ async def list_coordination_flags(thread_id: Optional[str] = None):
 
     rows = await _db.fetch_all(query, params)
     return [dict(row) for row in rows]
+
+
+# --- Domain Analysis Endpoints ---
+
+
+@router.post("/parse-headers")
+async def parse_headers(request: ParseHeadersRequest):
+    """Parse email headers from raw/OCR'd text."""
+    if not _reconstructor:
+        raise HTTPException(status_code=503, detail="Reconstructor not initialized")
+
+    result = _reconstructor.parse_email_headers(request.parsed_text)
+    return result
+
+
+@router.post("/reconstruct")
+async def reconstruct_thread(request: ReconstructRequest):
+    """Reconstruct a conversation thread from a list of messages."""
+    if not _reconstructor:
+        raise HTTPException(status_code=503, detail="Reconstructor not initialized")
+
+    result = await _reconstructor.reconstruct_thread(request.messages)
+    return result
+
+
+@router.get("/gaps/{thread_id}")
+async def detect_gaps(thread_id: str):
+    """Detect reply gaps in a thread."""
+    if not _reconstructor:
+        raise HTTPException(status_code=503, detail="Reconstructor not initialized")
+
+    gaps = await _reconstructor.detect_gaps(thread_id)
+    return {"thread_id": thread_id, "gaps": gaps, "count": len(gaps)}
+
+
+@router.get("/bcc-patterns/{thread_id}")
+async def detect_bcc_patterns(thread_id: str):
+    """Detect BCC patterns in a thread."""
+    if not _reconstructor:
+        raise HTTPException(status_code=503, detail="Reconstructor not initialized")
+
+    patterns = await _reconstructor.detect_bcc_patterns(thread_id)
+    return {"thread_id": thread_id, "patterns": patterns, "count": len(patterns)}
+
+
+@router.get("/coordination/{thread_id}")
+async def detect_coordination(thread_id: str):
+    """Detect coordination patterns in a thread."""
+    if not _reconstructor:
+        raise HTTPException(status_code=503, detail="Reconstructor not initialized")
+
+    coordination = await _reconstructor.detect_coordination(thread_id)
+    return {"thread_id": thread_id, "coordination": coordination, "count": len(coordination)}
 
 
 @router.get("/items/count")

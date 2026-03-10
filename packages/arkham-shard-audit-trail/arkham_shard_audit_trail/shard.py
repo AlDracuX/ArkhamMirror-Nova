@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .engine import AuditEngine
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class AuditTrailShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.engine: AuditEngine | None = None
 
     async def initialize(self, frame) -> None:
         """Initialize the AuditTrail shard with Frame services."""
@@ -44,6 +46,9 @@ class AuditTrailShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Create engine
+        self.engine = AuditEngine(db=self._db, event_bus=self._event_bus)
+
         # Subscribe to ALL events via wildcard
         if self._event_bus:
             await self._event_bus.subscribe("*", self._on_event)
@@ -54,6 +59,7 @@ class AuditTrailShard(ArkhamShard):
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            engine=self.engine,
         )
 
         # Register self in app state for API access
@@ -133,6 +139,7 @@ class AuditTrailShard(ArkhamShard):
                     id TEXT PRIMARY KEY,
                     tenant_id UUID,
                     user_id TEXT,
+                    session_id TEXT,
                     action_type TEXT NOT NULL,
                     shard TEXT,
                     entity_id TEXT,
@@ -140,6 +147,14 @@ class AuditTrailShard(ArkhamShard):
                     payload JSONB DEFAULT '{}',
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            """)
+
+            # Add session_id column if table already existed without it
+            await self._db.execute("""
+                DO $$ BEGIN
+                    ALTER TABLE arkham_audit_trail.actions ADD COLUMN IF NOT EXISTS session_id TEXT;
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$
             """)
 
             # Sessions table
@@ -180,6 +195,9 @@ class AuditTrailShard(ArkhamShard):
             )
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_audit_actions_time ON arkham_audit_trail.actions(timestamp)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_audit_actions_session ON arkham_audit_trail.actions(session_id)"
             )
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_audit_exports_tenant ON arkham_audit_trail.exports(tenant_id)"

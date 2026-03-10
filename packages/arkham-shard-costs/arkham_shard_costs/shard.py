@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .engine import CostsEngine
+from .llm import CostsLLM
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,8 @@ class CostsShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.engine: Optional[CostsEngine] = None
+        self.costs_llm: Optional[CostsLLM] = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Costs shard with Frame services."""
@@ -45,12 +49,18 @@ class CostsShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Instantiate domain engine and LLM wrapper
+        self.engine = CostsEngine(db=self._db, event_bus=self._event_bus)
+        self.costs_llm = CostsLLM(llm_service=self._llm_service)
+
         # Initialize API with our instances
         init_api(
             db=self._db,
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            engine=self.engine,
+            costs_llm=self.costs_llm,
         )
 
         # Subscribe to events
@@ -70,6 +80,8 @@ class CostsShard(ArkhamShard):
     async def shutdown(self) -> None:
         """Clean up shard resources."""
         logger.info("Shutting down Costs Shard...")
+        self.engine = None
+        self.costs_llm = None
         logger.info("Costs Shard shutdown complete")
 
     def get_routes(self):
@@ -79,16 +91,22 @@ class CostsShard(ArkhamShard):
     # --- Event Handlers ---
 
     async def _on_disclosure_evasion(self, event: Dict[str, Any]) -> None:
-        """Handle disclosure.evasion.scored events."""
+        """Handle disclosure.evasion.scored events - auto-log conduct."""
         logger.debug(f"Costs shard received evasion score: {event.get('respondent_id')}")
+        if self.engine:
+            await self.engine.auto_log_conduct_from_event("disclosure.evasion.scored", event)
 
     async def _on_rules_breach(self, event: Dict[str, Any]) -> None:
-        """Handle rules.breach.detected events."""
+        """Handle rules.breach.detected events - auto-log conduct."""
         logger.debug(f"Costs shard received breach: {event.get('breach_id')}")
+        if self.engine:
+            await self.engine.auto_log_conduct_from_event("rules.breach.detected", event)
 
     async def _on_deadline_breach(self, event: Dict[str, Any]) -> None:
-        """Handle deadlines.breach.detected events."""
+        """Handle deadlines.breach.detected events - auto-log conduct."""
         logger.debug(f"Costs shard received deadline breach: {event.get('deadline_id')}")
+        if self.engine:
+            await self.engine.auto_log_conduct_from_event("deadlines.breach.detected", event)
 
     async def _on_case_updated(self, event: Dict[str, Any]) -> None:
         """Handle case.updated events."""

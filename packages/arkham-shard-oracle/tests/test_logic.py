@@ -20,6 +20,7 @@ from arkham_shard_oracle.models import (
     LegalAuthority,
     ResearchSession,
 )
+from arkham_shard_oracle.search import AuthoritySearch
 from arkham_shard_oracle.shard import OracleShard
 from fastapi import HTTPException
 
@@ -76,6 +77,7 @@ def setup_api(api_module, mock_db, mock_events):
     api_module._db = mock_db
     api_module._event_bus = mock_events
     api_module._shard = None
+    api_module._authority_search = AuthoritySearch(db=mock_db, event_bus=mock_events)
     return api_module
 
 

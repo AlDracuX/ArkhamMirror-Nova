@@ -1,6 +1,11 @@
 """BurdenMap Shard API endpoints.
 
-CRUD for burden_elements plus a /matrix endpoint that groups by claim.
+CRUD for burden_elements plus domain endpoints:
+- /populate: auto-populate from claim type
+- /dashboard/{case_id}: traffic-light dashboard
+- /shift/detect: burden shift detection
+- /gaps/{case_id}: gap analysis
+- /suggest: LLM evidence suggestions
 """
 
 import logging
@@ -12,6 +17,8 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
+    from .engine import BurdenEngine
+    from .llm import BurdenLLM
     from .shard import BurdenMapShard
 
 logger = logging.getLogger(__name__)
@@ -36,6 +43,8 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_engine: "BurdenEngine | None" = None
+_burden_llm: "BurdenLLM | None" = None
 
 
 def init_api(
@@ -43,13 +52,17 @@ def init_api(
     event_bus,
     llm_service=None,
     shard=None,
+    engine=None,
+    burden_llm=None,
 ):
     """Initialize API with shard dependencies."""
-    global _db, _event_bus, _llm_service, _shard
+    global _db, _event_bus, _llm_service, _shard, _engine, _burden_llm
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _engine = engine
+    _burden_llm = burden_llm
 
 
 # --- Request/Response Models ---
@@ -77,12 +90,31 @@ class UpdateElementRequest(BaseModel):
     notes: Optional[str] = None
 
 
+class PopulateRequest(BaseModel):
+    case_id: str
+    claim_type: str  # 's.13', 's.26', 's.27'
+
+
+class ShiftDetectRequest(BaseModel):
+    case_id: str
+
+
+class SuggestRequest(BaseModel):
+    case_id: str
+    case_context: str = ""
+
+
 # --- Helper ---
 
 
 def _ensure_db():
     if not _db:
         raise HTTPException(status_code=503, detail="Burden service not initialized")
+
+
+def _ensure_engine():
+    if not _engine:
+        raise HTTPException(status_code=503, detail="BurdenEngine not initialized")
 
 
 def _validate_status(status: str) -> None:
@@ -93,7 +125,80 @@ def _validate_status(status: str) -> None:
         )
 
 
-# --- Endpoints ---
+# --- Domain Endpoints ---
+
+
+@router.post("/populate")
+async def populate_from_claims(request: PopulateRequest):
+    """Auto-populate burden elements based on claim type."""
+    _ensure_engine()
+
+    try:
+        elements = await _engine.populate_from_claims(
+            case_id=request.case_id,
+            claim_type=request.claim_type,
+        )
+        return {"count": len(elements), "elements": elements}
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+@router.get("/dashboard/{case_id}")
+async def get_dashboard(case_id: str):
+    """Traffic-light dashboard for a case."""
+    _ensure_engine()
+
+    dashboard = await _engine.compute_dashboard(case_id)
+    return dashboard
+
+
+@router.post("/shift/detect")
+async def detect_shift(request: ShiftDetectRequest):
+    """Check if burden has shifted under s.136 EA 2010."""
+    _ensure_engine()
+
+    result = await _engine.detect_burden_shift(request.case_id)
+    return result
+
+
+@router.get("/gaps/{case_id}")
+async def get_gaps(case_id: str):
+    """Gap analysis -- find unmet/partial elements."""
+    _ensure_engine()
+
+    gaps = await _engine.gap_analysis(case_id)
+    return {"count": len(gaps), "gaps": gaps}
+
+
+@router.post("/suggest")
+async def suggest_evidence(request: SuggestRequest):
+    """LLM: suggest evidence for burden gaps."""
+    _ensure_engine()
+
+    if not _burden_llm or not _burden_llm.is_available:
+        raise HTTPException(status_code=503, detail="LLM service not available")
+
+    gaps = await _engine.gap_analysis(request.case_id)
+    if not gaps:
+        return {"suggestions": [], "message": "No gaps found -- all burden elements are met."}
+
+    suggestions = await _burden_llm.suggest_evidence(gaps, case_context=request.case_context)
+    return {
+        "count": len(suggestions),
+        "suggestions": [
+            {
+                "element": s.element,
+                "suggestion": s.suggestion,
+                "evidence_type": s.evidence_type,
+                "priority": s.priority,
+                "reasoning": s.reasoning,
+            }
+            for s in suggestions
+        ],
+    }
+
+
+# --- CRUD Endpoints ---
 
 
 @router.get("/")

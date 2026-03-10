@@ -36,6 +36,7 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_builder = None
 
 
 def init_api(
@@ -43,13 +44,15 @@ def init_api(
     event_bus,
     llm_service=None,
     shard=None,
+    builder=None,
 ):
     """Initialize API with shard dependencies."""
-    global _db, _event_bus, _llm_service, _shard
+    global _db, _event_bus, _llm_service, _shard, _builder
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _builder = builder
 
 
 # --- Request/Response Models ---
@@ -107,6 +110,26 @@ class GenerateExamPlanRequest(BaseModel):
     witness_name: str
     case_id: str
     topics: List[str]
+
+
+class BuildTreeRequest(BaseModel):
+    witness_id: str
+    statement_text: str
+
+
+class ScoreDamageResponse(BaseModel):
+    score: float
+    reasoning: str
+    factors: Optional[dict] = None
+
+
+class GenerateImpeachmentRequest(BaseModel):
+    contradiction_id: str
+
+
+class RouteFollowupRequest(BaseModel):
+    node_id: str
+    actual_answer: str
 
 
 # --- Helper ---
@@ -452,6 +475,66 @@ async def delete_exam_plan(plan_id: str):
         {"id": plan_id},
     )
     return {"id": plan_id, "deleted": True}
+
+
+# --- Domain Logic Endpoints ---
+
+
+def _ensure_builder():
+    if not _builder:
+        raise HTTPException(status_code=503, detail="CrossExam builder not initialized")
+
+
+@router.post("/build")
+async def build_question_tree(request: BuildTreeRequest):
+    """Build a question tree from a witness statement using LLM or skeleton fallback."""
+    _ensure_builder()
+
+    try:
+        tree_id = await _builder.build_from_statement(request.witness_id, request.statement_text)
+        return {"tree_id": tree_id, "witness_id": request.witness_id}
+    except Exception as e:
+        logger.error(f"Failed to build question tree: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to build question tree: {e}")
+
+
+@router.post("/score/{node_id}")
+async def score_damage(node_id: str):
+    """Score the damage potential of a question node."""
+    _ensure_builder()
+
+    try:
+        result = await _builder.score_damage(node_id)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to score damage: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to score damage: {e}")
+
+
+@router.post("/impeachment")
+async def generate_impeachment(request: GenerateImpeachmentRequest):
+    """Generate a 3-step impeachment sequence from a detected contradiction."""
+    _ensure_builder()
+
+    try:
+        seq_id = await _builder.generate_impeachment_sequence(request.contradiction_id)
+        return {"impeachment_id": seq_id, "contradiction_id": request.contradiction_id}
+    except Exception as e:
+        logger.error(f"Failed to generate impeachment: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate impeachment: {e}")
+
+
+@router.post("/followup")
+async def route_followup(request: RouteFollowupRequest):
+    """Route follow-up question based on actual witness answer."""
+    _ensure_builder()
+
+    try:
+        next_node_id = await _builder.route_followup(request.node_id, request.actual_answer)
+        return {"next_node_id": next_node_id, "is_terminal": next_node_id is None}
+    except Exception as e:
+        logger.error(f"Failed to route follow-up: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to route follow-up: {e}")
 
 
 # --- Generate Endpoint ---

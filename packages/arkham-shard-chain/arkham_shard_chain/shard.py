@@ -6,6 +6,7 @@ from typing import Any, Optional
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .engine import ChainEngine
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class ChainShard(ArkhamShard):
         self._db = None
         self._event_bus = None
         self._storage_service = None
+        self.engine: Optional[ChainEngine] = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Chain shard with Frame services."""
@@ -44,6 +46,9 @@ class ChainShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Initialize engine
+        self.engine = ChainEngine(db=self._db, event_bus=self._event_bus)
+
         # Subscribe to frame events
         if self._event_bus:
             await self._event_bus.subscribe("ingest.document.processed", self._on_document_ingested)
@@ -55,6 +60,7 @@ class ChainShard(ArkhamShard):
             event_bus=self._event_bus,
             storage_service=self._storage_service,
             shard=self,
+            engine=self.engine,
         )
 
         # Register self in app state for API access
@@ -70,6 +76,7 @@ class ChainShard(ArkhamShard):
         if self._event_bus:
             await self._event_bus.unsubscribe("ingest.document.processed", self._on_document_ingested)
             await self._event_bus.unsubscribe("documents.accessed", self._on_document_accessed)
+        self.engine = None
         logger.info("Chain Shard shutdown complete")
 
     def get_routes(self):

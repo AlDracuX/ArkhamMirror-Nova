@@ -31,6 +31,8 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_engine = None
+_costs_llm = None
 
 
 def init_api(
@@ -38,13 +40,17 @@ def init_api(
     event_bus,
     llm_service=None,
     shard=None,
+    engine=None,
+    costs_llm=None,
 ):
     """Initialize API with shard dependencies."""
-    global _db, _event_bus, _llm_service, _shard
+    global _db, _event_bus, _llm_service, _shard, _engine, _costs_llm
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _engine = engine
+    _costs_llm = costs_llm
 
 
 # --- Request/Response Models ---
@@ -278,6 +284,113 @@ async def create_conduct_log(request: ConductLogCreate):
         )
 
     return {"id": log_id, "status": "created"}
+
+
+# --- Domain Endpoints (Engine + LLM) ---
+
+
+class AggregateTimeRequest(BaseModel):
+    project_id: str
+    hourly_rate: float = 0.0
+
+
+class RollupExpensesRequest(BaseModel):
+    project_id: str
+
+
+class ScoreConductRequest(BaseModel):
+    project_id: str
+
+
+class BuildApplicationRequest(BaseModel):
+    application_id: str
+
+
+@router.post("/time/aggregate")
+async def aggregate_time(request: AggregateTimeRequest):
+    """Aggregate time entries for a project."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Costs engine not initialized")
+    return await _engine.aggregate_time(request.project_id, request.hourly_rate)
+
+
+@router.post("/expenses/rollup")
+async def rollup_expenses(request: RollupExpensesRequest):
+    """Rollup expenses for a project."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Costs engine not initialized")
+    return await _engine.rollup_expenses(request.project_id)
+
+
+@router.post("/conduct/score")
+async def score_conduct(request: ScoreConductRequest):
+    """Score conduct log for Rule 76 costs basis."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Costs engine not initialized")
+    return await _engine.score_conduct(request.project_id)
+
+
+@router.post("/application/build")
+async def build_application(request: BuildApplicationRequest):
+    """Build a costs application from linked records."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Costs engine not initialized")
+    return await _engine.build_application(request.application_id)
+
+
+@router.post("/application/{application_id}/schedule")
+async def generate_schedule(application_id: str):
+    """Generate a Schedule of Costs document."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Costs engine not initialized")
+    text = await _engine.generate_schedule(application_id)
+    return {"schedule": text}
+
+
+@router.post("/application/{application_id}/draft")
+async def draft_application(application_id: str):
+    """LLM: Draft a costs application text."""
+    if not _engine or not _costs_llm:
+        raise HTTPException(status_code=503, detail="Costs engine or LLM not initialized")
+
+    # Build application data first
+    app_data = await _engine.build_application(application_id)
+    if "error" in app_data:
+        raise HTTPException(status_code=404, detail=app_data["error"])
+
+    # Get conduct summary
+    project_id = app_data.get("project_id", "")
+    conduct_score = await _engine.score_conduct(project_id) if project_id else {}
+    conduct_summary = json.dumps(conduct_score.get("by_type", {}), indent=2)
+
+    result = await _costs_llm.draft_application(
+        conduct_summary=conduct_summary,
+        time_total=app_data.get("time_cost", 0.0),
+        expense_total=app_data.get("expense_total", 0.0),
+        total_claimed=app_data.get("total_amount_claimed", 0.0),
+    )
+
+    if result.success and result.text:
+        # Store draft text on the application
+        await _db.execute(
+            "UPDATE arkham_costs.applications SET application_text = :text, updated_at = :now WHERE id = :id",
+            {"text": result.text, "now": datetime.utcnow(), "id": application_id},
+        )
+
+        if _event_bus:
+            await _event_bus.emit(
+                "costs.application.drafted",
+                {"application_id": application_id, "project_id": project_id},
+                source="costs-shard",
+            )
+
+    return {
+        "application_id": application_id,
+        "text": result.text,
+        "rule_references": result.rule_references,
+        "success": result.success,
+        "error": result.error,
+    }
 
 
 # --- Applications Endpoints ---

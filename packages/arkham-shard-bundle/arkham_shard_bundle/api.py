@@ -1,7 +1,7 @@
 """Bundle Shard API endpoints.
 
 CRUD for Bundles, Versions, Pages, and Indices.
-Plus the core bundle compilation logic.
+Plus the core bundle compilation logic and LLM-assisted ordering.
 """
 
 import json
@@ -22,6 +22,8 @@ from .models import (
 )
 
 if TYPE_CHECKING:
+    from .compiler import BundleCompiler
+    from .llm import BundleLLMIntegration
     from .shard import BundleShard
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,8 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_compiler = None
+_llm_integration = None
 
 
 def init_api(
@@ -49,13 +53,17 @@ def init_api(
     event_bus,
     llm_service=None,
     shard=None,
+    compiler=None,
+    llm_integration=None,
 ):
     """Initialize API with shard dependencies."""
-    global _db, _event_bus, _llm_service, _shard
+    global _db, _event_bus, _llm_service, _shard, _compiler, _llm_integration
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _compiler = compiler
+    _llm_integration = llm_integration
 
 
 # --- Request/Response Models ---
@@ -82,7 +90,22 @@ class CompileRequest(BaseModel):
     compiled_by: str | None = None
 
 
-# --- Endpoints ---
+class AddDocumentRequest(BaseModel):
+    document_id: str
+    position: int | None = None
+    title: str = ""
+    filename: str = ""
+    page_count: int = 1
+    status: str = "unknown"
+    section_label: str = ""
+    notes: str = ""
+
+
+class SuggestOrderRequest(BaseModel):
+    documents: list[dict] = Field(default_factory=list)
+
+
+# --- Bundle CRUD Endpoints ---
 
 
 @router.get("/bundles")
@@ -211,7 +234,7 @@ async def delete_bundle(bundle_id: str):
     return {"status": "deleted", "bundle_id": bundle_id}
 
 
-# --- Compilation Logic ---
+# --- Compilation Endpoints ---
 
 
 @router.post("/bundles/{bundle_id}/compile")
@@ -238,8 +261,6 @@ async def compile_bundle(bundle_id: str, request: CompileRequest):
     pages_to_insert = []
     index_entries = []
 
-    # Fetch document metadata if possible (link to Documents shard would be here)
-    # For now, we assume simple mapping provided by caller or default to 1 page
     for pos, doc_id in enumerate(request.document_ids):
         # Handle section header injection
         if str(pos) in request.section_headers:
@@ -388,6 +409,148 @@ async def compile_bundle(bundle_id: str, request: CompileRequest):
         "total_pages": bundle_index.total_pages,
         "index": bundle_index.to_dict(),
     }
+
+
+# --- Domain Endpoints (via BundleCompiler) ---
+
+
+@router.post("/{bundle_id}/compile")
+async def compile_bundle_via_compiler(bundle_id: str):
+    """Compile bundle using the BundleCompiler (from existing pages)."""
+    if not _compiler:
+        raise HTTPException(status_code=503, detail="Compiler not initialized")
+
+    try:
+        result = await _compiler.compile(bundle_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/{bundle_id}/documents/add")
+async def add_document_to_bundle(bundle_id: str, request: AddDocumentRequest):
+    """Add a document to the bundle at the specified position."""
+    if not _compiler:
+        raise HTTPException(status_code=503, detail="Compiler not initialized")
+
+    try:
+        result = await _compiler.add_document(
+            bundle_id=bundle_id,
+            document_id=request.document_id,
+            position=request.position,
+            title=request.title,
+            filename=request.filename,
+            page_count=request.page_count,
+            status=request.status,
+            section_label=request.section_label,
+            notes=request.notes,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.delete("/{bundle_id}/documents/{doc_id}")
+async def remove_document_from_bundle(bundle_id: str, doc_id: str):
+    """Remove a document from the bundle and renumber pages."""
+    if not _compiler:
+        raise HTTPException(status_code=503, detail="Compiler not initialized")
+
+    try:
+        await _compiler.remove_document(bundle_id=bundle_id, document_id=doc_id)
+        return {"status": "removed", "bundle_id": bundle_id, "document_id": doc_id}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{bundle_id}/index")
+async def get_bundle_index(bundle_id: str):
+    """Get the current index for a bundle."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Bundle service not initialized")
+
+    bundle_row = await _db.fetch_one(
+        "SELECT * FROM arkham_bundle.bundles WHERE id = :id",
+        {"id": bundle_id},
+    )
+    if not bundle_row:
+        raise HTTPException(status_code=404, detail="Bundle not found")
+
+    version_id = bundle_row.get("current_version_id", "")
+    if not version_id:
+        raise HTTPException(status_code=404, detail="Bundle has no compiled version")
+
+    row = await _db.fetch_one(
+        "SELECT * FROM arkham_bundle.indices WHERE bundle_id = :bundle_id AND version_id = :version_id",
+        {"bundle_id": bundle_id, "version_id": version_id},
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Index not found for current version")
+
+    return dict(row)
+
+
+@router.get("/{bundle_id}/index/text")
+async def get_bundle_index_text(bundle_id: str):
+    """Export the bundle index as formatted text (ET Presidential Guidance format)."""
+    if not _compiler:
+        raise HTTPException(status_code=503, detail="Compiler not initialized")
+
+    try:
+        text = await _compiler.export_index_text(bundle_id)
+        return {"bundle_id": bundle_id, "text": text}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{bundle_id}/versions")
+async def get_bundle_versions(bundle_id: str):
+    """List all compiled versions of a bundle."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Bundle service not initialized")
+
+    rows = await _db.fetch_all(
+        "SELECT * FROM arkham_bundle.versions WHERE bundle_id = :id ORDER BY version_number DESC",
+        {"id": bundle_id},
+    )
+    return {"bundle_id": bundle_id, "versions": [dict(r) for r in rows]}
+
+
+@router.get("/{bundle_id}/versions/compare")
+async def compare_bundle_versions(
+    bundle_id: str,
+    version_a: str = Query(..., description="First version ID"),
+    version_b: str = Query(..., description="Second version ID"),
+):
+    """Compare two bundle versions: added/removed/reordered docs, page count diff."""
+    if not _compiler:
+        raise HTTPException(status_code=503, detail="Compiler not initialized")
+
+    result = await _compiler.compare_versions(version_a, version_b)
+    return {"bundle_id": bundle_id, **result}
+
+
+@router.post("/{bundle_id}/suggest-order")
+async def suggest_document_order(bundle_id: str, request: SuggestOrderRequest):
+    """LLM: suggest optimal document ordering per ET Presidential Guidance."""
+    if not _llm_integration:
+        raise HTTPException(status_code=503, detail="LLM integration not initialized")
+
+    if not _llm_integration.is_available:
+        raise HTTPException(status_code=503, detail="LLM service not available")
+
+    result = await _llm_integration.suggest_ordering(request.documents)
+    return {
+        "bundle_id": bundle_id,
+        "sections": [
+            {"section": s.section, "document_ids": s.document_ids, "reasoning": s.reasoning} for s in result.sections
+        ],
+        "ordered_document_ids": result.ordered_document_ids,
+        "reasoning": result.reasoning,
+    }
+
+
+# --- Legacy endpoints (kept for backwards compat with existing tests) ---
 
 
 @router.get("/bundles/{bundle_id}/versions")

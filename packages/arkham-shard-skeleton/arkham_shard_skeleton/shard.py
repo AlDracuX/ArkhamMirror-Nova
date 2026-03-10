@@ -1,11 +1,13 @@
 """Skeleton Shard - Legal argument and submission builder."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .builder import SkeletonBuilder
+from .llm import SkeletonLLMIntegration
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,8 @@ class SkeletonShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.builder: SkeletonBuilder | None = None
+        self.llm_integration: SkeletonLLMIntegration | None = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Skeleton shard with Frame services."""
@@ -45,18 +49,29 @@ class SkeletonShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Instantiate domain services
+        self.builder = SkeletonBuilder(
+            db=self._db,
+            event_bus=self._event_bus,
+            llm_service=self._llm_service,
+        )
+        self.llm_integration = SkeletonLLMIntegration(llm_service=self._llm_service)
+
         # Initialize API with our instances
         init_api(
             db=self._db,
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            builder=self.builder,
+            llm_integration=self.llm_integration,
         )
 
         # Subscribe to events
         if self._event_bus:
             await self._event_bus.subscribe("casemap.theory.updated", self._on_theory_updated)
             await self._event_bus.subscribe("claims.verified", self._on_claims_verified)
+            await self._event_bus.subscribe("oracle.authority.found", self._on_authority_found)
 
         # Register self in app state for API access
         if hasattr(frame, "app") and frame.app:
@@ -68,6 +83,8 @@ class SkeletonShard(ArkhamShard):
     async def shutdown(self) -> None:
         """Clean up shard resources."""
         logger.info("Shutting down Skeleton Shard...")
+        self.builder = None
+        self.llm_integration = None
         logger.info("Skeleton Shard shutdown complete")
 
     def get_routes(self):
@@ -77,12 +94,48 @@ class SkeletonShard(ArkhamShard):
     # --- Event Handlers ---
 
     async def _on_theory_updated(self, event: Dict[str, Any]) -> None:
-        """Handle casemap.theory.updated events."""
-        logger.debug(f"Skeleton shard received theory.updated: {event.get('theory_id')}")
+        """Handle casemap.theory.updated events.
+
+        When a theory is updated in casemap, rebuild affected argument trees.
+        """
+        theory_id = event.get("theory_id")
+        claim_id = event.get("claim_id")
+        logger.debug(f"Skeleton shard received theory.updated: {theory_id}")
+        if claim_id and self.builder:
+            try:
+                await self.builder.build_argument_tree(claim_id)
+                logger.info(f"Rebuilt argument tree for claim {claim_id} after theory update")
+            except Exception as e:
+                logger.error(f"Failed to rebuild argument tree for claim {claim_id}: {e}")
 
     async def _on_claims_verified(self, event: Dict[str, Any]) -> None:
-        """Handle claims.verified events."""
-        logger.debug(f"Skeleton shard received claims.verified: {event.get('claim_id')}")
+        """Handle claims.verified events.
+
+        When a claim is verified, build its argument tree.
+        """
+        claim_id = event.get("claim_id")
+        logger.debug(f"Skeleton shard received claims.verified: {claim_id}")
+        if claim_id and self.builder:
+            try:
+                await self.builder.build_argument_tree(claim_id)
+                logger.info(f"Built argument tree for verified claim {claim_id}")
+            except Exception as e:
+                logger.error(f"Failed to build argument tree for claim {claim_id}: {e}")
+
+    async def _on_authority_found(self, event: Dict[str, Any]) -> None:
+        """Handle oracle.authority.found events.
+
+        When the oracle shard finds a new authority, link it to relevant trees.
+        """
+        authority_id = event.get("authority_id")
+        tree_id = event.get("tree_id")
+        logger.debug(f"Skeleton shard received oracle.authority.found: {authority_id}")
+        if authority_id and tree_id and self.builder:
+            try:
+                await self.builder.link_authorities(tree_id, [authority_id])
+                logger.info(f"Linked authority {authority_id} to tree {tree_id}")
+            except Exception as e:
+                logger.error(f"Failed to link authority {authority_id} to tree {tree_id}: {e}")
 
     # --- Database Schema ---
 

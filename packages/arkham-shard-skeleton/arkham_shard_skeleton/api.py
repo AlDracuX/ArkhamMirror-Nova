@@ -9,6 +9,8 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
+    from .builder import SkeletonBuilder
+    from .llm import SkeletonLLMIntegration
     from .shard import SkeletonShard
 
 logger = logging.getLogger(__name__)
@@ -29,6 +31,8 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_builder: "SkeletonBuilder | None" = None
+_llm_integration: "SkeletonLLMIntegration | None" = None
 
 
 def init_api(
@@ -36,13 +40,17 @@ def init_api(
     event_bus,
     llm_service=None,
     shard=None,
+    builder=None,
+    llm_integration=None,
 ):
     """Initialize API with shard dependencies."""
-    global _db, _event_bus, _llm_service, _shard
+    global _db, _event_bus, _llm_service, _shard, _builder, _llm_integration
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _builder = builder
+    _llm_integration = llm_integration
 
 
 # --- Request/Response Models ---
@@ -79,6 +87,37 @@ class SubmissionCreate(BaseModel):
     content_structure: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
     created_by: Optional[str] = None
+
+
+class TreeBuildRequest(BaseModel):
+    """Request to build an argument tree from a claim."""
+
+    claim_id: str
+
+
+class AuthorityLinkRequest(BaseModel):
+    """Request to link authorities to a tree."""
+
+    tree_id: str
+    authority_ids: list[str]
+
+
+class BundleRefRequest(BaseModel):
+    """Request to add bundle page references to a submission."""
+
+    submission_id: str
+    bundle_id: str
+
+
+class DraftRequest(BaseModel):
+    """Request to draft an argument section via LLM."""
+
+    heading: str
+    claim_summary: str
+    legal_test: str = ""
+    evidence_summaries: list[str] = Field(default_factory=list)
+    authority_citations: list[str] = Field(default_factory=list)
+    bundle_refs: dict[str, int] = Field(default_factory=dict)
 
 
 # --- Argument Trees Endpoints ---
@@ -138,6 +177,111 @@ async def create_argument_tree(request: ArgumentTreeCreate):
         )
 
     return {"id": tree_id, "status": "created"}
+
+
+# --- Domain Endpoints ---
+
+
+@router.post("/tree/build")
+async def build_argument_tree(request: TreeBuildRequest):
+    """Build argument tree from a claim.
+
+    Fetches claim data and linked evidence/authorities, builds structured
+    argument tree, persists it, and emits skeleton.argument.structured event.
+    """
+    if not _builder:
+        raise HTTPException(status_code=503, detail="Skeleton builder not initialized")
+
+    result = await _builder.build_argument_tree(request.claim_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Claim {request.claim_id} not found")
+
+    return result
+
+
+@router.post("/render/{submission_id}")
+async def render_submission(submission_id: str):
+    """Render submission as structured legal text.
+
+    Produces numbered paragraphs with bundle page references and authority citations.
+    """
+    if not _builder:
+        raise HTTPException(status_code=503, detail="Skeleton builder not initialized")
+
+    text = await _builder.render_submission(submission_id)
+    if text is None:
+        raise HTTPException(status_code=404, detail=f"Submission {submission_id} not found")
+
+    # Emit event
+    if _event_bus:
+        await _event_bus.emit(
+            "skeleton.submission.drafted",
+            {"submission_id": submission_id},
+            source="skeleton-shard",
+        )
+
+    return {"submission_id": submission_id, "rendered_text": text}
+
+
+@router.post("/authorities/link")
+async def link_authorities(request: AuthorityLinkRequest):
+    """Link authorities to an argument tree.
+
+    Merges new authority IDs with existing ones on the tree (deduplicates).
+    """
+    if not _builder:
+        raise HTTPException(status_code=503, detail="Skeleton builder not initialized")
+
+    try:
+        await _builder.link_authorities(request.tree_id, request.authority_ids)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return {"tree_id": request.tree_id, "status": "linked"}
+
+
+@router.post("/bundle-refs")
+async def add_bundle_references(request: BundleRefRequest):
+    """Add bundle page references to a submission.
+
+    Cross-references bundle page numbers for all document citations
+    by querying the arkham_bundle schema.
+    """
+    if not _builder:
+        raise HTTPException(status_code=503, detail="Skeleton builder not initialized")
+
+    try:
+        await _builder.add_bundle_references(request.submission_id, request.bundle_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return {"submission_id": request.submission_id, "status": "updated"}
+
+
+@router.post("/draft")
+async def draft_section(request: DraftRequest):
+    """Draft an argument section using LLM.
+
+    Uses UK Employment Tribunal legal drafter persona to produce
+    numbered paragraphs with neutral citations and bundle page references.
+    """
+    if not _llm_integration or not _llm_integration.is_available:
+        raise HTTPException(status_code=503, detail="LLM service not available")
+
+    result = await _llm_integration.draft_section(
+        heading=request.heading,
+        claim_summary=request.claim_summary,
+        legal_test=request.legal_test,
+        evidence_summaries=request.evidence_summaries,
+        authority_citations=request.authority_citations,
+        bundle_refs=request.bundle_refs,
+    )
+
+    return {
+        "heading": result.heading,
+        "paragraphs": result.paragraphs,
+        "authority_citations": result.authority_citations,
+    }
 
 
 # --- Authorities Endpoints ---

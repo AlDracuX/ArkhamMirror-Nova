@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field
 from .models import VALID_STATUSES
 
 if TYPE_CHECKING:
+    from .engine import DisclosureEngine
+    from .llm import DisclosureLLMHelper
     from .shard import DisclosureShard
 
 logger = logging.getLogger(__name__)
@@ -31,6 +33,8 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_engine: Optional["DisclosureEngine"] = None
+_llm_helper: Optional["DisclosureLLMHelper"] = None
 
 
 def init_api(
@@ -38,13 +42,17 @@ def init_api(
     event_bus,
     llm_service=None,
     shard=None,
+    engine=None,
+    llm_helper=None,
 ):
     """Initialize API with shard dependencies."""
-    global _db, _event_bus, _llm_service, _shard
+    global _db, _event_bus, _llm_service, _shard, _engine, _llm_helper
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _engine = engine
+    _llm_helper = llm_helper
 
 
 # --- Request/Response Models ---
@@ -82,6 +90,40 @@ class ScheduleRequest(BaseModel):
     case_id: str
 
 
+class GapDetectRequest(BaseModel):
+    """Request body for gap detection."""
+
+    case_id: str
+
+
+class EvasionScoreRequest(BaseModel):
+    """Request body for evasion scoring."""
+
+    respondent_id: str
+    case_id: str
+
+
+class DeadlineCalculateRequest(BaseModel):
+    """Request body for deadline calculation."""
+
+    order_date: str  # ISO format date string
+    deadline_days: int = 14
+    deadline_type: str = "calendar_days"
+
+
+class ClassifyDocumentRequest(BaseModel):
+    """Request body for document classification."""
+
+    document_id: str
+    metadata: dict = Field(default_factory=dict)
+
+
+class ScheduleGenerateRequest(BaseModel):
+    """Request body for enhanced schedule generation."""
+
+    case_id: str
+
+
 # --- CRUD Endpoints ---
 
 
@@ -111,6 +153,125 @@ async def list_disclosure_requests(
     query += " ORDER BY created_at DESC"
     rows = await _db.fetch_all(query, params)
     return {"count": len(rows), "requests": [dict(r) for r in rows]}
+
+
+# --- Domain Endpoints (MUST be before /{request_id} to avoid path conflicts) ---
+
+
+@router.post("/gaps/detect")
+async def detect_gaps(request: GapDetectRequest):
+    """Run gap detection for a case."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Disclosure engine not initialized")
+
+    gaps = await _engine.detect_gaps(request.case_id)
+    return {"case_id": request.case_id, "gap_count": len(gaps), "gaps": gaps}
+
+
+@router.get("/gaps")
+async def list_gaps(
+    case_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+):
+    """List disclosure gaps with optional filters."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Disclosure service not initialized")
+
+    query = "SELECT * FROM arkham_disclosure.gaps WHERE 1=1"
+    params: dict = {}
+
+    if status:
+        query += " AND status = :status"
+        params["status"] = status
+
+    if case_id:
+        query += (
+            " AND request_id IN (SELECT id::text FROM arkham_disclosure.disclosure_requests WHERE case_id = :case_id)"
+        )
+        params["case_id"] = case_id
+
+    query += " ORDER BY created_at DESC"
+    rows = await _db.fetch_all(query, params)
+    return {"count": len(rows), "gaps": [dict(r) for r in rows]}
+
+
+@router.post("/evasion/score")
+async def score_evasion(request: EvasionScoreRequest):
+    """Score respondent evasion patterns."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Disclosure engine not initialized")
+
+    result = await _engine.score_evasion(request.respondent_id, request.case_id)
+    return result
+
+
+@router.get("/evasion/{respondent_id}")
+async def get_evasion_history(respondent_id: str):
+    """Get evasion score history for a respondent."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Disclosure service not initialized")
+
+    rows = await _db.fetch_all(
+        """
+        SELECT id, respondent_id, score, reason, created_at
+        FROM arkham_disclosure.evasion_scores
+        WHERE respondent_id = :respondent_id
+        ORDER BY created_at DESC
+        """,
+        {"respondent_id": respondent_id},
+    )
+    return {"respondent_id": respondent_id, "scores": [dict(r) for r in rows]}
+
+
+@router.post("/deadlines/calculate")
+async def calculate_deadline(request: DeadlineCalculateRequest):
+    """Calculate disclosure deadline from order date."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Disclosure engine not initialized")
+
+    try:
+        order_date = date.fromisoformat(request.order_date)
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"Invalid date format: {request.order_date}")
+
+    deadline = await _engine.calculate_deadline(
+        order_date=order_date,
+        deadline_days=request.deadline_days,
+        deadline_type=request.deadline_type,
+    )
+    return {
+        "order_date": order_date.isoformat(),
+        "deadline": deadline.isoformat(),
+        "deadline_days": request.deadline_days,
+        "deadline_type": request.deadline_type,
+    }
+
+
+@router.post("/schedule/generate")
+async def generate_enhanced_schedule(request: ScheduleGenerateRequest):
+    """Generate full disclosure schedule with gaps and evasion data."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Disclosure engine not initialized")
+
+    schedule = await _engine.generate_schedule(request.case_id)
+    return {"case_id": request.case_id, "schedule": schedule}
+
+
+@router.post("/classify")
+async def classify_document(request: ClassifyDocumentRequest):
+    """Classify a document against disclosure request categories using LLM."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Disclosure engine not initialized")
+
+    matched_ids = await _engine.match_document_to_request(request.document_id, request.metadata)
+    return {
+        "document_id": request.document_id,
+        "matched_request_ids": matched_ids,
+        "match_count": len(matched_ids),
+    }
+
+
+# --- Individual Request Endpoints ---
 
 
 @router.get("/{request_id}")

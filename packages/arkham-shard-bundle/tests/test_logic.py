@@ -191,6 +191,9 @@ class TestAPILogic:
         import arkham_shard_bundle.api as api_mod
 
         self.api = api_mod
+        # Reset new module-level refs added for compiler/llm
+        self.api._compiler = None
+        self.api._llm_integration = None
 
     @pytest.mark.asyncio
     async def test_list_bundles_no_db(self):

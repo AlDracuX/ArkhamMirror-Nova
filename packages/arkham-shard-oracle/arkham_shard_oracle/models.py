@@ -74,6 +74,20 @@ class AuthoritySearchRequest(BaseModel):
     claim_types: Optional[List[str]] = None
 
 
+class RelevanceRequest(BaseModel):
+    """Request model for scoring authority relevance."""
+
+    authority_id: str
+    case_facts: str
+
+
+class ResearchRequest(BaseModel):
+    """Request model for comprehensive legal research."""
+
+    query: str
+    context: Optional[str] = None
+
+
 # Keep legacy models for backward compat with existing research_sessions table
 class ResearchSession(BaseModel):
     id: str

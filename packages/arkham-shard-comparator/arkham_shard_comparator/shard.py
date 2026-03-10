@@ -1,11 +1,13 @@
 """Comparator Shard - Equality Act s.13/s.26 treatment comparison matrix."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .engine import ComparatorEngine
+from .llm import ComparatorLLM
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,8 @@ class ComparatorShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.engine: ComparatorEngine | None = None
+        self.llm: ComparatorLLM | None = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Comparator shard with Frame services."""
@@ -45,13 +49,33 @@ class ComparatorShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Instantiate domain components
+        self.engine = ComparatorEngine(db=self._db, event_bus=self._event_bus)
+        self.llm = ComparatorLLM(llm_service=self._llm_service)
+
         # Initialize API with our instances
         init_api(
             db=self._db,
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            engine=self.engine,
+            comparator_llm=self.llm,
         )
+
+        # Subscribe to cross-shard events
+        if self._event_bus:
+            try:
+                # EventBus.subscribe is synchronous in the frame
+                result = self._event_bus.subscribe("entities.extracted", self._handle_entities_extracted)
+                if hasattr(result, "__await__"):
+                    await result
+                result = self._event_bus.subscribe("documents.processed", self._handle_documents_processed)
+                if hasattr(result, "__await__"):
+                    await result
+                logger.info("Comparator Shard subscribed to entities.extracted and documents.processed")
+            except Exception as e:
+                logger.warning(f"Event subscription failed (non-fatal): {e}")
 
         # Register self in app state for API access
         if hasattr(frame, "app") and frame.app:
@@ -63,11 +87,45 @@ class ComparatorShard(ArkhamShard):
     async def shutdown(self) -> None:
         """Clean up shard resources."""
         logger.info("Shutting down Comparator Shard...")
+        self.engine = None
+        self.llm = None
         logger.info("Comparator Shard shutdown complete")
 
     def get_routes(self):
         """Return FastAPI router for this shard."""
         return router
+
+    # --- Event Handlers ---
+
+    async def _handle_entities_extracted(self, event_data: dict) -> None:
+        """Handle entities.extracted events from other shards.
+
+        When entities are extracted from documents, check if any relate to
+        named individuals who could be comparators.
+        """
+        logger.info(f"Comparator shard received entities.extracted: {event_data.get('source', 'unknown')}")
+        # Future: auto-create comparator suggestions from extracted person entities
+        if self._event_bus:
+            await self._event_bus.emit(
+                "comparator.entities.received",
+                {"source_event": "entities.extracted", "entity_count": len(event_data.get("entities", []))},
+                source="comparator-shard",
+            )
+
+    async def _handle_documents_processed(self, event_data: dict) -> None:
+        """Handle documents.processed events from other shards.
+
+        When new documents are processed, check if they contain evidence of
+        differential treatment relevant to existing incidents.
+        """
+        logger.info(f"Comparator shard received documents.processed: {event_data.get('document_id', 'unknown')}")
+        # Future: auto-scan for treatment evidence in processed documents
+        if self._event_bus:
+            await self._event_bus.emit(
+                "comparator.documents.received",
+                {"source_event": "documents.processed", "document_id": event_data.get("document_id")},
+                source="comparator-shard",
+            )
 
     # --- Database Schema ---
 
@@ -82,7 +140,6 @@ class ComparatorShard(ArkhamShard):
             await self._db.execute("CREATE SCHEMA IF NOT EXISTS arkham_comparator")
 
             # --- comparators table ---
-            # Named actual or hypothetical comparators for discrimination analysis
             await self._db.execute("""
                 CREATE TABLE IF NOT EXISTS arkham_comparator.comparators (
                     id TEXT PRIMARY KEY,
@@ -99,7 +156,6 @@ class ComparatorShard(ArkhamShard):
             )
 
             # --- incidents table ---
-            # Discrete workplace events or policy applications to be compared
             await self._db.execute("""
                 CREATE TABLE IF NOT EXISTS arkham_comparator.incidents (
                     id TEXT PRIMARY KEY,
@@ -122,8 +178,6 @@ class ComparatorShard(ArkhamShard):
             )
 
             # --- treatments table ---
-            # How each subject (claimant or named comparator) was treated per incident.
-            # subject_id = 'claimant' or a comparator UUID.
             await self._db.execute("""
                 CREATE TABLE IF NOT EXISTS arkham_comparator.treatments (
                     id TEXT PRIMARY KEY,
@@ -150,7 +204,6 @@ class ComparatorShard(ArkhamShard):
             )
 
             # --- divergences table ---
-            # Recorded findings of less favourable treatment (s.13/s.26 evidence)
             await self._db.execute("""
                 CREATE TABLE IF NOT EXISTS arkham_comparator.divergences (
                     id TEXT PRIMARY KEY,
@@ -173,6 +226,25 @@ class ComparatorShard(ArkhamShard):
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_comparator_divergences_score "
                 "ON arkham_comparator.divergences(significance_score DESC)"
+            )
+
+            # --- legal_elements table ---
+            # Tracks evidence mapped to s.13/s.26 legal elements per case
+            await self._db.execute("""
+                CREATE TABLE IF NOT EXISTS arkham_comparator.legal_elements (
+                    id TEXT PRIMARY KEY,
+                    case_id TEXT NOT NULL,
+                    element_type TEXT NOT NULL,
+                    element_name TEXT NOT NULL,
+                    evidence_ref TEXT DEFAULT '',
+                    notes TEXT DEFAULT '',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_comparator_legal_elements_case "
+                "ON arkham_comparator.legal_elements(case_id, element_type)"
             )
 
             logger.info("Comparator database schema created")

@@ -6,6 +6,7 @@ from typing import Any, Dict
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .search import AuthoritySearch
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class OracleShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.authority_search: AuthoritySearch | None = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Oracle shard with Frame services."""
@@ -44,6 +46,14 @@ class OracleShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Initialize domain services
+        self.authority_search = AuthoritySearch(
+            db=self._db,
+            vectors_service=self._vectors_service,
+            event_bus=self._event_bus,
+            llm_service=self._llm_service,
+        )
+
         # Subscribe to events
         if self._event_bus:
             await self._event_bus.subscribe("casemap.theory.updated", self.handle_theory_updated)
@@ -55,6 +65,7 @@ class OracleShard(ArkhamShard):
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            authority_search=self.authority_search,
         )
 
         # Register self in app state for API access
@@ -67,18 +78,37 @@ class OracleShard(ArkhamShard):
     async def shutdown(self) -> None:
         """Clean up shard resources."""
         logger.info("Shutting down Oracle Shard...")
+        self.authority_search = None
         if self._event_bus:
             await self._event_bus.unsubscribe("casemap.theory.updated", self.handle_theory_updated)
             await self._event_bus.unsubscribe("claims.created", self.handle_claims_created)
         logger.info("Oracle Shard shutdown complete")
 
     async def handle_theory_updated(self, event_data: Dict[str, Any]) -> None:
-        """Handle case theory updated event."""
+        """Handle case theory updated event - research relevant authorities."""
         logger.info("Oracle Shard: Case theory updated, researching relevant authorities")
+        if self.authority_search and self._event_bus:
+            theory_text = event_data.get("theory", "") or event_data.get("description", "")
+            if theory_text:
+                results = await self.authority_search.search(query=theory_text)
+                if results:
+                    await self._event_bus.emit(
+                        "oracle.authority.found",
+                        {"authority_ids": [r.get("id") for r in results[:5]], "source": "theory_updated"},
+                    )
 
     async def handle_claims_created(self, event_data: Dict[str, Any]) -> None:
-        """Handle claims created event."""
+        """Handle claims created event - map claims to legal tests."""
         logger.info("Oracle Shard: New claims created, mapping to legal tests")
+        if self.authority_search and self._event_bus:
+            claim_type = event_data.get("claim_type", "") or event_data.get("type", "")
+            if claim_type:
+                results = await self.authority_search.search(query=claim_type)
+                if results:
+                    await self._event_bus.emit(
+                        "oracle.authority.found",
+                        {"authority_ids": [r.get("id") for r in results[:5]], "source": "claims_created"},
+                    )
 
     def get_routes(self):
         """Return FastAPI router for this shard."""

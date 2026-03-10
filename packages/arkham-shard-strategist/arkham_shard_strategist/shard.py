@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .engine import StrategistEngine
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class StrategistShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.engine: Optional[StrategistEngine] = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Strategist shard with Frame services."""
@@ -44,6 +46,13 @@ class StrategistShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Instantiate the domain engine
+        self.engine = StrategistEngine(
+            db=self._db,
+            event_bus=self._event_bus,
+            llm_service=self._llm_service,
+        )
+
         # Subscribe to events
         if self._event_bus:
             await self._event_bus.subscribe("playbook.strategy.updated", self.handle_strategy_updated)
@@ -56,6 +65,7 @@ class StrategistShard(ArkhamShard):
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            engine=self.engine,
         )
 
         # Register self in app state for API access
@@ -72,19 +82,40 @@ class StrategistShard(ArkhamShard):
             await self._event_bus.unsubscribe("playbook.strategy.updated", self.handle_strategy_updated)
             await self._event_bus.unsubscribe("respondent.profile.updated", self.handle_profile_updated)
             await self._event_bus.unsubscribe("witnesses.statement.created", self.handle_statement_created)
+        self.engine = None
         logger.info("Strategist Shard shutdown complete")
 
     async def handle_strategy_updated(self, event_data: Dict[str, Any]) -> None:
-        """Handle strategy updated event."""
-        logger.info("Strategist Shard: Strategy updated, recalculating predictions")
+        """Handle strategy updated event - recalculate predictions for the project."""
+        project_id = event_data.get("project_id")
+        logger.info(f"Strategist Shard: Strategy updated for project {project_id}, recalculating predictions")
+        if self.engine and project_id:
+            try:
+                await self.engine.predict_arguments(project_id=project_id)
+            except Exception as e:
+                logger.error(f"Failed to recalculate predictions on strategy update: {e}")
 
     async def handle_profile_updated(self, event_data: Dict[str, Any]) -> None:
-        """Handle respondent profile updated event."""
-        logger.info("Strategist Shard: Respondent profile updated, updating tactical models")
+        """Handle respondent profile updated event - rebuild tactical model."""
+        project_id = event_data.get("project_id")
+        respondent_id = event_data.get("respondent_id")
+        logger.info("Strategist Shard: Respondent profile updated, rebuilding tactical model")
+        if self.engine and project_id and respondent_id:
+            try:
+                await self.engine.build_tactical_model(project_id=project_id, respondent_id=respondent_id)
+            except Exception as e:
+                logger.error(f"Failed to rebuild tactical model on profile update: {e}")
 
     async def handle_statement_created(self, event_data: Dict[str, Any]) -> None:
-        """Handle witness statement created event."""
-        logger.info("Strategist Shard: New witness statement, simulating testimony angles")
+        """Handle witness statement created event - run red team analysis."""
+        project_id = event_data.get("project_id")
+        statement_id = event_data.get("statement_id")
+        logger.info("Strategist Shard: New witness statement, running red team analysis")
+        if self.engine and project_id and statement_id:
+            try:
+                await self.engine.red_team(project_id=project_id, target_id=statement_id)
+            except Exception as e:
+                logger.error(f"Failed to run red team on new statement: {e}")
 
     def get_routes(self):
         """Return FastAPI router for this shard."""

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .engine import DigestEngine
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class DigestShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.engine: Optional[DigestEngine] = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Digest shard with Frame services."""
@@ -44,16 +46,34 @@ class DigestShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
-        # Subscribe to all events for change logging
-        if self._event_bus:
-            await self._event_bus.subscribe("*.*.*", self.handle_any_event)
+        # Initialize engine with services
+        self.engine = DigestEngine(
+            db=self._db,
+            event_bus=self._event_bus,
+            llm_service=self._llm_service,
+        )
 
-        # Initialize API with our instances
+        # Subscribe to key event patterns for change logging
+        if self._event_bus:
+            for pattern in [
+                "disclosure.*",
+                "rules.*",
+                "burden.*",
+                "costs.*",
+                "deadlines.*",
+                "contradictions.*",
+                "evidence.*",
+                "timeline.*",
+            ]:
+                await self._event_bus.subscribe(pattern, self._handle_event)
+
+        # Initialize API with engine and services
         init_api(
             db=self._db,
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            engine=self.engine,
         )
 
         # Register self in app state for API access
@@ -67,21 +87,33 @@ class DigestShard(ArkhamShard):
         """Clean up shard resources."""
         logger.info("Shutting down Digest Shard...")
         if self._event_bus:
-            await self._event_bus.unsubscribe("*.*.*", self.handle_any_event)
+            for pattern in [
+                "disclosure.*",
+                "rules.*",
+                "burden.*",
+                "costs.*",
+                "deadlines.*",
+                "contradictions.*",
+                "evidence.*",
+                "timeline.*",
+            ]:
+                await self._event_bus.unsubscribe(pattern, self._handle_event)
+        self.engine = None
         logger.info("Digest Shard shutdown complete")
 
-    async def handle_any_event(self, event_data: Dict[str, Any]) -> None:
-        """Handle any event by logging it to the change log."""
+    async def _handle_event(self, event_data: Dict[str, Any]) -> None:
+        """Handle subscribed events by logging them via the engine."""
         event_type = event_data.get("event_type", "unknown")
-        event_data.get("payload", {})
         source = event_data.get("source", "unknown")
 
-        # Filter out self-events and generic items
-        if source == "digest-shard" or ".item." in event_type:
+        # Filter out self-events
+        if source == "digest-shard":
             return
 
-        logger.debug(f"Digest Shard: Logging change event {event_type}")
-        # In a real implementation, this would insert into arkham_digest.change_log
+        if self.engine:
+            payload = event_data.get("payload", event_data)
+            await self.engine.log_change(event_type, payload)
+            logger.debug(f"Digest Shard: Logged change event {event_type}")
 
     def get_routes(self):
         """Return FastAPI router for this shard."""

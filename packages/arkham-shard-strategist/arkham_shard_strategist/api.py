@@ -18,14 +18,16 @@ _db = None
 _event_bus = None
 _llm_service = None
 _shard = None
+_engine = None
 
 
-def init_api(db, event_bus, llm_service=None, shard=None):
-    global _db, _event_bus, _llm_service, _shard
+def init_api(db, event_bus, llm_service=None, shard=None, engine=None):
+    global _db, _event_bus, _llm_service, _shard, _engine
     _db = db
     _event_bus = event_bus
     _llm_service = llm_service
     _shard = shard
+    _engine = engine
 
 
 # ---------------------------------------------------------------------------
@@ -353,3 +355,90 @@ def _parse_json_field(value: Any, default: Any = None) -> list:
         except (json.JSONDecodeError, TypeError):
             return default if default is not None else []
     return default if default is not None else []
+
+
+# ---------------------------------------------------------------------------
+# Domain Analysis Endpoints (powered by StrategistEngine)
+# ---------------------------------------------------------------------------
+
+
+class PredictRequest(BaseModel):
+    project_id: str
+    claim_id: Optional[str] = None
+
+
+class CounterRequest(BaseModel):
+    pass  # prediction_id comes from path
+
+
+class SWOTRequest(BaseModel):
+    project_id: str
+
+
+class RedTeamRequest(BaseModel):
+    project_id: str
+    target_id: str
+
+
+class TacticalModelRequest(BaseModel):
+    project_id: str
+    respondent_id: str
+
+
+@router.post("/predict")
+async def predict_arguments(request: PredictRequest):
+    """Predict respondent arguments using LLM and case context."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Strategist engine not available")
+
+    results = await _engine.predict_arguments(
+        project_id=request.project_id,
+        claim_id=request.claim_id,
+    )
+    return {"predictions": results, "count": len(results)}
+
+
+@router.post("/counter/{prediction_id}")
+async def generate_counterarguments(prediction_id: str):
+    """Generate counterarguments for a predicted respondent argument."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Strategist engine not available")
+
+    results = await _engine.generate_counterarguments(prediction_id=prediction_id)
+    return {"counterarguments": results, "count": len(results)}
+
+
+@router.post("/swot")
+async def build_swot(request: SWOTRequest):
+    """Build SWOT analysis for the current litigation position."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Strategist engine not available")
+
+    result = await _engine.build_swot(project_id=request.project_id)
+    return result
+
+
+@router.post("/red-team")
+async def red_team(request: RedTeamRequest):
+    """Red team assessment - attack own case from respondent's perspective."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Strategist engine not available")
+
+    result = await _engine.red_team(
+        project_id=request.project_id,
+        target_id=request.target_id,
+    )
+    return result
+
+
+@router.post("/tactical-model")
+async def build_tactical_model(request: TacticalModelRequest):
+    """Build tactical model of respondent's likely behaviour."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Strategist engine not available")
+
+    result = await _engine.build_tactical_model(
+        project_id=request.project_id,
+        respondent_id=request.respondent_id,
+    )
+    return result

@@ -5,7 +5,7 @@ Schema: arkham_burden_map (1 table)
 
 Inter-shard integration (EventBus only -- no direct imports):
   Subscribes: casemap.theory.updated, claims.status.changed, credibility.score.updated
-  Publishes:  burden-map.item.created, burden-map.item.updated, burden-map.item.deleted
+  Publishes:  burden.status.updated, burden.gap.critical, burden.shifted
 """
 
 import logging
@@ -14,6 +14,8 @@ from typing import Any, Dict
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .engine import BurdenEngine
+from .llm import BurdenLLM
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,8 @@ class BurdenMapShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.engine: BurdenEngine | None = None
+        self.llm: BurdenLLM | None = None
 
     async def initialize(self, frame) -> None:
         """Initialize the BurdenMap shard with Frame services."""
@@ -56,6 +60,12 @@ class BurdenMapShard(ArkhamShard):
 
         await self._create_schema()
 
+        # Domain logic engine
+        self.engine = BurdenEngine(db=self._db, event_bus=self._event_bus)
+
+        # LLM integration (optional -- degrades gracefully)
+        self.llm = BurdenLLM(llm_service=self._llm_service)
+
         # Subscribe to upstream shard events (EventBus -- no direct imports)
         if self._event_bus:
             await self._event_bus.subscribe("casemap.theory.updated", self._on_casemap_theory_updated)
@@ -67,6 +77,8 @@ class BurdenMapShard(ArkhamShard):
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            engine=self.engine,
+            burden_llm=self.llm,
         )
 
         # Register self on app state for API dependency injection
@@ -83,6 +95,8 @@ class BurdenMapShard(ArkhamShard):
             await self._event_bus.unsubscribe("casemap.theory.updated", self._on_casemap_theory_updated)
             await self._event_bus.unsubscribe("claims.status.changed", self._on_claims_status_changed)
             await self._event_bus.unsubscribe("credibility.score.updated", self._on_credibility_score_updated)
+        self.engine = None
+        self.llm = None
         logger.info("BurdenMap Shard shutdown complete")
 
     def get_routes(self):
@@ -108,7 +122,7 @@ class BurdenMapShard(ArkhamShard):
                     element         TEXT NOT NULL,
                     legal_standard  TEXT NOT NULL DEFAULT '',
                     burden_party    TEXT NOT NULL DEFAULT 'claimant',
-                    evidence_ids    UUID[] DEFAULT '{{}}',
+                    evidence_ids    UUID[] DEFAULT '{{{{}}}}',
                     status          TEXT NOT NULL DEFAULT 'unmet',
                     notes           TEXT,
                     created_at      TIMESTAMPTZ DEFAULT NOW(),
@@ -133,13 +147,31 @@ class BurdenMapShard(ArkhamShard):
     # --- Event Handlers (inter-shard via EventBus) ---
 
     async def _on_casemap_theory_updated(self, event: Dict[str, Any]) -> None:
-        """React to casemap.theory.updated."""
+        """React to casemap.theory.updated -- recompute dashboard for affected case."""
         logger.debug(f"BurdenMap: received casemap.theory.updated: {event}")
+        case_id = event.get("case_id")
+        if case_id and self.engine:
+            try:
+                await self.engine.compute_dashboard(case_id)
+            except Exception as e:
+                logger.error(f"Failed to recompute dashboard on theory update: {e}")
 
     async def _on_claims_status_changed(self, event: Dict[str, Any]) -> None:
-        """React to claims.status.changed."""
+        """React to claims.status.changed -- recheck burden shift."""
         logger.debug(f"BurdenMap: received claims.status.changed: {event}")
+        case_id = event.get("case_id")
+        if case_id and self.engine:
+            try:
+                await self.engine.detect_burden_shift(case_id)
+            except Exception as e:
+                logger.error(f"Failed to detect burden shift on claims change: {e}")
 
     async def _on_credibility_score_updated(self, event: Dict[str, Any]) -> None:
-        """React to credibility.score.updated."""
+        """React to credibility.score.updated -- recompute traffic lights."""
         logger.debug(f"BurdenMap: received credibility.score.updated: {event}")
+        element_id = event.get("element_id")
+        if element_id and self.engine:
+            try:
+                await self.engine.compute_traffic_light(element_id)
+            except Exception as e:
+                logger.error(f"Failed to recompute traffic light on credibility update: {e}")

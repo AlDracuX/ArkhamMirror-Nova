@@ -6,6 +6,9 @@ from typing import Any, Dict, List, Optional
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .calculator import DeadlineCalculator
+from .llm import RulesLLM
+from .seeder import RuleSeeder
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +33,9 @@ class RulesShard(ArkhamShard):
         self._event_bus = None
         self._llm_service = None
         self._vectors_service = None
+        self.calculator: Optional[DeadlineCalculator] = None
+        self.seeder: Optional[RuleSeeder] = None
+        self.rules_llm: Optional[RulesLLM] = None
 
     async def initialize(self, frame) -> None:
         """Initialize the Rules shard with Frame services."""
@@ -46,12 +52,20 @@ class RulesShard(ArkhamShard):
         # Create database schema
         await self._create_schema()
 
+        # Initialize domain components
+        self.calculator = DeadlineCalculator(db=self._db, event_bus=self._event_bus)
+        self.seeder = RuleSeeder()
+        self.rules_llm = RulesLLM(llm_service=self._llm_service)
+
         # Initialize API with our instances
         init_api(
             db=self._db,
             event_bus=self._event_bus,
             llm_service=self._llm_service,
             shard=self,
+            calculator=self.calculator,
+            seeder=self.seeder,
+            rules_llm=self.rules_llm,
         )
 
         # Subscribe to events
@@ -69,6 +83,9 @@ class RulesShard(ArkhamShard):
     async def shutdown(self) -> None:
         """Clean up shard resources."""
         logger.info("Shutting down Rules Shard...")
+        self.calculator = None
+        self.seeder = None
+        self.rules_llm = None
         logger.info("Rules Shard shutdown complete")
 
     def get_routes(self):
@@ -80,24 +97,43 @@ class RulesShard(ArkhamShard):
     async def _on_deadline_created(self, event: Dict[str, Any]) -> None:
         """Handle deadlines.created events for rule calculations."""
         deadline_id = event.get("deadline_id")
+        rule_id = event.get("rule_id")
+        trigger_date_str = event.get("trigger_date")
+        trigger_type = event.get("trigger_type", "custom")
+
         logger.info(f"Rules shard processing deadline: {deadline_id}")
-        # Stub logic:
-        # 1. Fetch deadline details
-        # 2. Match against Rules (e.g. Rule 29, 38)
-        # 3. Perform offset calculation
-        # 4. Update deadline or create Breach if missed
+
+        if not rule_id or not trigger_date_str or not self.calculator:
+            return
+
+        try:
+            from datetime import date as date_type
+
+            trigger_date = (
+                date_type.fromisoformat(trigger_date_str) if isinstance(trigger_date_str, str) else trigger_date_str
+            )
+            await self.calculator.calculate(rule_id, trigger_date, trigger_type)
+        except Exception as e:
+            logger.error(f"Failed to calculate deadline from event: {e}")
 
     async def _on_document_processed(self, event: Dict[str, Any]) -> None:
         """Handle documents.processed events for procedural triggers."""
         doc_id = event.get("document_id")
         doc_type = event.get("document_type")
+        doc_text = event.get("text", "")
 
         if doc_type in ["order", "judgment", "claim"]:
             logger.info(f"Rules shard triggered by {doc_type} document: {doc_id}")
-            # Stub logic:
-            # 1. Extract dates from document
-            # 2. Trigger automatic deadline calculations
-            # 3. Emit rules.deadline.calculated event
+
+            # Extract dates from document using LLM (or regex fallback)
+            if self.rules_llm and doc_text:
+                try:
+                    extracted = await self.rules_llm.extract_dates(doc_text)
+                    for ed in extracted:
+                        if ed.creates_deadline:
+                            logger.info(f"Extracted deadline date {ed.date} from {doc_type}: {ed.description}")
+                except Exception as e:
+                    logger.error(f"Date extraction failed: {e}")
 
     # --- Database Schema ---
 
