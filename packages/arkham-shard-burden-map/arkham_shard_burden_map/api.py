@@ -1,7 +1,11 @@
-"""BurdenMap Shard API endpoints."""
+"""BurdenMap Shard API endpoints.
+
+CRUD for burden_elements plus a /matrix endpoint that groups by claim.
+"""
 
 import logging
 import uuid
+from collections import defaultdict
 from typing import TYPE_CHECKING, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -11,6 +15,10 @@ if TYPE_CHECKING:
     from .shard import BurdenMapShard
 
 logger = logging.getLogger(__name__)
+
+VALID_STATUSES = {"unmet", "partial", "met", "disputed"}
+
+SCHEMA = "arkham_burden_map"
 
 
 def get_shard(request: Request) -> "BurdenMapShard":
@@ -48,140 +56,239 @@ def init_api(
 
 
 class CreateElementRequest(BaseModel):
-    title: str
-    claim_type: str
-    statutory_reference: str = ""
-    description: str = ""
-    burden_holder: str = "claimant"
-    required: bool = True
-    theory_id: Optional[str] = None
-    linked_claim_id: Optional[str] = None
-    project_id: Optional[str] = None
+    case_id: Optional[str] = None
+    claim: str
+    element: str
+    legal_standard: str = ""
+    burden_party: str = "claimant"
+    evidence_ids: List[str] = Field(default_factory=list)
+    status: str = "unmet"
+    notes: Optional[str] = None
 
 
-class AddEvidenceWeightRequest(BaseModel):
-    element_id: str
-    weight: str  # strong, moderate, weak, neutral, adverse
-    source_type: str = "document"
-    source_id: str
-    source_title: str
-    excerpt: Optional[str] = None
-    supports_burden_holder: bool = True
-    analyst_notes: str = ""
+class UpdateElementRequest(BaseModel):
+    case_id: Optional[str] = None
+    claim: Optional[str] = None
+    element: Optional[str] = None
+    legal_standard: Optional[str] = None
+    burden_party: Optional[str] = None
+    evidence_ids: Optional[List[str]] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+# --- Helper ---
+
+
+def _ensure_db():
+    if not _db:
+        raise HTTPException(status_code=503, detail="Burden service not initialized")
+
+
+def _validate_status(status: str) -> None:
+    if status not in VALID_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid status '{status}'. Must be one of: {', '.join(sorted(VALID_STATUSES))}",
+        )
 
 
 # --- Endpoints ---
 
 
-@router.get("/elements")
-async def list_elements(project_id: Optional[str] = None):
-    """List all claim elements."""
-    if not _db:
-        raise HTTPException(status_code=503, detail="Burden service not initialized")
+@router.get("/")
+async def list_elements(
+    case_id: Optional[str] = Query(None),
+    claim: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+):
+    """List burden elements with optional filters."""
+    _ensure_db()
 
-    query = "SELECT * FROM arkham_burden_map.claim_elements WHERE 1=1"
+    query = f"SELECT * FROM {SCHEMA}.burden_elements WHERE 1=1"
     params: dict = {}
-    if project_id:
-        query += " AND project_id = :pid"
-        params["pid"] = project_id
+
+    if case_id and isinstance(case_id, str):
+        query += " AND case_id = :case_id"
+        params["case_id"] = case_id
+    if claim and isinstance(claim, str):
+        query += " AND claim = :claim"
+        params["claim"] = claim
+    if status is not None and isinstance(status, str):
+        _validate_status(status)
+        query += " AND status = :status"
+        params["status"] = status
+
+    query += " ORDER BY created_at"
 
     rows = await _db.fetch_all(query, params)
     return {"count": len(rows), "elements": [dict(r) for r in rows]}
 
 
-@router.post("/elements")
+@router.get("/matrix")
+async def get_matrix(case_id: str = Query(...)):
+    """Return burden elements grouped by claim with met/total counts."""
+    _ensure_db()
+
+    rows = await _db.fetch_all(
+        f"SELECT * FROM {SCHEMA}.burden_elements WHERE case_id = :case_id ORDER BY claim, created_at",
+        {"case_id": case_id},
+    )
+
+    claims_map: dict = defaultdict(list)
+    for row in rows:
+        claims_map[row["claim"]].append(dict(row))
+
+    claims = []
+    for claim_name, elements in claims_map.items():
+        met_count = sum(1 for e in elements if e.get("status") == "met")
+        claims.append(
+            {
+                "claim": claim_name,
+                "elements": elements,
+                "met_count": met_count,
+                "total": len(elements),
+            }
+        )
+
+    return {"claims": claims}
+
+
+@router.get("/{element_id}")
+async def get_element(element_id: str):
+    """Get a single burden element by ID."""
+    _ensure_db()
+
+    row = await _db.fetch_one(
+        f"SELECT * FROM {SCHEMA}.burden_elements WHERE id = :id",
+        {"id": element_id},
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Element not found")
+
+    return dict(row)
+
+
+@router.post("/")
 async def create_element(request: CreateElementRequest):
-    """Create a new legal element requirement."""
-    if not _db:
-        raise HTTPException(status_code=503, detail="Burden service not initialized")
+    """Create a new burden element."""
+    _ensure_db()
+    _validate_status(request.status)
 
     eid = str(uuid.uuid4())
-    tenant_id = _shard.get_tenant_id_or_none() if _shard else None
 
     await _db.execute(
-        """
-        INSERT INTO arkham_burden_map.claim_elements
-            (id, tenant_id, title, claim_type, statutory_reference, description, burden_holder, required, theory_id, linked_claim_id, project_id)
+        f"""
+        INSERT INTO {SCHEMA}.burden_elements
+            (id, case_id, claim, element, legal_standard, burden_party,
+             evidence_ids, status, notes, created_at, updated_at)
         VALUES
-            (:id, :tenant_id, :title, :type, :ref, :desc, :holder, :req, :theory, :claim, :project)
+            (:id, :case_id, :claim, :element, :legal_standard, :burden_party,
+             :evidence_ids, :status, :notes, NOW(), NOW())
         """,
         {
             "id": eid,
-            "tenant_id": str(tenant_id) if tenant_id else None,
-            "title": request.title,
-            "type": request.claim_type,
-            "ref": request.statutory_reference,
-            "desc": request.description,
-            "holder": request.burden_holder,
-            "req": request.required,
-            "theory": request.theory_id,
-            "claim": request.linked_claim_id,
-            "project": request.project_id,
+            "case_id": request.case_id,
+            "claim": request.claim,
+            "element": request.element,
+            "legal_standard": request.legal_standard,
+            "burden_party": request.burden_party,
+            "evidence_ids": request.evidence_ids,
+            "status": request.status,
+            "notes": request.notes,
         },
     )
-    return {"element_id": eid}
+
+    if _event_bus:
+        await _event_bus.emit(
+            "burden-map.item.created",
+            {"element_id": eid, "claim": request.claim},
+            source="burden-map-shard",
+        )
+
+    return {"element_id": eid, "status": "created"}
 
 
-@router.get("/dashboard")
-async def get_burden_dashboard(project_id: Optional[str] = None):
-    """Get the full burden of proof matrix with traffic lights."""
-    if not _db:
-        raise HTTPException(status_code=503, detail="Burden service not initialized")
+@router.put("/{element_id}")
+async def update_element(element_id: str, request: UpdateElementRequest):
+    """Update an existing burden element."""
+    _ensure_db()
 
-    # This joins elements with their assignments
-    query = """
-        SELECT ce.*, ba.traffic_light, ba.net_score, ba.supporting_count, ba.adverse_count, ba.gap_summary
-        FROM arkham_burden_map.claim_elements ce
-        LEFT JOIN arkham_burden_map.burden_assignments ba ON ba.element_id = ce.id
-        WHERE ce.status = 'active'
-    """
-    params: dict = {}
-    if project_id:
-        query += " AND ce.project_id = :pid"
-        params["pid"] = project_id
+    # Check element exists
+    existing = await _db.fetch_one(
+        f"SELECT * FROM {SCHEMA}.burden_elements WHERE id = :id",
+        {"id": element_id},
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Element not found")
 
-    rows = await _db.fetch_all(query, params)
-    return {"elements": [dict(r) for r in rows]}
+    # Build dynamic SET clause from non-None fields
+    updates = request.model_dump(exclude_none=True)
+    if not updates:
+        return dict(existing)
 
+    if "status" in updates:
+        _validate_status(updates["status"])
 
-@router.post("/weights")
-async def add_evidence_weight(request: AddEvidenceWeightRequest):
-    """Link a piece of evidence to an element and assess its weight."""
-    if not _db:
-        raise HTTPException(status_code=503, detail="Burden service not initialized")
+    set_parts = []
+    params: dict = {"id": element_id}
+    for field_name, value in updates.items():
+        set_parts.append(f"{field_name} = :{field_name}")
+        params[field_name] = value
 
-    wid = str(uuid.uuid4())
+    set_parts.append("updated_at = NOW()")
+    set_clause = ", ".join(set_parts)
+
     await _db.execute(
-        """
-        INSERT INTO arkham_burden_map.evidence_weights
-            (id, element_id, weight, source_type, source_id, source_title, excerpt, supports_burden_holder, analyst_notes)
-        VALUES
-            (:id, :eid, :weight, :stype, :sid, :stitle, :excerpt, :supports, :notes)
-        """,
-        {
-            "id": wid,
-            "eid": request.element_id,
-            "weight": request.weight,
-            "stype": request.source_type,
-            "sid": request.source_id,
-            "stitle": request.source_title,
-            "excerpt": request.excerpt,
-            "supports": request.supports_burden_holder,
-            "notes": request.analyst_notes,
-        },
+        f"UPDATE {SCHEMA}.burden_elements SET {set_clause} WHERE id = :id",
+        params,
     )
 
-    # Trigger recalculation if shard available
-    if _shard:
-        await _shard._recalculate_assignment(request.element_id)
+    if _event_bus:
+        await _event_bus.emit(
+            "burden-map.item.updated",
+            {"element_id": element_id},
+            source="burden-map-shard",
+        )
 
-    return {"weight_id": wid, "status": "added"}
+    # Re-fetch updated row
+    updated = await _db.fetch_one(
+        f"SELECT * FROM {SCHEMA}.burden_elements WHERE id = :id",
+        {"id": element_id},
+    )
+    return dict(updated)
+
+
+@router.delete("/{element_id}")
+async def delete_element(element_id: str):
+    """Delete a burden element."""
+    _ensure_db()
+
+    existing = await _db.fetch_one(
+        f"SELECT * FROM {SCHEMA}.burden_elements WHERE id = :id",
+        {"id": element_id},
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Element not found")
+
+    await _db.execute(
+        f"DELETE FROM {SCHEMA}.burden_elements WHERE id = :id",
+        {"id": element_id},
+    )
+
+    if _event_bus:
+        await _event_bus.emit(
+            "burden-map.item.deleted",
+            {"element_id": element_id},
+            source="burden-map-shard",
+        )
+
+    return {"status": "deleted", "element_id": element_id}
 
 
 @router.get("/items/count")
 async def count_items():
     """Return count for badge display."""
-    if not _db:
-        raise HTTPException(status_code=503, detail="Database not available")
-    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_burden_map.claim_elements")
+    _ensure_db()
+    result = await _db.fetch_one(f"SELECT COUNT(*) as count FROM {SCHEMA}.burden_elements")
     return {"count": result["count"] if result else 0}

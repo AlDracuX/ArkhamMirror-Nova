@@ -141,7 +141,6 @@ async def parse_text(request: ParseTextRequest):
 
     entities = []
     dates = []
-    locations = []
     relationships = []
 
     # Extract entities
@@ -160,7 +159,7 @@ async def parse_text(request: ParseTextRequest):
 
     # Extract locations (from GPE entities)
     if request.extract_locations:
-        locations = []  # Would filter entities for GPE/LOC types
+        pass  # Would filter entities for GPE/LOC types
 
     # Extract relationships
     if request.extract_relationships:
@@ -197,7 +196,7 @@ async def parse_document(doc_id: str):
 
     # Dispatch to cpu-ner worker pool
     job_id = str(uuid.uuid4())
-    job = await _worker_service.enqueue(
+    await _worker_service.enqueue(
         pool="cpu-ner",
         job_id=job_id,
         payload={
@@ -521,7 +520,7 @@ async def list_all_chunks(
         raise HTTPException(status_code=503, detail="Parse shard not initialized")
 
     db = _parse_shard._frame.get_service("database")
-    doc_service = _parse_shard._frame.get_service("documents")
+    _parse_shard._frame.get_service("documents")
     if not db or not db._engine:
         raise HTTPException(status_code=503, detail="Database not available")
 

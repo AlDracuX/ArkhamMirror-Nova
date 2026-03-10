@@ -104,9 +104,14 @@ COPY packages/arkham-shard-respondent-intel/ ./packages/arkham-shard-respondent-
 COPY packages/arkham-shard-digest/ ./packages/arkham-shard-digest/
 
 # Install PyTorch - GPU-enabled by default for Legion (NVIDIA)
-# For CPU-only: change to --index-url https://download.pytorch.org/whl/cpu
-ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124
-RUN pip install --no-cache-dir "torch>=2.6" --index-url ${TORCH_INDEX_URL}
+# For CPU-only: docker build --build-arg COMPUTE_BACKEND=cpu ...
+ARG COMPUTE_BACKEND=cuda
+ARG TORCH_INDEX_URL=""
+RUN if [ "$COMPUTE_BACKEND" = "cpu" ]; then \
+      pip install --no-cache-dir "torch>=2.6" --index-url https://download.pytorch.org/whl/cpu; \
+    else \
+      pip install --no-cache-dir "torch>=2.6" --index-url https://download.pytorch.org/whl/cu124; \
+    fi
 
 # Install each shard (continue on error for optional shards)
 RUN for shard_dir in ./packages/arkham-shard-*/; do \
@@ -222,6 +227,6 @@ EXPOSE 8100
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8100/health || exit 1
+    CMD curl -f http://localhost:8100/api/health || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

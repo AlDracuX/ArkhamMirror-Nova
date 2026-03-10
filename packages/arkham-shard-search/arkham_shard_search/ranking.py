@@ -31,13 +31,21 @@ class ResultRanker:
         reverse = sort_order == SortOrder.DESC
 
         if sort_by == SortBy.RELEVANCE:
-            key_func = lambda x: x.score
+
+            def key_func(x):
+                return x.score
         elif sort_by == SortBy.DATE:
-            key_func = lambda x: x.created_at or ""
+
+            def key_func(x):
+                return x.created_at or ""
         elif sort_by == SortBy.TITLE:
-            key_func = lambda x: x.title.lower()
+
+            def key_func(x):
+                return x.title.lower()
         else:
-            key_func = lambda x: x.score
+
+            def key_func(x):
+                return x.score
 
         return sorted(results, key=key_func, reverse=reverse)
 

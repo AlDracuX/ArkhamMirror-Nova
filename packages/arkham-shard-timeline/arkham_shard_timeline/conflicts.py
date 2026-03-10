@@ -158,7 +158,6 @@ class ConflictDetector:
                     if event2.date_start < event1.date_start:
                         # Check for temporal markers
                         markers_later = ["later", "after", "following", "next", "then"]
-                        markers_earlier = ["before", "earlier", "previously", "prior"]
 
                         # This is a simplified heuristic
                         # Real implementation would analyze text context

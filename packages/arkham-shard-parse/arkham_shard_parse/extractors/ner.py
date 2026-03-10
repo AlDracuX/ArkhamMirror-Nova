@@ -115,7 +115,6 @@ class NERExtractor:
             # Skip if first word of sentence or single letter
             if word and word[0].isupper() and len(word) > 1:
                 entity_text = word
-                start = i
 
                 # Look for consecutive capitalized words
                 j = i + 1

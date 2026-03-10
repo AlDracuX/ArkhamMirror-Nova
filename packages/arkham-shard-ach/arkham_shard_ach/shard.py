@@ -746,7 +746,7 @@ class ACHShard(ArkhamShard):
         if not self._db:
             return False
 
-        result = await self._db.execute("DELETE FROM arkham_ach.premortems WHERE id = :id", {"id": premortem_id})
+        await self._db.execute("DELETE FROM arkham_ach.premortems WHERE id = :id", {"id": premortem_id})
         return True
 
     # --- Scenario Tree Persistence ---

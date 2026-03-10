@@ -6,6 +6,7 @@ for potential costs applications in the Employment Tribunal.
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from decimal import Decimal
 from enum import Enum
 from typing import Any, Optional
 
@@ -95,6 +96,24 @@ class ConductLog:
     metadata: dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.utcnow)
     created_by: Optional[str] = None
+
+
+@dataclass
+class CostItem:
+    """A single cost item for a case (expense claim line item)."""
+
+    id: str
+    case_id: str
+    category: str
+    description: str
+    amount: Decimal
+    date: date
+    claimant: str
+    currency: str = "GBP"
+    evidence_doc_id: Optional[str] = None
+    status: str = "claimed"
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
 
 
 @dataclass

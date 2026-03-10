@@ -1,9 +1,14 @@
 """
 DatabaseService - PostgreSQL database access with schema isolation.
+
+Uses async SQLAlchemy with asyncpg for non-blocking database operations.
 """
 
 import logging
 from typing import Any, Dict, List, Optional
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 logger = logging.getLogger(__name__)
 
@@ -48,19 +53,24 @@ class DatabaseService:
         self._session_factory = None
         self._connected = False
 
+    def _async_url(self, url: str) -> str:
+        """Convert a standard postgresql:// URL to postgresql+asyncpg:// for async engine."""
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
+
     async def initialize(self) -> None:
         """Initialize database connection."""
         try:
-            from sqlalchemy import create_engine
-            from sqlalchemy.orm import sessionmaker
+            async_url = self._async_url(self.config.database_url)
 
-            self._engine = create_engine(
-                self.config.database_url,
+            self._engine = create_async_engine(
+                async_url,
                 pool_pre_ping=True,
                 pool_size=5,
                 max_overflow=10,
             )
-            self._session_factory = sessionmaker(bind=self._engine)
+            self._session_factory = async_sessionmaker(self._engine, class_=AsyncSession, expire_on_commit=False)
             self._connected = True
             logger.info(f"Database connected: {self.config.database_url.split('@')[-1]}")
         except Exception as e:
@@ -70,7 +80,7 @@ class DatabaseService:
     async def shutdown(self) -> None:
         """Close database connection."""
         if self._engine:
-            self._engine.dispose()
+            await self._engine.dispose()
         self._connected = False
         logger.info("Database connection closed")
 
@@ -79,10 +89,8 @@ class DatabaseService:
         if not self._connected or not self._engine:
             return False
         try:
-            from sqlalchemy import text
-
-            with self._engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
+            async with self._engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
             return True
         except Exception:
             return False
@@ -92,10 +100,8 @@ class DatabaseService:
         if not self._connected:
             return []
         try:
-            from sqlalchemy import text
-
-            with self._engine.connect() as conn:
-                result = conn.execute(
+            async with self._engine.connect() as conn:
+                result = await conn.execute(
                     text("SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE 'arkham_%'")
                 )
                 return [row[0] for row in result]
@@ -111,28 +117,29 @@ class DatabaseService:
         stats = {"connected": True}
 
         try:
-            from sqlalchemy import text
-
-            with self._engine.connect() as conn:
+            async with self._engine.connect() as conn:
                 # Database size
-                size_result = conn.execute(text("SELECT pg_database_size(current_database()) as size"))
+                size_result = await conn.execute(text("SELECT pg_database_size(current_database()) as size"))
                 row = size_result.fetchone()
                 stats["database_size_bytes"] = row[0] if row else 0
 
                 # Table count per schema
                 schema_stats = []
-                schemas = await self.list_schemas()
+                schema_result = await conn.execute(
+                    text("SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE 'arkham_%'")
+                )
+                schemas = [r[0] for r in schema_result]
 
                 for schema in schemas:
                     # Get table count
-                    table_result = conn.execute(
+                    table_result = await conn.execute(
                         text("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = :schema"),
                         {"schema": schema},
                     )
                     table_count = table_result.fetchone()[0]
 
                     # Get total row count (approximate via pg_stat)
-                    row_result = conn.execute(
+                    row_result = await conn.execute(
                         text(
                             "SELECT COALESCE(SUM(n_live_tup), 0) as rows "
                             "FROM pg_stat_user_tables "
@@ -143,7 +150,7 @@ class DatabaseService:
                     row_count = row_result.fetchone()[0]
 
                     # Get schema size
-                    size_result = conn.execute(
+                    size_result = await conn.execute(
                         text(
                             "SELECT COALESCE(SUM(pg_total_relation_size(quote_ident(schemaname) || '.' || quote_ident(tablename))), 0) "
                             "FROM pg_tables WHERE schemaname = :schema"
@@ -177,10 +184,8 @@ class DatabaseService:
             return []
 
         try:
-            from sqlalchemy import text
-
-            with self._engine.connect() as conn:
-                result = conn.execute(
+            async with self._engine.connect() as conn:
+                result = await conn.execute(
                     text("""
                     SELECT
                         t.table_name,
@@ -217,18 +222,16 @@ class DatabaseService:
             return {"success": False, "error": "Database not connected"}
 
         try:
-            from sqlalchemy import text
-
             schemas = await self.list_schemas()
             vacuumed_tables = 0
 
-            with self._engine.connect() as conn:
+            async with self._engine.connect() as conn:
                 # Need to set isolation level for VACUUM
-                conn.execution_options(isolation_level="AUTOCOMMIT")
+                await conn.execution_options(isolation_level="AUTOCOMMIT")
 
                 for schema in schemas:
                     # Get tables in schema
-                    result = conn.execute(
+                    result = await conn.execute(
                         text("SELECT table_name FROM information_schema.tables WHERE table_schema = :schema"),
                         {"schema": schema},
                     )
@@ -236,7 +239,7 @@ class DatabaseService:
                     for row in result.fetchall():
                         table_name = row[0]
                         try:
-                            conn.execute(text(f'VACUUM ANALYZE "{schema}"."{table_name}"'))
+                            await conn.execute(text(f'VACUUM ANALYZE "{schema}"."{table_name}"'))
                             vacuumed_tables += 1
                         except Exception as e:
                             logger.warning(f"Failed to vacuum {schema}.{table_name}: {e}")
@@ -257,18 +260,16 @@ class DatabaseService:
             return {"success": False, "error": "Database not connected"}
 
         try:
-            from sqlalchemy import text
-
             schemas = await self.list_schemas()
             dropped = []
             dropped_tables = []
 
-            with self._engine.connect() as conn:
+            async with self._engine.connect() as conn:
                 # Drop arkham_* schemas
                 for schema in schemas:
                     try:
-                        conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
-                        conn.commit()
+                        await conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
+                        await conn.commit()
                         dropped.append(schema)
                         logger.info(f"Dropped schema: {schema}")
                     except Exception as e:
@@ -276,7 +277,7 @@ class DatabaseService:
 
                 # Also drop arkham_* tables in public schema (e.g., arkham_entities)
                 try:
-                    result = conn.execute(
+                    result = await conn.execute(
                         text(
                             "SELECT table_name FROM information_schema.tables "
                             "WHERE table_schema = 'public' AND table_name LIKE 'arkham_%'"
@@ -286,8 +287,8 @@ class DatabaseService:
 
                     for table in public_tables:
                         try:
-                            conn.execute(text(f'DROP TABLE IF EXISTS "public"."{table}" CASCADE'))
-                            conn.commit()
+                            await conn.execute(text(f'DROP TABLE IF EXISTS "public"."{table}" CASCADE'))
+                            await conn.commit()
                             dropped_tables.append(table)
                             logger.info(f"Dropped public table: {table}")
                         except Exception as e:
@@ -332,12 +333,10 @@ class DatabaseService:
         if not self._connected:
             raise DatabaseError("Database not connected")
         try:
-            from sqlalchemy import text
-
             query, params = self._convert_params(query, params)
-            with self._engine.connect() as conn:
-                conn.execute(text(query), params)
-                conn.commit()
+            async with self._engine.connect() as conn:
+                await conn.execute(text(query), params)
+                await conn.commit()
         except Exception as e:
             raise QueryExecutionError(str(e), query)
 
@@ -346,11 +345,9 @@ class DatabaseService:
         if not self._connected:
             raise DatabaseError("Database not connected")
         try:
-            from sqlalchemy import text
-
             query, params = self._convert_params(query, params)
-            with self._engine.connect() as conn:
-                result = conn.execute(text(query), params)
+            async with self._engine.connect() as conn:
+                result = await conn.execute(text(query), params)
                 row = result.fetchone()
                 if row:
                     return dict(row._mapping)
@@ -363,11 +360,9 @@ class DatabaseService:
         if not self._connected:
             raise DatabaseError("Database not connected")
         try:
-            from sqlalchemy import text
-
             query, params = self._convert_params(query, params)
-            with self._engine.connect() as conn:
-                result = conn.execute(text(query), params)
+            async with self._engine.connect() as conn:
+                result = await conn.execute(text(query), params)
                 return [dict(row._mapping) for row in result.fetchall()]
         except Exception as e:
             raise QueryExecutionError(str(e), query)

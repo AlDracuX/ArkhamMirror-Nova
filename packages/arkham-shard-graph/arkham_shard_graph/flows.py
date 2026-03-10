@@ -300,8 +300,8 @@ class FlowAnalyzer:
             flow_nodes = []
             for entity_type, node_id in type_node_ids.items():
                 # Determine layer by flow direction
-                out_val = sum(l.value for l in flow_links if l.source == node_id)
-                in_val = sum(l.value for l in flow_links if l.target == node_id)
+                out_val = sum(lnk.value for lnk in flow_links if lnk.source == node_id)
+                in_val = sum(lnk.value for lnk in flow_links if lnk.target == node_id)
 
                 if out_val > in_val * 1.5:
                     layer = 0
@@ -403,7 +403,7 @@ class FlowAnalyzer:
             return flow_data
 
         # Sort links by value
-        sorted_links = sorted(flow_data.links, key=lambda l: l.value, reverse=True)
+        sorted_links = sorted(flow_data.links, key=lambda lnk: lnk.value, reverse=True)
 
         # Keep top links and aggregate the rest
         kept_links: list[FlowLink] = []
@@ -492,13 +492,13 @@ class FlowAnalyzer:
             ],
             "links": [
                 {
-                    "source": l.source,
-                    "target": l.target,
-                    "value": l.value,
-                    "category": l.category,
-                    "relationship_type": l.relationship_type,
+                    "source": lnk.source,
+                    "target": lnk.target,
+                    "value": lnk.value,
+                    "category": lnk.category,
+                    "relationship_type": lnk.relationship_type,
                 }
-                for l in flow_data.links
+                for lnk in flow_data.links
             ],
             "total_flow": flow_data.total_flow,
             "layer_count": flow_data.layer_count,

@@ -673,7 +673,7 @@ Where RATING is: ++, +, N, -, or --"""
             "\nHypotheses to challenge:",
         ]
 
-        for i, h in enumerate(hypotheses):
+        for _i, h in enumerate(hypotheses):
             label = f"H{matrix.hypotheses.index(h) + 1}"
             context_parts.append(f"\n{label}: {h.title}")
             if h.description:
@@ -1117,7 +1117,7 @@ Where TYPE is: fact, testimony, document, physical, circumstantial, inference"""
         evidence_context = ""
         if evidence_list:
             evidence_context = "\n\nEvidence that seemed to support this hypothesis:\n"
-            for i, e in enumerate(evidence_list[:10]):
+            for _i, e in enumerate(evidence_list[:10]):
                 evidence_context += f"- {e.description}\n"
         elif matrix.evidence:
             # Get evidence with positive ratings for this hypothesis
@@ -1202,7 +1202,7 @@ Return as JSON:
                 data = json.loads(json_match.group(0))
 
                 failure_modes = []
-                for i, fm in enumerate(data.get("failure_modes", [])):
+                for _i, fm in enumerate(data.get("failure_modes", [])):
                     fm_type = fm.get("type", "misinterpretation").lower()
                     type_map = {
                         "misinterpretation": FailureModeType.MISINTERPRETATION,

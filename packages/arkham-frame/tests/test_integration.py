@@ -364,7 +364,7 @@ async def run_tests(workers: list[str] = None, with_workers: bool = False):
     # Shutdown workers
     if worker_tasks:
         print("\nShutting down workers...")
-        for worker, task in worker_tasks:
+        for worker, _task in worker_tasks:
             worker._shutdown_event.set()
         await asyncio.gather(*[t for _, t in worker_tasks], return_exceptions=True)
 

@@ -191,7 +191,7 @@ class TestInconsistencyDetection:
         conflicts = detector.detect_conflicts(events, [ConflictType.INCONSISTENCY])
 
         # Should detect some inconsistencies
-        inconsistencies = [c for c in conflicts if c.type == ConflictType.INCONSISTENCY]
+        [c for c in conflicts if c.type == ConflictType.INCONSISTENCY]
         # Note: Detection depends on temporal markers in text
         # This test may pass or fail depending on heuristic implementation
 

@@ -1,8 +1,13 @@
 """Text chunking for embeddings."""
 
+from __future__ import annotations
+
 import logging
-from typing import List
+from typing import TYPE_CHECKING, List
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    import numpy as np
 
 from .models import TextChunk
 
@@ -334,7 +339,7 @@ class TextChunker:
         logger.debug(f"Created {len(chunks)} semantic chunks (threshold={threshold:.3f})")
         return chunks
 
-    def _get_sentence_embeddings(self, sentences: List[str]) -> "np.ndarray | None":
+    def _get_sentence_embeddings(self, sentences: List[str]) -> np.ndarray | None:
         """
         Get embeddings for sentences using available embedding model.
 

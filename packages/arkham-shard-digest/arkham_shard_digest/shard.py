@@ -73,7 +73,7 @@ class DigestShard(ArkhamShard):
     async def handle_any_event(self, event_data: Dict[str, Any]) -> None:
         """Handle any event by logging it to the change log."""
         event_type = event_data.get("event_type", "unknown")
-        payload = event_data.get("payload", {})
+        event_data.get("payload", {})
         source = event_data.get("source", "unknown")
 
         # Filter out self-events and generic items

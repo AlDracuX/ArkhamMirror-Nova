@@ -20,12 +20,9 @@ if _env_path.exists():
     load_dotenv(_env_path)
     print(f"Loaded environment from {_env_path}")
 
-from .frame import ArkhamFrame
+from .frame import ArkhamFrame, get_frame, set_frame  # noqa: F401 — get_frame re-exported for API modules
 
 logger = logging.getLogger(__name__)
-
-# Global frame instance
-frame: ArkhamFrame = None
 
 
 async def load_shards(frame: ArkhamFrame, app: FastAPI) -> None:
@@ -44,6 +41,9 @@ async def load_shards(frame: ArkhamFrame, app: FastAPI) -> None:
 
     # Discover shards via entry points
     eps = entry_points(group="arkham.shards")
+
+    # Critical shards that MUST load successfully (comma-separated env var)
+    critical_shards = [s.strip() for s in os.environ.get("CRITICAL_SHARDS", "").split(",") if s.strip()]
 
     for ep in eps:
         shard_name = ep.name
@@ -71,21 +71,19 @@ async def load_shards(frame: ArkhamFrame, app: FastAPI) -> None:
             logger.info(f"Shard loaded: {shard_name}")
 
         except Exception as e:
-            logger.warning(f"Failed to load shard {shard_name}: {e}")
-            import traceback
-
-            traceback.print_exc()
+            logger.exception(f"Failed to load shard {shard_name}")
+            if shard_name in critical_shards:
+                raise RuntimeError(f"Critical shard '{shard_name}' failed to load") from e
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage Frame lifecycle."""
-    global frame
-
     # Startup
     logger.info("Starting ArkhamFrame...")
-    frame = ArkhamFrame()
-    await frame.initialize()
+    f = ArkhamFrame()
+    await f.initialize()
+    set_frame(f)
 
     # Initialize auth database tables
     from .auth import create_db_and_tables
@@ -99,22 +97,20 @@ async def lifespan(app: FastAPI):
         await session.commit()
 
     # Store app reference on frame for shards to access
-    frame.app = app
+    f.app = app
 
     # Load shards
-    await load_shards(frame, app)
+    await load_shards(f, app)
 
     # Set up SPA static serving AFTER shards are loaded
     # This ensures shard routes have priority over the catch-all
-    import os
-
     if os.environ.get("ARKHAM_SERVE_SHELL", "false").lower() == "true":
         setup_static_serving()
 
     yield
 
     # Shutdown shards
-    for name, shard in frame.shards.items():
+    for name, shard in f.shards.items():
         try:
             await shard.shutdown()
             logger.info(f"Shard {name} shut down")
@@ -123,7 +119,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown frame
     logger.info("Stopping ArkhamFrame...")
-    await frame.shutdown()
+    await f.shutdown()
 
 
 def get_cors_origins() -> list[str]:
@@ -132,10 +128,15 @@ def get_cors_origins() -> list[str]:
     if origins_env:
         return [o.strip() for o in origins_env.split(",") if o.strip()]
 
-    # Default: allow localhost for development
+    # Only allow localhost in development
+    if os.environ.get("ENVIRONMENT", "development").lower() == "production":
+        logger.warning("CORS_ORIGINS not set in production — no origins allowed")
+        return []
+
     return [
         "http://localhost:5173",
         "http://localhost:8100",
+        "http://localhost:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:8100",
     ]
@@ -252,10 +253,3 @@ def setup_static_serving():
         logger.info("Shell UI dist not found - static serving disabled")
         logger.info("Build the Shell with 'npm run build' in arkham-shard-shell/")
         logger.info(f"Searched paths: {[str(p) for p in possible_paths]}")
-
-
-def get_frame() -> ArkhamFrame:
-    """Get the global Frame instance."""
-    if frame is None:
-        raise RuntimeError("Frame not initialized")
-    return frame

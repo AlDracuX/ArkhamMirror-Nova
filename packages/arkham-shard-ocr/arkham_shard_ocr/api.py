@@ -198,5 +198,5 @@ async def ocr_upload(file: UploadFile = File(...), engine: str = "paddle", langu
         # Clean up temp file
         try:
             os.unlink(tmp_path)
-        except:
+        except Exception:
             pass

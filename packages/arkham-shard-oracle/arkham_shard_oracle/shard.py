@@ -1,7 +1,7 @@
 """Oracle Shard - Legal research and authority search assistant."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from arkham_frame.shard_interface import ArkhamShard
 
@@ -96,23 +96,26 @@ class OracleShard(ArkhamShard):
             # Create schema
             await self._db.execute("CREATE SCHEMA IF NOT EXISTS arkham_oracle")
 
-            # Create tables
+            # Primary table: legal_authorities (per spec)
             await self._db.execute("""
-                CREATE TABLE IF NOT EXISTS arkham_oracle.authorities (
-                    id TEXT PRIMARY KEY,
-                    tenant_id UUID,
-                    title TEXT NOT NULL,
-                    citation TEXT,
-                    type TEXT,
+                CREATE TABLE IF NOT EXISTS arkham_oracle.legal_authorities (
+                    id UUID PRIMARY KEY,
+                    citation TEXT UNIQUE,
                     jurisdiction TEXT,
-                    binding_status TEXT,
+                    court TEXT,
+                    title TEXT,
+                    year INT,
                     summary TEXT,
-                    ratio_decidendi TEXT,
-                    metadata JSONB DEFAULT '{}',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    full_text TEXT NULL,
+                    relevance_tags TEXT[] DEFAULT '{}',
+                    claim_types TEXT[] DEFAULT '{}',
+                    authority_type TEXT DEFAULT 'case_law',
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ DEFAULT NOW()
                 )
             """)
 
+            # Legacy tables kept for backward compatibility with existing data
             await self._db.execute("""
                 CREATE TABLE IF NOT EXISTS arkham_oracle.research_sessions (
                     id TEXT PRIMARY KEY,
@@ -127,7 +130,7 @@ class OracleShard(ArkhamShard):
             await self._db.execute("""
                 CREATE TABLE IF NOT EXISTS arkham_oracle.case_summaries (
                     id TEXT PRIMARY KEY,
-                    authority_id TEXT REFERENCES arkham_oracle.authorities(id) ON DELETE CASCADE,
+                    authority_id TEXT,
                     facts TEXT,
                     decision TEXT,
                     legal_principles JSONB DEFAULT '[]'
@@ -137,18 +140,23 @@ class OracleShard(ArkhamShard):
             await self._db.execute("""
                 CREATE TABLE IF NOT EXISTS arkham_oracle.authority_chains (
                     id TEXT PRIMARY KEY,
-                    source_authority_id TEXT REFERENCES arkham_oracle.authorities(id) ON DELETE CASCADE,
-                    cited_authority_id TEXT REFERENCES arkham_oracle.authorities(id) ON DELETE CASCADE,
+                    source_authority_id TEXT,
+                    cited_authority_id TEXT,
                     relationship_type TEXT
                 )
             """)
 
             # Indexes
             await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_oracle_research_project ON arkham_oracle.research_sessions(project_id)"
+                "CREATE INDEX IF NOT EXISTS idx_oracle_legal_authorities_citation "
+                "ON arkham_oracle.legal_authorities(citation)"
             )
             await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_oracle_authorities_citation ON arkham_oracle.authorities(citation)"
+                "CREATE INDEX IF NOT EXISTS idx_oracle_legal_authorities_jurisdiction "
+                "ON arkham_oracle.legal_authorities(jurisdiction)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_oracle_research_project ON arkham_oracle.research_sessions(project_id)"
             )
 
             logger.info("Oracle database schema created")

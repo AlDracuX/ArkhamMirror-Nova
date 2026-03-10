@@ -668,7 +668,7 @@ async def _get_vector_similarity(text1: str, text2: str) -> float:
 
         vec1, vec2 = embeddings[0], embeddings[1]
 
-        dot_product = sum(a * b for a, b in zip(vec1, vec2))
+        dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
         norm1 = math.sqrt(sum(a * a for a in vec1))
         norm2 = math.sqrt(sum(b * b for b in vec2))
 

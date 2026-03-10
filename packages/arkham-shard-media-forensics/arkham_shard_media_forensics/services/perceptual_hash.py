@@ -119,7 +119,7 @@ class PerceptualHashService:
         bin1 = bin(int(hash1, 16))[2:].zfill(len(hash1) * 4)
         bin2 = bin(int(hash2, 16))[2:].zfill(len(hash2) * 4)
 
-        return sum(c1 != c2 for c1, c2 in zip(bin1, bin2))
+        return sum(c1 != c2 for c1, c2 in zip(bin1, bin2, strict=False))
 
     def similarity_score(self, hash1: str, hash2: str) -> float:
         """

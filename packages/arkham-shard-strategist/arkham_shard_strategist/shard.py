@@ -152,12 +152,33 @@ class StrategistShard(ArkhamShard):
                 )
             """)
 
+            await self._db.execute("""
+                CREATE TABLE IF NOT EXISTS arkham_strategist.strategies (
+                    id UUID PRIMARY KEY,
+                    case_id UUID,
+                    name TEXT NOT NULL,
+                    approach TEXT NOT NULL,
+                    summary TEXT,
+                    strengths JSONB DEFAULT '[]',
+                    weaknesses JSONB DEFAULT '[]',
+                    risks JSONB DEFAULT '[]',
+                    opportunities JSONB DEFAULT '[]',
+                    recommended BOOLEAN DEFAULT false,
+                    confidence_score FLOAT,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+
             # Indexes
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_strategist_predictions_project ON arkham_strategist.predictions(project_id)"
             )
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_strategist_reports_project ON arkham_strategist.red_team_reports(project_id)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_strategist_strategies_case ON arkham_strategist.strategies(case_id)"
             )
 
             logger.info("Strategist database schema created")

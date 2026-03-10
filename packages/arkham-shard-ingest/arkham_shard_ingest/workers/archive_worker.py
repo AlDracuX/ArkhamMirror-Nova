@@ -818,7 +818,7 @@ class ArchiveWorker(BaseWorker):
                 import py7zr
 
                 with py7zr.SevenZipFile(archive_path, mode="r") as archive:
-                    for name, info in archive.list():
+                    for _name, info in archive.list():
                         if not info.is_directory:
                             file_count += 1
                             total_size += info.uncompressed

@@ -163,7 +163,7 @@ class TemporalGraphEngine:
             row = rows[0]
             start_date = row["earliest"]
             end_date = row["latest"]
-            distinct_days = row["distinct_days"] or 1
+            row["distinct_days"] or 1
 
             # Suggest interval based on data spread
             total_days = (end_date - start_date).days
@@ -454,7 +454,7 @@ class TemporalGraphEngine:
             stable_nodes = all_node_sets[0]
             stable_edges = all_edge_sets[0]
 
-            for node_set, edge_set in zip(all_node_sets[1:], all_edge_sets[1:]):
+            for node_set, edge_set in zip(all_node_sets[1:], all_edge_sets[1:], strict=False):
                 stable_nodes &= node_set
                 stable_edges &= edge_set
 

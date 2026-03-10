@@ -606,9 +606,7 @@ async def detect_parallel_situations(project_id: str):
         return {"parallel_situations": [], "count": 0}
 
     inc_ids = [r["id"] for r in inc_rows]
-    treat_rows = await _db.fetch_all(
-        "SELECT * FROM arkham_comparator.treatments WHERE incident_id = ANY(:ids)", {"ids": inc_ids}
-    )
+    await _db.fetch_all("SELECT * FROM arkham_comparator.treatments WHERE incident_id = ANY(:ids)", {"ids": inc_ids})
 
     # 2. Use LLM to analyze the corpus (simulated for now, would use prompt)
     # prompt = f"Analyze these {len(inc_rows)} incidents and their treatments... find same policy divergent outcomes."

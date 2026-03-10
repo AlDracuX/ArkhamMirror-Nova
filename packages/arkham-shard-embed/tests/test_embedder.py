@@ -184,7 +184,7 @@ def test_empty_text(manager):
     try:
         embedding = manager.embed_text("")
         assert isinstance(embedding, list)
-    except Exception as e:
+    except Exception:
         # If it raises, that's also acceptable
         assert True
 

@@ -1,17 +1,17 @@
 """
 Playbook Shard - Logic Tests
 
-Tests for models, API handler logic, and schema creation.
+Tests for models, API handler logic, and simulation.
 All external dependencies are mocked.
 """
 
+import json
 import uuid
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from arkham_shard_playbook.api import CreateStrategyRequest, create_strategy, get_strategy, list_objectives
-from arkham_shard_playbook.models import EvidenceObjective, LitigationStrategy, StrategyScenario
+from arkham_shard_playbook.models import VALID_PRIORITIES, VALID_STATUSES, Play, SimulationResult
 from arkham_shard_playbook.shard import PlaybookShard
 from fastapi import HTTPException
 
@@ -54,6 +54,23 @@ def mock_frame(mock_events, mock_db):
     return frame
 
 
+@pytest.fixture
+def api_module(mock_db, mock_events):
+    """Return the api module with globals wired up."""
+    import arkham_shard_playbook.api as api_mod
+
+    api_mod._db = mock_db
+    api_mod._event_bus = mock_events
+    api_mod._llm_service = None
+    api_mod._shard = None
+    yield api_mod
+    # Reset after test
+    api_mod._db = None
+    api_mod._event_bus = None
+    api_mod._llm_service = None
+    api_mod._shard = None
+
+
 # ---------------------------------------------------------------------------
 # Model Tests
 # ---------------------------------------------------------------------------
@@ -62,45 +79,82 @@ def mock_frame(mock_events, mock_db):
 class TestModels:
     """Verify dataclass construction and defaults."""
 
-    def test_litigation_strategy_defaults(self):
-        s = LitigationStrategy(
-            id="s1", project_id="proj1", title="Winning Strategy", description="How to win", status="active"
-        )
-        assert s.id == "s1"
-        assert s.project_id == "proj1"
-        assert s.title == "Winning Strategy"
-        assert s.description == "How to win"
-        assert s.status == "active"
-        assert s.main_claims == []
-        assert s.fallback_positions == []
-        assert s.metadata == {}
-        assert isinstance(s.created_at, datetime)
+    def test_play_defaults(self):
+        p = Play(id="p1", name="Test Play")
+        assert p.id == "p1"
+        assert p.name == "Test Play"
+        assert p.status == "draft"
+        assert p.priority == "medium"
+        assert p.steps == []
+        assert p.triggers == []
+        assert p.expected_outcomes == []
+        assert p.contingencies == []
+        assert p.scenario == ""
+        assert p.description == ""
+        assert p.case_id is None
 
-    def test_strategy_scenario_defaults(self):
-        s = StrategyScenario(
-            id="s1",
-            strategy_id="strat1",
-            name="Best Case",
-            description="We win everything",
-            probability=0.2,
-            impact="High",
-        )
-        assert s.id == "s1"
-        assert s.strategy_id == "strat1"
-        assert s.name == "Best Case"
-        assert s.description == "We win everything"
-        assert s.probability == 0.2
-        assert s.impact == "High"
-        assert s.consequences == []
+    def test_play_with_all_fields(self):
+        steps = [{"order": 1, "action": "File motion"}]
+        triggers = [{"type": "deadline", "value": "2026-04-01"}]
+        outcomes = [{"description": "Motion granted"}]
+        contingencies = [{"if": "denied", "then": "appeal"}]
 
-    def test_evidence_objective_defaults(self):
-        o = EvidenceObjective(id="o1", project_id="proj1", evidence_id="ev1", objective_id="obj1", relevance_score=0.9)
-        assert o.id == "o1"
-        assert o.project_id == "proj1"
-        assert o.evidence_id == "ev1"
-        assert o.objective_id == "obj1"
-        assert o.relevance_score == 0.9
-        assert o.notes is None
+        p = Play(
+            id="p2",
+            case_id="case-123",
+            name="Full Play",
+            scenario="Best case",
+            description="A detailed play",
+            steps=steps,
+            triggers=triggers,
+            expected_outcomes=outcomes,
+            contingencies=contingencies,
+            priority="critical",
+            status="active",
+        )
+        assert p.case_id == "case-123"
+        assert p.priority == "critical"
+        assert p.status == "active"
+        assert len(p.steps) == 1
+        assert p.steps[0]["order"] == 1
+
+    def test_simulation_result_structure(self):
+        sim = SimulationResult(
+            play_id="p1",
+            scenario="Attack scenario",
+            steps=[{"order": 1, "action": "step1"}],
+            risk_assessment="medium",
+            estimated_outcomes=[{"desc": "win"}],
+        )
+        assert sim.play_id == "p1"
+        assert sim.risk_assessment == "medium"
+        assert len(sim.steps) == 1
+        assert len(sim.estimated_outcomes) == 1
+
+
+# ---------------------------------------------------------------------------
+# Status Transition Tests
+# ---------------------------------------------------------------------------
+
+
+class TestStatusTransitions:
+    """Verify valid statuses and priorities."""
+
+    def test_valid_statuses(self):
+        assert VALID_STATUSES == {"draft", "active", "executed", "archived"}
+
+    def test_valid_priorities(self):
+        assert VALID_PRIORITIES == {"low", "medium", "high", "critical"}
+
+    @pytest.mark.parametrize("status", ["draft", "active", "executed", "archived"])
+    def test_play_accepts_valid_status(self, status):
+        p = Play(id="p1", name="Test", status=status)
+        assert p.status == status
+
+    @pytest.mark.parametrize("priority", ["low", "medium", "high", "critical"])
+    def test_play_accepts_valid_priority(self, priority):
+        p = Play(id="p1", name="Test", priority=priority)
+        assert p.priority == priority
 
 
 # ---------------------------------------------------------------------------
@@ -112,31 +166,39 @@ class TestSchemaCreation:
     """Verify all tables are created during initialize()."""
 
     @pytest.mark.asyncio
-    async def test_all_tables_created(self, mock_frame, mock_db):
+    async def test_plays_table_created(self, mock_frame, mock_db):
         shard = PlaybookShard()
         await shard.initialize(mock_frame)
 
         executed_sql = " ".join(str(c.args[0]) for c in mock_db.execute.call_args_list)
 
         assert "CREATE SCHEMA IF NOT EXISTS arkham_playbook" in executed_sql
-        assert "arkham_playbook.strategies" in executed_sql
-        assert "arkham_playbook.scenarios" in executed_sql
-        assert "arkham_playbook.evidence_objectives" in executed_sql
+        assert "arkham_playbook.plays" in executed_sql
 
     @pytest.mark.asyncio
-    async def test_strategies_table_columns(self, mock_frame, mock_db):
+    async def test_plays_table_columns(self, mock_frame, mock_db):
         shard = PlaybookShard()
         await shard.initialize(mock_frame)
 
         ddl_calls = [str(c.args[0]) for c in mock_db.execute.call_args_list]
-        strat_ddl = next((s for s in ddl_calls if "strategies" in s and "CREATE TABLE" in s), None)
-        assert strat_ddl is not None
-        assert "tenant_id" in strat_ddl
-        assert "project_id" in strat_ddl
-        assert "title" in strat_ddl
-        assert "description" in strat_ddl
-        assert "status" in strat_ddl
-        assert "main_claims" in strat_ddl
+        plays_ddl = next((s for s in ddl_calls if "plays" in s and "CREATE TABLE" in s), None)
+        assert plays_ddl is not None
+        for col in [
+            "id",
+            "case_id",
+            "name",
+            "scenario",
+            "description",
+            "steps",
+            "triggers",
+            "expected_outcomes",
+            "contingencies",
+            "priority",
+            "status",
+            "created_at",
+            "updated_at",
+        ]:
+            assert col in plays_ddl, f"Column '{col}' missing from plays DDL"
 
     @pytest.mark.asyncio
     async def test_indexes_created(self, mock_frame, mock_db):
@@ -155,65 +217,149 @@ class TestSchemaCreation:
 class TestAPILogic:
     """Test the API module-level handler functions via direct import."""
 
-    def setup_method(self):
-        """Reset module-level _db before each test."""
-        import arkham_shard_playbook.api as api_mod
-
-        self.api = api_mod
-
     @pytest.mark.asyncio
-    async def test_create_strategy_no_db(self):
-        self.api._db = None
-        req = CreateStrategyRequest(project_id="p1", title="Title")
+    async def test_create_play_no_db(self, api_module):
+        api_module._db = None
+        req = api_module.CreatePlayRequest(name="Test", scenario="Test scenario")
         with pytest.raises(HTTPException) as exc:
-            await create_strategy(req)
+            await api_module.create_play(req)
         assert exc.value.status_code == 503
 
     @pytest.mark.asyncio
-    async def test_create_strategy_success(self, mock_db, mock_events):
-        self.api._db = mock_db
-        self.api._event_bus = mock_events
-        self.api._shard = None
-
-        req = CreateStrategyRequest(project_id="p1", title="Title", description="Desc")
-        result = await create_strategy(req)
+    async def test_create_play_success(self, api_module, mock_db, mock_events):
+        req = api_module.CreatePlayRequest(
+            name="Test Play",
+            scenario="Test scenario",
+            case_id="case-1",
+            priority="high",
+        )
+        result = await api_module.create_play(req)
 
         assert "id" in result
         mock_db.execute.assert_called_once()
-        mock_events.emit.assert_called_once_with("playbook.strategy.updated", {"strategy_id": result["id"]})
+        mock_events.emit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_strategy_not_found(self, mock_db):
-        self.api._db = mock_db
-        mock_db.fetch_one.return_value = None
-
+    async def test_create_play_invalid_priority(self, api_module, mock_db):
+        req = api_module.CreatePlayRequest(name="Test", scenario="Scenario", priority="ultra")
         with pytest.raises(HTTPException) as exc:
-            await get_strategy("nonexistent")
+            await api_module.create_play(req)
+        assert exc.value.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_create_play_invalid_status(self, api_module, mock_db):
+        req = api_module.CreatePlayRequest(name="Test", scenario="Scenario", status="deleted")
+        with pytest.raises(HTTPException) as exc:
+            await api_module.create_play(req)
+        assert exc.value.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_get_play_not_found(self, api_module, mock_db):
+        mock_db.fetch_one.return_value = None
+        with pytest.raises(HTTPException) as exc:
+            await api_module.get_play("nonexistent")
         assert exc.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_strategy_success(self, mock_db):
-        self.api._db = mock_db
+    async def test_get_play_success(self, api_module, mock_db):
         mock_db.fetch_one.return_value = {
-            "id": "strat1",
-            "project_id": "proj1",
-            "title": "Title",
-            "description": "Desc",
+            "id": "play1",
+            "case_id": "case-1",
+            "name": "Test Play",
+            "scenario": "Scenario",
+            "description": "",
+            "steps": "[]",
+            "triggers": "[]",
+            "expected_outcomes": "[]",
+            "contingencies": "[]",
+            "priority": "medium",
+            "status": "draft",
+            "created_at": datetime.now(),
+            "updated_at": datetime.now(),
         }
-        mock_db.fetch_all.return_value = [
-            {"id": "sc1", "strategy_id": "strat1", "name": "Scenario 1", "description": "Desc"}
-        ]
-
-        result = await get_strategy("strat1")
-        assert result["id"] == "strat1"
-        assert len(result["scenarios"]) == 1
-        assert result["scenarios"][0]["id"] == "sc1"
+        result = await api_module.get_play("play1")
+        assert result["id"] == "play1"
+        assert result["name"] == "Test Play"
 
     @pytest.mark.asyncio
-    async def test_list_objectives(self, mock_db):
-        self.api._db = mock_db
-        mock_db.fetch_all.return_value = [{"id": "o1", "project_id": "proj1"}]
+    async def test_list_plays_empty(self, api_module, mock_db):
+        mock_db.fetch_all.return_value = []
+        result = await api_module.list_plays()
+        assert result == []
 
-        result = await list_objectives("proj1")
-        assert len(result) == 1
-        assert result[0]["id"] == "o1"
+    @pytest.mark.asyncio
+    async def test_delete_play_not_found(self, api_module, mock_db):
+        mock_db.fetch_one.return_value = None
+        with pytest.raises(HTTPException) as exc:
+            await api_module.delete_play("nonexistent")
+        assert exc.value.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_simulate_play_not_found(self, api_module, mock_db):
+        mock_db.fetch_one.return_value = None
+        req = api_module.SimulateRequest(play_id="nonexistent")
+        with pytest.raises(HTTPException) as exc:
+            await api_module.simulate_play(req)
+        assert exc.value.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_simulate_play_success(self, api_module, mock_db):
+        mock_db.fetch_one.return_value = {
+            "id": "play1",
+            "case_id": "case-1",
+            "name": "Test Play",
+            "scenario": "Win scenario",
+            "description": "Desc",
+            "steps": json.dumps(
+                [
+                    {"order": 1, "action": "File motion"},
+                    {"order": 2, "action": "Present evidence"},
+                ]
+            ),
+            "triggers": "[]",
+            "expected_outcomes": json.dumps([{"description": "Motion granted"}]),
+            "contingencies": json.dumps([{"if": "denied", "then": "appeal"}]),
+            "priority": "high",
+            "status": "active",
+            "created_at": datetime.now(),
+            "updated_at": datetime.now(),
+        }
+        req = api_module.SimulateRequest(play_id="play1")
+        result = await api_module.simulate_play(req)
+
+        assert result["play_id"] == "play1"
+        assert result["scenario"] == "Win scenario"
+        assert len(result["steps"]) == 2
+        assert result["risk_assessment"] in ("low", "medium", "high")
+        assert isinstance(result["estimated_outcomes"], list)
+
+    @pytest.mark.asyncio
+    async def test_simulate_step_ordering(self, api_module, mock_db):
+        """Verify simulation preserves step ordering."""
+        steps = [
+            {"order": 3, "action": "Third"},
+            {"order": 1, "action": "First"},
+            {"order": 2, "action": "Second"},
+        ]
+        mock_db.fetch_one.return_value = {
+            "id": "play1",
+            "case_id": None,
+            "name": "Ordering Test",
+            "scenario": "Test",
+            "description": "",
+            "steps": json.dumps(steps),
+            "triggers": "[]",
+            "expected_outcomes": "[]",
+            "contingencies": "[]",
+            "priority": "medium",
+            "status": "draft",
+            "created_at": datetime.now(),
+            "updated_at": datetime.now(),
+        }
+        req = api_module.SimulateRequest(play_id="play1")
+        result = await api_module.simulate_play(req)
+
+        # Steps should be sorted by order
+        result_steps = result["steps"]
+        orders = [s.get("order", 0) for s in result_steps]
+        assert orders == sorted(orders), f"Steps not sorted by order: {orders}"

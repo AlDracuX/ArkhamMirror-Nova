@@ -136,6 +136,24 @@ class CrossExamShard(ArkhamShard):
                 )
             """)
 
+            # Exam Plans
+            await self._db.execute("""
+                CREATE TABLE IF NOT EXISTS arkham_crossexam.exam_plans (
+                    id UUID PRIMARY KEY,
+                    case_id UUID,
+                    witness_id UUID NULL,
+                    witness_name TEXT NOT NULL,
+                    topics JSONB DEFAULT '[]',
+                    questions JSONB DEFAULT '[]',
+                    impeachment_points JSONB DEFAULT '[]',
+                    objectives TEXT NULL,
+                    approach TEXT DEFAULT 'standard',
+                    status TEXT DEFAULT 'draft',
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
             # Damage Scores
             await self._db.execute("""
                 CREATE TABLE IF NOT EXISTS arkham_crossexam.damage_scores (
@@ -151,7 +169,7 @@ class CrossExamShard(ArkhamShard):
             """)
 
             # Migration: Ensure tenant_id exists in all tables
-            tables = ["question_trees", "question_nodes", "impeachment_sequences", "damage_scores"]
+            tables = ["question_trees", "question_nodes", "impeachment_sequences", "damage_scores", "exam_plans"]
             for table in tables:
                 await self._db.execute(f"""
                     DO $$
@@ -182,6 +200,12 @@ class CrossExamShard(ArkhamShard):
             )
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_crossexam_damage_target ON arkham_crossexam.damage_scores(target_id)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_crossexam_plans_case ON arkham_crossexam.exam_plans(case_id)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_crossexam_plans_status ON arkham_crossexam.exam_plans(status)"
             )
 
             logger.info("CrossExam database schema created")

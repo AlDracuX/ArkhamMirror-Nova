@@ -59,7 +59,7 @@ class SearchShard(ArkhamShard):
 
         # Get optional services
         documents_service = frame.get_service("documents")
-        entities_service = frame.get_service("entities")
+        frame.get_service("entities")
         event_bus = frame.get_service("events")
 
         # Initialize search engines

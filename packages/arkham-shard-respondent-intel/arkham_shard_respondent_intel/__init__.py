@@ -1,4 +1,4 @@
-"""ArkhamFrame RespondentIntel Shard - RespondentIntel."""
+"""ArkhamFrame RespondentIntel Shard - Respondent Intel."""
 
 from .shard import RespondentIntelShard
 

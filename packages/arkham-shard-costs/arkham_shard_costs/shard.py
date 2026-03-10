@@ -58,6 +58,7 @@ class CostsShard(ArkhamShard):
             await self._event_bus.subscribe("disclosure.evasion.scored", self._on_disclosure_evasion)
             await self._event_bus.subscribe("rules.breach.detected", self._on_rules_breach)
             await self._event_bus.subscribe("deadlines.breach.detected", self._on_deadline_breach)
+            await self._event_bus.subscribe("case.updated", self._on_case_updated)
 
         # Register self in app state for API access
         if hasattr(frame, "app") and frame.app:
@@ -88,6 +89,10 @@ class CostsShard(ArkhamShard):
     async def _on_deadline_breach(self, event: Dict[str, Any]) -> None:
         """Handle deadlines.breach.detected events."""
         logger.debug(f"Costs shard received deadline breach: {event.get('deadline_id')}")
+
+    async def _on_case_updated(self, event: Dict[str, Any]) -> None:
+        """Handle case.updated events."""
+        logger.debug(f"Costs shard received case update: {event.get('case_id')}")
 
     # --- Database Schema ---
 
@@ -182,6 +187,26 @@ class CostsShard(ArkhamShard):
                 )
             """)
 
+            # -------------------------------------------------------
+            # Cost Items table - individual cost claim line items
+            # -------------------------------------------------------
+            await self._db.execute("""
+                CREATE TABLE IF NOT EXISTS arkham_costs.cost_items (
+                    id UUID PRIMARY KEY,
+                    case_id UUID,
+                    category TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    amount DECIMAL NOT NULL,
+                    currency TEXT DEFAULT 'GBP',
+                    date DATE NOT NULL,
+                    claimant TEXT NOT NULL,
+                    evidence_doc_id UUID,
+                    status TEXT DEFAULT 'claimed',
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
             # Tenant_id migration / addition for all tables
             await self._db.execute("""
                 DO $$
@@ -225,6 +250,13 @@ class CostsShard(ArkhamShard):
             )
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_costs_apps_tenant ON arkham_costs.applications(tenant_id)"
+            )
+            await self._db.execute("CREATE INDEX IF NOT EXISTS idx_cost_items_case ON arkham_costs.cost_items(case_id)")
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_cost_items_category ON arkham_costs.cost_items(category)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_cost_items_status ON arkham_costs.cost_items(status)"
             )
 
             logger.info("Costs database schema created")

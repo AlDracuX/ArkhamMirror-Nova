@@ -59,7 +59,7 @@ def get_shard(request: Request) -> "TemplatesShard":
 @router.get("/health")
 async def health(request: Request):
     """Health check endpoint."""
-    shard = get_shard(request)
+    get_shard(request)
     return {"status": "healthy", "shard": "templates", "version": "0.1.0"}
 
 

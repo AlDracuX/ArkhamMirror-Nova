@@ -527,7 +527,7 @@ class TestNormalizeDateMethod:
 
     def test_normalize_invalid(self, extractor):
         """Test normalizing invalid date returns None."""
-        result = extractor.normalize_date("not a date at all xyz")
+        extractor.normalize_date("not a date at all xyz")
         # May return None or may be parsed by dateutil - either is acceptable
         # The key is it doesn't raise an exception
 

@@ -276,7 +276,7 @@ class EmbedWorker(BaseWorker):
                 )
 
                 # Update chunk vector_id references in batch
-                chunk_updates = [(vid, cid) for vid, cid in zip(vector_ids, chunk_ids) if cid]
+                chunk_updates = [(vid, cid) for vid, cid in zip(vector_ids, chunk_ids, strict=False) if cid]
                 if chunk_updates:
                     await conn.executemany(
                         """

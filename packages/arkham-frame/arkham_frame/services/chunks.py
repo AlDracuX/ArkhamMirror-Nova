@@ -413,7 +413,6 @@ class ChunkService:
         current_chunk = []
         current_len = 0
         current_start = 0
-        text_offset = 0
 
         for sentence in sentences:
             sentence_len = len(sentence)
@@ -584,7 +583,6 @@ class ChunkService:
             return self._chunk_recursive(text, config)
 
         chunks = []
-        last_end = 0
 
         for i, header_match in enumerate(headers):
             # Determine section end

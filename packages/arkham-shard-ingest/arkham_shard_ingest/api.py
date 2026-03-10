@@ -6,8 +6,10 @@ import os
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
+
+from arkham_frame.auth import User, current_active_user
 
 from .models import JobPriority, JobStatus
 
@@ -161,6 +163,7 @@ async def upload_file(
     file: UploadFile = File(...),
     priority: str = Form("user"),
     ocr_mode: str = Form("auto"),
+    user: User = Depends(current_active_user),
 ):
     """
     Upload a single file for ingestion.
@@ -184,7 +187,10 @@ async def upload_file(
     # Validate ocr_mode
     valid_ocr_modes = ("auto", "paddle_only", "qwen_only")
     if ocr_mode not in valid_ocr_modes:
-        ocr_mode = "auto"
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid ocr_mode '{ocr_mode}'. Must be one of: {', '.join(valid_ocr_modes)}",
+        )
 
     job = await _intake_manager.receive_file(
         file=file.file,
@@ -234,6 +240,7 @@ async def upload_batch(
     files: list[UploadFile] = File(...),
     priority: str = Form("batch"),
     ocr_mode: str = Form("auto"),
+    user: User = Depends(current_active_user),
 ):
     """
     Upload multiple files as a batch.
@@ -256,7 +263,10 @@ async def upload_batch(
     # Validate ocr_mode
     valid_ocr_modes = ("auto", "paddle_only", "qwen_only")
     if ocr_mode not in valid_ocr_modes:
-        ocr_mode = "auto"
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid ocr_mode '{ocr_mode}'. Must be one of: {', '.join(valid_ocr_modes)}",
+        )
 
     file_tuples = [(f.file, f.filename) for f in files]
     batch = await _intake_manager.receive_batch(file_tuples, job_priority, ocr_mode=ocr_mode)
@@ -307,7 +317,7 @@ async def upload_batch(
 
 
 @router.post("/ingest-path", response_model=BatchUploadResponse)
-async def ingest_from_path(request: IngestPathRequest):
+async def ingest_from_path(request: IngestPathRequest, user: User = Depends(current_active_user)):
     """
     Ingest files from a local filesystem path.
 
@@ -333,7 +343,12 @@ async def ingest_from_path(request: IngestPathRequest):
 
     # Validate ocr_mode
     valid_ocr_modes = ("auto", "paddle_only", "qwen_only")
-    ocr_mode = request.ocr_mode if request.ocr_mode in valid_ocr_modes else "auto"
+    if request.ocr_mode not in valid_ocr_modes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid ocr_mode '{request.ocr_mode}'. Must be one of: {', '.join(valid_ocr_modes)}",
+        )
+    ocr_mode = request.ocr_mode
 
     batch = await _intake_manager.receive_path(
         path=path,

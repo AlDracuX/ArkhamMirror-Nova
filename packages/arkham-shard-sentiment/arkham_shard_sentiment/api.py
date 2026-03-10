@@ -1,13 +1,25 @@
 """Sentiment Shard API endpoints."""
 
+import json
 import logging
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
-from .models import ComparatorDiff, SentimentAnalysis, SentimentPattern, ToneScore
+from .models import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    ComparatorDiff,
+    CreateResultRequest,
+    SentimentAnalysis,
+    SentimentPattern,
+    ToneScore,
+    UpdateResultRequest,
+    analyze_sentiment,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +39,198 @@ def init_api(db, event_bus, llm_service=None, shard=None):
     _shard = shard
 
 
+# ---------------------------------------------------------------------------
+# CRUD: sentiment_results
+# ---------------------------------------------------------------------------
+
+
+@router.get("/")
+async def list_results(
+    document_id: Optional[str] = Query(None),
+    case_id: Optional[str] = Query(None),
+    label: Optional[str] = Query(None),
+):
+    """List sentiment results with optional filters."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    query = "SELECT * FROM arkham_sentiment.sentiment_results WHERE 1=1"
+    params: Dict[str, Any] = {}
+
+    if document_id:
+        query += " AND document_id = :document_id"
+        params["document_id"] = document_id
+    if case_id:
+        query += " AND case_id = :case_id"
+        params["case_id"] = case_id
+    if label:
+        query += " AND label = :label"
+        params["label"] = label
+
+    query += " ORDER BY created_at DESC"
+    rows = await _db.fetch_all(query, params)
+    results = []
+    for row in rows:
+        r = dict(row)
+        # Parse JSONB fields if they come back as strings
+        for field in ("passages", "entity_sentiments"):
+            if isinstance(r.get(field), str):
+                try:
+                    r[field] = json.loads(r[field])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        results.append(r)
+    return results
+
+
+@router.get("/{result_id}")
+async def get_result(result_id: str):
+    """Get a single sentiment result by ID."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    row = await _db.fetch_one(
+        "SELECT * FROM arkham_sentiment.sentiment_results WHERE id = :id",
+        {"id": result_id},
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Sentiment result not found")
+
+    r = dict(row)
+    for field in ("passages", "entity_sentiments"):
+        if isinstance(r.get(field), str):
+            try:
+                r[field] = json.loads(r[field])
+            except (json.JSONDecodeError, TypeError):
+                pass
+    return r
+
+
+@router.post("/")
+async def create_result(request: CreateResultRequest):
+    """Create a new sentiment result."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    result_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+
+    await _db.execute(
+        """
+        INSERT INTO arkham_sentiment.sentiment_results
+        (id, document_id, case_id, overall_score, label, confidence, passages, entity_sentiments, analyzed_at, created_at, updated_at)
+        VALUES (:id, :document_id, :case_id, :overall_score, :label, :confidence, :passages, :entity_sentiments, :analyzed_at, :created_at, :updated_at)
+        """,
+        {
+            "id": result_id,
+            "document_id": request.document_id,
+            "case_id": request.case_id,
+            "overall_score": request.overall_score,
+            "label": request.label,
+            "confidence": request.confidence,
+            "passages": json.dumps(request.passages),
+            "entity_sentiments": json.dumps(request.entity_sentiments),
+            "analyzed_at": now,
+            "created_at": now,
+            "updated_at": now,
+        },
+    )
+
+    if _event_bus:
+        await _event_bus.emit("sentiment.analysis.created", {"result_id": result_id})
+
+    return {"id": result_id}
+
+
+@router.put("/{result_id}")
+async def update_result(result_id: str, request: UpdateResultRequest):
+    """Update an existing sentiment result."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    # Verify it exists
+    existing = await _db.fetch_one(
+        "SELECT id FROM arkham_sentiment.sentiment_results WHERE id = :id",
+        {"id": result_id},
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Sentiment result not found")
+
+    updates = []
+    params: Dict[str, Any] = {"id": result_id}
+
+    if request.overall_score is not None:
+        updates.append("overall_score = :overall_score")
+        params["overall_score"] = request.overall_score
+    if request.label is not None:
+        updates.append("label = :label")
+        params["label"] = request.label
+    if request.confidence is not None:
+        updates.append("confidence = :confidence")
+        params["confidence"] = request.confidence
+    if request.passages is not None:
+        updates.append("passages = :passages")
+        params["passages"] = json.dumps(request.passages)
+    if request.entity_sentiments is not None:
+        updates.append("entity_sentiments = :entity_sentiments")
+        params["entity_sentiments"] = json.dumps(request.entity_sentiments)
+
+    if updates:
+        updates.append("updated_at = :updated_at")
+        params["updated_at"] = datetime.now(timezone.utc)
+        set_clause = ", ".join(updates)
+        await _db.execute(
+            f"UPDATE arkham_sentiment.sentiment_results SET {set_clause} WHERE id = :id",
+            params,
+        )
+
+    return {"id": result_id, "updated": True}
+
+
+@router.delete("/{result_id}")
+async def delete_result(result_id: str):
+    """Delete a sentiment result."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    existing = await _db.fetch_one(
+        "SELECT id FROM arkham_sentiment.sentiment_results WHERE id = :id",
+        {"id": result_id},
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Sentiment result not found")
+
+    await _db.execute(
+        "DELETE FROM arkham_sentiment.sentiment_results WHERE id = :id",
+        {"id": result_id},
+    )
+
+    return {"id": result_id, "deleted": True}
+
+
+# ---------------------------------------------------------------------------
+# Domain: analyze
+# ---------------------------------------------------------------------------
+
+
+@router.post("/analyze", response_model=AnalyzeResponse)
+async def analyze_text(request: AnalyzeRequest):
+    """Analyze text for sentiment using keyword-based scoring."""
+    result = analyze_sentiment(request.text)
+    return AnalyzeResponse(
+        document_id=str(request.document_id),
+        score=result["score"],
+        label=result["label"],
+        confidence=result["confidence"],
+        key_passages=result["key_passages"],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Legacy / badge endpoints
+# ---------------------------------------------------------------------------
+
+
 class CreateAnalysisRequest(BaseModel):
     document_id: Optional[str] = None
     thread_id: Optional[str] = None
@@ -42,8 +246,6 @@ async def create_analysis(request: CreateAnalysisRequest):
     analysis_id = str(uuid.uuid4())
     tenant_id = _shard.get_tenant_id_or_none() if _shard else None
 
-    # In a real implementation, we would trigger an LLM job here.
-    # For now, we'll just create a placeholder record.
     await _db.execute(
         """
         INSERT INTO arkham_sentiment.analyses
@@ -103,5 +305,5 @@ async def count_items():
     """Return count for badge display."""
     if not _db:
         raise HTTPException(status_code=503, detail="Database not available")
-    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_sentiment.analyses")
+    result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_sentiment.sentiment_results")
     return {"count": result["count"] if result else 0}

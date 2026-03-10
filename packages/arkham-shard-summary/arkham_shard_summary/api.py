@@ -676,7 +676,7 @@ async def browse_documents(
                 )
             )
 
-    except Exception as e:
+    except Exception:
         # Try arkham_frame.documents as fallback
         try:
             count_query = "SELECT COUNT(*) as count FROM arkham_frame.documents WHERE 1=1"

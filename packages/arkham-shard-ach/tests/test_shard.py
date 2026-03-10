@@ -280,7 +280,7 @@ class TestHypothesisManagement:
             matrix_id=matrix.id,
             title="Hypothesis 1",
         )
-        h2 = shard.matrix_manager.add_hypothesis(
+        shard.matrix_manager.add_hypothesis(
             matrix_id=matrix.id,
             title="Hypothesis 2",
         )
@@ -385,7 +385,7 @@ class TestEvidenceManagement:
             matrix_id=matrix.id,
             description="Evidence 1",
         )
-        e2 = shard.matrix_manager.add_evidence(
+        shard.matrix_manager.add_evidence(
             matrix_id=matrix.id,
             description="Evidence 2",
         )

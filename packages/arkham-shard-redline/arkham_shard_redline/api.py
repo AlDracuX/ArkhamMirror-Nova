@@ -1,13 +1,13 @@
 """Redline Shard API endpoints."""
 
 import logging
-import uuid
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
-from .models import DocumentChange, DocumentComparison, VersionChain
+if TYPE_CHECKING:
+    from .shard import RedlineShard
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +16,11 @@ router = APIRouter(prefix="/api/redline", tags=["redline"])
 _db = None
 _event_bus = None
 _llm_service = None
-_shard = None
+_shard: Optional["RedlineShard"] = None
 
 
 def init_api(db, event_bus, llm_service=None, shard=None):
+    """Initialize API with shard dependencies."""
     global _db, _event_bus, _llm_service, _shard
     _db = db
     _event_bus = event_bus
@@ -27,62 +28,124 @@ def init_api(db, event_bus, llm_service=None, shard=None):
     _shard = shard
 
 
+def _get_shard() -> "RedlineShard":
+    if not _shard:
+        raise HTTPException(status_code=503, detail="Redline shard not available")
+    return _shard
+
+
+# --- Request/Response Models ---
+
+
 class CreateComparisonRequest(BaseModel):
-    project_id: str
-    base_document_id: str
-    target_document_id: str
-    metadata: Dict[str, Any] = {}
+    doc_a_id: str
+    doc_b_id: str
+    title: str = ""
+    case_id: Optional[str] = None
 
 
-@router.post("/comparisons", response_model=Dict[str, str])
+class UpdateComparisonRequest(BaseModel):
+    title: Optional[str] = None
+    status: Optional[str] = None
+    diff_count: Optional[int] = None
+    additions: Optional[int] = None
+    deletions: Optional[int] = None
+    modifications: Optional[int] = None
+    diffs: Optional[List[Dict[str, Any]]] = None
+    case_id: Optional[str] = None
+
+
+class CompareRequest(BaseModel):
+    doc_a_id: str
+    doc_b_id: str
+    title: str = ""
+    case_id: Optional[str] = None
+
+
+# --- Endpoints ---
+
+
+@router.get("/")
+async def list_comparisons(
+    case_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+):
+    """List comparisons with optional filters."""
+    shard = _get_shard()
+    return await shard.list_comparisons(case_id=case_id, status=status)
+
+
+@router.get("/{comp_id}")
+async def get_comparison(comp_id: str):
+    """Get a single comparison with diffs."""
+    shard = _get_shard()
+    result = await shard.get_comparison(comp_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Comparison not found")
+    return result
+
+
+@router.post("/")
 async def create_comparison(request: CreateComparisonRequest):
-    if not _db:
-        raise HTTPException(status_code=503, detail="Database not available")
-
-    comp_id = str(uuid.uuid4())
-    tenant_id = _shard.get_tenant_id_or_none() if _shard else None
-
-    await _db.execute(
-        """
-        INSERT INTO arkham_redline.comparisons
-        (id, tenant_id, project_id, base_document_id, target_document_id, diff_summary)
-        VALUES (:id, :tenant_id, :project_id, :base, :target, :summary)
-        """,
-        {
-            "id": comp_id,
-            "tenant_id": tenant_id,
-            "project_id": request.project_id,
-            "base": request.base_document_id,
-            "target": request.target_document_id,
-            "summary": "Comparison pending...",
-        },
+    """Create a new comparison record."""
+    shard = _get_shard()
+    return await shard.create_comparison(
+        doc_a_id=request.doc_a_id,
+        doc_b_id=request.doc_b_id,
+        title=request.title,
+        case_id=request.case_id,
     )
 
-    if _event_bus:
-        await _event_bus.emit("redline.comparison.created", {"comparison_id": comp_id})
 
-    return {"id": comp_id}
+@router.put("/{comp_id}")
+async def update_comparison(comp_id: str, request: UpdateComparisonRequest):
+    """Update a comparison record."""
+    shard = _get_shard()
 
-
-@router.get("/comparisons/{comp_id}")
-async def get_comparison(comp_id: str):
-    row = await _db.fetch_one("SELECT * FROM arkham_redline.comparisons WHERE id = :id", {"id": comp_id})
-    if not row:
+    # Check it exists first
+    existing = await shard.get_comparison(comp_id)
+    if not existing:
         raise HTTPException(status_code=404, detail="Comparison not found")
 
-    comp = dict(row)
-    changes = await _db.fetch_all("SELECT * FROM arkham_redline.changes WHERE comparison_id = :id", {"id": comp_id})
-    comp["changes"] = [dict(c) for c in changes]
+    updates = request.model_dump(exclude_none=True)
+    if not updates:
+        return existing
 
-    return comp
+    result = await shard.update_comparison(comp_id, updates)
+    if result is None:
+        raise HTTPException(status_code=400, detail="Invalid update")
+    return result
 
 
-@router.get("/project/{project_id}/chains")
-async def list_chains(project_id: str):
-    rows = await _db.fetch_all(
-        "SELECT * FROM arkham_redline.version_chains WHERE project_id = :project_id", {"project_id": project_id}
+@router.delete("/{comp_id}")
+async def delete_comparison(comp_id: str):
+    """Delete a comparison record."""
+    shard = _get_shard()
+
+    existing = await shard.get_comparison(comp_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Comparison not found")
+
+    await shard.delete_comparison(comp_id)
+    return {"deleted": True, "id": comp_id}
+
+
+@router.post("/compare")
+async def compare_documents(request: CompareRequest):
+    """
+    Create a comparison and initiate document diff.
+
+    For now, creates the record in pending status.
+    Actual diff processing would be handled asynchronously.
+    """
+    shard = _get_shard()
+    result = await shard.create_comparison(
+        doc_a_id=request.doc_a_id,
+        doc_b_id=request.doc_b_id,
+        title=request.title,
+        case_id=request.case_id,
     )
-    return [dict(r) for r in rows]
+    return result
 
 
 @router.get("/items/count")

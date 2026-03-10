@@ -254,7 +254,7 @@ class WorkerService:
                     await conn.remove_listener("arkham_job_completed", self._handle_job_completed)
                     await conn.remove_listener("arkham_job_failed", self._handle_job_failed)
                     await conn.remove_listener("arkham_worker_event", self._handle_worker_event)
-                except:
+                except Exception:
                     pass
                 await self._db_pool.release(conn)
 
@@ -374,7 +374,7 @@ class WorkerService:
             self._listener_task.cancel()
             try:
                 await self._listener_task
-            except:
+            except Exception:
                 pass
             self._listener_task = None
 
@@ -384,7 +384,7 @@ class WorkerService:
             self._heartbeat_task.cancel()
             try:
                 await self._heartbeat_task
-            except:
+            except Exception:
                 pass
             self._heartbeat_task = None
 
@@ -406,7 +406,7 @@ class WorkerService:
                         """,
                             worker_id,
                         )
-            except:
+            except Exception:
                 pass
 
         self._available = False
@@ -1169,7 +1169,7 @@ class WorkerService:
                     """,
                         worker_id,
                     )
-            except:
+            except Exception:
                 pass
 
         if worker_id in self._workers:

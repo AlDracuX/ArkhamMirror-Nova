@@ -282,7 +282,7 @@ async def set_shard_state(shard_name: str, request: ShardStateRequest) -> Dict[s
             }
         else:
             # Need to load it
-            result = await load_shard(LoadShardRequest(name=shard_name))
+            await load_shard(LoadShardRequest(name=shard_name))
             return {
                 "status": "success",
                 "message": f"Shard '{shard_name}' enabled and loaded",
@@ -304,7 +304,7 @@ async def set_shard_state(shard_name: str, request: ShardStateRequest) -> Dict[s
             }
         else:
             # Unload it
-            result = await unload_shard(shard_name)
+            await unload_shard(shard_name)
             return {
                 "status": "success",
                 "message": f"Shard '{shard_name}' disabled and unloaded",

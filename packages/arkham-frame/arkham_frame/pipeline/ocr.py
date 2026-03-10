@@ -88,7 +88,7 @@ class OCRStage(PipelineStage):
             total_text = ""
 
             for i, page_path in enumerate(page_paths):
-                job_id = str(uuid.uuid4())
+                str(uuid.uuid4())
                 payload = {
                     "document_id": document_id,
                     "page_number": i + 1,

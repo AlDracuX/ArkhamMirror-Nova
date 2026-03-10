@@ -13,6 +13,12 @@ logger = logging.getLogger(__name__)
 _frame_instance: Optional["ArkhamFrame"] = None
 
 
+def set_frame(instance: "ArkhamFrame") -> None:
+    """Set the global Frame instance (called by lifespan manager)."""
+    global _frame_instance
+    _frame_instance = instance
+
+
 def get_frame() -> "ArkhamFrame":
     """Get the global Frame instance."""
     if _frame_instance is None:

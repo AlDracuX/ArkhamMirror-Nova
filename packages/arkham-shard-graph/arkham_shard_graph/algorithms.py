@@ -291,7 +291,7 @@ class GraphAlgorithms:
                     path_length=len(path) - 1,
                 )
 
-            for neighbor, weight, rel_type in adjacency.get(current, []):
+            for neighbor, _weight, _rel_type in adjacency.get(current, []):
                 # Skip excluded entities
                 if neighbor in excluded:
                     continue
@@ -400,7 +400,7 @@ class GraphAlgorithms:
             List of CentralityResult objects
         """
         # Degree is already calculated on nodes
-        node_map = {n.id: n for n in graph.nodes}
+        {n.id: n for n in graph.nodes}
 
         # Sort by degree
         sorted_nodes = sorted(graph.nodes, key=lambda n: n.degree, reverse=True)
@@ -585,7 +585,7 @@ class GraphAlgorithms:
             Tuple of (communities list, modularity score)
         """
         node_ids = [n.id for n in graph.nodes]
-        node_map = {n.id: n for n in graph.nodes}
+        {n.id: n for n in graph.nodes}
 
         # Initialize each node in its own community
         community_map = {node_id: node_id for node_id in node_ids}
@@ -657,7 +657,7 @@ class GraphAlgorithms:
             external_edges = 0
 
             for member in members:
-                for neighbor, weight in adjacency.get(member, []):
+                for neighbor, _weight in adjacency.get(member, []):
                     if neighbor in members:
                         internal_edges += 1
                     else:
@@ -1249,7 +1249,7 @@ class GraphAlgorithms:
 
         # Get direct alters (1-hop neighbors)
         alters = []
-        for neighbor_id, weight in adjacency.get(ego_node_id, []):
+        for neighbor_id, _weight in adjacency.get(ego_node_id, []):
             alters.append(neighbor_id)
 
         n_alters = len(alters)

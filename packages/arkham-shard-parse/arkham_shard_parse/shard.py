@@ -161,7 +161,7 @@ class ParseShard(ArkhamShard):
         """
         # EventBus wraps events: {"event_type": ..., "payload": {...}, "source": ...}
         payload = event.get("payload", event)  # Support both wrapped and unwrapped
-        job_id = payload.get("job_id")
+        payload.get("job_id")
         result = payload.get("result", {})
         doc_id = result.get("document_id")
 

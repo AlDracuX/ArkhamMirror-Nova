@@ -4,10 +4,11 @@ import json
 import logging
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Optional
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 if TYPE_CHECKING:
     from .shard import CostsShard
@@ -80,6 +81,43 @@ class ConductLogCreate(BaseModel):
     legal_reference: str = "Rule 76(1)(a)"
     project_id: Optional[str] = None
     created_by: Optional[str] = None
+
+
+class CostItemCreate(BaseModel):
+    case_id: str
+    category: str
+    description: str
+    amount: Decimal
+    currency: str = "GBP"
+    date: date
+    claimant: str
+    evidence_doc_id: Optional[str] = None
+    status: str = "claimed"
+
+    @field_validator("amount")
+    @classmethod
+    def amount_must_be_positive(cls, v: Decimal) -> Decimal:
+        if v <= 0:
+            raise ValueError("Amount must be positive")
+        return v
+
+
+class CostItemUpdate(BaseModel):
+    category: Optional[str] = None
+    description: Optional[str] = None
+    amount: Optional[Decimal] = None
+    currency: Optional[str] = None
+    date: Optional[date] = None
+    claimant: Optional[str] = None
+    evidence_doc_id: Optional[str] = None
+    status: Optional[str] = None
+
+    @field_validator("amount")
+    @classmethod
+    def amount_must_be_positive(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+        if v is not None and v <= 0:
+            raise ValueError("Amount must be positive")
+        return v
 
 
 # --- Time Entries Endpoints ---
@@ -268,3 +306,147 @@ async def count_items():
         raise HTTPException(status_code=503, detail="Database not available")
     result = await _db.fetch_one("SELECT COUNT(*) as count FROM arkham_costs.time_entries")
     return {"count": result["count"] if result else 0}
+
+
+# --- Cost Items Endpoints ---
+
+
+@router.get("/summary")
+async def get_cost_items_summary(case_id: Optional[str] = None):
+    """Return totals grouped by category."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Costs service not initialized")
+
+    query = "SELECT category, COALESCE(SUM(amount), 0) as total, COUNT(*) as count FROM arkham_costs.cost_items"
+    params: dict[str, Any] = {}
+    if case_id:
+        query += " WHERE case_id = :case_id"
+        params["case_id"] = case_id
+    query += " GROUP BY category ORDER BY category"
+
+    rows = await _db.fetch_all(query, params)
+    categories = [{"category": row["category"], "total": float(row["total"]), "count": row["count"]} for row in rows]
+    grand_total = sum(c["total"] for c in categories)
+    return {"categories": categories, "grand_total": grand_total}
+
+
+@router.get("/{item_id}")
+async def get_cost_item(item_id: str):
+    """Get a single cost item by ID."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Costs service not initialized")
+
+    row = await _db.fetch_one("SELECT * FROM arkham_costs.cost_items WHERE id = :id", {"id": item_id})
+    if not row:
+        raise HTTPException(status_code=404, detail="Cost item not found")
+    return dict(row)
+
+
+@router.get("/")
+async def list_cost_items(
+    case_id: Optional[str] = None,
+    category: Optional[str] = None,
+    status: Optional[str] = None,
+):
+    """List cost items with optional filters."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Costs service not initialized")
+
+    query = "SELECT * FROM arkham_costs.cost_items WHERE 1=1"
+    params: dict[str, Any] = {}
+    if case_id:
+        query += " AND case_id = :case_id"
+        params["case_id"] = case_id
+    if category:
+        query += " AND category = :category"
+        params["category"] = category
+    if status:
+        query += " AND status = :status"
+        params["status"] = status
+    query += " ORDER BY date DESC"
+
+    rows = await _db.fetch_all(query, params)
+    return [dict(row) for row in rows]
+
+
+@router.post("/")
+async def create_cost_item(request: CostItemCreate):
+    """Create a new cost item."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Costs service not initialized")
+
+    item_id = str(uuid.uuid4())
+
+    await _db.execute(
+        """
+        INSERT INTO arkham_costs.cost_items
+        (id, case_id, category, description, amount, currency, date, claimant, evidence_doc_id, status)
+        VALUES (:id, :case_id, :category, :description, :amount, :currency, :date, :claimant, :evidence_doc_id, :status)
+        """,
+        {
+            "id": item_id,
+            "case_id": request.case_id,
+            "category": request.category,
+            "description": request.description,
+            "amount": float(request.amount),
+            "currency": request.currency,
+            "date": request.date,
+            "claimant": request.claimant,
+            "evidence_doc_id": request.evidence_doc_id,
+            "status": request.status,
+        },
+    )
+
+    if _event_bus:
+        await _event_bus.emit(
+            "costs.item.created",
+            {"item_id": item_id, "case_id": request.case_id, "amount": float(request.amount)},
+            source="costs-shard",
+        )
+
+    return {"id": item_id, "status": "created"}
+
+
+@router.put("/{item_id}")
+async def update_cost_item(item_id: str, request: CostItemUpdate):
+    """Update an existing cost item."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Costs service not initialized")
+
+    existing = await _db.fetch_one("SELECT id FROM arkham_costs.cost_items WHERE id = :id", {"id": item_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Cost item not found")
+
+    updates = {k: v for k, v in request.model_dump().items() if v is not None}
+    if not updates:
+        return {"id": item_id, "status": "no_changes"}
+
+    if "amount" in updates:
+        updates["amount"] = float(updates["amount"])
+
+    set_clauses = ", ".join(f"{k} = :{k}" for k in updates)
+    updates["id"] = item_id
+    updates["_updated_at"] = datetime.utcnow()
+    set_clauses += ", updated_at = :_updated_at"
+
+    await _db.execute(
+        f"UPDATE arkham_costs.cost_items SET {set_clauses} WHERE id = :id",
+        updates,
+    )
+
+    return {"id": item_id, "status": "updated"}
+
+
+@router.delete("/{item_id}")
+async def delete_cost_item(item_id: str):
+    """Delete a cost item."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Costs service not initialized")
+
+    existing = await _db.fetch_one("SELECT id FROM arkham_costs.cost_items WHERE id = :id", {"id": item_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Cost item not found")
+
+    await _db.execute("DELETE FROM arkham_costs.cost_items WHERE id = :id", {"id": item_id})
+
+    return {"id": item_id, "status": "deleted"}

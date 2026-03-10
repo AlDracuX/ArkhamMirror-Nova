@@ -271,14 +271,14 @@ class TestPublicMergeTimelinesAPI:
     @pytest.mark.asyncio
     async def test_merge_timelines_basic(self, initialized_shard):
         """Test basic merge_timelines call."""
-        result = await initialized_shard.merge_timelines(["doc-1", "doc-2"])
+        await initialized_shard.merge_timelines(["doc-1", "doc-2"])
 
         initialized_shard.merger.merge.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_merge_timelines_with_strategy(self, initialized_shard):
         """Test merge_timelines with custom strategy."""
-        result = await initialized_shard.merge_timelines(
+        await initialized_shard.merge_timelines(
             ["doc-1", "doc-2"],
             strategy=MergeStrategy.DEDUPLICATED,
         )

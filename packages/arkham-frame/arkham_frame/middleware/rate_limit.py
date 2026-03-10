@@ -22,6 +22,7 @@ DEFAULT_LIMIT = int(os.environ.get("RATE_LIMIT_DEFAULT", "100"))
 DEFAULT_WINDOW = int(os.environ.get("RATE_LIMIT_WINDOW", "60"))  # seconds
 UPLOAD_LIMIT = int(os.environ.get("RATE_LIMIT_UPLOAD", "20"))
 AUTH_LIMIT = int(os.environ.get("RATE_LIMIT_AUTH", "10"))
+FAIL_OPEN = os.environ.get("RATE_LIMIT_FAIL_OPEN", "").lower() in ("true", "1", "yes")
 
 # Global reference to database pool (set by ArkhamFrame)
 _db_pool = None
@@ -66,9 +67,11 @@ async def check_rate_limit(
     global _db_pool
 
     if _db_pool is None:
-        # No database, allow request (fail open)
-        logger.warning("Rate limiter: no database pool, allowing request")
-        return True, 0, datetime.utcnow()
+        if FAIL_OPEN:
+            logger.warning("Rate limiter: no database pool, allowing request (RATE_LIMIT_FAIL_OPEN=true)")
+            return True, 0, datetime.utcnow()
+        logger.error("Rate limiter: no database pool, denying request")
+        return False, 0, datetime.utcnow()
 
     try:
         async with _db_pool.acquire() as conn:
@@ -85,8 +88,10 @@ async def check_rate_limit(
 
     except Exception as e:
         logger.error(f"Rate limit check failed: {e}")
-        # Fail open - allow request if database error
-        return True, 0, datetime.utcnow()
+        if FAIL_OPEN:
+            logger.warning("Rate limiter: allowing request due to RATE_LIMIT_FAIL_OPEN=true")
+            return True, 0, datetime.utcnow()
+        return False, 0, datetime.utcnow()
 
 
 async def rate_limit_middleware(
@@ -109,6 +114,17 @@ async def rate_limit_middleware(
     allowed, count, reset_at = await check_rate_limit(endpoint_key, limit, window)
 
     if not allowed:
+        # count == 0 means the rate limiter itself is unavailable (fail-closed)
+        if count == 0:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": "service_unavailable",
+                    "detail": "Rate limiter unavailable. Request denied (fail-closed).",
+                    "retry_after": 5,
+                },
+                headers={"Retry-After": "5"},
+            )
         retry_after = max(1, int((reset_at - datetime.utcnow()).total_seconds()))
         return JSONResponse(
             status_code=429,
@@ -174,6 +190,16 @@ def rate_limit(
                 allowed, count, reset_at = await check_rate_limit(endpoint_key, limit, window)
 
                 if not allowed:
+                    if count == 0:
+                        raise HTTPException(
+                            status_code=503,
+                            detail={
+                                "error": "service_unavailable",
+                                "detail": "Rate limiter unavailable. Request denied (fail-closed).",
+                                "retry_after": 5,
+                            },
+                            headers={"Retry-After": "5"},
+                        )
                     retry_after = max(1, int((reset_at - datetime.utcnow()).total_seconds()))
                     raise HTTPException(
                         status_code=429,

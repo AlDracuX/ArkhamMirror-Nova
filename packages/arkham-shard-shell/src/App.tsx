@@ -263,8 +263,8 @@ export function App() {
                         <Route path="/respondent-intel" element={<RespondentIntelPage />} />
                         <Route path="/digest" element={<DigestPage />} />
 
-                        {/* Catch-all: try to render shard with generic UI */}
-                        <Route path="*" element={<GenericShardPage />} />
+                        {/* Dynamic routes for shards without custom UI */}
+                        <Route path=":shardName/*" element={<GenericShardPage />} />
                       </Route>
                     </Routes>
                   </BadgeProvider>

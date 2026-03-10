@@ -161,7 +161,7 @@ class OCRShard(ArkhamShard):
         valid_entries = 0
         expired_entries = 0
 
-        for key, (timestamp, _) in list(self._cache.items()):
+        for _key, (timestamp, _) in list(self._cache.items()):
             if now - timestamp > ttl_seconds:
                 expired_entries += 1
             else:

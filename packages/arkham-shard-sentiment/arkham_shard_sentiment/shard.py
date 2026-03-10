@@ -1,7 +1,7 @@
 """Sentiment Shard - Tone and language pattern analyzer."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from arkham_frame.shard_interface import ArkhamShard
 
@@ -102,7 +102,24 @@ class SentimentShard(ArkhamShard):
             # Create schema
             await self._db.execute("CREATE SCHEMA IF NOT EXISTS arkham_sentiment")
 
-            # Create tables
+            # Core table: sentiment_results
+            await self._db.execute("""
+                CREATE TABLE IF NOT EXISTS arkham_sentiment.sentiment_results (
+                    id UUID PRIMARY KEY,
+                    document_id UUID NOT NULL,
+                    case_id UUID,
+                    overall_score FLOAT NOT NULL DEFAULT 0.0,
+                    label TEXT NOT NULL DEFAULT 'neutral',
+                    confidence FLOAT NOT NULL DEFAULT 0.0,
+                    passages JSONB DEFAULT '[]',
+                    entity_sentiments JSONB DEFAULT '{}',
+                    analyzed_at TIMESTAMPTZ,
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # Legacy tables (kept for existing data)
             await self._db.execute("""
                 CREATE TABLE IF NOT EXISTS arkham_sentiment.analyses (
                     id TEXT PRIMARY KEY,
@@ -155,6 +172,15 @@ class SentimentShard(ArkhamShard):
             """)
 
             # Indexes
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_sentiment_results_doc ON arkham_sentiment.sentiment_results(document_id)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_sentiment_results_case ON arkham_sentiment.sentiment_results(case_id)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_sentiment_results_label ON arkham_sentiment.sentiment_results(label)"
+            )
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_sentiment_analyses_project ON arkham_sentiment.analyses(project_id)"
             )

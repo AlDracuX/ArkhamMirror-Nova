@@ -148,7 +148,8 @@ class VectorStore:
 
         try:
             points = [
-                {"id": vid, "vector": vec, "payload": pay} for vid, vec, pay in zip(vector_ids, vectors, payloads)
+                {"id": vid, "vector": vec, "payload": pay}
+                for vid, vec, pay in zip(vector_ids, vectors, payloads, strict=False)
             ]
 
             await self.vectors_service.upsert(collection_name=collection_name, points=points)

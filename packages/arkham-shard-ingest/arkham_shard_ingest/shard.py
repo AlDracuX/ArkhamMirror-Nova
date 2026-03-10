@@ -321,7 +321,7 @@ class IngestShard(ArkhamShard):
             text = result.get("text", "")
             logger.info(f"Job {job.id}: Document {doc.id} - text length: {len(text)} chars")
             if text:
-                page_count = result.get("pages", 1)
+                result.get("pages", 1)
                 logger.info(f"Job {job.id}: Adding page with {len(text)} chars to document {doc.id}")
                 await doc_service.add_page(
                     doc_id=doc.id,

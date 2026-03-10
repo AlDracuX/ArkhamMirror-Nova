@@ -558,7 +558,7 @@ async def get_project_collections(project_id: str) -> Dict[str, Any]:
                     "name": collection_name,
                     "exists": False,
                 }
-        except Exception as e:
+        except Exception:
             # Collection doesn't exist or other error
             collections[coll_type] = {
                 "name": collection_name,

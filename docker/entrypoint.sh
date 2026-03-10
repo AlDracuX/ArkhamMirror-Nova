@@ -58,6 +58,10 @@ if [ -n "$DATABASE_URL" ]; then
     else
         echo "  Database already initialized."
     fi
+
+    # Track migration version
+    psql "$DATABASE_URL" -c "CREATE TABLE IF NOT EXISTS arkham_frame.schema_version (version INT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT now());"
+    psql "$DATABASE_URL" -c "INSERT INTO arkham_frame.schema_version (version) VALUES (1) ON CONFLICT DO NOTHING;"
 fi
 
 # -----------------------------------------------------------------------------

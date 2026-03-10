@@ -231,7 +231,7 @@ class PaddleWorker(BaseWorker):
                 scores = ocr_res["rec_scores"]
                 boxes = ocr_res["rec_polys"]
 
-                for box, text, score in zip(boxes, texts, scores):
+                for box, text, score in zip(boxes, texts, scores, strict=False):
                     box_list = box.tolist() if hasattr(box, "tolist") else list(box)
                     text_lines.append(text)
                     lines.append(

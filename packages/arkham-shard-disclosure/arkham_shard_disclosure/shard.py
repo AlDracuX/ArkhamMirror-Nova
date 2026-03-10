@@ -53,6 +53,11 @@ class DisclosureShard(ArkhamShard):
             shard=self,
         )
 
+        # Subscribe to events
+        if self._event_bus:
+            await self._event_bus.subscribe("document.processed", self._handle_document_processed)
+            await self._event_bus.subscribe("case.updated", self._handle_case_updated)
+
         # Register self in app state for API access
         if hasattr(frame, "app") and frame.app:
             frame.app.state.disclosure_shard = self
@@ -63,11 +68,24 @@ class DisclosureShard(ArkhamShard):
     async def shutdown(self) -> None:
         """Clean up shard resources."""
         logger.info("Shutting down Disclosure Shard...")
+        if self._event_bus:
+            await self._event_bus.unsubscribe("document.processed", self._handle_document_processed)
+            await self._event_bus.unsubscribe("case.updated", self._handle_case_updated)
         logger.info("Disclosure Shard shutdown complete")
 
     def get_routes(self):
         """Return FastAPI router for this shard."""
         return router
+
+    # --- Event Handlers ---
+
+    async def _handle_document_processed(self, event: dict) -> None:
+        """Handle document.processed events for linking documents to requests."""
+        logger.debug(f"Disclosure received document.processed: {event}")
+
+    async def _handle_case_updated(self, event: dict) -> None:
+        """Handle case.updated events for refreshing disclosure state."""
+        logger.debug(f"Disclosure received case.updated: {event}")
 
     # --- Database Schema ---
 
@@ -81,18 +99,24 @@ class DisclosureShard(ArkhamShard):
             # Create schema
             await self._db.execute("CREATE SCHEMA IF NOT EXISTS arkham_disclosure")
 
-            # --- requests table ---
+            # --- disclosure_requests table (spec-compliant) ---
             await self._db.execute("""
-                CREATE TABLE IF NOT EXISTS arkham_disclosure.requests (
-                    id TEXT PRIMARY KEY,
-                    tenant_id UUID,
-                    respondent_id TEXT NOT NULL,
-                    request_text TEXT NOT NULL,
-                    deadline TIMESTAMP,
-                    status TEXT NOT NULL DEFAULT 'pending',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                CREATE TABLE IF NOT EXISTS arkham_disclosure.disclosure_requests (
+                    id UUID PRIMARY KEY,
+                    case_id UUID,
+                    category TEXT,
+                    description TEXT,
+                    requesting_party TEXT,
+                    status TEXT DEFAULT 'pending',
+                    deadline DATE NULL,
+                    document_ids UUID[] DEFAULT '{}',
+                    response_text TEXT NULL,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ DEFAULT NOW()
                 )
             """)
+
+            # --- Legacy tables (kept for migration compatibility) ---
 
             # --- responses table ---
             await self._db.execute("""
@@ -133,20 +157,23 @@ class DisclosureShard(ArkhamShard):
 
             # --- Indexes ---
             await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_disclosure_requests_respondent "
-                "ON arkham_disclosure.requests(respondent_id)"
+                "CREATE INDEX IF NOT EXISTS idx_disclosure_requests_case "
+                "ON arkham_disclosure.disclosure_requests(case_id)"
             )
             await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_disclosure_requests_tenant ON arkham_disclosure.requests(tenant_id)"
+                "CREATE INDEX IF NOT EXISTS idx_disclosure_requests_status "
+                "ON arkham_disclosure.disclosure_requests(status)"
             )
             await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_disclosure_requests_status ON arkham_disclosure.requests(status)"
+                "CREATE INDEX IF NOT EXISTS idx_disclosure_requests_category "
+                "ON arkham_disclosure.disclosure_requests(category)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_disclosure_requests_deadline "
+                "ON arkham_disclosure.disclosure_requests(deadline)"
             )
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_disclosure_responses_request ON arkham_disclosure.responses(request_id)"
-            )
-            await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_disclosure_responses_tenant ON arkham_disclosure.responses(tenant_id)"
             )
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_disclosure_gaps_request ON arkham_disclosure.gaps(request_id)"
@@ -157,10 +184,6 @@ class DisclosureShard(ArkhamShard):
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_disclosure_evasion_respondent "
                 "ON arkham_disclosure.evasion_scores(respondent_id)"
-            )
-            await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_disclosure_evasion_tenant "
-                "ON arkham_disclosure.evasion_scores(tenant_id)"
             )
 
             logger.info("Disclosure database schema created")

@@ -1040,7 +1040,6 @@ class PacketsShard(ArkhamShard):
         # Filter by tenant_id for multi-tenancy
         tenant_id = self.get_tenant_id_or_none()
         tenant_filter = " WHERE tenant_id = :tenant_id" if tenant_id else ""
-        tenant_filter_and = " AND tenant_id = :tenant_id" if tenant_id else ""
         params = {"tenant_id": str(tenant_id)} if tenant_id else {}
 
         # Total packets

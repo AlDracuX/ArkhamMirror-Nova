@@ -79,7 +79,7 @@ class TestPaddleWorkerEngine:
         mock_paddleocr_module.PaddleOCR = mock_paddleocr_class
 
         with patch.dict("sys.modules", {"paddleocr": mock_paddleocr_module}):
-            engine = PaddleWorker._get_engine(lang="zh")
+            PaddleWorker._get_engine(lang="zh")
 
             mock_paddleocr_class.assert_called_once_with(
                 use_angle_cls=True,
@@ -112,7 +112,7 @@ class TestPaddleWorkerEngine:
         mock_paddleocr_module.PaddleOCR = mock_paddleocr_class
 
         with patch.dict("sys.modules", {"paddleocr": mock_paddleocr_module}):
-            engine = PaddleWorker._get_engine(use_angle_cls=False)
+            PaddleWorker._get_engine(use_angle_cls=False)
 
             mock_paddleocr_class.assert_called_once_with(
                 use_angle_cls=False,

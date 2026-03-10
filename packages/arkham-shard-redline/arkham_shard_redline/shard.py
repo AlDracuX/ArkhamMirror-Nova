@@ -1,20 +1,38 @@
 """Redline Shard - Document version comparison and semantic diff."""
 
+import json
 import logging
+import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from arkham_frame.shard_interface import ArkhamShard
 
 from .api import init_api, router
+from .models import Comparison, ComparisonStatus
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_json_field(value: Any, default: Any = None) -> Any:
+    """Parse a JSON field that may already be parsed by the database driver."""
+    if value is None:
+        return default if default is not None else []
+    if isinstance(value, (list, dict)):
+        return value
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return default if default is not None else []
+    return default if default is not None else []
 
 
 class RedlineShard(ArkhamShard):
     """
     Redline shard for ArkhamFrame.
 
-    Document version comparison and semantic diff
+    Document version comparison and semantic diff.
     """
 
     name = "redline"
@@ -90,6 +108,159 @@ class RedlineShard(ArkhamShard):
         """Return FastAPI router for this shard."""
         return router
 
+    # --- CRUD helpers ---
+
+    async def create_comparison(
+        self,
+        doc_a_id: str,
+        doc_b_id: str,
+        title: str = "",
+        case_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Create a new comparison record in pending status."""
+        comp_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
+
+        if self._db:
+            await self._db.execute(
+                """
+                INSERT INTO arkham_redline.comparisons
+                (id, case_id, doc_a_id, doc_b_id, title, status, diff_count,
+                 additions, deletions, modifications, diffs, created_at, updated_at)
+                VALUES (:id, :case_id, :doc_a_id, :doc_b_id, :title, :status,
+                        0, 0, 0, 0, :diffs, :created_at, :updated_at)
+                """,
+                {
+                    "id": comp_id,
+                    "case_id": case_id,
+                    "doc_a_id": doc_a_id,
+                    "doc_b_id": doc_b_id,
+                    "title": title,
+                    "status": ComparisonStatus.PENDING,
+                    "diffs": "[]",
+                    "created_at": now,
+                    "updated_at": now,
+                },
+            )
+
+        if self._event_bus:
+            await self._event_bus.emit(
+                "redline.comparison.created",
+                {"comparison_id": comp_id},
+                source="redline-shard",
+            )
+
+        return {
+            "id": comp_id,
+            "case_id": case_id,
+            "doc_a_id": doc_a_id,
+            "doc_b_id": doc_b_id,
+            "title": title,
+            "status": ComparisonStatus.PENDING,
+            "diff_count": 0,
+            "additions": 0,
+            "deletions": 0,
+            "modifications": 0,
+            "diffs": [],
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat(),
+        }
+
+    async def get_comparison(self, comp_id: str) -> Optional[Dict[str, Any]]:
+        """Get a comparison by ID."""
+        if not self._db:
+            return None
+        row = await self._db.fetch_one(
+            "SELECT * FROM arkham_redline.comparisons WHERE id = :id",
+            {"id": comp_id},
+        )
+        if not row:
+            return None
+        result = dict(row)
+        result["diffs"] = _parse_json_field(result.get("diffs"), [])
+        return result
+
+    async def list_comparisons(
+        self,
+        case_id: Optional[str] = None,
+        status: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """List comparisons with optional filters."""
+        if not self._db:
+            return []
+
+        query = "SELECT * FROM arkham_redline.comparisons WHERE 1=1"
+        params: Dict[str, Any] = {}
+
+        if case_id:
+            query += " AND case_id = :case_id"
+            params["case_id"] = case_id
+        if status:
+            query += " AND status = :status"
+            params["status"] = status
+
+        query += " ORDER BY created_at DESC"
+
+        rows = await self._db.fetch_all(query, params)
+        results = []
+        for row in rows:
+            r = dict(row)
+            r["diffs"] = _parse_json_field(r.get("diffs"), [])
+            results.append(r)
+        return results
+
+    async def update_comparison(self, comp_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update a comparison record."""
+        if not self._db:
+            return None
+
+        # Validate status if provided
+        if "status" in updates and updates["status"] not in ComparisonStatus.ALL:
+            return None
+
+        allowed_fields = {
+            "title",
+            "status",
+            "diff_count",
+            "additions",
+            "deletions",
+            "modifications",
+            "diffs",
+            "case_id",
+        }
+        set_clauses = []
+        params: Dict[str, Any] = {"id": comp_id}
+
+        for key, value in updates.items():
+            if key in allowed_fields:
+                if key == "diffs":
+                    value = json.dumps(value) if isinstance(value, (list, dict)) else value
+                set_clauses.append(f"{key} = :{key}")
+                params[key] = value
+
+        if not set_clauses:
+            return await self.get_comparison(comp_id)
+
+        set_clauses.append("updated_at = :updated_at")
+        params["updated_at"] = datetime.now(timezone.utc)
+
+        await self._db.execute(
+            f"UPDATE arkham_redline.comparisons SET {', '.join(set_clauses)} WHERE id = :id",
+            params,
+        )
+
+        return await self.get_comparison(comp_id)
+
+    async def delete_comparison(self, comp_id: str) -> bool:
+        """Delete a comparison record. Returns True if deleted."""
+        if not self._db:
+            return False
+        await self._db.execute(
+            "DELETE FROM arkham_redline.comparisons WHERE id = :id",
+            {"id": comp_id},
+        )
+        return True
+
     # --- Database Schema ---
 
     async def _create_schema(self) -> None:
@@ -102,51 +273,31 @@ class RedlineShard(ArkhamShard):
             # Create schema
             await self._db.execute("CREATE SCHEMA IF NOT EXISTS arkham_redline")
 
-            # Create tables
+            # Create comparisons table (new spec)
             await self._db.execute("""
                 CREATE TABLE IF NOT EXISTS arkham_redline.comparisons (
-                    id TEXT PRIMARY KEY,
-                    tenant_id UUID,
-                    project_id TEXT NOT NULL,
-                    base_document_id TEXT NOT NULL,
-                    target_document_id TEXT NOT NULL,
-                    diff_summary TEXT,
-                    change_count INTEGER DEFAULT 0,
-                    silent_edits BOOLEAN DEFAULT FALSE,
-                    metadata JSONB DEFAULT '{}',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            await self._db.execute("""
-                CREATE TABLE IF NOT EXISTS arkham_redline.version_chains (
-                    id TEXT PRIMARY KEY,
-                    project_id TEXT NOT NULL,
-                    document_ids JSONB DEFAULT '[]',
-                    description TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            await self._db.execute("""
-                CREATE TABLE IF NOT EXISTS arkham_redline.changes (
-                    id TEXT PRIMARY KEY,
-                    comparison_id TEXT REFERENCES arkham_redline.comparisons(id) ON DELETE CASCADE,
-                    type TEXT NOT NULL,
-                    location TEXT,
-                    before_text TEXT,
-                    after_text TEXT,
-                    significance FLOAT,
-                    is_silent BOOLEAN DEFAULT FALSE
+                    id UUID PRIMARY KEY,
+                    case_id UUID,
+                    doc_a_id UUID,
+                    doc_b_id UUID,
+                    title TEXT,
+                    status TEXT DEFAULT 'pending',
+                    diff_count INTEGER DEFAULT 0,
+                    additions INTEGER DEFAULT 0,
+                    deletions INTEGER DEFAULT 0,
+                    modifications INTEGER DEFAULT 0,
+                    diffs JSONB DEFAULT '[]',
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
                 )
             """)
 
             # Indexes
             await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_redline_comparisons_project ON arkham_redline.comparisons(project_id)"
+                "CREATE INDEX IF NOT EXISTS idx_redline_comp_case ON arkham_redline.comparisons(case_id)"
             )
             await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_redline_chains_project ON arkham_redline.version_chains(project_id)"
+                "CREATE INDEX IF NOT EXISTS idx_redline_comp_status ON arkham_redline.comparisons(status)"
             )
 
             logger.info("Redline database schema created")

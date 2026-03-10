@@ -6,7 +6,7 @@ import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Any, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
@@ -50,11 +50,15 @@ def init_api(
 
 
 class RuleCreate(BaseModel):
-    rule_number: str
+    rule_number: str = ""
     title: str
+    jurisdiction: Optional[str] = None
+    statute: Optional[str] = None
+    section: Optional[str] = None
     description: str = ""
-    category: str
-    trigger_type: str
+    text: Optional[str] = None
+    category: str = ""
+    trigger_type: str = ""
     deadline_days: Optional[int] = None
     deadline_type: str = "calendar_days"
     statutory_source: str = "ET Rules of Procedure 2013"
@@ -64,7 +68,35 @@ class RuleCreate(BaseModel):
     strike_out_risk: bool = False
     unless_order_applicable: bool = False
     notes: str = ""
+    applicability_notes: Optional[str] = None
+    claim_types: list[str] = Field(default_factory=list)
+    precedent_refs: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
+
+
+class RuleUpdate(BaseModel):
+    rule_number: Optional[str] = None
+    title: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    statute: Optional[str] = None
+    section: Optional[str] = None
+    description: Optional[str] = None
+    text: Optional[str] = None
+    category: Optional[str] = None
+    trigger_type: Optional[str] = None
+    deadline_days: Optional[int] = None
+    deadline_type: Optional[str] = None
+    statutory_source: Optional[str] = None
+    applies_to: Optional[str] = None
+    is_mandatory: Optional[bool] = None
+    consequence_of_breach: Optional[str] = None
+    strike_out_risk: Optional[bool] = None
+    unless_order_applicable: Optional[bool] = None
+    notes: Optional[str] = None
+    applicability_notes: Optional[str] = None
+    claim_types: Optional[list[str]] = None
+    precedent_refs: Optional[list[str]] = None
+    tags: Optional[list[str]] = None
 
 
 class BreachCreate(BaseModel):
@@ -81,23 +113,64 @@ class BreachCreate(BaseModel):
     created_by: Optional[str] = None
 
 
-# --- Rules Endpoints ---
+# --- Rules CRUD Endpoints ---
+
+
+@router.get("/applicable")
+async def get_applicable_rules(
+    claim_type: str = Query(..., description="Claim type to match against claim_types array"),
+):
+    """Return rules where claim_type is in the claim_types array, sorted by jurisdiction then statute."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Rules service not initialized")
+
+    rows = await _db.fetch_all(
+        "SELECT * FROM arkham_rules.rules WHERE :claim_type = ANY(claim_types) ORDER BY jurisdiction, statute",
+        {"claim_type": claim_type},
+    )
+    return [dict(row) for row in rows]
 
 
 @router.get("/rules")
-async def list_rules(category: Optional[str] = None):
-    """List procedural rules."""
+async def list_rules(
+    category: Optional[str] = None,
+    jurisdiction: Optional[str] = None,
+    statute: Optional[str] = None,
+):
+    """List procedural rules with optional filters."""
     if not _db:
         raise HTTPException(status_code=503, detail="Rules service not initialized")
 
     query = "SELECT * FROM arkham_rules.rules WHERE 1=1"
-    params = {}
+    params: dict[str, Any] = {}
     if category:
         query += " AND category = :category"
         params["category"] = category
+    if jurisdiction:
+        query += " AND jurisdiction = :jurisdiction"
+        params["jurisdiction"] = jurisdiction
+    if statute:
+        query += " AND statute = :statute"
+        params["statute"] = statute
 
+    query += " ORDER BY created_at DESC"
     rows = await _db.fetch_all(query, params)
     return [dict(row) for row in rows]
+
+
+@router.get("/rules/{rule_id}")
+async def get_rule(rule_id: str):
+    """Get a single rule by ID."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Rules service not initialized")
+
+    row = await _db.fetch_one(
+        "SELECT * FROM arkham_rules.rules WHERE id = :id",
+        {"id": rule_id},
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Rule not found: {rule_id}")
+    return dict(row)
 
 
 @router.post("/rules")
@@ -112,15 +185,25 @@ async def create_rule(request: RuleCreate):
     await _db.execute(
         """
         INSERT INTO arkham_rules.rules
-        (id, tenant_id, rule_number, title, description, category, trigger_type, deadline_days, deadline_type, statutory_source, applies_to, is_mandatory, consequence_of_breach, strike_out_risk, unless_order_applicable, notes, tags)
-        VALUES (:id, :tenant_id, :rule_number, :title, :description, :category, :trigger_type, :deadline_days, :deadline_type, :statutory_source, :applies_to, :is_mandatory, :consequence_of_breach, :strike_out_risk, :unless_order_applicable, :notes, :tags)
+        (id, tenant_id, rule_number, title, jurisdiction, statute, section, description, text,
+         category, trigger_type, deadline_days, deadline_type, statutory_source, applies_to,
+         is_mandatory, consequence_of_breach, strike_out_risk, unless_order_applicable,
+         notes, applicability_notes, claim_types, precedent_refs, tags)
+        VALUES (:id, :tenant_id, :rule_number, :title, :jurisdiction, :statute, :section, :description, :text,
+                :category, :trigger_type, :deadline_days, :deadline_type, :statutory_source, :applies_to,
+                :is_mandatory, :consequence_of_breach, :strike_out_risk, :unless_order_applicable,
+                :notes, :applicability_notes, :claim_types, :precedent_refs, :tags)
         """,
         {
             "id": rule_id,
             "tenant_id": str(tenant_id) if tenant_id else None,
             "rule_number": request.rule_number,
             "title": request.title,
+            "jurisdiction": request.jurisdiction,
+            "statute": request.statute,
+            "section": request.section,
             "description": request.description,
+            "text": request.text,
             "category": request.category,
             "trigger_type": request.trigger_type,
             "deadline_days": request.deadline_days,
@@ -132,11 +215,79 @@ async def create_rule(request: RuleCreate):
             "strike_out_risk": request.strike_out_risk,
             "unless_order_applicable": request.unless_order_applicable,
             "notes": request.notes,
+            "applicability_notes": request.applicability_notes,
+            "claim_types": request.claim_types,
+            "precedent_refs": request.precedent_refs,
             "tags": json.dumps(request.tags),
         },
     )
 
     return {"id": rule_id, "status": "created"}
+
+
+@router.put("/rules/{rule_id}")
+async def update_rule(rule_id: str, request: RuleUpdate):
+    """Update an existing rule. Only provided fields are updated."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Rules service not initialized")
+
+    # Check rule exists
+    existing = await _db.fetch_one(
+        "SELECT * FROM arkham_rules.rules WHERE id = :id",
+        {"id": rule_id},
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail=f"Rule not found: {rule_id}")
+
+    # Build dynamic SET clause from non-None fields
+    updates = request.model_dump(exclude_none=True)
+    if not updates:
+        return dict(existing)
+
+    # Handle special serialization for array/json fields
+    if "tags" in updates:
+        updates["tags"] = json.dumps(updates["tags"])
+
+    set_clauses = []
+    params: dict[str, Any] = {"id": rule_id}
+    for field_name, value in updates.items():
+        set_clauses.append(f"{field_name} = :{field_name}")
+        params[field_name] = value
+
+    set_clauses.append("updated_at = CURRENT_TIMESTAMP")
+    set_sql = ", ".join(set_clauses)
+
+    await _db.execute(
+        f"UPDATE arkham_rules.rules SET {set_sql} WHERE id = :id",
+        params,
+    )
+
+    # Fetch and return updated row
+    updated = await _db.fetch_one(
+        "SELECT * FROM arkham_rules.rules WHERE id = :id",
+        {"id": rule_id},
+    )
+    return dict(updated) if updated else {"id": rule_id, "status": "updated"}
+
+
+@router.delete("/rules/{rule_id}")
+async def delete_rule(rule_id: str):
+    """Delete a rule by ID."""
+    if not _db:
+        raise HTTPException(status_code=503, detail="Rules service not initialized")
+
+    existing = await _db.fetch_one(
+        "SELECT id FROM arkham_rules.rules WHERE id = :id",
+        {"id": rule_id},
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail=f"Rule not found: {rule_id}")
+
+    await _db.execute(
+        "DELETE FROM arkham_rules.rules WHERE id = :id",
+        {"id": rule_id},
+    )
+    return {"id": rule_id, "status": "deleted"}
 
 
 # --- Calculations Endpoints ---
@@ -149,7 +300,7 @@ async def list_calculations(project_id: Optional[str] = None):
         raise HTTPException(status_code=503, detail="Rules service not initialized")
 
     query = "SELECT * FROM arkham_rules.calculations WHERE 1=1"
-    params = {}
+    params: dict[str, Any] = {}
     if project_id:
         query += " AND project_id = :project_id"
         params["project_id"] = project_id
@@ -168,7 +319,7 @@ async def list_breaches(project_id: Optional[str] = None, party: Optional[str] =
         raise HTTPException(status_code=503, detail="Rules service not initialized")
 
     query = "SELECT * FROM arkham_rules.breaches WHERE 1=1"
-    params = {}
+    params: dict[str, Any] = {}
     if project_id:
         query += " AND project_id = :project_id"
         params["project_id"] = project_id
@@ -242,7 +393,7 @@ async def list_compliance_checks(project_id: Optional[str] = None):
         raise HTTPException(status_code=503, detail="Rules service not initialized")
 
     query = "SELECT * FROM arkham_rules.compliance_checks WHERE 1=1"
-    params = {}
+    params: dict[str, Any] = {}
     if project_id:
         query += " AND project_id = :project_id"
         params["project_id"] = project_id

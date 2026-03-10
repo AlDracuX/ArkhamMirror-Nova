@@ -252,7 +252,7 @@ class CredibilityShard(ArkhamShard):
     async def _on_claim_verified(self, event: Dict[str, Any]) -> None:
         """Handle claims.claim.verified event - boost source credibility."""
         payload = event.get("payload", {})
-        claim_id = payload.get("claim_id")
+        payload.get("claim_id")
         source_document_id = payload.get("source_document_id")
 
         if source_document_id:
@@ -262,7 +262,7 @@ class CredibilityShard(ArkhamShard):
     async def _on_claim_disputed(self, event: Dict[str, Any]) -> None:
         """Handle claims.claim.disputed event - reduce source credibility."""
         payload = event.get("payload", {})
-        claim_id = payload.get("claim_id")
+        payload.get("claim_id")
         source_document_id = payload.get("source_document_id")
 
         if source_document_id:

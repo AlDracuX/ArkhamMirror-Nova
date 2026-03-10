@@ -1,7 +1,7 @@
 """Playbook Shard - Litigation strategy and scenario planner."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from arkham_frame.shard_interface import ArkhamShard
 
@@ -14,7 +14,7 @@ class PlaybookShard(ArkhamShard):
     """
     Playbook shard for ArkhamFrame.
 
-    Litigation strategy and scenario planner
+    Litigation strategy and scenario planner.
     """
 
     name = "playbook"
@@ -102,51 +102,34 @@ class PlaybookShard(ArkhamShard):
             # Create schema
             await self._db.execute("CREATE SCHEMA IF NOT EXISTS arkham_playbook")
 
-            # Create tables
+            # Create plays table
             await self._db.execute("""
-                CREATE TABLE IF NOT EXISTS arkham_playbook.strategies (
-                    id TEXT PRIMARY KEY,
-                    tenant_id UUID,
-                    project_id TEXT NOT NULL,
-                    title TEXT NOT NULL,
-                    description TEXT,
-                    status TEXT DEFAULT 'draft',
-                    main_claims JSONB DEFAULT '[]',
-                    fallback_positions JSONB DEFAULT '[]',
-                    metadata JSONB DEFAULT '{}',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            await self._db.execute("""
-                CREATE TABLE IF NOT EXISTS arkham_playbook.scenarios (
-                    id TEXT PRIMARY KEY,
-                    strategy_id TEXT REFERENCES arkham_playbook.strategies(id) ON DELETE CASCADE,
+                CREATE TABLE IF NOT EXISTS arkham_playbook.plays (
+                    id UUID PRIMARY KEY,
+                    case_id UUID,
                     name TEXT NOT NULL,
+                    scenario TEXT,
                     description TEXT,
-                    probability FLOAT,
-                    impact TEXT,
-                    consequences JSONB DEFAULT '[]'
-                )
-            """)
-
-            await self._db.execute("""
-                CREATE TABLE IF NOT EXISTS arkham_playbook.evidence_objectives (
-                    id TEXT PRIMARY KEY,
-                    project_id TEXT NOT NULL,
-                    evidence_id TEXT NOT NULL,
-                    objective_id TEXT NOT NULL,
-                    relevance_score FLOAT,
-                    notes TEXT
+                    steps JSONB DEFAULT '[]',
+                    triggers JSONB DEFAULT '[]',
+                    expected_outcomes JSONB DEFAULT '[]',
+                    contingencies JSONB DEFAULT '[]',
+                    priority TEXT DEFAULT 'medium',
+                    status TEXT DEFAULT 'draft',
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
                 )
             """)
 
             # Indexes
             await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_playbook_strategies_project ON arkham_playbook.strategies(project_id)"
+                "CREATE INDEX IF NOT EXISTS idx_playbook_plays_case ON arkham_playbook.plays(case_id)"
             )
             await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_playbook_objectives_project ON arkham_playbook.evidence_objectives(project_id)"
+                "CREATE INDEX IF NOT EXISTS idx_playbook_plays_status ON arkham_playbook.plays(status)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_playbook_plays_priority ON arkham_playbook.plays(priority)"
             )
 
             logger.info("Playbook database schema created")

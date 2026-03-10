@@ -103,7 +103,7 @@ async def export_data(
             },
         )
 
-    except ValueError as e:
+    except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid format: {format}")
     except ExportError as e:
         raise HTTPException(status_code=500, detail=str(e))

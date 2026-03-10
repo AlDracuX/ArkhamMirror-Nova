@@ -15,11 +15,9 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from .manager import UserManager
+from .manager import SECRET_KEY, UserManager
 from .models import Base, User, UserRole
 
-# Configuration from environment
-SECRET_KEY = os.environ.get("AUTH_SECRET_KEY", "CHANGE-ME-IN-PRODUCTION")
 JWT_LIFETIME = int(os.environ.get("JWT_LIFETIME_SECONDS", "3600"))
 DATABASE_URL = os.environ.get(
     "AUTH_DATABASE_URL", os.environ.get("DATABASE_URL", "postgresql+asyncpg://arkham:arkhampass@localhost/arkhamdb")

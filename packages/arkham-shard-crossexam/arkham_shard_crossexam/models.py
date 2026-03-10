@@ -22,6 +22,24 @@ class NodeStatus(str, Enum):
     SKIPPED = "skipped"
 
 
+class ExamApproach(str, Enum):
+    """Approach style for cross-examination."""
+
+    STANDARD = "standard"
+    HOSTILE = "hostile"
+    FRIENDLY = "friendly"
+    EXPERT = "expert"
+
+
+class ExamPlanStatus(str, Enum):
+    """Status of an exam plan."""
+
+    DRAFT = "draft"
+    PREPARED = "prepared"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+
+
 @dataclass
 class QuestionNode:
     """A node in a cross-examination question tree."""
@@ -74,6 +92,24 @@ class ImpeachmentSequence:
     document_evidence_id: Optional[str] = None
     steps: List[str] = field(default_factory=list)  # List of question texts or node IDs
     status: ItemStatus = ItemStatus.ACTIVE
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+
+@dataclass
+class ExamPlan:
+    """A cross-examination plan for a witness."""
+
+    id: str
+    case_id: Optional[str] = None
+    witness_id: Optional[str] = None
+    witness_name: str = ""
+    topics: List[dict] = field(default_factory=list)
+    questions: List[dict] = field(default_factory=list)
+    impeachment_points: List[dict] = field(default_factory=list)
+    objectives: Optional[str] = None
+    approach: ExamApproach = ExamApproach.STANDARD
+    status: ExamPlanStatus = ExamPlanStatus.DRAFT
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 

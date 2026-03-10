@@ -1,14 +1,15 @@
 # =============================================================================
 # PMAT Quality Gates — SHATTERED
 # =============================================================================
+# Quality gates — tightened 2026-03-10 (target: reduce complexity by 10/month)
 # Thresholds based on current baseline (77/100 repo score, 424 violations).
 # Tighten these as code quality improves.
 # =============================================================================
 
 [gates]
 # Max allowed violations per category before gate fails
-complexity = 400        # Baseline: 387 — tighten as hotspots are refactored
-satd = 40               # Baseline: 34 — keep tech debt from growing
+complexity = 375        # Baseline: 387 — forces 12 violations to be fixed
+satd = 35               # Baseline: 34 — forces 1 SATD to be resolved
 dead_code = 5           # Baseline: 0 (Rust-only scan, not useful for Python yet)
 security = 0            # Zero tolerance for security violations
 duplicates = 10         # Baseline: 0 — keep it low

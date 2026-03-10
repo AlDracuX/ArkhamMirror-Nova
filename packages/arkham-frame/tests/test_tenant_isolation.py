@@ -67,8 +67,8 @@ def mock_db():
             self.queries.append({"query": query, "params": params or {}})
             tenant_id = params.get("tenant_id") if params else None
             results = []
-            for table, rows in self.data.items():
-                for row_id, row in rows.items():
+            for _table, rows in self.data.items():
+                for _row_id, row in rows.items():
                     row_tenant = row.get("tenant_id")
                     # Include row if:
                     # 1. No tenant filter requested
@@ -820,7 +820,7 @@ class TestQueryPatternVerification:
 
     def test_hybrid_settings_pattern(self):
         """Verify hybrid settings pattern for global + tenant settings."""
-        tenant_id = uuid4()
+        uuid4()
 
         query = """
             SELECT * FROM arkham_settings

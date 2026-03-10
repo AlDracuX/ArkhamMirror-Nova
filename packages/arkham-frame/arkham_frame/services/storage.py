@@ -503,7 +503,7 @@ class StorageService:
         content, metadata = await self.retrieve(storage_id)
 
         # Store in project location
-        project_path = await self.get_project_path(project_id)
+        await self.get_project_path(project_id)
         relative_path = f"{project_id}/{file_info.filename}"
 
         new_storage_id = await self.store(

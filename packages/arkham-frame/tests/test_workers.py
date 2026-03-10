@@ -116,7 +116,7 @@ class TestWorkerLifecycle:
         task = asyncio.create_task(worker.run())
 
         # Wait for registration first
-        registered = await wait_for_worker_registration(db_pool, worker.worker_id)
+        await wait_for_worker_registration(db_pool, worker.worker_id)
 
         # Get initial heartbeat
         async with db_pool.acquire() as conn:

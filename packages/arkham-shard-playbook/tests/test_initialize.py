@@ -84,6 +84,16 @@ class TestShardInitialization:
         assert len(schema_calls) > 0, "CREATE SCHEMA not called"
 
     @pytest.mark.asyncio
+    async def test_plays_table_created(self, mock_frame, mock_db):
+        """Test plays table is created on init."""
+        shard = PlaybookShard()
+        await shard.initialize(mock_frame)
+
+        calls = [str(c) for c in mock_db.execute.call_args_list]
+        plays_calls = [c for c in calls if "arkham_playbook.plays" in c]
+        assert len(plays_calls) > 0, "plays table not created"
+
+    @pytest.mark.asyncio
     async def test_shutdown(self, mock_frame):
         """Test shard shutdown."""
         shard = PlaybookShard()

@@ -312,7 +312,7 @@ async def list_letters(
     total = await shard.get_count(status=status.value if status else None)
 
     return LetterListResponse(
-        items=[_letter_to_response(l) for l in letters],
+        items=[_letter_to_response(lt) for lt in letters],
         total=total,
         limit=limit,
         offset=offset,
@@ -741,7 +741,7 @@ async def list_draft_letters(
     total = await shard.get_count(status="draft")
 
     return LetterListResponse(
-        items=[_letter_to_response(l) for l in letters],
+        items=[_letter_to_response(lt) for lt in letters],
         total=total,
         limit=limit,
         offset=offset,
@@ -763,7 +763,7 @@ async def list_finalized_letters(
     total = await shard.get_count(status="finalized")
 
     return LetterListResponse(
-        items=[_letter_to_response(l) for l in letters],
+        items=[_letter_to_response(lt) for lt in letters],
         total=total,
         limit=limit,
         offset=offset,
@@ -785,7 +785,7 @@ async def list_sent_letters(
     total = await shard.get_count(status="sent")
 
     return LetterListResponse(
-        items=[_letter_to_response(l) for l in letters],
+        items=[_letter_to_response(lt) for lt in letters],
         total=total,
         limit=limit,
         offset=offset,

@@ -894,7 +894,7 @@ class TestSchedulerService:
         """Test scheduler statistics."""
         scheduler_service.register_job("stats_job", execution_tracker.increment)
 
-        job = scheduler_service.schedule_interval(name="Stats Job", func_name="stats_job", seconds=1)
+        scheduler_service.schedule_interval(name="Stats Job", func_name="stats_job", seconds=1)
 
         # Wait for executions
         await asyncio.sleep(2.5)

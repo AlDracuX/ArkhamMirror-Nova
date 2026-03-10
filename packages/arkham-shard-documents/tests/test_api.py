@@ -93,7 +93,7 @@ class TestListDocuments:
         response = client.get("/api/documents/items?sort=title&order=asc")
         assert response.status_code == 200
 
-        data = response.json()
+        response.json()
         assert response.status_code == 200
 
     def test_list_documents_with_status_filter(self, client):

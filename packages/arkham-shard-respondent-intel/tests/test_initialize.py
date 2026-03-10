@@ -43,7 +43,6 @@ def mock_frame(mock_events, mock_db):
             "llm": None,
             "database": mock_db,
             "vectors": None,
-            "documents": None,
         }.get(name)
     )
     return frame
@@ -78,10 +77,36 @@ class TestShardInitialization:
         shard = RespondentIntelShard()
         await shard.initialize(mock_frame)
 
-        # Verify CREATE SCHEMA was called
         calls = [str(c) for c in mock_db.execute.call_args_list]
         schema_calls = [c for c in calls if "CREATE SCHEMA" in c]
         assert len(schema_calls) > 0, "CREATE SCHEMA not called"
+
+    @pytest.mark.asyncio
+    async def test_respondent_profiles_table_created(self, mock_frame, mock_db):
+        """Test respondent_profiles table DDL is executed."""
+        shard = RespondentIntelShard()
+        await shard.initialize(mock_frame)
+
+        ddl_calls = [str(c.args[0]) for c in mock_db.execute.call_args_list]
+        profiles_ddl = next((s for s in ddl_calls if "respondent_profiles" in s and "CREATE TABLE" in s), None)
+        assert profiles_ddl is not None, "respondent_profiles CREATE TABLE not found"
+        # Verify key columns
+        assert "case_id" in profiles_ddl
+        assert "organization" in profiles_ddl
+        assert "strengths" in profiles_ddl
+        assert "weaknesses" in profiles_ddl
+        assert "document_ids" in profiles_ddl
+        assert "JSONB" in profiles_ddl
+        assert "UUID" in profiles_ddl
+
+    @pytest.mark.asyncio
+    async def test_indexes_created(self, mock_frame, mock_db):
+        """Test indexes are created on init."""
+        shard = RespondentIntelShard()
+        await shard.initialize(mock_frame)
+
+        index_calls = [str(c.args[0]) for c in mock_db.execute.call_args_list if "CREATE INDEX" in str(c.args[0])]
+        assert len(index_calls) >= 3, f"Expected at least 3 indexes, got {len(index_calls)}"
 
     @pytest.mark.asyncio
     async def test_shutdown(self, mock_frame):

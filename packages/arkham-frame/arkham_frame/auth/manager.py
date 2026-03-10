@@ -13,7 +13,16 @@ from .models import User
 
 logger = logging.getLogger(__name__)
 
-SECRET_KEY = os.environ.get("AUTH_SECRET_KEY", "CHANGE-ME-IN-PRODUCTION")
+SECRET_KEY = os.environ.get("AUTH_SECRET_KEY", "")
+if not SECRET_KEY:
+    import warnings
+
+    SECRET_KEY = "dev-only-insecure-key-" + "0" * 32
+    warnings.warn(
+        "AUTH_SECRET_KEY not set — using insecure development key. "
+        "Set AUTH_SECRET_KEY environment variable for production.",
+        stacklevel=2,
+    )
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):

@@ -52,9 +52,15 @@ class ConfigService:
     def _load_env(self):
         """Load configuration from environment variables."""
         # PostgreSQL database (includes pgvector for vectors and job queue)
-        self._config["database_url"] = os.environ.get(
-            "DATABASE_URL", "postgresql://arkham:arkhampass@localhost:5432/arkhamdb"
-        )
+        _default_db = "postgresql://arkham:arkhampass@localhost:5432/arkhamdb"
+        db_url = os.environ.get("DATABASE_URL", _default_db)
+        if not os.environ.get("DATABASE_URL") and not is_running_in_docker():
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "DATABASE_URL not set — using development default. Set DATABASE_URL for production."
+            )
+        self._config["database_url"] = db_url
         # LLM endpoint (LM Studio, Ollama, OpenAI-compatible)
         self._config["llm_endpoint"] = os.environ.get(
             "LLM_ENDPOINT", os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1")

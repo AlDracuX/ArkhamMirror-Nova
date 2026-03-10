@@ -16,6 +16,7 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 # Module-level state for test injection
 _shard_instance: "SettingsShard | None" = None
+_storage = None
 
 
 def init_api(db=None, event_bus=None, storage=None, shard=None):

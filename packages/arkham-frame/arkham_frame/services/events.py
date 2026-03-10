@@ -24,6 +24,20 @@ class EventDeliveryError(Exception):
 
 
 @dataclass
+class EventResult:
+    """Result of emitting an event."""
+
+    event_type: str
+    delivered: int = 0
+    failed: int = 0
+    errors: list[str] = field(default_factory=list)
+
+    @property
+    def success(self) -> bool:
+        return self.failed == 0
+
+
+@dataclass
 class Event:
     """An event in the system."""
 
@@ -77,9 +91,10 @@ class EventBus:
         event_type: str,
         payload: Dict[str, Any],
         source: str,
-    ) -> None:
+    ) -> EventResult:
         """Emit an event."""
         self._sequence += 1
+        result = EventResult(event_type=event_type)
 
         event = Event(
             event_type=event_type,
@@ -99,7 +114,7 @@ class EventBus:
                 for callback in callbacks:
                     try:
                         if callable(callback):
-                            result = callback(
+                            cb_result = callback(
                                 {
                                     "event_type": event_type,
                                     "payload": payload,
@@ -107,10 +122,15 @@ class EventBus:
                                 }
                             )
                             # Handle async callbacks
-                            if hasattr(result, "__await__"):
-                                await result
+                            if hasattr(cb_result, "__await__"):
+                                await cb_result
+                            result.delivered += 1
                     except Exception as e:
-                        logger.error(f"Event callback error: {e}")
+                        result.failed += 1
+                        result.errors.append(str(e))
+                        logger.error(f"Event callback {callback.__name__} failed for {event_type}: {e}")
+
+        return result
 
     def get_events(
         self,

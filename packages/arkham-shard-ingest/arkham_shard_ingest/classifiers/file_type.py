@@ -188,7 +188,7 @@ class FileTypeClassifier:
         Returns list of worker pool names.
         """
         # Find matching route config
-        for category, config in FILE_TYPE_ROUTES.items():
+        for _category, config in FILE_TYPE_ROUTES.items():
             if file_info.extension in config["extensions"]:
                 # Filter out meta-instructions like ROUTE_BY_QUALITY
                 return [

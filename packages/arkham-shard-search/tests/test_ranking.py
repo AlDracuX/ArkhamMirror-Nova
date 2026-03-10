@@ -170,7 +170,7 @@ class TestResultRankerRerankByEntities:
 
     def test_rerank_no_priority_entities(self, entity_results):
         """Test reranking with no priority entities returns unchanged order."""
-        original_order = [r.doc_id for r in entity_results]
+        [r.doc_id for r in entity_results]
         reranked = ResultRanker.rerank_by_entities(entity_results, [])
         # Order unchanged when sorted by score descending
         assert reranked == entity_results

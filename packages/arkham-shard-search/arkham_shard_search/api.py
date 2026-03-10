@@ -316,9 +316,8 @@ async def find_similar_documents(
         raise HTTPException(status_code=503, detail="Search service not initialized")
 
     # Parse filters
-    search_filters = None
     if filters:
-        search_filters = FilterBuilder.from_dict(filters)
+        FilterBuilder.from_dict(filters)
 
     try:
         results = await _semantic_engine.find_similar(

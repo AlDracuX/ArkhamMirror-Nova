@@ -241,7 +241,7 @@ class EmbedShard(ArkhamShard):
             points = []
             vector_ids = []
             chunk_ids = []
-            for emb, data in zip(embeddings, chunk_data):
+            for emb, data in zip(embeddings, chunk_data, strict=False):
                 vector_id = str(uuid_mod.uuid4())
                 point = VectorPoint(
                     id=vector_id,

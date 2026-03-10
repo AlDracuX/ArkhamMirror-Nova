@@ -9,7 +9,7 @@ __version__ = "0.1.0"
 
 # Shard interface
 # Frame class
-from .frame import ArkhamFrame, get_frame
+from .frame import ArkhamFrame, get_frame, set_frame
 
 # Pipeline
 from .pipeline import (
@@ -67,6 +67,7 @@ __all__ = [
     # Frame
     "ArkhamFrame",
     "get_frame",
+    "set_frame",
     # Services
     "ConfigService",
     # Exceptions

@@ -517,7 +517,7 @@ class TestEventHandlers:
                 # Should emit failure event
                 emit_calls = mock_events.emit.call_args_list
                 # Check if any emit call was for job failure
-                failure_events = [c for c in emit_calls if "failed" in str(c)]
+                [c for c in emit_calls if "failed" in str(c)]
                 # The job should be marked as dead
 
 

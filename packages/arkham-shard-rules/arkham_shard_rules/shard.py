@@ -116,11 +116,15 @@ class RulesShard(ArkhamShard):
             # -------------------------------------------------------
             await self._db.execute("""
                 CREATE TABLE IF NOT EXISTS arkham_rules.rules (
-                    id TEXT PRIMARY KEY,
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     tenant_id UUID,
                     rule_number TEXT NOT NULL,
                     title TEXT NOT NULL,
+                    jurisdiction TEXT,
+                    statute TEXT,
+                    section TEXT,
                     description TEXT,
+                    text TEXT,
                     category TEXT,
                     trigger_type TEXT,
                     deadline_days INTEGER,
@@ -132,11 +136,32 @@ class RulesShard(ArkhamShard):
                     strike_out_risk BOOLEAN DEFAULT FALSE,
                     unless_order_applicable BOOLEAN DEFAULT FALSE,
                     notes TEXT,
+                    applicability_notes TEXT,
+                    claim_types TEXT[] DEFAULT '{}',
+                    precedent_refs TEXT[] DEFAULT '{}',
                     tags JSONB DEFAULT '[]',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+
+            # Migration: add new columns to existing deployments
+            new_columns = [
+                ("jurisdiction", "TEXT"),
+                ("statute", "TEXT"),
+                ("section", "TEXT"),
+                ("text", "TEXT"),
+                ("applicability_notes", "TEXT"),
+                ("claim_types", "TEXT[] DEFAULT '{}'"),
+                ("precedent_refs", "TEXT[] DEFAULT '{}'"),
+            ]
+            for col_name, col_type in new_columns:
+                await self._db.execute(f"""
+                    DO $$ BEGIN
+                        ALTER TABLE arkham_rules.rules ADD COLUMN {col_name} {col_type};
+                    EXCEPTION WHEN duplicate_column THEN NULL;
+                    END $$;
+                """)
 
             # -------------------------------------------------------
             # Calculations table - computed deadlines

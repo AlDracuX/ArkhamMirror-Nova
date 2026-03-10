@@ -1,7 +1,7 @@
 """RespondentIntel Shard - Corporate structure and respondent background intelligence."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from arkham_frame.shard_interface import ArkhamShard
 
@@ -14,7 +14,7 @@ class RespondentIntelShard(ArkhamShard):
     """
     RespondentIntel shard for ArkhamFrame.
 
-    Corporate structure and respondent background intelligence
+    Corporate structure and respondent background intelligence.
     """
 
     name = "respondent-intel"
@@ -22,7 +22,7 @@ class RespondentIntelShard(ArkhamShard):
     description = "Corporate structure and respondent background intelligence"
 
     def __init__(self):
-        super().__init__()  # Auto-loads manifest from shard.yaml
+        super().__init__()
         self._frame = None
         self._db = None
         self._event_bus = None
@@ -96,60 +96,38 @@ class RespondentIntelShard(ArkhamShard):
             # Create schema
             await self._db.execute("CREATE SCHEMA IF NOT EXISTS arkham_respondent_intel")
 
-            # Create tables
+            # Create respondent_profiles table
             await self._db.execute("""
-                CREATE TABLE IF NOT EXISTS arkham_respondent_intel.profiles (
-                    id TEXT PRIMARY KEY,
-                    tenant_id UUID,
+                CREATE TABLE IF NOT EXISTS arkham_respondent_intel.respondent_profiles (
+                    id UUID PRIMARY KEY,
+                    case_id UUID,
                     name TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    corporate_structure JSONB DEFAULT '{}',
-                    key_personnel JSONB DEFAULT '[]',
-                    metadata JSONB DEFAULT '{}',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            await self._db.execute("""
-                CREATE TABLE IF NOT EXISTS arkham_respondent_intel.connections (
-                    id TEXT PRIMARY KEY,
-                    source_respondent_id TEXT NOT NULL,
-                    target_respondent_id TEXT NOT NULL,
-                    relationship_type TEXT,
-                    description TEXT,
-                    strength FLOAT
-                )
-            """)
-
-            await self._db.execute("""
-                CREATE TABLE IF NOT EXISTS arkham_respondent_intel.public_records (
-                    id TEXT PRIMARY KEY,
-                    respondent_id TEXT REFERENCES arkham_respondent_intel.profiles(id) ON DELETE CASCADE,
-                    record_type TEXT NOT NULL,
-                    title TEXT NOT NULL,
-                    url TEXT,
-                    summary TEXT,
-                    record_date TIMESTAMP
-                )
-            """)
-
-            await self._db.execute("""
-                CREATE TABLE IF NOT EXISTS arkham_respondent_intel.vulnerabilities (
-                    id TEXT PRIMARY KEY,
-                    respondent_id TEXT REFERENCES arkham_respondent_intel.profiles(id) ON DELETE CASCADE,
-                    category TEXT NOT NULL,
-                    description TEXT,
-                    severity TEXT,
-                    evidence_ids JSONB DEFAULT '[]'
+                    role TEXT NOT NULL,
+                    organization TEXT NOT NULL,
+                    title TEXT,
+                    background TEXT,
+                    strengths JSONB DEFAULT '[]',
+                    weaknesses JSONB DEFAULT '[]',
+                    known_positions JSONB DEFAULT '[]',
+                    credibility_notes TEXT,
+                    document_ids UUID[] DEFAULT '{}',
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ DEFAULT NOW()
                 )
             """)
 
             # Indexes
             await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_respondent_profiles_name ON arkham_respondent_intel.profiles(name)"
+                "CREATE INDEX IF NOT EXISTS idx_respondent_profiles_case_id "
+                "ON arkham_respondent_intel.respondent_profiles(case_id)"
             )
             await self._db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_respondent_records_respondent ON arkham_respondent_intel.public_records(respondent_id)"
+                "CREATE INDEX IF NOT EXISTS idx_respondent_profiles_organization "
+                "ON arkham_respondent_intel.respondent_profiles(organization)"
+            )
+            await self._db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_respondent_profiles_name "
+                "ON arkham_respondent_intel.respondent_profiles(name)"
             )
 
             logger.info("RespondentIntel database schema created")

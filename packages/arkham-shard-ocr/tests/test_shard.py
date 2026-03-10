@@ -548,9 +548,9 @@ class TestShardIntegration:
         await shard.initialize(mock_frame)
 
         # Process multiple pages
-        result1 = await shard.ocr_page(image_path="/page1.png")
-        result2 = await shard.ocr_page(image_path="/page2.png")
-        result3 = await shard.ocr_page(image_path="/page3.png")
+        await shard.ocr_page(image_path="/page1.png")
+        await shard.ocr_page(image_path="/page2.png")
+        await shard.ocr_page(image_path="/page3.png")
 
         worker_service = mock_frame.get_service("workers")
         assert worker_service.enqueue.call_count == 3

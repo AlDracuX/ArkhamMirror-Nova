@@ -84,7 +84,7 @@ services:
       - "traefik.http.services.shattered.loadbalancer.server.port=8100"
 
       # Health check
-      - "traefik.http.services.shattered.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.shattered.loadbalancer.healthcheck.path=/api/health"
       - "traefik.http.services.shattered.loadbalancer.healthcheck.interval=30s"
 
   # ---------------------------------------------------------------------------
@@ -93,20 +93,6 @@ services:
   # Remove external port exposure in production
   postgres:
     ports: []  # Don't expose PostgreSQL externally
-
-  # ---------------------------------------------------------------------------
-  # Qdrant Override
-  # ---------------------------------------------------------------------------
-  # Remove external port exposure in production
-  qdrant:
-    ports: []  # Don't expose Qdrant externally
-
-  # ---------------------------------------------------------------------------
-  # Redis Override
-  # ---------------------------------------------------------------------------
-  # Remove external port exposure in production
-  redis:
-    ports: []  # Don't expose Redis externally
 
 # -----------------------------------------------------------------------------
 # Network (same as base)

@@ -533,7 +533,7 @@ class CompositeScorer:
                         paths[neighbor].extend([p + [neighbor] for p in paths[current]])
 
             # Count paths through each node
-            for target, target_paths in paths.items():
+            for _target, target_paths in paths.items():
                 for path in target_paths:
                     for node in path[1:-1]:  # Exclude source and target
                         betweenness[node] += 1.0 / len(target_paths)

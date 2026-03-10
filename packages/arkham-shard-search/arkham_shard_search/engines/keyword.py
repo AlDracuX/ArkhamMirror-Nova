@@ -288,7 +288,7 @@ class KeywordSearchEngine:
             # Build query conditions for term matching
             # Match any of the query terms
             conditions = []
-            for i, term in enumerate(query_terms[:5]):  # Limit terms for query efficiency
+            for i, _term in enumerate(query_terms[:5]):  # Limit terms for query efficiency
                 conditions.append(f"LOWER(c.text) LIKE :term{i}")
 
             where_clause = " OR ".join(conditions) if conditions else "1=1"

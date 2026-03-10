@@ -34,6 +34,9 @@ from .scoring import CompositeScorer, ScoreConfig
 from .temporal import EvolutionMetrics, TemporalGraphEngine, TemporalSnapshot
 
 if TYPE_CHECKING:
+    from .argumentation import ArgumentationBuilder
+    from .causal import CausalGraphEngine
+    from .geospatial import GeoGraphEngine
     from .shard import GraphShard
 
 logger = logging.getLogger(__name__)
@@ -952,7 +955,7 @@ async def get_sources_status() -> dict[str, Any]:
     }
 
     async with httpx.AsyncClient(base_url="http://127.0.0.1:8100", timeout=5.0) as client:
-        for key, source in sources.items():
+        for _key, source in sources.items():
             try:
                 response = await client.get(source["endpoint"])
                 if response.status_code == 200:
@@ -3014,7 +3017,7 @@ async def get_annotations(
             if isinstance(style, str):
                 try:
                     style = json.loads(style)
-                except:
+                except Exception:
                     style = {}
 
             annotations.append(

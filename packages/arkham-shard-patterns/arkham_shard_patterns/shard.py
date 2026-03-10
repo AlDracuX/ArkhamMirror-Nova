@@ -1465,7 +1465,7 @@ class PatternsShard(ArkhamShard):
 
         # Limit text to prevent context overflow
         text_sample = text[:12000] if len(text) > 12000 else text
-        text_preview = text[:500] + "..." if len(text) > 500 else text
+        text[:500] + "..." if len(text) > 500 else text
 
         # Build type descriptions for the prompt
         type_descriptions = {

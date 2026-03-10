@@ -342,8 +342,8 @@ class LightWorker(BaseWorker):
         # Check character distribution
         letters = sum(1 for c in text if c.isalpha())
         digits = sum(1 for c in text if c.isdigit())
-        spaces = sum(1 for c in text if c.isspace())
-        punctuation = sum(1 for c in text if not c.isalnum() and not c.isspace())
+        sum(1 for c in text if c.isspace())
+        sum(1 for c in text if not c.isalnum() and not c.isspace())
 
         # Ratio checks
         if char_count > 0:
