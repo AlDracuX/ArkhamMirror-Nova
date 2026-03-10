@@ -1,5 +1,6 @@
 """Embed Shard - Document embeddings and vector operations."""
 
+import asyncio
 import logging
 import os
 
@@ -226,7 +227,7 @@ class EmbedShard(ArkhamShard):
 
             # Embed all texts in batches
             logger.info(f"Embedding {len(texts)} chunks for document {doc_id}")
-            embeddings = self.embedding_manager.embed_batch(texts, batch_size=32)
+            embeddings = await asyncio.to_thread(self.embedding_manager.embed_batch, texts, 32)
 
             if len(embeddings) != len(texts):
                 logger.error(f"Embedding count mismatch: {len(embeddings)} vs {len(texts)}")
@@ -334,7 +335,7 @@ class EmbedShard(ArkhamShard):
             return []
 
         try:
-            return self.embedding_manager.embed_text(text, use_cache=use_cache)
+            return await asyncio.to_thread(self.embedding_manager.embed_text, text, use_cache)
         except Exception as e:
             logger.error(f"Text embedding failed: {e}")
             return []
@@ -355,7 +356,7 @@ class EmbedShard(ArkhamShard):
             return []
 
         try:
-            return self.embedding_manager.embed_batch(texts, batch_size=batch_size)
+            return await asyncio.to_thread(self.embedding_manager.embed_batch, texts, batch_size)
         except Exception as e:
             logger.error(f"Batch embedding failed: {e}")
             return []
@@ -400,7 +401,7 @@ class EmbedShard(ArkhamShard):
                 if not self.embedding_manager:
                     logger.error("Embedding manager not available")
                     return []
-                query_vector = self.embedding_manager.embed_text(query)
+                query_vector = await asyncio.to_thread(self.embedding_manager.embed_text, query)
             else:
                 query_vector = query
 

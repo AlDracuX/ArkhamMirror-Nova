@@ -97,12 +97,12 @@ class Rule:
     """
 
     id: str
-    tenant_id: Optional[str] = None
     rule_number: str  # e.g. "Rule 29", "Rule 47", "PD 2.3"
     title: str
     description: str
     category: RuleCategory
     trigger_type: TriggerType
+    tenant_id: Optional[str] = None
     deadline_days: Optional[int] = None  # Number of days/weeks/months
     deadline_type: DeadlineType = DeadlineType.CALENDAR_DAYS
     statutory_source: str = "ET Rules of Procedure 2013 (SI 2013/1237)"
@@ -131,7 +131,6 @@ class Calculation:
     """
 
     id: str
-    tenant_id: Optional[str] = None
     rule_id: str
     rule_number: str
     rule_title: str
@@ -141,6 +140,7 @@ class Calculation:
     deadline_days: int
     deadline_type: DeadlineType
     description: str  # Human-readable summary, e.g. "ET3 due 28 days from claim"
+    tenant_id: Optional[str] = None
     project_id: Optional[str] = None
     document_id: Optional[str] = None  # Source order/judgment document
     respondent: Optional[str] = None  # Named respondent if applicable
@@ -165,7 +165,6 @@ class Breach:
     """
 
     id: str
-    tenant_id: Optional[str] = None
     rule_id: str
     rule_number: str
     rule_title: str
@@ -173,6 +172,7 @@ class Breach:
     breach_date: date  # Date the breach occurred / was detected
     deadline_date: Optional[date]  # The deadline that was missed (if applicable)
     description: str  # Factual description of the breach
+    tenant_id: Optional[str] = None
     severity: BreachSeverity = BreachSeverity.MODERATE
     status: BreachStatus = BreachStatus.DETECTED
     document_evidence: list[str] = field(default_factory=list)  # Document IDs
@@ -199,11 +199,11 @@ class ComplianceCheck:
     """
 
     id: str
-    tenant_id: Optional[str] = None
     document_id: Optional[str]  # Document being checked (if any)
     submission_type: str  # e.g. "ET3 Response", "Witness Statement", "Skeleton"
     rules_checked: list[str]  # Rule IDs checked
     result: ComplianceResult
+    tenant_id: Optional[str] = None
     issues_found: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     passed_checks: list[str] = field(default_factory=list)

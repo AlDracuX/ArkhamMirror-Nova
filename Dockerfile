@@ -116,9 +116,6 @@ RUN for shard_dir in ./packages/arkham-shard-*/; do \
       fi \
     done
 
-# Disable embed shard (blocks event loop with sync CPU ops - fix pending)
-RUN pip uninstall -y arkham-shard-embed || true
-
 # Download spaCy model for NER
 RUN python -m spacy download en_core_web_sm || echo "spaCy model download skipped"
 

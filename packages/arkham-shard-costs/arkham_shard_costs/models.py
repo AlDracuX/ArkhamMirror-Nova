@@ -46,10 +46,10 @@ class TimeEntry:
     """A record of time spent on a litigation activity."""
 
     id: str
-    tenant_id: Optional[str] = None
     activity: str
     duration_minutes: int
     activity_date: date
+    tenant_id: Optional[str] = None
     project_id: Optional[str] = None
     hourly_rate: Optional[float] = None
     notes: str = ""
@@ -63,11 +63,11 @@ class Expense:
     """A record of a litigation-related expense."""
 
     id: str
-    tenant_id: Optional[str] = None
     description: str
     amount: float
-    currency: str = "GBP"
     expense_date: date
+    tenant_id: Optional[str] = None
+    currency: str = "GBP"
     receipt_document_id: Optional[str] = None
     project_id: Optional[str] = None
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -83,11 +83,11 @@ class ConductLog:
     """
 
     id: str
-    tenant_id: Optional[str] = None
     party_name: str  # The respondent who engaged in the conduct
     conduct_type: ConductType
     description: str
     occurred_at: datetime
+    tenant_id: Optional[str] = None
     supporting_evidence: list[str] = field(default_factory=list)  # Document IDs
     significance: str = "medium"  # low | medium | high | critical
     legal_reference: str = "Rule 76(1)(a)"

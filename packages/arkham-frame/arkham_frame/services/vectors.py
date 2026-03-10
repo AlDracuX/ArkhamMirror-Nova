@@ -1003,9 +1003,11 @@ class VectorService:
             embeddings = await self._embed_via_cloud_api([text])
             return embeddings[0]
 
-        # Use local model
+        # Use local model - run in thread to avoid blocking event loop
+        import asyncio
+
         try:
-            embedding = self._embedding_model.encode(text, convert_to_numpy=True)
+            embedding = await asyncio.to_thread(lambda: self._embedding_model.encode(text, convert_to_numpy=True))
             return embedding.tolist()
         except Exception as e:
             raise EmbeddingError(f"Failed to generate embedding: {e}")
@@ -1022,9 +1024,11 @@ class VectorService:
         if self._use_cloud_embeddings:
             return await self._embed_via_cloud_api(texts)
 
-        # Use local model
+        # Use local model - run in thread to avoid blocking event loop
+        import asyncio
+
         try:
-            embeddings = self._embedding_model.encode(texts, convert_to_numpy=True)
+            embeddings = await asyncio.to_thread(lambda: self._embedding_model.encode(texts, convert_to_numpy=True))
             return [e.tolist() for e in embeddings]
         except Exception as e:
             raise EmbeddingError(f"Failed to generate embeddings: {e}")
