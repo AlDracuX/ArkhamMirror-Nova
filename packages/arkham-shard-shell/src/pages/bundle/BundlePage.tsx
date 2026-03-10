@@ -200,7 +200,7 @@ export function BundlePage() {
     setSearchParams(searchParams);
   };
 
-  if (!!itemId) {
+  if (itemId) {
     return <BundleDetailView bundleId={itemId} onBack={() => setItemId(null)} />;
   }
 
@@ -481,7 +481,7 @@ function BundleDetailView({ bundleId, onBack }: { bundleId: string; onBack: () =
   }, [loadBundleDetails]);
 
   useEffect(() => {
-    if (!!activeVersion) {
+    if (activeVersion) {
       loadVersionContent(activeVersion.id);
     }
   }, [activeVersion, loadVersionContent]);

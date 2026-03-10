@@ -18,7 +18,7 @@ export function CommsPage() {
   const [searchParams] = useSearchParams();
   const threadId = searchParams.get('threadId') || searchParams.get('itemId');
 
-  if (!!threadId) {
+  if (threadId) {
     return <ThreadDetailView threadId={threadId} />;
   }
 

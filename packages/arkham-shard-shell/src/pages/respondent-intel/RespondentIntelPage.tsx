@@ -65,7 +65,7 @@ export function RespondentIntelPage() {
     setSearchParams(params);
   }, [searchParams, setSearchParams]);
 
-  if (!!profileId) {
+  if (profileId) {
     return <ProfileDetailView profileId={profileId} onBack={handleCloseDetail} />;
   }
 

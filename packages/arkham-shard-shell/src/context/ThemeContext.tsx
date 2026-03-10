@@ -5,7 +5,7 @@
  * Themes: "arkham" (dark), "newsroom" (light parchment), "system" (follows OS preference)
  */
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 
 // Available theme presets
 export type ThemePreset =
@@ -132,9 +132,6 @@ interface ThemeContextValue {
   setThemePreset: (preset: ThemePreset) => void;
   setAccentColor: (color: string) => void;
   resetToDefaults: () => void;
-
-  // State
-  isLoading: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -203,67 +200,48 @@ function getSystemTheme(): Exclude<ThemePreset, 'system'> {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [themePreset, setThemePresetState] = useState<ThemePreset>('arkham');
-  const [accentColor, setAccentColorState] = useState(DEFAULT_ACCENT);
-  const [effectiveTheme, setEffectiveTheme] = useState<Exclude<ThemePreset, 'system'>>('arkham');
-
-  // Load saved preferences on mount
-  useEffect(() => {
+  const [themePreset, setThemePresetState] = useState<ThemePreset>(() => {
     try {
-      const savedTheme = localStorage.getItem(STORAGE_KEYS.theme) as ThemePreset | null;
-      const savedAccent = localStorage.getItem(STORAGE_KEYS.accent);
-
-      const validThemes: ThemePreset[] = [
-        'arkham',
-        'newsroom',
-        'ocean',
-        'forest',
-        'frost',
-        'midnight',
-        'terminal',
-        'system',
-      ];
-      if (savedTheme && validThemes.includes(savedTheme)) {
-        setThemePresetState(savedTheme);
-      }
-      if (savedAccent && /^#[0-9A-Fa-f]{6}$/.test(savedAccent)) {
-        setAccentColorState(savedAccent);
-      }
-    } catch (e) {
+      const saved = localStorage.getItem(STORAGE_KEYS.theme) as ThemePreset | null;
+      const validThemes: ThemePreset[] = ['arkham', 'newsroom', 'ocean', 'forest', 'frost', 'midnight', 'terminal', 'system'];
+      if (saved && validThemes.includes(saved)) return saved;
+    } catch {
       // Ignore storage errors
     }
-    setIsLoading(false);
-  }, []);
-
-  // Resolve effective theme from preset
-  useEffect(() => {
-    if (themePreset === 'system') {
-      setEffectiveTheme(getSystemTheme());
-    } else {
-      setEffectiveTheme(themePreset);
+    return 'arkham';
+  });
+  const [accentColor, setAccentColorState] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.accent);
+      if (saved && /^#[0-9A-Fa-f]{6}$/.test(saved)) return saved;
+    } catch {
+      // Ignore storage errors
     }
-  }, [themePreset]);
+    return DEFAULT_ACCENT;
+  });
+
+  // Track system theme for 'system' preset
+  const [systemTheme, setSystemTheme] = useState<Exclude<ThemePreset, 'system'>>(getSystemTheme);
+
+  // Derive effective theme from preset + system theme
+  const effectiveTheme = useMemo(() => {
+    return themePreset === 'system' ? systemTheme : themePreset;
+  }, [themePreset, systemTheme]);
 
   // Listen for system preference changes
   useEffect(() => {
-    if (themePreset !== 'system') return;
-
     const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
     const handler = (e: MediaQueryListEvent) => {
-      setEffectiveTheme(e.matches ? 'newsroom' : 'arkham');
+      setSystemTheme(e.matches ? 'newsroom' : 'arkham');
     };
-
     mediaQuery.addEventListener('change', handler);
     return () => mediaQuery.removeEventListener('change', handler);
-  }, [themePreset]);
+  }, []);
 
   // Apply theme whenever effective theme or accent changes
   useEffect(() => {
-    if (!isLoading) {
-      applyTheme(effectiveTheme, accentColor);
-    }
-  }, [effectiveTheme, accentColor, isLoading]);
+    applyTheme(effectiveTheme, accentColor);
+  }, [effectiveTheme, accentColor]);
 
   const setThemePreset = useCallback((preset: ThemePreset) => {
     setThemePresetState(preset);
@@ -300,7 +278,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setThemePreset,
         setAccentColor,
         resetToDefaults,
-        isLoading,
       }}
     >
       {children}

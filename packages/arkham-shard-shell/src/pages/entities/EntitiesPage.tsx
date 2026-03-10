@@ -5,7 +5,7 @@
  * Supports filtering by type, searching, viewing entity details, and merging duplicates.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Icon } from '../../components/common/Icon';
 import { AIAnalystButton } from '../../components/AIAnalyst';
@@ -76,12 +76,7 @@ export function EntitiesPage() {
     return 'browse';
   };
 
-  const [activeTab, setActiveTab] = useState<TabId>(() => getTabFromPath(location.pathname));
-
-  // Sync tab with URL changes
-  useEffect(() => {
-    setActiveTab(getTabFromPath(location.pathname));
-  }, [location.pathname]);
+  const activeTab = useMemo(() => getTabFromPath(location.pathname), [location.pathname]);
 
   // Handle tab click - navigate to route
   const handleTabClick = (tab: (typeof TABS)[number]) => {

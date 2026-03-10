@@ -118,6 +118,7 @@ function SvgFallbackMap({
   const width = 960;
   const height = 500;
 
+  /* eslint-disable react-hooks/set-state-in-effect -- async data fetch */
   useEffect(() => {
     const fetchMap = async () => {
       try {
@@ -137,6 +138,7 @@ function SvgFallbackMap({
     };
     fetchMap();
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const nodeCoords = useMemo(() => {
     const coords: Record<string, { x: number; y: number; lat: number; lng: number }> = {};
@@ -436,6 +438,7 @@ export default function GeoMapView({
   }, [validNodes]);
 
   // Build GeoJSON for edges
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const edgesGeoJson = useMemo(() => {
     if (!showEdges || !data?.edges || validNodes.length === 0) {
       return { type: 'FeatureCollection' as const, features: [] as any[] };

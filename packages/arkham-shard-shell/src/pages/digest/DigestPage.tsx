@@ -30,7 +30,7 @@ export function DigestPage() {
     });
   };
 
-  if (!!briefingId) {
+  if (briefingId) {
     return <BriefingDetailView briefingId={String(briefingId)} />;
   }
 

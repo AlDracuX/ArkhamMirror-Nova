@@ -10,11 +10,11 @@ export function CrossExamPage() {
   const treeId = searchParams.get('treeId');
   const impeachmentId = searchParams.get('impeachmentId');
 
-  if (!!treeId) {
+  if (treeId) {
     return <TreeDetailView treeId={treeId} />;
   }
 
-  if (!!impeachmentId) {
+  if (impeachmentId) {
     return <ImpeachmentDetailView impeachmentId={impeachmentId} />;
   }
 

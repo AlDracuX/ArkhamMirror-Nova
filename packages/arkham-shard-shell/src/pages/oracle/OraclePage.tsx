@@ -68,7 +68,7 @@ export function OraclePage() {
     return <SessionDetailView sessionId={sessionId} onBack={clearSelection} onSelectAuthority={selectAuthority} />;
   }
 
-  if (!!authId) {
+  if (authId) {
     return <AuthorityDetailView authId={authId} onBack={clearSelection} />;
   }
 

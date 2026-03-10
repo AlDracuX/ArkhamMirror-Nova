@@ -56,7 +56,7 @@ export function StrategistPage() {
   const [searchParams] = useSearchParams();
   const itemId = searchParams.get('itemId') || searchParams.get('id');
 
-  if (!!itemId) {
+  if (itemId) {
     return <StrategistDetailView itemId={String(itemId)} />;
   }
 

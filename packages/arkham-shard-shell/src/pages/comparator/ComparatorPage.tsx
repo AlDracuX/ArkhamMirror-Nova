@@ -459,7 +459,7 @@ function ItemDetailView({ itemId }: { itemId: string }) {
               width: '48px', height: '48px', borderRadius: '12px', background: '#f3f4f6',
               display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6'
             }}>
-              <Icon name={!!item.name ? "User" : "AlertCircle"} size={24} />
+              <Icon name={item.name ? "User" : "AlertCircle"} size={24} />
             </div>
             <h1 style={{ fontSize: '24px', fontWeight: 700, margin: 0 }}>
               {String(item.name || item.description || 'Untitled Item')}

@@ -75,6 +75,7 @@ export const CytoscapeTooltip: React.FC<CytoscapeTooltipProps> = ({ node, positi
   const [adjustedPosition, setAdjustedPosition] = useState<{ x: number; y: number } | null>(null);
 
   // Adjust position to keep tooltip within viewport
+  /* eslint-disable react-hooks/set-state-in-effect -- adjusting position from DOM measurements */
   useEffect(() => {
     if (!position || !tooltipRef.current) {
       setAdjustedPosition(null);
@@ -105,6 +106,7 @@ export const CytoscapeTooltip: React.FC<CytoscapeTooltipProps> = ({ node, positi
 
     setAdjustedPosition({ x, y });
   }, [position]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!node || !position) {
     return null;

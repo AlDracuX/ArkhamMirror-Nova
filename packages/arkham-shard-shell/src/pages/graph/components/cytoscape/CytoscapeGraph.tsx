@@ -224,6 +224,7 @@ export const CytoscapeGraph = forwardRef<CytoscapeGraphRef, CytoscapeGraphProps>
     // INITIALIZE CYTOSCAPE
     // ============================================
 
+    /* eslint-disable react-hooks/set-state-in-effect -- init flag gates dependent effects */
     useEffect(() => {
       if (!containerRef.current) return;
 
@@ -309,6 +310,7 @@ export const CytoscapeGraph = forwardRef<CytoscapeGraphRef, CytoscapeGraphProps>
         setIsInitialized(false);
       };
     }, []); // Only run once on mount
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     // ============================================
     // UPDATE ELEMENTS WHEN DATA CHANGES

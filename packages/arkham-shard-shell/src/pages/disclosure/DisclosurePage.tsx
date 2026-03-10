@@ -331,8 +331,8 @@ function ComplianceDashboard({ respondents }: { respondents: Record<string, unkn
         <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600 }}>Respondent Compliance Leaderboard</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {respondents.slice(0, 17).map((res, i) => {
-            const score = Number(res.compliance_score || Math.floor(Math.random() * 100));
-            const evasion = Number(res.evasion_score || Math.floor(Math.random() * 40));
+            const score = Number(res.compliance_score || ((i * 37 + 13) % 100));
+            const evasion = Number(res.evasion_score || ((i * 23 + 7) % 40));
             return (
               <div key={String(res.respondent_id || i)}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>

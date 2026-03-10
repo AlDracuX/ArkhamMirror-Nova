@@ -33,6 +33,7 @@ export function MilestoneDialog({ milestone, hypotheses, onSave, onClose }: Mile
   const [observationNotes, setObservationNotes] = useState(milestone?.observation_notes || '');
   const [status, setStatus] = useState<-1 | 0 | 1>(milestone?.observed ?? 0);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- form reset from prop */
   useEffect(() => {
     if (milestone) {
       setDescription(milestone.description);
@@ -42,6 +43,7 @@ export function MilestoneDialog({ milestone, hypotheses, onSave, onClose }: Mile
       setStatus(milestone.observed);
     }
   }, [milestone]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
