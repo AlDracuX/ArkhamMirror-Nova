@@ -46,10 +46,36 @@ shards:
   # Media
   media-forensics: true
 
-  # Legal
+  # Case Management
   witnesses: true
   deadlines: true
   casemap: true
+
+  # Litigation Warfare
+  crossexam: true
+  disclosure: true
+  burden-map: true
+  skeleton: true
+  respondent-intel: true
+  comparator: true
+  bundle: true
+
+  # Strategic & Procedural
+  rules: true
+  costs: true
+  playbook: true
+  strategist: true
+  oracle: true
+
+  # Evidence Intelligence
+  sentiment: true
+  comms: true
+  redline: true
+  chain: true
+  digest: true
+
+  # Operations
+  audit-trail: true
 
   # Visualization
   graph: true
@@ -95,5 +121,6 @@ frame:
 #
 # Domain bundles:
 # journalist: ingest, parse, search, entities, timeline, contradictions, graph, export
-# legal: ingest, parse, search, timeline, letters, packets, export
+# legal: ingest, parse, search, timeline, letters, packets, export + all litigation shards
 # research: ingest, parse, search, ach, claims, summary, export
+# litigation: full + all 17 litigation shards (disclosure, burden-map, comparator, etc.)

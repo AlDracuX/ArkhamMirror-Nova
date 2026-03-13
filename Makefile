@@ -35,19 +35,19 @@ format-check: ## Check Python formatting without changes
 # ---- Testing ----
 
 test: ## Run all Python tests
-	python -m pytest packages/ -v --tb=short
+	python3 -m pytest packages/ -v --tb=short
 
 test-fast: ## Run tests without slow markers (quick feedback)
-	python -m pytest packages/ -v --tb=short -x -q
+	python3 -m pytest packages/ -v --tb=short -x -q
 
 test-frame: ## Run frame tests only
-	python -m pytest packages/arkham-frame/tests/ -v
+	python3 -m pytest packages/arkham-frame/tests/ -v
 
 test-shard: ## Run tests for a specific shard (usage: make test-shard SHARD=ach)
-	python -m pytest packages/arkham-shard-$(SHARD)/tests/ -v
+	python3 -m pytest packages/arkham-shard-$(SHARD)/tests/ -v
 
 coverage: ## Run tests with coverage report
-	python -m pytest packages/ --cov=packages --cov-report=term-missing --tb=short
+	python3 -m pytest packages/ --cov=packages --cov-report=term-missing --tb=short
 
 # ---- PMAT Quality ----
 
