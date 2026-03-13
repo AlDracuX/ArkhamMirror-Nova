@@ -162,12 +162,12 @@ class DocumentService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
+            async with self.db._engine.connect() as conn:
                 # Create schema if not exists
-                conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {self.SCHEMA}"))
+                await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {self.SCHEMA}"))
 
                 # Documents table
-                conn.execute(
+                await conn.execute(
                     text(f"""
                     CREATE TABLE IF NOT EXISTS {self.SCHEMA}.documents (
                         id VARCHAR(36) PRIMARY KEY,
@@ -189,7 +189,7 @@ class DocumentService:
                 )
 
                 # Add chunk_count if missing (migration for existing tables)
-                conn.execute(
+                await conn.execute(
                     text(f"""
                     DO $$
                     BEGIN
@@ -207,7 +207,7 @@ class DocumentService:
                 )
 
                 # Chunks table
-                conn.execute(
+                await conn.execute(
                     text(f"""
                     CREATE TABLE IF NOT EXISTS {self.SCHEMA}.chunks (
                         id VARCHAR(36) PRIMARY KEY,
@@ -225,7 +225,7 @@ class DocumentService:
                 )
 
                 # Pages table
-                conn.execute(
+                await conn.execute(
                     text(f"""
                     CREATE TABLE IF NOT EXISTS {self.SCHEMA}.pages (
                         id VARCHAR(36) PRIMARY KEY,
@@ -242,28 +242,28 @@ class DocumentService:
                 )
 
                 # Indexes
-                conn.execute(
+                await conn.execute(
                     text(f"""
                     CREATE INDEX IF NOT EXISTS idx_documents_project ON {self.SCHEMA}.documents(project_id)
                 """)
                 )
-                conn.execute(
+                await conn.execute(
                     text(f"""
                     CREATE INDEX IF NOT EXISTS idx_documents_status ON {self.SCHEMA}.documents(status)
                 """)
                 )
-                conn.execute(
+                await conn.execute(
                     text(f"""
                     CREATE INDEX IF NOT EXISTS idx_chunks_document ON {self.SCHEMA}.chunks(document_id)
                 """)
                 )
-                conn.execute(
+                await conn.execute(
                     text(f"""
                     CREATE INDEX IF NOT EXISTS idx_pages_document ON {self.SCHEMA}.pages(document_id)
                 """)
                 )
 
-                conn.commit()
+                await conn.commit()
                 logger.debug("Document tables created/verified")
 
         except Exception as e:
@@ -316,8 +316,8 @@ class DocumentService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
-                conn.execute(
+            async with self.db._engine.connect() as conn:
+                await conn.execute(
                     text(f"""
                         INSERT INTO {self.SCHEMA}.documents
                         (id, filename, storage_id, project_id, status, mime_type, file_size,
@@ -339,7 +339,7 @@ class DocumentService:
                         "metadata": Json(metadata or {}),  # Wrap dict for JSONB
                     },
                 )
-                conn.commit()
+                await conn.commit()
 
             return Document(
                 id=doc_id,
@@ -376,8 +376,8 @@ class DocumentService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
-                result = conn.execute(
+            async with self.db._engine.connect() as conn:
+                result = await conn.execute(
                     text(f"SELECT * FROM {self.SCHEMA}.documents WHERE id = :id"),
                     {"id": doc_id},
                 )
@@ -441,16 +441,16 @@ class DocumentService:
         order = "DESC" if order.lower() == "desc" else "ASC"
 
         try:
-            with self.db._engine.connect() as conn:
+            async with self.db._engine.connect() as conn:
                 # Get total count
-                count_result = conn.execute(
+                count_result = await conn.execute(
                     text(f"SELECT COUNT(*) FROM {self.SCHEMA}.documents {where}"),
                     params,
                 )
                 total = count_result.scalar()
 
                 # Get documents
-                result = conn.execute(
+                result = await conn.execute(
                     text(f"""
                         SELECT * FROM {self.SCHEMA}.documents
                         {where}
@@ -510,8 +510,8 @@ class DocumentService:
         updates.append("updated_at = :updated_at")
 
         try:
-            with self.db._engine.connect() as conn:
-                conn.execute(
+            async with self.db._engine.connect() as conn:
+                await conn.execute(
                     text(f"""
                         UPDATE {self.SCHEMA}.documents
                         SET {", ".join(updates)}
@@ -519,7 +519,7 @@ class DocumentService:
                     """),
                     params,
                 )
-                conn.commit()
+                await conn.commit()
 
             return await self.get_document(doc_id)
 
@@ -548,13 +548,13 @@ class DocumentService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
+            async with self.db._engine.connect() as conn:
                 # Delete from DB (cascades to chunks and pages)
-                result = conn.execute(
+                result = await conn.execute(
                     text(f"DELETE FROM {self.SCHEMA}.documents WHERE id = :id"),
                     {"id": doc_id},
                 )
-                conn.commit()
+                await conn.commit()
 
                 if result.rowcount == 0:
                     return False
@@ -594,8 +594,8 @@ class DocumentService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
-                result = conn.execute(
+            async with self.db._engine.connect() as conn:
+                result = await conn.execute(
                     text(f"""
                         SELECT text FROM {self.SCHEMA}.pages
                         WHERE document_id = :doc_id
@@ -627,8 +627,8 @@ class DocumentService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
-                result = conn.execute(
+            async with self.db._engine.connect() as conn:
+                result = await conn.execute(
                     text(f"""
                         SELECT * FROM {self.SCHEMA}.chunks
                         WHERE document_id = :doc_id
@@ -659,8 +659,8 @@ class DocumentService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
-                result = conn.execute(
+            async with self.db._engine.connect() as conn:
+                result = await conn.execute(
                     text(f"""
                         SELECT * FROM {self.SCHEMA}.pages
                         WHERE document_id = :doc_id
@@ -710,8 +710,8 @@ class DocumentService:
         from sqlalchemy import text as sql_text
 
         try:
-            with self.db._engine.connect() as conn:
-                conn.execute(
+            async with self.db._engine.connect() as conn:
+                await conn.execute(
                     sql_text(f"""
                         INSERT INTO {self.SCHEMA}.pages
                         (id, document_id, page_number, text, image_path, width, height, word_count, metadata)
@@ -731,7 +731,7 @@ class DocumentService:
                 )
 
                 # Update document page count
-                conn.execute(
+                await conn.execute(
                     sql_text(f"""
                         UPDATE {self.SCHEMA}.documents
                         SET page_count = (
@@ -742,7 +742,7 @@ class DocumentService:
                     {"doc_id": doc_id},
                 )
 
-                conn.commit()
+                await conn.commit()
 
             return Page(
                 id=page_id,
@@ -798,8 +798,8 @@ class DocumentService:
         from sqlalchemy import text as sql_text
 
         try:
-            with self.db._engine.connect() as conn:
-                conn.execute(
+            async with self.db._engine.connect() as conn:
+                await conn.execute(
                     sql_text(f"""
                         INSERT INTO {self.SCHEMA}.chunks
                         (id, document_id, page_number, chunk_index, text, start_char, end_char,
@@ -820,7 +820,7 @@ class DocumentService:
                         "metadata": Json(metadata or {}),  # Wrap dict for JSONB
                     },
                 )
-                conn.commit()
+                await conn.commit()
 
             return Chunk(
                 id=chunk_id,
@@ -855,9 +855,9 @@ class DocumentService:
         from sqlalchemy import text as sql_text
 
         try:
-            with self.db._engine.connect() as conn:
+            async with self.db._engine.connect() as conn:
                 # Get actual count
-                result = conn.execute(
+                result = await conn.execute(
                     sql_text(f"""
                         SELECT COUNT(*) FROM {self.SCHEMA}.chunks
                         WHERE document_id = :doc_id
@@ -867,7 +867,7 @@ class DocumentService:
                 count = result.scalar() or 0
 
                 # Update document
-                conn.execute(
+                await conn.execute(
                     sql_text(f"""
                         UPDATE {self.SCHEMA}.documents
                         SET chunk_count = :count, updated_at = CURRENT_TIMESTAMP
@@ -875,7 +875,7 @@ class DocumentService:
                     """),
                     {"doc_id": doc_id, "count": count},
                 )
-                conn.commit()
+                await conn.commit()
 
                 logger.debug(f"Updated chunk_count to {count} for document {doc_id}")
                 return count
@@ -1009,7 +1009,7 @@ class DocumentService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
+            async with self.db._engine.connect() as conn:
                 params = {
                     "status": status,
                     "updated_at": datetime.utcnow(),
@@ -1017,7 +1017,7 @@ class DocumentService:
                 }
 
                 if status == DocumentStatus.COMPLETED.value:
-                    conn.execute(
+                    await conn.execute(
                         text(f"""
                             UPDATE {self.SCHEMA}.documents
                             SET status = :status, updated_at = :updated_at, processed_at = :updated_at
@@ -1026,7 +1026,7 @@ class DocumentService:
                         params,
                     )
                 else:
-                    conn.execute(
+                    await conn.execute(
                         text(f"""
                             UPDATE {self.SCHEMA}.documents
                             SET status = :status, updated_at = :updated_at
@@ -1035,7 +1035,7 @@ class DocumentService:
                         params,
                     )
 
-                conn.commit()
+                await conn.commit()
 
             return BatchResult(total=len(doc_ids), successful=len(doc_ids), failed=0)
 
@@ -1082,8 +1082,8 @@ class DocumentService:
         where = "WHERE " + " AND ".join(conditions) if conditions else ""
 
         try:
-            with self.db._engine.connect() as conn:
-                result = conn.execute(
+            async with self.db._engine.connect() as conn:
+                result = await conn.execute(
                     text(f"SELECT COUNT(*) FROM {self.SCHEMA}.documents {where}"),
                     params,
                 )

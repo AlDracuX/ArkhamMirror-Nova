@@ -276,12 +276,12 @@ class EntityService:
         try:
             from sqlalchemy import text
 
-            with self.db._engine.connect() as conn:
+            async with self.db._engine.connect() as conn:
                 # Ensure schema exists
-                conn.execute(text("CREATE SCHEMA IF NOT EXISTS arkham_frame"))
+                await conn.execute(text("CREATE SCHEMA IF NOT EXISTS arkham_frame"))
 
                 # Create entities table
-                conn.execute(
+                await conn.execute(
                     text("""
                     CREATE TABLE IF NOT EXISTS arkham_frame.entities (
                         id VARCHAR(36) PRIMARY KEY,
@@ -300,7 +300,7 @@ class EntityService:
                 )
 
                 # Create canonical_entities table
-                conn.execute(
+                await conn.execute(
                     text("""
                     CREATE TABLE IF NOT EXISTS arkham_frame.canonical_entities (
                         id VARCHAR(36) PRIMARY KEY,
@@ -316,7 +316,7 @@ class EntityService:
                 )
 
                 # Create entity_relationships table
-                conn.execute(
+                await conn.execute(
                     text("""
                     CREATE TABLE IF NOT EXISTS arkham_frame.entity_relationships (
                         id VARCHAR(36) PRIMARY KEY,
@@ -332,56 +332,56 @@ class EntityService:
                 )
 
                 # Create indexes
-                conn.execute(
+                await conn.execute(
                     text("""
                     CREATE INDEX IF NOT EXISTS idx_entities_document
                     ON arkham_frame.entities(document_id)
                 """)
                 )
-                conn.execute(
+                await conn.execute(
                     text("""
                     CREATE INDEX IF NOT EXISTS idx_entities_type
                     ON arkham_frame.entities(entity_type)
                 """)
                 )
-                conn.execute(
+                await conn.execute(
                     text("""
                     CREATE INDEX IF NOT EXISTS idx_entities_canonical
                     ON arkham_frame.entities(canonical_id)
                 """)
                 )
-                conn.execute(
+                await conn.execute(
                     text("""
                     CREATE INDEX IF NOT EXISTS idx_entities_text
                     ON arkham_frame.entities(text)
                 """)
                 )
-                conn.execute(
+                await conn.execute(
                     text("""
                     CREATE INDEX IF NOT EXISTS idx_canonical_name
                     ON arkham_frame.canonical_entities(name)
                 """)
                 )
-                conn.execute(
+                await conn.execute(
                     text("""
                     CREATE INDEX IF NOT EXISTS idx_canonical_type
                     ON arkham_frame.canonical_entities(entity_type)
                 """)
                 )
-                conn.execute(
+                await conn.execute(
                     text("""
                     CREATE INDEX IF NOT EXISTS idx_relationships_source
                     ON arkham_frame.entity_relationships(source_id)
                 """)
                 )
-                conn.execute(
+                await conn.execute(
                     text("""
                     CREATE INDEX IF NOT EXISTS idx_relationships_target
                     ON arkham_frame.entity_relationships(target_id)
                 """)
                 )
 
-                conn.commit()
+                await conn.commit()
 
             self._initialized = True
             logger.info("EntityService initialized with database tables")
@@ -426,8 +426,8 @@ class EntityService:
 
                 from sqlalchemy import text as sql_text
 
-                with self.db._engine.connect() as conn:
-                    conn.execute(
+                async with self.db._engine.connect() as conn:
+                    await conn.execute(
                         sql_text("""
                         INSERT INTO arkham_frame.entities
                         (id, text, entity_type, document_id, chunk_id, start_offset,
@@ -450,7 +450,7 @@ class EntityService:
                             "created_at": entity.created_at,
                         },
                     )
-                    conn.commit()
+                    await conn.commit()
             except Exception as e:
                 logger.error(f"Failed to save entity to database: {e}")
 
@@ -495,8 +495,8 @@ class EntityService:
 
                 from sqlalchemy import text
 
-                with self.db._engine.connect() as conn:
-                    result = conn.execute(
+                async with self.db._engine.connect() as conn:
+                    result = await conn.execute(
                         text("""
                         SELECT id, text, entity_type, document_id, chunk_id,
                                start_offset, end_offset, confidence, canonical_id,
@@ -563,8 +563,8 @@ class EntityService:
 
                 from sqlalchemy import text
 
-                with self.db._engine.connect() as conn:
-                    conn.execute(
+                async with self.db._engine.connect() as conn:
+                    await conn.execute(
                         text("""
                         UPDATE arkham_frame.entities
                         SET text = :text, entity_type = :entity_type,
@@ -581,7 +581,7 @@ class EntityService:
                             "metadata": json.dumps(entity.metadata),
                         },
                     )
-                    conn.commit()
+                    await conn.commit()
             except Exception as e:
                 logger.error(f"Failed to update entity in database: {e}")
 
@@ -593,14 +593,14 @@ class EntityService:
             try:
                 from sqlalchemy import text
 
-                with self.db._engine.connect() as conn:
-                    result = conn.execute(
+                async with self.db._engine.connect() as conn:
+                    result = await conn.execute(
                         text("""
                         DELETE FROM arkham_frame.entities WHERE id = :id
                     """),
                         {"id": entity_id},
                     )
-                    conn.commit()
+                    await conn.commit()
                     return result.rowcount > 0
             except Exception as e:
                 logger.error(f"Failed to delete entity from database: {e}")
@@ -649,8 +649,8 @@ class EntityService:
 
                 query += " ORDER BY created_at DESC OFFSET :offset LIMIT :limit"
 
-                with self.db._engine.connect() as conn:
-                    result = conn.execute(text(query), params)
+                async with self.db._engine.connect() as conn:
+                    result = await conn.execute(text(query), params)
 
                     for row in result:
                         metadata = row[9]
@@ -699,8 +699,8 @@ class EntityService:
                     query += " AND document_id = :document_id"
                     params["document_id"] = document_id
 
-                with self.db._engine.connect() as conn:
-                    result = conn.execute(text(query), params)
+                async with self.db._engine.connect() as conn:
+                    result = await conn.execute(text(query), params)
                     return result.scalar() or 0
             except Exception as e:
                 logger.error(f"Failed to count entities: {e}")
@@ -738,8 +738,8 @@ class EntityService:
 
                 from sqlalchemy import text
 
-                with self.db._engine.connect() as conn:
-                    conn.execute(
+                async with self.db._engine.connect() as conn:
+                    await conn.execute(
                         text("""
                         INSERT INTO arkham_frame.canonical_entities
                         (id, name, entity_type, aliases, description, metadata,
@@ -758,7 +758,7 @@ class EntityService:
                             "updated_at": canonical.updated_at,
                         },
                     )
-                    conn.commit()
+                    await conn.commit()
             except Exception as e:
                 logger.error(f"Failed to save canonical entity to database: {e}")
 
@@ -773,8 +773,8 @@ class EntityService:
 
                 from sqlalchemy import text
 
-                with self.db._engine.connect() as conn:
-                    result = conn.execute(
+                async with self.db._engine.connect() as conn:
+                    result = await conn.execute(
                         text("""
                         SELECT id, name, entity_type, aliases, description,
                                metadata, created_at, updated_at
@@ -841,8 +841,8 @@ class EntityService:
 
                 from sqlalchemy import text
 
-                with self.db._engine.connect() as conn:
-                    conn.execute(
+                async with self.db._engine.connect() as conn:
+                    await conn.execute(
                         text("""
                         UPDATE arkham_frame.canonical_entities
                         SET name = :name, entity_type = :entity_type,
@@ -860,7 +860,7 @@ class EntityService:
                             "updated_at": canonical.updated_at,
                         },
                     )
-                    conn.commit()
+                    await conn.commit()
             except Exception as e:
                 logger.error(f"Failed to update canonical entity in database: {e}")
 
@@ -872,9 +872,9 @@ class EntityService:
             try:
                 from sqlalchemy import text
 
-                with self.db._engine.connect() as conn:
+                async with self.db._engine.connect() as conn:
                     # Unlink entities first
-                    conn.execute(
+                    await conn.execute(
                         text("""
                         UPDATE arkham_frame.entities
                         SET canonical_id = NULL
@@ -884,14 +884,14 @@ class EntityService:
                     )
 
                     # Delete canonical
-                    result = conn.execute(
+                    result = await conn.execute(
                         text("""
                         DELETE FROM arkham_frame.canonical_entities
                         WHERE id = :id
                     """),
                         {"id": canonical_id},
                     )
-                    conn.commit()
+                    await conn.commit()
                     return result.rowcount > 0
             except Exception as e:
                 logger.error(f"Failed to delete canonical entity: {e}")
@@ -931,8 +931,8 @@ class EntityService:
 
                 query += " ORDER BY name ASC OFFSET :offset LIMIT :limit"
 
-                with self.db._engine.connect() as conn:
-                    result = conn.execute(text(query), params)
+                async with self.db._engine.connect() as conn:
+                    result = await conn.execute(text(query), params)
 
                     for row in result:
                         aliases = row[3]
@@ -1007,8 +1007,8 @@ class EntityService:
                 if self.db and self.db._connected:
                     from sqlalchemy import text
 
-                    with self.db._engine.connect() as conn:
-                        conn.execute(
+                    async with self.db._engine.connect() as conn:
+                        await conn.execute(
                             text("""
                             UPDATE arkham_frame.entities
                             SET canonical_id = :target_id
@@ -1016,7 +1016,7 @@ class EntityService:
                         """),
                             {"target_id": target_id, "source_id": source_id},
                         )
-                        conn.commit()
+                        await conn.commit()
 
                 # Delete source canonical
                 await self.delete_canonical(source_id)
@@ -1076,8 +1076,8 @@ class EntityService:
 
                 from sqlalchemy import text
 
-                with self.db._engine.connect() as conn:
-                    conn.execute(
+                async with self.db._engine.connect() as conn:
+                    await conn.execute(
                         text("""
                         INSERT INTO arkham_frame.entity_relationships
                         (id, source_id, target_id, relationship_type, confidence,
@@ -1096,7 +1096,7 @@ class EntityService:
                             "created_at": relationship.created_at,
                         },
                     )
-                    conn.commit()
+                    await conn.commit()
             except Exception as e:
                 logger.error(f"Failed to save relationship to database: {e}")
 
@@ -1111,8 +1111,8 @@ class EntityService:
 
                 from sqlalchemy import text
 
-                with self.db._engine.connect() as conn:
-                    result = conn.execute(
+                async with self.db._engine.connect() as conn:
+                    result = await conn.execute(
                         text("""
                         SELECT id, source_id, target_id, relationship_type,
                                confidence, document_id, metadata, created_at
@@ -1151,15 +1151,15 @@ class EntityService:
             try:
                 from sqlalchemy import text
 
-                with self.db._engine.connect() as conn:
-                    result = conn.execute(
+                async with self.db._engine.connect() as conn:
+                    result = await conn.execute(
                         text("""
                         DELETE FROM arkham_frame.entity_relationships
                         WHERE id = :id
                     """),
                         {"id": relationship_id},
                     )
-                    conn.commit()
+                    await conn.commit()
                     return result.rowcount > 0
             except Exception as e:
                 logger.error(f"Failed to delete relationship: {e}")
@@ -1213,8 +1213,8 @@ class EntityService:
                         else relationship_type
                     )
 
-                with self.db._engine.connect() as conn:
-                    result = conn.execute(text(query), params)
+                async with self.db._engine.connect() as conn:
+                    result = await conn.execute(text(query), params)
 
                     for row in result:
                         metadata = row[6]
@@ -1273,8 +1273,8 @@ class EntityService:
 
                 query += " ORDER BY created_at DESC OFFSET :offset LIMIT :limit"
 
-                with self.db._engine.connect() as conn:
-                    result = conn.execute(text(query), params)
+                async with self.db._engine.connect() as conn:
+                    result = await conn.execute(text(query), params)
 
                     for row in result:
                         metadata = row[6]
@@ -1320,8 +1320,8 @@ class EntityService:
                         else relationship_type
                     )
 
-                with self.db._engine.connect() as conn:
-                    result = conn.execute(text(query), params)
+                async with self.db._engine.connect() as conn:
+                    result = await conn.execute(text(query), params)
                     return result.scalar() or 0
             except Exception as e:
                 logger.error(f"Failed to count relationships: {e}")
@@ -1338,13 +1338,13 @@ class EntityService:
             try:
                 from sqlalchemy import text
 
-                with self.db._engine.connect() as conn:
+                async with self.db._engine.connect() as conn:
                     # Total relationships
-                    result = conn.execute(text("SELECT COUNT(*) FROM arkham_frame.entity_relationships"))
+                    result = await conn.execute(text("SELECT COUNT(*) FROM arkham_frame.entity_relationships"))
                     stats["total"] = result.scalar() or 0
 
                     # Relationships by type
-                    result = conn.execute(
+                    result = await conn.execute(
                         text("""
                         SELECT relationship_type, COUNT(*)
                         FROM arkham_frame.entity_relationships
@@ -1383,8 +1383,8 @@ class EntityService:
                 from sqlalchemy import text
 
                 # Find co-occurring entities by document
-                with self.db._engine.connect() as conn:
-                    result = conn.execute(
+                async with self.db._engine.connect() as conn:
+                    result = await conn.execute(
                         text("""
                         WITH target_docs AS (
                             SELECT DISTINCT document_id
@@ -1501,21 +1501,21 @@ class EntityService:
             try:
                 from sqlalchemy import text
 
-                with self.db._engine.connect() as conn:
+                async with self.db._engine.connect() as conn:
                     # Total entities
-                    result = conn.execute(text("SELECT COUNT(*) FROM arkham_frame.entities"))
+                    result = await conn.execute(text("SELECT COUNT(*) FROM arkham_frame.entities"))
                     stats["total_entities"] = result.scalar() or 0
 
                     # Total canonicals
-                    result = conn.execute(text("SELECT COUNT(*) FROM arkham_frame.canonical_entities"))
+                    result = await conn.execute(text("SELECT COUNT(*) FROM arkham_frame.canonical_entities"))
                     stats["total_canonicals"] = result.scalar() or 0
 
                     # Total relationships
-                    result = conn.execute(text("SELECT COUNT(*) FROM arkham_frame.entity_relationships"))
+                    result = await conn.execute(text("SELECT COUNT(*) FROM arkham_frame.entity_relationships"))
                     stats["total_relationships"] = result.scalar() or 0
 
                     # Entities by type
-                    result = conn.execute(
+                    result = await conn.execute(
                         text("""
                         SELECT entity_type, COUNT(*)
                         FROM arkham_frame.entities
@@ -1526,7 +1526,7 @@ class EntityService:
                         stats["entities_by_type"][row[0]] = row[1]
 
                     # Linked entities
-                    result = conn.execute(
+                    result = await conn.execute(
                         text("""
                         SELECT COUNT(*)
                         FROM arkham_frame.entities
