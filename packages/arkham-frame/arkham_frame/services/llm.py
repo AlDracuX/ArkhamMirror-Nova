@@ -378,10 +378,10 @@ class LLMService:
         if stop:
             payload["stop"] = stop
 
-        # OpenRouter fallback routing (max 3 models allowed)
+        # OpenRouter model fallbacks: models array is tried in priority order.
+        # Do NOT set route="fallback" — that enables provider-level routing
+        # which can select arbitrary models outside our list.
         if self._is_openrouter and self._use_fallback_routing and self._fallback_models:
-            payload["route"] = "fallback"
-            # Include primary model + fallback models, limit to 3 total
             all_models = [self._model_name] + [m for m in self._fallback_models if m != self._model_name]
             payload["models"] = all_models[:3]
 
@@ -466,9 +466,8 @@ class LLMService:
         if max_tokens:
             payload["max_tokens"] = max_tokens
 
-        # OpenRouter fallback routing (max 3 models allowed)
+        # OpenRouter model fallbacks (no route="fallback" — see chat() comment)
         if self._is_openrouter and self._use_fallback_routing and self._fallback_models:
-            payload["route"] = "fallback"
             all_models = [self._model_name] + [m for m in self._fallback_models if m != self._model_name]
             payload["models"] = all_models[:3]
 
