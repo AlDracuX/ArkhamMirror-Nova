@@ -10,6 +10,7 @@ All prompts are UK Employment Tribunal specific.
 
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -180,15 +181,30 @@ class CrossExamLLM:
             raise
 
     def _parse_json_response(self, response: Any) -> dict:
-        """Parse JSON from LLM response, handling various response formats."""
+        """Parse JSON from LLM response, handling markdown fences and extra text."""
         text = response.text if hasattr(response, "text") else str(response)
         if not text:
             return {}
+        text = text.strip()
+        # Strip markdown code fences
+        if text.startswith("```"):
+            text = re.sub(r"^```\w*\n?", "", text)
+            text = re.sub(r"\n?```$", "", text)
+            text = text.strip()
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            logger.warning("Failed to parse LLM response as JSON")
-            return {}
+            pass
+        # Try to find JSON object or array in the text
+        for pattern in [r"\{[\s\S]*\}", r"\[[\s\S]*\]"]:
+            match = re.search(pattern, text)
+            if match:
+                try:
+                    return json.loads(match.group())
+                except json.JSONDecodeError:
+                    continue
+        logger.warning(f"Failed to parse LLM response as JSON: {text[:100]}")
+        return {}
 
     async def generate_questions(self, statement_text: str) -> list[GeneratedQuestion]:
         """Generate cross-examination questions from a witness statement."""

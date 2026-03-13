@@ -19,6 +19,35 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
+def _extract_json(text: str) -> Any:
+    """Extract JSON from LLM response that may contain markdown fences or extra text."""
+    import json
+
+    if not text:
+        return None
+    # Strip markdown code fences
+    text = text.strip()
+    if text.startswith("```"):
+        # Remove opening fence (with optional language tag)
+        text = re.sub(r"^```\w*\n?", "", text)
+        text = re.sub(r"\n?```$", "", text)
+        text = text.strip()
+    # Try direct parse
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    # Try to find JSON object or array in the text
+    for pattern in [r"\{[\s\S]*\}", r"\[[\s\S]*\]"]:
+        match = re.search(pattern, text)
+        if match:
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                continue
+    return None
+
+
 class ContradictionDetector:
     """
     Multi-stage contradiction detection engine.
@@ -90,28 +119,21 @@ class ContradictionDetector:
             logger.warning("LLM service not available, falling back to simple extraction")
             return self.extract_claims_simple(text, document_id)
 
-        prompt = f"""Extract factual claims from the following text.
-For each claim, identify:
-- The claim text
-- Whether it's a fact, opinion, prediction, or attribution
+        prompt = f"""Extract factual claims from the following text. For each claim, identify the claim text and whether it's a fact, opinion, prediction, or attribution.
 
 Text:
-{text}
+{text[:3000]}
 
-Return a JSON array of claims with format:
-[
-  {{"claim": "...", "type": "fact"}},
-  ...
-]"""
+Respond with ONLY a JSON array, no other text:
+[{{"claim": "exact claim text", "type": "fact"}}]"""
 
         try:
             response = await self.llm_service.generate(prompt)
 
-            # Parse JSON response - LLMResponse is a dataclass with .text attribute
-            import json
-
             response_text = response.text if hasattr(response, "text") else str(response)
-            claims_data = json.loads(response_text) if response_text else []
+            claims_data = _extract_json(response_text)
+            if not isinstance(claims_data, list):
+                claims_data = []
 
             claims = []
             for i, claim_data in enumerate(claims_data):
@@ -209,35 +231,23 @@ Return a JSON array of claims with format:
             logger.warning("LLM service not available, using heuristic verification")
             return self._verify_contradiction_heuristic(claim_a, claim_b, similarity)
 
-        prompt = f"""Analyze if these two claims contradict each other.
+        prompt = f"""Do these two claims contradict each other?
 
 Claim A: {claim_a.text}
 Claim B: {claim_b.text}
 
-Determine:
-1. Do they contradict? (yes/no)
-2. Type of contradiction: direct, temporal, numeric, entity, logical, contextual
-3. Severity: high, medium, low
-4. Explanation of the contradiction
-5. Confidence score (0.0 to 1.0)
+Respond with ONLY this JSON, no other text:
+{{"contradicts": true, "type": "direct", "severity": "high", "explanation": "why they contradict", "confidence": 0.8}}
 
-Return JSON format:
-{{
-  "contradicts": true/false,
-  "type": "direct|temporal|numeric|entity|logical|contextual",
-  "severity": "high|medium|low",
-  "explanation": "...",
-  "confidence": 0.0-1.0
-}}"""
+If they do NOT contradict, set "contradicts" to false. Type must be one of: direct, temporal, numeric, entity, logical, contextual. Severity: high, medium, or low."""
 
         try:
             response = await self.llm_service.generate(prompt)
 
-            # Parse response - LLMResponse is a dataclass with .text attribute
-            import json
-
             response_text = response.text if hasattr(response, "text") else str(response)
-            result = json.loads(response_text) if response_text else {}
+            result = _extract_json(response_text)
+            if not isinstance(result, dict):
+                result = {}
 
             if not result.get("contradicts", False):
                 return None
