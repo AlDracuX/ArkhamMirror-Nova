@@ -303,7 +303,15 @@ async def create_disclosure_request(request: CreateDisclosureRequest):
         )
 
     req_id = str(uuid.uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.utcnow()
+
+    # Parse deadline string to date object for PostgreSQL DATE column
+    deadline_val = None
+    if request.deadline:
+        try:
+            deadline_val = date.fromisoformat(request.deadline)
+        except (ValueError, TypeError):
+            deadline_val = None
 
     await _db.execute(
         """
@@ -319,8 +327,8 @@ async def create_disclosure_request(request: CreateDisclosureRequest):
             "description": request.description,
             "requesting_party": request.requesting_party,
             "status": request.status,
-            "deadline": request.deadline,
-            "document_ids": request.document_ids,
+            "deadline": deadline_val,
+            "document_ids": request.document_ids if request.document_ids else [],
             "response_text": request.response_text,
             "created_at": now,
             "updated_at": now,
@@ -331,6 +339,7 @@ async def create_disclosure_request(request: CreateDisclosureRequest):
         await _event_bus.emit(
             "disclosure.request.created",
             {"request_id": req_id, "case_id": request.case_id, "category": request.category},
+            source="disclosure",
         )
 
     return {"request_id": req_id}
@@ -359,7 +368,7 @@ async def update_disclosure_request(request_id: str, request: UpdateDisclosureRe
 
     # Build dynamic update
     updates = []
-    params = {"id": request_id, "updated_at": datetime.utcnow().isoformat()}
+    params = {"id": request_id, "updated_at": datetime.utcnow()}
 
     if request.case_id is not None:
         updates.append("case_id = :case_id")
@@ -378,7 +387,10 @@ async def update_disclosure_request(request_id: str, request: UpdateDisclosureRe
         params["status"] = request.status
     if request.deadline is not None:
         updates.append("deadline = :deadline")
-        params["deadline"] = request.deadline
+        try:
+            params["deadline"] = date.fromisoformat(request.deadline)
+        except (ValueError, TypeError):
+            params["deadline"] = None
     if request.document_ids is not None:
         updates.append("document_ids = :document_ids")
         params["document_ids"] = request.document_ids
@@ -396,6 +408,7 @@ async def update_disclosure_request(request_id: str, request: UpdateDisclosureRe
         await _event_bus.emit(
             "disclosure.request.updated",
             {"request_id": request_id},
+            source="disclosure",
         )
 
     return {"updated": True, "request_id": request_id}
@@ -420,7 +433,7 @@ async def delete_disclosure_request(request_id: str):
     )
 
     if _event_bus:
-        await _event_bus.emit("disclosure.request.deleted", {"request_id": request_id})
+        await _event_bus.emit("disclosure.request.deleted", {"request_id": request_id}, source="disclosure")
 
     return {"deleted": True, "request_id": request_id}
 

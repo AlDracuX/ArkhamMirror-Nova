@@ -42,6 +42,53 @@ def init_api(db, event_bus, llm_service=None, shard=None, engine=None):
 
 
 # ---------------------------------------------------------------------------
+# Domain: analyze (MUST be before CRUD POST "/" to avoid route conflict)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/analyze", response_model=AnalyzeResponse)
+async def analyze_text(request: AnalyzeRequest):
+    """Analyze text for sentiment using keyword-based scoring + optional LLM."""
+    if _engine:
+        result = await _engine.analyze_document(
+            document_id=str(request.document_id),
+            text=request.text,
+        )
+        return AnalyzeResponse(
+            document_id=str(request.document_id),
+            score=result["overall_score"],
+            label=result["label"],
+            confidence=result["confidence"],
+            key_passages=result["keywords_found"],
+        )
+
+    # Fallback: keyword-only when engine not initialised
+    result = analyze_sentiment(request.text)
+    return AnalyzeResponse(
+        document_id=str(request.document_id),
+        score=result["score"],
+        label=result["label"],
+        confidence=result["confidence"],
+        key_passages=result["key_passages"],
+    )
+
+
+class ClassifyRequest(BaseModel):
+    """Request body for tone classification."""
+
+    text: str
+
+
+@router.post("/classify")
+async def classify_tone(request: ClassifyRequest):
+    """Classify communication tone into categories."""
+    if not _engine:
+        raise HTTPException(status_code=503, detail="Engine not available")
+    categories = _engine.classify_tone_categories(request.text)
+    return {"categories": categories}
+
+
+# ---------------------------------------------------------------------------
 # CRUD: sentiment_results
 # ---------------------------------------------------------------------------
 
@@ -139,7 +186,7 @@ async def create_result(request: CreateResultRequest):
     )
 
     if _event_bus:
-        await _event_bus.emit("sentiment.analysis.created", {"result_id": result_id})
+        await _event_bus.emit("sentiment.analysis.created", {"result_id": result_id}, source="sentiment")
 
     return {"id": result_id}
 
@@ -211,38 +258,6 @@ async def delete_result(result_id: str):
 
 
 # ---------------------------------------------------------------------------
-# Domain: analyze
-# ---------------------------------------------------------------------------
-
-
-@router.post("/analyze", response_model=AnalyzeResponse)
-async def analyze_text(request: AnalyzeRequest):
-    """Analyze text for sentiment using keyword-based scoring + optional LLM."""
-    if _engine:
-        result = await _engine.analyze_document(
-            document_id=str(request.document_id),
-            text=request.text,
-        )
-        return AnalyzeResponse(
-            document_id=str(request.document_id),
-            score=result["overall_score"],
-            label=result["label"],
-            confidence=result["confidence"],
-            key_passages=result["keywords_found"],
-        )
-
-    # Fallback: keyword-only when engine not initialised
-    result = analyze_sentiment(request.text)
-    return AnalyzeResponse(
-        document_id=str(request.document_id),
-        score=result["score"],
-        label=result["label"],
-        confidence=result["confidence"],
-        key_passages=result["key_passages"],
-    )
-
-
-# ---------------------------------------------------------------------------
 # Domain: temporal patterns
 # ---------------------------------------------------------------------------
 
@@ -268,26 +283,6 @@ async def compare_parties(case_id: str):
         raise HTTPException(status_code=503, detail="Engine not available")
     result = await _engine.compare_parties(case_id=case_id)
     return {"case_id": case_id, **result}
-
-
-# ---------------------------------------------------------------------------
-# Domain: classify tone categories
-# ---------------------------------------------------------------------------
-
-
-class ClassifyRequest(BaseModel):
-    """Request body for tone classification."""
-
-    text: str
-
-
-@router.post("/classify")
-async def classify_tone(request: ClassifyRequest):
-    """Classify communication tone into categories."""
-    if not _engine:
-        raise HTTPException(status_code=503, detail="Engine not available")
-    categories = _engine.classify_tone_categories(request.text)
-    return {"categories": categories}
 
 
 # ---------------------------------------------------------------------------
@@ -328,7 +323,7 @@ async def create_analysis(request: CreateAnalysisRequest):
     )
 
     if _event_bus:
-        await _event_bus.emit("sentiment.analysis.created", {"analysis_id": analysis_id})
+        await _event_bus.emit("sentiment.analysis.created", {"analysis_id": analysis_id}, source="sentiment")
 
     return {"id": analysis_id}
 

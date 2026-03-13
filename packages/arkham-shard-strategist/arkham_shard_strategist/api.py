@@ -69,7 +69,7 @@ async def create_prediction(request: CreatePredictionRequest):
     )
 
     if _event_bus:
-        await _event_bus.emit("strategist.prediction.generated", {"prediction_id": pred_id})
+        await _event_bus.emit("strategist.prediction.generated", {"prediction_id": pred_id}, source="strategist")
 
     return {"id": pred_id}
 
@@ -219,7 +219,7 @@ async def create_strategy(request: CreateStrategyRequest):
     )
 
     if _event_bus:
-        await _event_bus.emit("strategist.strategy.created", {"strategy_id": strategy_id})
+        await _event_bus.emit("strategist.strategy.created", {"strategy_id": strategy_id}, source="strategist")
 
     return {"id": strategy_id}
 

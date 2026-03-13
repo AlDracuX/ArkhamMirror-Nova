@@ -123,7 +123,7 @@ async def generate_briefing(request: GenerateBriefingRequest):
     )
 
     if _event_bus:
-        await _event_bus.emit("digest.briefing.generated", {"briefing_id": brief_id})
+        await _event_bus.emit("digest.briefing.generated", {"briefing_id": brief_id}, source="digest")
 
     return {"id": brief_id}
 

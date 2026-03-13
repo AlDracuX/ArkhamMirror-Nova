@@ -230,7 +230,7 @@ async def create_authority(body: AuthorityCreate) -> Dict[str, Any]:
     )
 
     if _event_bus:
-        await _event_bus.emit("oracle.authority.found", {"authority_id": authority_id})
+        await _event_bus.emit("oracle.authority.found", {"authority_id": authority_id}, source="oracle")
 
     return {
         "id": authority_id,

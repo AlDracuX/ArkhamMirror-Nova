@@ -203,14 +203,14 @@ async def create_profile(request: CreateProfileRequest) -> Dict[str, str]:
             "weaknesses": json.dumps(request.weaknesses),
             "known_positions": json.dumps(request.known_positions),
             "credibility_notes": request.credibility_notes,
-            "document_ids": request.document_ids,
+            "document_ids": request.document_ids if request.document_ids else [],
             "created_at": now,
             "updated_at": now,
         },
     )
 
     if _event_bus:
-        await _event_bus.emit("respondent.profile.updated", {"profile_id": profile_id})
+        await _event_bus.emit("respondent.profile.updated", {"profile_id": profile_id}, source="respondent-intel")
 
     return {"id": profile_id}
 
@@ -249,7 +249,7 @@ async def update_profile(profile_id: str, request: UpdateProfileRequest) -> Dict
         )
 
     if _event_bus:
-        await _event_bus.emit("respondent.profile.updated", {"profile_id": profile_id})
+        await _event_bus.emit("respondent.profile.updated", {"profile_id": profile_id}, source="respondent-intel")
 
     return {"id": profile_id, "updated": True}
 

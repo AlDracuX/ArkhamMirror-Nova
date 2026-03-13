@@ -174,7 +174,7 @@ async def create_play(request: CreatePlayRequest):
     )
 
     if _event_bus:
-        await _event_bus.emit("playbook.strategy.updated", {"play_id": play_id})
+        await _event_bus.emit("playbook.strategy.updated", {"play_id": play_id}, source="playbook")
 
     return {"id": play_id}
 
@@ -215,7 +215,7 @@ async def update_play(play_id: str, request: UpdatePlayRequest):
     await _db.execute(query, updates)
 
     if _event_bus:
-        await _event_bus.emit("playbook.strategy.updated", {"play_id": play_id})
+        await _event_bus.emit("playbook.strategy.updated", {"play_id": play_id}, source="playbook")
 
     updated = await _db.fetch_one("SELECT * FROM arkham_playbook.plays WHERE id = :id", {"id": play_id})
     return _row_to_dict(updated)
