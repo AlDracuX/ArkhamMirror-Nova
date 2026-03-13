@@ -303,6 +303,21 @@ class RedlineShard(ArkhamShard):
                 )
             """)
 
+            # Migration: add case_id if table existed before it was added
+            await self._db.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_schema = 'arkham_redline'
+                        AND table_name = 'comparisons'
+                        AND column_name = 'case_id'
+                    ) THEN
+                        ALTER TABLE arkham_redline.comparisons ADD COLUMN case_id UUID;
+                    END IF;
+                END $$
+            """)
+
             # Indexes
             await self._db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_redline_comp_case ON arkham_redline.comparisons(case_id)"

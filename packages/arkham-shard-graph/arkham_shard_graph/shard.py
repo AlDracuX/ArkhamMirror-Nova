@@ -585,7 +585,12 @@ class GraphShard(ArkhamShard):
             return
 
         try:
-            await self._db_service.execute(GRAPH_SCHEMA_SQL)
+            # Execute each statement individually — asyncpg cannot handle
+            # multiple statements in a single prepared statement.
+            for stmt in GRAPH_SCHEMA_SQL.split(";"):
+                stmt = stmt.strip()
+                if stmt and not stmt.startswith("--"):
+                    await self._db_service.execute(stmt)
 
             # ===========================================
             # Multi-tenancy Migration
