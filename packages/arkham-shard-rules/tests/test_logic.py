@@ -801,3 +801,532 @@ class TestRuleSeeder:
         assert "Rule 1" in rule_numbers
         assert "Rule 37" in rule_numbers
         assert "Rule 76" in rule_numbers
+
+    @pytest.mark.asyncio
+    async def test_seed_no_db_raises(self):
+        """Seed raises RuntimeError when no DB is provided."""
+        from arkham_shard_rules.seeder import RuleSeeder
+
+        seeder = RuleSeeder()
+        with pytest.raises(RuntimeError, match="Database not available"):
+            await seeder.seed(None)
+
+    def test_seeder_rules_have_required_fields(self):
+        """Every seeded rule has required fields."""
+        from arkham_shard_rules.seeder import RuleSeeder
+
+        seeder = RuleSeeder()
+        for rule in seeder.ET_RULES:
+            assert "rule_number" in rule, f"Missing rule_number in {rule}"
+            assert "title" in rule, f"Missing title in {rule}"
+            assert "description" in rule, f"Missing description in {rule}"
+            assert "category" in rule, f"Missing category in {rule}"
+
+    @pytest.mark.asyncio
+    async def test_seed_upsert_sql_contains_on_conflict(self, mock_db):
+        """Verify seed uses ON CONFLICT for idempotent upsert."""
+        from arkham_shard_rules.seeder import RuleSeeder
+
+        seeder = RuleSeeder()
+        await seeder.seed(mock_db)
+
+        sql = mock_db.execute.call_args_list[0][0][0]
+        assert "ON CONFLICT" in sql
+        assert "DO UPDATE SET" in sql
+
+    def test_seeder_includes_practice_directions(self):
+        """Verify seeder includes practice direction entries."""
+        from arkham_shard_rules.seeder import RuleSeeder
+
+        seeder = RuleSeeder()
+        pd_rules = [r for r in seeder.ET_RULES if r["rule_number"].startswith("PD")]
+        assert len(pd_rules) >= 2, "Should include at least 2 practice directions"
+
+
+# ---------------------------------------------------------------------------
+# Additional DeadlineCalculator Edge Case Tests
+# ---------------------------------------------------------------------------
+
+
+class TestDeadlineCalculatorEdgeCases:
+    """Edge-case tests for DeadlineCalculator."""
+
+    def setup_method(self):
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        self.calc = DeadlineCalculator()
+
+    def test_add_working_days_zero(self):
+        """Zero working days returns the same date."""
+        start = date(2026, 3, 9)  # Monday
+        assert self.calc.add_working_days(start, 0) == start
+
+    def test_add_working_days_one(self):
+        """One working day from Monday = Tuesday."""
+        monday = date(2026, 3, 9)
+        result = self.calc.add_working_days(monday, 1)
+        assert result == date(2026, 3, 10)
+
+    def test_add_working_days_across_full_week(self):
+        """5 working days from Monday = next Monday."""
+        monday = date(2026, 3, 9)
+        result = self.calc.add_working_days(monday, 5)
+        assert result == date(2026, 3, 16)  # Next Monday
+
+    def test_add_weeks(self):
+        """Weeks arithmetic adds N*7 days."""
+        start = date(2026, 1, 1)
+        result = self.calc.add_weeks(start, 2)
+        assert result == date(2026, 1, 15)
+
+    def test_add_months_standard(self):
+        """Months arithmetic preserves day of month."""
+        start = date(2026, 1, 15)
+        result = self.calc.add_months(start, 3)
+        assert result == date(2026, 4, 15)
+
+    def test_add_months_end_of_month_clamping(self):
+        """Adding months clamps to end-of-month (e.g. Jan 31 + 1 month = Feb 28)."""
+        start = date(2026, 1, 31)
+        result = self.calc.add_months(start, 1)
+        assert result == date(2026, 2, 28)
+
+    def test_add_months_across_year(self):
+        """Months arithmetic crosses year boundary correctly."""
+        start = date(2026, 11, 15)
+        result = self.calc.add_months(start, 3)
+        assert result == date(2027, 2, 15)
+
+    def test_compute_deadline_working_days(self):
+        """compute_deadline dispatches to add_working_days."""
+        friday = date(2026, 3, 6)
+        result = self.calc.compute_deadline(friday, 3, "working_days")
+        assert result == date(2026, 3, 11)
+
+    def test_compute_deadline_weeks(self):
+        """compute_deadline dispatches to add_weeks."""
+        start = date(2026, 1, 1)
+        result = self.calc.compute_deadline(start, 2, "weeks")
+        assert result == date(2026, 1, 15)
+
+    def test_compute_deadline_months(self):
+        """compute_deadline dispatches to add_months."""
+        start = date(2026, 1, 15)
+        result = self.calc.compute_deadline(start, 3, "months")
+        assert result == date(2026, 4, 15)
+
+    def test_compute_deadline_defaults_to_calendar(self):
+        """Unknown deadline_type defaults to calendar_days."""
+        start = date(2026, 1, 1)
+        result = self.calc.compute_deadline(start, 14, "unknown_type")
+        assert result == date(2026, 1, 15)
+
+    @pytest.mark.asyncio
+    async def test_calculate_no_db_raises(self):
+        """calculate() raises RuntimeError when no DB available."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=None)
+        with pytest.raises(RuntimeError, match="Database not available"):
+            await calc.calculate("r1", date(2026, 1, 1), "custom")
+
+    @pytest.mark.asyncio
+    async def test_calculate_rule_not_found(self, mock_db):
+        """calculate() raises ValueError for missing rule."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db)
+        mock_db.fetch_one.return_value = None
+
+        with pytest.raises(ValueError, match="Rule not found"):
+            await calc.calculate("nonexistent", date(2026, 1, 1), "custom")
+
+    @pytest.mark.asyncio
+    async def test_calculate_rule_no_deadline_days(self, mock_db):
+        """calculate() raises ValueError when rule has no deadline_days."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db)
+        mock_db.fetch_one.return_value = {
+            "id": "r1",
+            "rule_number": "Rule 1",
+            "title": "Overriding Objective",
+            "deadline_days": None,
+            "deadline_type": "calendar_days",
+        }
+
+        with pytest.raises(ValueError, match="no deadline_days"):
+            await calc.calculate("r1", date(2026, 1, 1), "custom")
+
+    @pytest.mark.asyncio
+    async def test_calculate_with_event_bus(self, mock_db, mock_events):
+        """calculate() emits rules.deadline.calculated event."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db, event_bus=mock_events)
+        mock_db.fetch_one.return_value = {
+            "id": "r1",
+            "rule_number": "Rule 16",
+            "title": "Response to Claim",
+            "deadline_days": 28,
+            "deadline_type": "calendar_days",
+        }
+
+        result = await calc.calculate("r1", date(2026, 1, 1), "date_of_claim")
+        mock_events.emit.assert_called_once()
+        assert mock_events.emit.call_args[0][0] == "rules.deadline.calculated"
+        event_data = mock_events.emit.call_args[0][1]
+        assert event_data["rule_id"] == "r1"
+
+    @pytest.mark.asyncio
+    async def test_detect_breaches_emits_events(self, mock_db, mock_events):
+        """detect_breaches() emits rules.breach.detected for each breach."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db, event_bus=mock_events)
+        mock_db.fetch_all.return_value = [
+            {
+                "id": "calc1",
+                "rule_id": "r1",
+                "rule_number": "Rule 16",
+                "rule_title": "Response",
+                "deadline_date": date(2025, 1, 1),
+                "metadata": {},
+            },
+            {
+                "id": "calc2",
+                "rule_id": "r2",
+                "rule_number": "Rule 27",
+                "rule_title": "Disclosure",
+                "deadline_date": date(2025, 2, 1),
+                "metadata": {},
+            },
+        ]
+
+        breaches = await calc.detect_breaches("project-1")
+        assert len(breaches) == 2
+        assert mock_events.emit.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_unless_order_risk_low_severity(self, mock_db):
+        """Unless order risk is low for minor breach."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db)
+        mock_db.fetch_one.side_effect = [
+            {
+                "id": "b1",
+                "rule_id": "r1",
+                "breaching_party": "Respondent",
+                "severity": "minor",
+                "project_id": "p1",
+            },
+            {
+                "id": "r1",
+                "is_mandatory": False,
+                "strike_out_risk": False,
+                "unless_order_applicable": False,
+            },
+            {"count": 0},
+        ]
+
+        result = await calc.assess_unless_order_risk("b1")
+        assert result["risk_level"] == "low"
+        assert result["risk_score"] <= 0.4
+
+    @pytest.mark.asyncio
+    async def test_unless_order_risk_breach_not_found(self, mock_db):
+        """assess_unless_order_risk raises ValueError for missing breach."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db)
+        mock_db.fetch_one.return_value = None
+
+        with pytest.raises(ValueError, match="Breach not found"):
+            await calc.assess_unless_order_risk("nonexistent")
+
+    @pytest.mark.asyncio
+    async def test_compliance_check_non_compliant(self, mock_db):
+        """Compliance check returns non_compliant when deadline is missed."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db)
+
+        mock_db.fetch_all.return_value = [
+            {
+                "id": "r1",
+                "rule_number": "Rule 16",
+                "title": "Response to Claim",
+                "is_mandatory": True,
+            },
+        ]
+
+        mock_db.fetch_one.return_value = {
+            "rule_id": "r1",
+            "document_id": "doc1",
+            "deadline_date": date(2020, 1, 1),  # past
+            "metadata": {},
+        }
+
+        result = await calc.check_compliance("doc1", "date_of_claim")
+        assert result["result"] == "non_compliant"
+        assert len(result["issues_found"]) == 1
+        assert result["score"] == 0.0
+
+    @pytest.mark.asyncio
+    async def test_compliance_check_borderline(self, mock_db):
+        """Compliance check returns borderline when mandatory rule has no calculation."""
+        from arkham_shard_rules.calculator import DeadlineCalculator
+
+        calc = DeadlineCalculator(db=mock_db)
+
+        mock_db.fetch_all.return_value = [
+            {
+                "id": "r1",
+                "rule_number": "Rule 16",
+                "title": "Response to Claim",
+                "is_mandatory": True,
+            },
+        ]
+
+        mock_db.fetch_one.return_value = None  # No calculation found
+
+        result = await calc.check_compliance("doc1", "date_of_claim")
+        assert result["result"] == "borderline"
+        assert len(result["warnings"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# RulesLLM Tests
+# ---------------------------------------------------------------------------
+
+
+class TestRulesLLM:
+    """Tests for RulesLLM integration."""
+
+    def test_llm_not_available(self):
+        """RulesLLM.available returns False when no LLM service."""
+        from arkham_shard_rules.llm import RulesLLM
+
+        llm = RulesLLM(llm_service=None)
+        assert llm.available is False
+
+    def test_llm_available(self):
+        """RulesLLM.available returns True when LLM service exists."""
+        from arkham_shard_rules.llm import RulesLLM
+
+        llm = RulesLLM(llm_service=MagicMock())
+        assert llm.available is True
+
+    @pytest.mark.asyncio
+    async def test_extract_dates_no_llm_falls_back(self):
+        """extract_dates falls back to regex when no LLM."""
+        from arkham_shard_rules.llm import RulesLLM
+
+        llm = RulesLLM(llm_service=None)
+        text = "The hearing is listed for 15 March 2026. Disclosure by 1 February 2026."
+        dates = await llm.extract_dates(text)
+        assert len(dates) >= 2
+        assert any("2026-03-15" in d.date for d in dates)
+        assert any("2026-02-01" in d.date for d in dates)
+
+    @pytest.mark.asyncio
+    async def test_extract_dates_regex_numeric(self):
+        """Regex extraction handles DD/MM/YYYY format."""
+        from arkham_shard_rules.llm import RulesLLM
+
+        llm = RulesLLM(llm_service=None)
+        text = "Comply by 15/03/2026."
+        dates = await llm.extract_dates(text)
+        assert len(dates) >= 1
+        assert dates[0].date == "2026-03-15"
+
+    @pytest.mark.asyncio
+    async def test_extract_dates_deadline_detection(self):
+        """Regex extraction detects deadline keywords in context."""
+        from arkham_shard_rules.llm import RulesLLM
+
+        llm = RulesLLM(llm_service=None)
+        text = "You must comply by no later than 20 March 2026."
+        dates = await llm.extract_dates(text)
+        assert len(dates) >= 1
+        assert dates[0].creates_deadline is True
+
+    @pytest.mark.asyncio
+    async def test_suggest_rules_no_llm(self):
+        """suggest_rules returns empty list when no LLM."""
+        from arkham_shard_rules.llm import RulesLLM
+
+        llm = RulesLLM(llm_service=None)
+        result = await llm.suggest_rules("Respondent missed disclosure deadline")
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_extract_dates_with_llm(self):
+        """extract_dates calls LLM and parses JSON response."""
+        from arkham_shard_rules.llm import RulesLLM
+
+        mock_llm_service = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.text = json.dumps(
+            [
+                {
+                    "date": "2026-03-15",
+                    "description": "Hearing date",
+                    "rule_reference": "Rule 29",
+                    "creates_deadline": True,
+                    "deadline_for": "both",
+                    "notes": "Final hearing",
+                }
+            ]
+        )
+        mock_llm_service.generate = AsyncMock(return_value=mock_response)
+
+        llm = RulesLLM(llm_service=mock_llm_service)
+        dates = await llm.extract_dates("Order listing hearing for 15 March 2026")
+
+        assert len(dates) == 1
+        assert dates[0].date == "2026-03-15"
+        assert dates[0].rule_reference == "Rule 29"
+        assert dates[0].creates_deadline is True
+        mock_llm_service.generate.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_suggest_rules_with_llm(self):
+        """suggest_rules calls LLM and parses JSON response."""
+        from arkham_shard_rules.llm import RulesLLM
+
+        mock_llm_service = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.text = json.dumps(
+            [
+                {
+                    "rule_number": "Rule 37",
+                    "title": "Strike Out",
+                    "relevance": "Respondent conduct is scandalous",
+                    "deadline_days": None,
+                    "deadline_type": "calendar_days",
+                    "risk": "Claim struck out",
+                }
+            ]
+        )
+        mock_llm_service.generate = AsyncMock(return_value=mock_response)
+
+        llm = RulesLLM(llm_service=mock_llm_service)
+        rules = await llm.suggest_rules("Respondent acting vexatiously")
+
+        assert len(rules) == 1
+        assert rules[0].rule_number == "Rule 37"
+        assert rules[0].title == "Strike Out"
+
+    def test_parse_json_handles_markdown_fences(self):
+        """JSON parser strips markdown code fences."""
+        from arkham_shard_rules.llm import RulesLLM
+
+        llm = RulesLLM()
+        result = llm._parse_json_response('```json\n[{"key": "value"}]\n```')
+        assert len(result) == 1
+        assert result[0]["key"] == "value"
+
+    def test_parse_json_handles_empty(self):
+        """JSON parser returns empty list for empty input."""
+        from arkham_shard_rules.llm import RulesLLM
+
+        llm = RulesLLM()
+        assert llm._parse_json_response("") == []
+        assert llm._parse_json_response(None) == []
+
+    def test_parse_json_handles_malformed(self):
+        """JSON parser returns empty list for non-JSON."""
+        from arkham_shard_rules.llm import RulesLLM
+
+        llm = RulesLLM()
+        assert llm._parse_json_response("not json at all") == []
+
+
+# ---------------------------------------------------------------------------
+# Event Handler Tests
+# ---------------------------------------------------------------------------
+
+
+class TestEventHandlers:
+    """Test shard event handler methods."""
+
+    @pytest.mark.asyncio
+    async def test_on_deadline_created(self, mock_frame, mock_db):
+        """Shard handles deadlines.created event by calculating deadline."""
+        shard = RulesShard()
+        await shard.initialize(mock_frame)
+
+        mock_db.fetch_one.return_value = {
+            "id": "r1",
+            "rule_number": "Rule 4",
+            "title": "Time Limits",
+            "deadline_days": 28,
+            "deadline_type": "calendar_days",
+        }
+
+        event = {
+            "deadline_id": "d1",
+            "rule_id": "r1",
+            "trigger_date": "2026-01-01",
+            "trigger_type": "date_of_order",
+        }
+        await shard._on_deadline_created(event)
+        # Should have called calculate, which executes an INSERT
+        mock_db.execute.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_on_deadline_created_missing_rule_id(self, mock_frame, mock_db):
+        """Shard silently skips event without rule_id."""
+        shard = RulesShard()
+        await shard.initialize(mock_frame)
+
+        initial_call_count = mock_db.execute.call_count
+        event = {"deadline_id": "d1", "trigger_date": "2026-01-01"}
+        await shard._on_deadline_created(event)
+        # No additional DB calls beyond schema creation
+        assert mock_db.execute.call_count == initial_call_count
+
+    @pytest.mark.asyncio
+    async def test_on_document_processed_order(self, mock_frame, mock_db):
+        """Shard handles document.processed for order document types."""
+        mock_llm = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "[]"
+        mock_llm.generate = AsyncMock(return_value=mock_response)
+
+        frame = MagicMock()
+        frame.database = mock_db
+        frame.get_service = MagicMock(
+            side_effect=lambda name: {
+                "events": AsyncMock(subscribe=AsyncMock()),
+                "llm": mock_llm,
+                "vectors": None,
+            }.get(name)
+        )
+
+        shard = RulesShard()
+        await shard.initialize(frame)
+
+        event = {
+            "document_id": "doc1",
+            "document_type": "order",
+            "text": "Order dated 15 March 2026.",
+        }
+        # Should not raise
+        await shard._on_document_processed(event)
+
+    @pytest.mark.asyncio
+    async def test_on_document_processed_ignores_non_order(self, mock_frame, mock_db):
+        """Shard ignores document types that are not order/judgment/claim."""
+        shard = RulesShard()
+        await shard.initialize(mock_frame)
+
+        event = {
+            "document_id": "doc1",
+            "document_type": "email",
+            "text": "Some email content.",
+        }
+        # Should return early without processing
+        await shard._on_document_processed(event)
