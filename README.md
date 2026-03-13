@@ -118,7 +118,7 @@ SHATTERED uses the **Voltron** architectural philosophy: a modular, plug-and-pla
         +--------------------+--------------------+
         |         |          |          |         |
    +----v----+ +--v--+ +-----v-----+ +--v--+ +---v---+
-   |Dashboard| | ACH | |  Search   | |Graph| |Timeline|  <-- SHARDS (26)
+   |Dashboard| | ACH | |  Search   | |Graph| |Timeline|  <-- SHARDS (47)
    +---------+ +-----+ +-----------+ +-----+ +--------+
 ```
 
@@ -256,7 +256,7 @@ The Frame provides 17 core services available to all shards:
 | **Projects** | Project organization | Project CRUD, document organization, bulk operations |
 | **Settings** | Application configuration | 7 setting categories, import/export, reset capabilities |
 
-### Data Pipeline (6 shards)
+### Data Pipeline (7 shards)
 
 | Shard | Description | Key Features |
 |-------|-------------|--------------|
@@ -266,6 +266,7 @@ The Frame provides 17 core services available to all shards:
 | **Embed** | Vector embeddings | Multiple models, batch processing, incremental updates |
 | **OCR** | Text extraction | PaddleOCR, Vision LLM (local or cloud), language detection, confidence scoring |
 | **Entities** | Entity management | NER extraction, relationships, deduplication, type management |
+| **Chain** | Evidence chain of custody | SHA-256 hash verification, tamper detection, provenance reports |
 
 ### Search (1 shard)
 
@@ -273,7 +274,7 @@ The Frame provides 17 core services available to all shards:
 |-------|-------------|--------------|
 | **Search** | Document search | Semantic, keyword, hybrid search, facets, suggestions |
 
-### Analysis (9 shards)
+### Analysis (17 shards)
 
 | Shard | Description | Key Features |
 |-------|-------------|--------------|
@@ -285,7 +286,34 @@ The Frame provides 17 core services available to all shards:
 | **Patterns** | Pattern recognition | Recurring, behavioral, temporal, correlation patterns |
 | **Provenance** | Evidence chains | Data lineage, audit trails, artifact verification |
 | **Summary** | Auto-summarization | Multiple summary types, batch processing, auto-summarize on ingest |
-| **Media Forensics** | Image authenticity analysis | EXIF extraction, ELA analysis, perceptual hashing, C2PA verification, reverse image search |
+| **Media Forensics** | Image authenticity analysis | EXIF extraction, ELA analysis, perceptual hashing, C2PA verification |
+| **Sentiment** | Tone & sentiment analysis | Hostile/evasive/condescending tone detection, temporal patterns, party comparison |
+| **Comms** | Communication thread analysis | Email thread reconstruction, gap detection, BCC patterns, coordination flags |
+| **Redline** | Document comparison | Line-by-line diff, semantic diff, silent edit detection, legal-aware change classification |
+| **Comparator** | Discrimination comparator mapping | Treatment matrix, divergence scoring, s.13/s.26 element tracking |
+| **Respondent-Intel** | Respondent profiling | Position tracking, inconsistency detection, strengths/weaknesses assessment |
+| **CrossExam** | Cross-examination prep | Question tree generation, impeachment sequences, damage scoring |
+| **Oracle** | Legal research assistant | Authority search, citation chains, binding vs persuasive classification |
+| **Strategist** | Adversarial AI modeler | Argument prediction, SWOT analysis, red-teaming, tactical models |
+
+### Litigation (5 shards)
+
+| Shard | Description | Key Features |
+|-------|-------------|--------------|
+| **Disclosure** | Disclosure tracking | Gap detection, evasion scoring, deadline calculation, document matching |
+| **Rules** | ET procedural rules engine | ET Rules 1-76 encoded, deadline calculation, breach detection, compliance checking |
+| **Burden-Map** | Burden of proof mapper | s.136 EA 2010 burden shift, traffic-light dashboard, evidence gap analysis |
+| **Costs** | Costs & wasted costs tracker | Rule 76 conduct scoring, time/expense aggregation, costs application drafting |
+| **Playbook** | Litigation strategy planner | Strategy trees, scenario modeling, settlement leverage |
+
+### Case Management (4 shards)
+
+| Shard | Description | Key Features |
+|-------|-------------|--------------|
+| **CaseMap** | Case theory mapping | Legal theories, claim elements, evidence linking |
+| **Deadlines** | Deadline management | Tribunal dates, reminders, breach tracking |
+| **Witnesses** | Witness management | Statements, credibility notes, examination prep |
+| **Skeleton** | Legal argument builder | Argument trees, submission rendering, bundle cross-references, authority linking |
 
 ### Visualization (2 shards)
 
@@ -294,7 +322,7 @@ The Frame provides 17 core services available to all shards:
 | **Graph** | Network visualization | 10+ layout modes, analytics, cross-shard integration |
 | **Timeline** | Temporal visualization | Event extraction, date normalization, phases, gap detection |
 
-### Export (5 shards)
+### Export (6 shards)
 
 | Shard | Description | Key Features |
 |-------|-------------|--------------|
@@ -303,6 +331,14 @@ The Frame provides 17 core services available to all shards:
 | **Letters** | Letter generation | FOIA, complaints, legal templates |
 | **Packets** | Investigation bundles | Versioning, sharing, access control |
 | **Templates** | Template management | Jinja2 syntax, versioning, validation |
+| **Bundle** | Tribunal hearing bundles | Continuous pagination, version snapshots, ET Presidential Guidance format |
+
+### Operations (2 shards)
+
+| Shard | Description | Key Features |
+|-------|-------------|--------------|
+| **Digest** | Case briefing generator | Daily/weekly digests, ADHD-optimized format, cross-shard change aggregation |
+| **Audit-Trail** | System audit log | Immutable action logging, session tracking, retention management, export for tribunal |
 
 ---
 
@@ -788,24 +824,26 @@ Each shard has its own README with API documentation, events, and usage examples
 
 | Metric | Value |
 |--------|-------|
-| **Lines of Code** | ~217,000 |
-| **Total Packages** | 27 (26 shards + shell) |
+| **Test Suite** | 4,144 tests |
+| **Total Packages** | 48 (47 shards + shell) |
 | **Frame Services** | 17 |
-| **API Endpoints** | 400+ |
+| **API Endpoints** | 600+ |
 | **Graph Visualization Modes** | 10+ |
 | **Chunking Strategies** | 8 |
+| **Litigation Shards** | 17 (all with production domain logic) |
 | **Infrastructure** | PostgreSQL-only (pgvector + SKIP LOCKED) |
 
 ### Recent Major Features
 
+- **17 litigation shards** with full domain logic, LLM integration, and event-driven architecture
+- **4,144 automated tests** with comprehensive edge-case coverage
+- **OpenRouter LLM integration** with ordered model fallback (free tier support)
 - **PostgreSQL-only architecture** - Eliminated Redis and Qdrant dependencies
 - **pgvector integration** - Native PostgreSQL vector search
 - AI Junior Analyst integration across all analysis shards
 - Full ACH implementation with premortem, cone of plausibility, corpus search
-- Link Analysis mode (i2-style) for graph visualization
-- Deception detection with MOM/POP/MOSES/EVE checklists
-- Evidence chain provenance tracking
-- Shared template system for exports
+- UK Employment Tribunal-specific features: ET Rules engine, s.136 burden shift tracking, Rule 76 costs analysis
+- Evidence chain provenance tracking with tamper detection
 
 ---
 
