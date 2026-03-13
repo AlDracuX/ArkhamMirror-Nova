@@ -233,3 +233,195 @@ class TestAPILogic:
         assert "export_id" in result
         mock_db.execute.assert_called_once()
         mock_events.emit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_count_items_no_db(self):
+        from fastapi import HTTPException
+
+        self.api._db = None
+        with pytest.raises(HTTPException) as exc:
+            await self.api.count_items()
+        assert exc.value.status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_count_items(self, mock_db):
+        self.api._db = mock_db
+        mock_db.fetch_one.return_value = {"count": 42}
+        result = await self.api.count_items()
+        assert result["count"] == 42
+
+    @pytest.mark.asyncio
+    async def test_count_items_no_result(self, mock_db):
+        self.api._db = mock_db
+        mock_db.fetch_one.return_value = None
+        result = await self.api.count_items()
+        assert result["count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_get_summary_no_db(self):
+        self.api._db = None
+        result = await self.api.get_audit_summary()
+        assert result["total_actions"] == 0
+
+    @pytest.mark.asyncio
+    async def test_list_actions_with_all_filters(self, mock_db):
+        self.api._db = mock_db
+        mock_db.fetch_all.return_value = [{"id": "a1"}]
+
+        result = await self.api.list_actions(
+            user_id="u1", shard="ingest", action_type="document.ingest", entity_id="doc-1"
+        )
+        assert result["count"] == 1
+        call_args = mock_db.fetch_all.call_args
+        sql = call_args[0][0]
+        assert "user_id = :user_id" in sql
+        assert "shard = :shard" in sql
+        assert "action_type = :action_type" in sql
+        assert "entity_id = :entity_id" in sql
+
+
+# ---------------------------------------------------------------------------
+# _parse_datetime Tests
+# ---------------------------------------------------------------------------
+
+
+class TestParseDatetime:
+    """Edge cases for the API datetime parser."""
+
+    def test_parse_valid_iso(self):
+        from arkham_shard_audit_trail.api import _parse_datetime
+
+        result = _parse_datetime("2026-03-13T12:00:00")
+        assert result is not None
+        assert result.year == 2026
+        assert result.month == 3
+
+    def test_parse_none(self):
+        from arkham_shard_audit_trail.api import _parse_datetime
+
+        assert _parse_datetime(None) is None
+
+    def test_parse_empty_string(self):
+        from arkham_shard_audit_trail.api import _parse_datetime
+
+        assert _parse_datetime("") is None
+
+    def test_parse_invalid_string(self):
+        from arkham_shard_audit_trail.api import _parse_datetime
+
+        assert _parse_datetime("not-a-date") is None
+
+    def test_parse_date_only(self):
+        from arkham_shard_audit_trail.api import _parse_datetime
+
+        result = _parse_datetime("2026-03-13")
+        assert result is not None
+        assert result.day == 13
+
+
+# ---------------------------------------------------------------------------
+# Engine-Powered API Endpoint Tests
+# ---------------------------------------------------------------------------
+
+
+class TestEngineEndpoints:
+    """Tests for API endpoints that delegate to AuditEngine."""
+
+    def setup_method(self):
+        import arkham_shard_audit_trail.api as api_mod
+
+        self.api = api_mod
+
+    @pytest.mark.asyncio
+    async def test_search_endpoint_no_engine(self):
+        from arkham_shard_audit_trail.api import SearchRequest, search_actions
+        from fastapi import HTTPException
+
+        self.api._engine = None
+        with pytest.raises(HTTPException) as exc:
+            await search_actions(SearchRequest())
+        assert exc.value.status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_search_endpoint_delegates(self):
+        from arkham_shard_audit_trail.api import SearchRequest, search_actions
+
+        mock_engine = AsyncMock()
+        mock_engine.search_actions = AsyncMock(return_value=[{"id": "a1"}])
+        self.api._engine = mock_engine
+
+        result = await search_actions(SearchRequest(shard="ingest"))
+
+        assert result["count"] == 1
+        mock_engine.search_actions.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_session_endpoint_no_engine(self):
+        from arkham_shard_audit_trail.api import get_session_actions
+        from fastapi import HTTPException
+
+        self.api._engine = None
+        with pytest.raises(HTTPException) as exc:
+            await get_session_actions("sess-1")
+        assert exc.value.status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_session_endpoint_delegates(self):
+        from arkham_shard_audit_trail.api import get_session_actions
+
+        mock_engine = AsyncMock()
+        mock_engine.get_session_actions = AsyncMock(return_value=[{"id": "a1"}])
+        self.api._engine = mock_engine
+
+        result = await get_session_actions("sess-1")
+
+        assert result["count"] == 1
+        assert result["session_id"] == "sess-1"
+
+    @pytest.mark.asyncio
+    async def test_export_endpoint_no_engine(self):
+        from arkham_shard_audit_trail.api import ExportRequest, export_audit_log
+        from fastapi import HTTPException
+
+        self.api._engine = None
+        with pytest.raises(HTTPException) as exc:
+            await export_audit_log(ExportRequest())
+        assert exc.value.status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_export_endpoint_delegates(self):
+        from arkham_shard_audit_trail.api import ExportRequest, export_audit_log
+
+        mock_engine = AsyncMock()
+        mock_engine.export_audit_log = AsyncMock(
+            return_value={"export_id": "e1", "format": "json", "record_count": 5, "content": []}
+        )
+        self.api._engine = mock_engine
+
+        result = await export_audit_log(ExportRequest(shard="ach", format="csv"))
+
+        assert result["export_id"] == "e1"
+        mock_engine.export_audit_log.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_retention_endpoint_no_engine(self):
+        from arkham_shard_audit_trail.api import RetentionRequest, manage_retention
+        from fastapi import HTTPException
+
+        self.api._engine = None
+        with pytest.raises(HTTPException) as exc:
+            await manage_retention(RetentionRequest())
+        assert exc.value.status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_retention_endpoint_delegates(self):
+        from arkham_shard_audit_trail.api import RetentionRequest, manage_retention
+
+        mock_engine = AsyncMock()
+        mock_engine.manage_retention = AsyncMock(return_value=10)
+        self.api._engine = mock_engine
+
+        result = await manage_retention(RetentionRequest(retention_days=30))
+
+        assert result["deleted_count"] == 10
+        assert result["retention_days"] == 30

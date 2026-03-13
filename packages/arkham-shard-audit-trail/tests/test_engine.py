@@ -364,3 +364,146 @@ class TestEngineEdgeCases:
         assert "entity_id = :entity_id" in sql
         assert "timestamp >=" in sql
         assert "timestamp <=" in sql
+
+    @pytest.mark.asyncio
+    async def test_search_no_filters(self, engine, mock_db):
+        """Search with no filters returns all actions."""
+        rows = [_make_action(), _make_action(), _make_action()]
+        mock_db.fetch_all.return_value = rows
+
+        results = await engine.search_actions()
+
+        assert len(results) == 3
+        call_args = mock_db.fetch_all.call_args
+        sql = call_args[0][0]
+        # Should have no filter clauses beyond WHERE 1=1
+        assert "shard = :shard" not in sql
+        assert "user_id = :user_id" not in sql
+
+    @pytest.mark.asyncio
+    async def test_export_no_event_bus(self, mock_db):
+        """Export works when event_bus is None (no emit)."""
+        engine = AuditEngine(db=mock_db, event_bus=None)
+        mock_db.fetch_all.return_value = [_make_action()]
+
+        result = await engine.export_audit_log(filters={}, format="json")
+
+        assert result["record_count"] == 1
+        assert "export_id" in result
+        # DB insert should still happen
+        mock_db.execute.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_export_csv_empty_records(self, engine, mock_db, mock_events):
+        """CSV export with empty results returns empty string."""
+        mock_db.fetch_all.return_value = []
+
+        result = await engine.export_audit_log(filters={}, format="csv")
+
+        assert result["format"] == "csv"
+        assert result["record_count"] == 0
+        assert result["content"] == ""
+
+    @pytest.mark.asyncio
+    async def test_export_text_empty_records(self, engine, mock_db, mock_events):
+        """Text export with empty results returns 'no records' message."""
+        mock_db.fetch_all.return_value = []
+
+        result = await engine.export_audit_log(filters={}, format="text")
+
+        assert result["format"] == "text"
+        assert result["record_count"] == 0
+        assert "No audit records found" in result["content"]
+
+    @pytest.mark.asyncio
+    async def test_export_text_missing_fields(self, engine, mock_db, mock_events):
+        """Text export handles records with missing optional fields."""
+        row = {
+            "id": "a1",
+            "tenant_id": None,
+            "user_id": None,
+            "action_type": "test",
+            "shard": None,
+            "entity_id": None,
+            "session_id": None,
+            "description": None,
+            "payload": "{}",
+            "timestamp": None,
+        }
+        mock_db.fetch_all.return_value = [row]
+
+        result = await engine.export_audit_log(filters={}, format="text")
+
+        assert result["format"] == "text"
+        assert result["record_count"] == 1
+        assert isinstance(result["content"], str)
+
+    @pytest.mark.asyncio
+    async def test_export_csv_with_none_values(self, engine, mock_db, mock_events):
+        """CSV export serializes None values as empty strings."""
+        row = _make_action()
+        row["user_id"] = None
+        row["entity_id"] = None
+        row["timestamp"] = None
+        mock_db.fetch_all.return_value = [row]
+
+        result = await engine.export_audit_log(filters={}, format="csv")
+
+        content = result["content"]
+        reader = csv.reader(io.StringIO(content))
+        csv_rows = list(reader)
+        assert len(csv_rows) == 2  # header + 1 data row
+        # None fields should be empty strings
+        data_row = csv_rows[1]
+        assert "" in data_row  # At least one empty field
+
+
+# ---------------------------------------------------------------------------
+# Formatting helpers unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestFormatHelpers:
+    """Direct tests for _serialize_value and formatting methods."""
+
+    def test_serialize_none(self):
+        assert AuditEngine._serialize_value(None) == ""
+
+    def test_serialize_datetime(self):
+        dt = datetime(2026, 3, 13, 12, 0, 0, tzinfo=timezone.utc)
+        result = AuditEngine._serialize_value(dt)
+        assert "2026-03-13" in result
+
+    def test_serialize_string(self):
+        assert AuditEngine._serialize_value("hello") == "hello"
+
+    def test_serialize_integer(self):
+        assert AuditEngine._serialize_value(42) == "42"
+
+    def test_format_csv_empty(self):
+        engine = AuditEngine()
+        assert engine._format_csv([]) == ""
+
+    def test_format_text_empty(self):
+        engine = AuditEngine()
+        assert engine._format_text([]) == "No audit records found."
+
+    def test_format_csv_header_fields(self):
+        """CSV header contains expected column names."""
+        engine = AuditEngine()
+        records = [_make_action()]
+        csv_output = engine._format_csv(records)
+        header = csv_output.split("\n")[0]
+        assert "id" in header
+        assert "action_type" in header
+        assert "shard" in header
+        assert "timestamp" in header
+
+    def test_format_text_structure(self):
+        """Text output has title line and separator."""
+        engine = AuditEngine()
+        records = [_make_action(), _make_action()]
+        text_output = engine._format_text(records)
+        lines = text_output.split("\n")
+        assert "2 records" in lines[0]
+        assert "=" * 60 in lines[1]

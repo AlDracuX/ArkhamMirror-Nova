@@ -380,3 +380,229 @@ class TestBuildTree:
         mock_events.emit.assert_called_once()
         event_name = mock_events.emit.call_args.args[0]
         assert event_name == "crossexam.plan.generated"
+
+
+# ---------------------------------------------------------------------------
+# Edge-case tests
+# ---------------------------------------------------------------------------
+
+
+class TestDamageScoreEdgeCases:
+    """Edge cases for damage scoring."""
+
+    @pytest.mark.asyncio
+    async def test_damage_score_node_not_found(self, builder, mock_db):
+        """score_damage returns 0.0 score when node does not exist."""
+        mock_db.fetch_one.return_value = None
+        result = await builder.score_damage("nonexistent-node")
+        assert result["score"] == 0.0
+        assert "not found" in result["reasoning"].lower()
+
+    @pytest.mark.asyncio
+    async def test_damage_score_heuristic_with_document_contradiction(self, builder_no_llm, mock_db):
+        """Heuristic boosts score when metadata has contradicts_document."""
+        node_id = str(uuid.uuid4())
+        mock_db.fetch_one.return_value = {
+            "id": node_id,
+            "tree_id": "tree-1",
+            "question_text": "Did you sign the document?",
+            "expected_answer": "No",
+            "alternative_answer": "Yes",
+            "damage_potential": 0.5,
+            "metadata": json.dumps({"contradicts_document": "exhibit-3"}),
+        }
+        result = await builder_no_llm.score_damage(node_id)
+        # Base 0.5 + 0.3 boost = 0.8
+        assert result["score"] >= 0.7
+        assert "documentary evidence" in result["reasoning"].lower()
+
+    @pytest.mark.asyncio
+    async def test_damage_score_llm_failure_fallback(self, builder, mock_db, mock_llm):
+        """When LLM fails, damage scoring returns a fallback result."""
+        node_id = str(uuid.uuid4())
+        mock_db.fetch_one.return_value = {
+            "id": node_id,
+            "tree_id": "tree-1",
+            "question_text": "Test question?",
+            "expected_answer": "Yes",
+            "alternative_answer": "No",
+            "damage_potential": 0.4,
+            "metadata": "{}",
+        }
+        mock_llm.generate = AsyncMock(side_effect=RuntimeError("LLM unavailable"))
+        result = await builder.score_damage(node_id)
+        assert 0.0 <= result["score"] <= 1.0
+        assert "reasoning" in result
+
+    @pytest.mark.asyncio
+    async def test_damage_score_clamped_to_unit_range(self, builder, mock_db, mock_llm):
+        """LLM scores are clamped to [0.0, 1.0]."""
+        node_id = str(uuid.uuid4())
+        mock_db.fetch_one.return_value = {
+            "id": node_id,
+            "tree_id": "tree-1",
+            "question_text": "Test?",
+            "expected_answer": "Yes",
+            "alternative_answer": "No",
+            "damage_potential": 0.5,
+            "metadata": "{}",
+        }
+        mock_llm.generate = AsyncMock(
+            return_value=MagicMock(text=json.dumps({"score": 1.5, "reasoning": "Over max", "factors": {}}))
+        )
+        result = await builder.score_damage(node_id)
+        assert result["score"] <= 1.0
+
+
+class TestImpeachmentEdgeCases:
+    """Edge cases for impeachment generation."""
+
+    @pytest.mark.asyncio
+    async def test_impeachment_missing_contradiction_uses_fallback(self, builder_no_llm, mock_db, mock_events):
+        """When contradiction not found in DB, generates from placeholder data."""
+        contradiction_id = str(uuid.uuid4())
+        # All DB lookups return None
+        mock_db.fetch_one.return_value = None
+
+        seq_id = await builder_no_llm.generate_impeachment_sequence(contradiction_id)
+        assert seq_id is not None
+        assert isinstance(seq_id, str)
+        # Still stores in DB
+        insert_calls = [c for c in mock_db.execute.call_args_list if "impeachment_sequences" in str(c.args[0])]
+        assert len(insert_calls) >= 1
+
+    @pytest.mark.asyncio
+    async def test_impeachment_emits_event(self, builder_no_llm, mock_db, mock_events):
+        """Impeachment generation emits crossexam.impeachment.created event."""
+        contradiction_id = str(uuid.uuid4())
+        mock_db.fetch_one.return_value = {
+            "id": contradiction_id,
+            "witness_id": "w-1",
+            "claim_a": "I did not attend.",
+            "claim_b": "Attendance record shows presence.",
+            "doc_a_id": "stmt",
+            "doc_b_id": "doc",
+        }
+        await builder_no_llm.generate_impeachment_sequence(contradiction_id)
+        mock_events.emit.assert_called_once()
+        assert mock_events.emit.call_args.args[0] == "crossexam.impeachment.created"
+
+    @pytest.mark.asyncio
+    async def test_impeachment_llm_failure_falls_back_to_template(self, builder, mock_db, mock_llm, mock_events):
+        """When LLM fails, impeachment falls back to template generation."""
+        contradiction_id = str(uuid.uuid4())
+        mock_db.fetch_one.return_value = {
+            "id": contradiction_id,
+            "witness_id": "w-1",
+            "claim_a": "I was never informed.",
+            "claim_b": "Email CC list includes witness.",
+            "doc_a_id": "stmt-1",
+            "doc_b_id": "email-exhibit",
+        }
+        mock_llm.generate = AsyncMock(side_effect=RuntimeError("LLM down"))
+
+        seq_id = await builder.generate_impeachment_sequence(contradiction_id)
+        assert seq_id is not None
+        # Verify 3 template steps stored
+        insert_call = mock_db.execute.call_args_list[-1]
+        call_params = insert_call.args[1] if len(insert_call.args) > 1 else insert_call.kwargs.get("values", {})
+        steps = json.loads(call_params.get("steps", "[]"))
+        assert len(steps) == 3
+
+
+class TestFollowupEdgeCases:
+    """Edge cases for follow-up routing."""
+
+    @pytest.mark.asyncio
+    async def test_followup_node_not_found(self, builder, mock_db):
+        """Returns None when node does not exist."""
+        mock_db.fetch_one.return_value = None
+        result = await builder.route_followup("nonexistent", "any answer")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_followup_only_expected_path_available(self, builder, mock_db):
+        """When only expected follow-up exists, routes there regardless."""
+        node_id = str(uuid.uuid4())
+        expected_id = str(uuid.uuid4())
+        mock_db.fetch_one.return_value = {
+            "id": node_id,
+            "tree_id": "tree-1",
+            "question_text": "Were you there?",
+            "expected_answer": "No",
+            "alternative_answer": "Yes",
+            "follow_up_expected_id": expected_id,
+            "follow_up_alternative_id": None,
+            "metadata": "{}",
+        }
+        # Even if answer matches alternative, expected_id wins since alt is None
+        result = await builder.route_followup(node_id, "No, I was not.")
+        assert result == expected_id
+
+    @pytest.mark.asyncio
+    async def test_followup_empty_answers_returns_expected(self, builder, mock_db):
+        """When expected/alternative answers are empty, similarity is 0 for both."""
+        node_id = str(uuid.uuid4())
+        expected_id = str(uuid.uuid4())
+        alt_id = str(uuid.uuid4())
+        mock_db.fetch_one.return_value = {
+            "id": node_id,
+            "tree_id": "tree-1",
+            "question_text": "Question?",
+            "expected_answer": "",
+            "alternative_answer": "",
+            "follow_up_expected_id": expected_id,
+            "follow_up_alternative_id": alt_id,
+            "metadata": "{}",
+        }
+        # Both similarities are 0.0, expected_similarity >= alternative_similarity
+        result = await builder.route_followup(node_id, "Some answer")
+        assert result == expected_id
+
+
+class TestBuildTreeEdgeCases:
+    """Edge cases for tree building."""
+
+    @pytest.mark.asyncio
+    async def test_build_tree_empty_statement_creates_default(self, builder_no_llm, mock_db, mock_events):
+        """Empty statement still creates at least one default question."""
+        tree_id = await builder_no_llm.build_from_statement("w-1", "")
+        assert tree_id is not None
+        # Should have tree insert + at least 1 node insert
+        node_inserts = [c for c in mock_db.execute.call_args_list if "question_nodes" in str(c.args[0])]
+        assert len(node_inserts) >= 1
+
+    @pytest.mark.asyncio
+    async def test_build_tree_sets_root_node(self, builder_no_llm, mock_db, mock_events):
+        """Build sets root_node_id on the tree record."""
+        await builder_no_llm.build_from_statement("w-1", "I worked there for two years and left voluntarily.")
+        update_calls = [c for c in mock_db.execute.call_args_list if "root_node_id" in str(c.args[0])]
+        assert len(update_calls) == 1
+
+    @pytest.mark.asyncio
+    async def test_build_tree_llm_failure_falls_back(self, builder, mock_db, mock_llm, mock_events):
+        """When LLM fails during tree build, falls back to skeleton questions."""
+        mock_llm.generate = AsyncMock(side_effect=RuntimeError("LLM error"))
+        tree_id = await builder.build_from_statement(
+            "w-1", "I started in January and was dismissed in March without notice."
+        )
+        assert tree_id is not None
+        # Should still have created nodes via skeleton fallback
+        node_inserts = [c for c in mock_db.execute.call_args_list if "question_nodes" in str(c.args[0])]
+        assert len(node_inserts) >= 1
+
+
+class TestTextSimilarity:
+    """Test the _text_similarity helper method."""
+
+    def test_identical_texts(self, builder):
+        assert builder._text_similarity("hello world", "hello world") == 1.0
+
+    def test_completely_different(self, builder):
+        score = builder._text_similarity("hello world", "foo bar baz")
+        assert score < 0.5
+
+    def test_empty_text(self, builder):
+        assert builder._text_similarity("", "hello") == 0.0
+        assert builder._text_similarity("hello", "") == 0.0
+        assert builder._text_similarity("", "") == 0.0
