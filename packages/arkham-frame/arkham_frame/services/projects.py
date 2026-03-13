@@ -110,12 +110,12 @@ class ProjectService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
+            async with self.db._engine.connect() as conn:
                 # Create schema if not exists
-                conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {self.SCHEMA}"))
+                await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {self.SCHEMA}"))
 
                 # Projects table
-                conn.execute(
+                await conn.execute(
                     text(f"""
                     CREATE TABLE IF NOT EXISTS {self.SCHEMA}.projects (
                         id VARCHAR(36) PRIMARY KEY,
@@ -130,18 +130,18 @@ class ProjectService:
                 )
 
                 # Indexes
-                conn.execute(
+                await conn.execute(
                     text(f"""
                     CREATE INDEX IF NOT EXISTS idx_projects_name ON {self.SCHEMA}.projects(name)
                 """)
                 )
-                conn.execute(
+                await conn.execute(
                     text(f"""
                     CREATE INDEX IF NOT EXISTS idx_projects_updated ON {self.SCHEMA}.projects(updated_at)
                 """)
                 )
 
-                conn.commit()
+                await conn.commit()
                 logger.debug("Project tables created/verified")
 
         except Exception as e:
@@ -186,8 +186,8 @@ class ProjectService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
-                conn.execute(
+            async with self.db._engine.connect() as conn:
+                await conn.execute(
                     text(f"""
                         INSERT INTO {self.SCHEMA}.projects
                         (id, name, description, created_at, updated_at, settings, metadata)
@@ -203,7 +203,7 @@ class ProjectService:
                         "metadata": json.dumps({}),
                     },
                 )
-                conn.commit()
+                await conn.commit()
 
             # Create project storage directory
             if self.storage:
@@ -243,8 +243,8 @@ class ProjectService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
-                result = conn.execute(
+            async with self.db._engine.connect() as conn:
+                result = await conn.execute(
                     text(f"SELECT * FROM {self.SCHEMA}.projects WHERE id = :id"),
                     {"id": project_id},
                 )
@@ -274,8 +274,8 @@ class ProjectService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
-                result = conn.execute(
+            async with self.db._engine.connect() as conn:
+                result = await conn.execute(
                     text(f"SELECT * FROM {self.SCHEMA}.projects WHERE name = :name"),
                     {"name": name},
                 )
@@ -321,15 +321,15 @@ class ProjectService:
         order = "DESC" if order.lower() == "desc" else "ASC"
 
         try:
-            with self.db._engine.connect() as conn:
+            async with self.db._engine.connect() as conn:
                 # Get total count
-                count_result = conn.execute(
+                count_result = await conn.execute(
                     text(f"SELECT COUNT(*) FROM {self.SCHEMA}.projects"),
                 )
                 total = count_result.scalar()
 
                 # Get projects
-                result = conn.execute(
+                result = await conn.execute(
                     text(f"""
                         SELECT * FROM {self.SCHEMA}.projects
                         ORDER BY {sort} {order}
@@ -397,8 +397,8 @@ class ProjectService:
         updates.append("updated_at = :updated_at")
 
         try:
-            with self.db._engine.connect() as conn:
-                result = conn.execute(
+            async with self.db._engine.connect() as conn:
+                result = await conn.execute(
                     text(f"""
                         UPDATE {self.SCHEMA}.projects
                         SET {", ".join(updates)}
@@ -406,7 +406,7 @@ class ProjectService:
                     """),
                     params,
                 )
-                conn.commit()
+                await conn.commit()
 
                 if result.rowcount == 0:
                     return None
@@ -440,20 +440,20 @@ class ProjectService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
+            async with self.db._engine.connect() as conn:
                 if cascade:
                     # Delete associated documents
-                    conn.execute(
+                    await conn.execute(
                         text(f"DELETE FROM {self.SCHEMA}.documents WHERE project_id = :project_id"),
                         {"project_id": project_id},
                     )
 
                 # Delete project
-                result = conn.execute(
+                result = await conn.execute(
                     text(f"DELETE FROM {self.SCHEMA}.projects WHERE id = :id"),
                     {"id": project_id},
                 )
-                conn.commit()
+                await conn.commit()
 
                 if result.rowcount == 0:
                     return False
@@ -583,9 +583,9 @@ class ProjectService:
         stats = ProjectStats()
 
         try:
-            with self.db._engine.connect() as conn:
+            async with self.db._engine.connect() as conn:
                 # Document counts by status
-                result = conn.execute(
+                result = await conn.execute(
                     text(f"""
                         SELECT status, COUNT(*) as count, SUM(file_size) as size, SUM(page_count) as pages
                         FROM {self.SCHEMA}.documents
@@ -613,7 +613,7 @@ class ProjectService:
                         stats.failed_documents = count
 
                 # Chunk count
-                result = conn.execute(
+                result = await conn.execute(
                     text(f"""
                         SELECT COUNT(*) FROM {self.SCHEMA}.chunks c
                         JOIN {self.SCHEMA}.documents d ON c.document_id = d.id
@@ -625,7 +625,7 @@ class ProjectService:
 
                 # Entity count (if entities table exists)
                 try:
-                    result = conn.execute(
+                    result = await conn.execute(
                         text(f"""
                             SELECT COUNT(*) FROM {self.SCHEMA}.entities e
                             JOIN {self.SCHEMA}.documents d ON e.document_id = d.id
@@ -654,8 +654,8 @@ class ProjectService:
         from sqlalchemy import text
 
         try:
-            with self.db._engine.connect() as conn:
-                result = conn.execute(
+            async with self.db._engine.connect() as conn:
+                result = await conn.execute(
                     text(f"SELECT COUNT(*) FROM {self.SCHEMA}.projects"),
                 )
                 return result.scalar() or 0
