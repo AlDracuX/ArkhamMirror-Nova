@@ -66,13 +66,8 @@ class ComparatorShard(ArkhamShard):
         # Subscribe to cross-shard events
         if self._event_bus:
             try:
-                # EventBus.subscribe is synchronous in the frame
-                result = self._event_bus.subscribe("entities.extracted", self._handle_entities_extracted)
-                if hasattr(result, "__await__"):
-                    await result
-                result = self._event_bus.subscribe("documents.processed", self._handle_documents_processed)
-                if hasattr(result, "__await__"):
-                    await result
+                await self._event_bus.subscribe("entities.extracted", self._handle_entities_extracted)
+                await self._event_bus.subscribe("documents.processed", self._handle_documents_processed)
                 logger.info("Comparator Shard subscribed to entities.extracted and documents.processed")
             except Exception as e:
                 logger.warning(f"Event subscription failed (non-fatal): {e}")

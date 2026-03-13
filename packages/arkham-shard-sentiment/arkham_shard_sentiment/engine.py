@@ -203,7 +203,12 @@ class SentimentEngine:
 
         # 5. Persist
         result_id = str(uuid.uuid4())
-        if self._db:
+        # Validate document_id is a valid UUID before DB insert
+        try:
+            doc_uuid = str(uuid.UUID(document_id))
+        except (ValueError, AttributeError):
+            doc_uuid = None
+        if self._db and doc_uuid:
             await self._db.execute(
                 """
                 INSERT INTO arkham_sentiment.sentiment_results
@@ -212,7 +217,7 @@ class SentimentEngine:
                 """,
                 {
                     "id": result_id,
-                    "document_id": document_id,
+                    "document_id": doc_uuid,
                     "case_id": case_id,
                     "overall_score": keyword_result["score"],
                     "label": keyword_result["label"],

@@ -66,7 +66,7 @@ class BundleShard(ArkhamShard):
 
         # Subscribe to events
         if self._event_bus:
-            self._event_bus.subscribe("documents.processed", self._handle_document_processed)
+            await self._event_bus.subscribe("documents.processed", self._handle_document_processed)
 
         # Register self in app state for API access
         if hasattr(frame, "app") and frame.app:
@@ -82,7 +82,7 @@ class BundleShard(ArkhamShard):
         # Unsubscribe from events
         if self._event_bus:
             try:
-                self._event_bus.unsubscribe("documents.processed", self._handle_document_processed)
+                await self._event_bus.unsubscribe("documents.processed", self._handle_document_processed)
             except Exception:
                 pass
 

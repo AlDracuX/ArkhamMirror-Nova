@@ -67,8 +67,10 @@ class CrossExamShard(ArkhamShard):
 
         # Subscribe to cross-shard events
         if self._event_bus:
-            self._event_bus.subscribe("witnesses.statement.created", self._handle_statement_created)
-            self._event_bus.subscribe("contradictions.contradiction.detected", self._handle_contradiction_detected)
+            await self._event_bus.subscribe("witnesses.statement.created", self._handle_statement_created)
+            await self._event_bus.subscribe(
+                "contradictions.contradiction.detected", self._handle_contradiction_detected
+            )
 
         # Register self in app state for API access
         if hasattr(frame, "app") and frame.app:
@@ -84,8 +86,8 @@ class CrossExamShard(ArkhamShard):
         # Unsubscribe from events
         if self._event_bus:
             try:
-                self._event_bus.unsubscribe("witnesses.statement.created", self._handle_statement_created)
-                self._event_bus.unsubscribe(
+                await self._event_bus.unsubscribe("witnesses.statement.created", self._handle_statement_created)
+                await self._event_bus.unsubscribe(
                     "contradictions.contradiction.detected", self._handle_contradiction_detected
                 )
             except Exception:
