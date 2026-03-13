@@ -192,7 +192,9 @@ class TestAPILogic:
 
         assert "id" in result
         mock_db.execute.assert_called_once()
-        mock_events.emit.assert_called_once_with("strategist.prediction.generated", {"prediction_id": result["id"]})
+        mock_events.emit.assert_called_once_with(
+            "strategist.prediction.generated", {"prediction_id": result["id"]}, source="strategist"
+        )
 
     @pytest.mark.asyncio
     async def test_get_prediction_not_found(self, mock_db):

@@ -185,7 +185,9 @@ class TestAPILogic:
 
         assert "id" in result
         mock_db.execute.assert_called_once()
-        mock_events.emit.assert_called_once_with("digest.briefing.generated", {"briefing_id": result["id"]})
+        mock_events.emit.assert_called_once_with(
+            "digest.briefing.generated", {"briefing_id": result["id"]}, source="digest"
+        )
 
     @pytest.mark.asyncio
     async def test_get_briefing_not_found(self, mock_db):
