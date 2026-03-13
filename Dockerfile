@@ -18,7 +18,7 @@ WORKDIR /build
 COPY packages/arkham-shard-shell/package*.json ./
 
 # Install dependencies (--legacy-peer-deps for react-leaflet@5 / React 18 compat)
-RUN npm ci --silent --legacy-peer-deps
+RUN npm ci --legacy-peer-deps
 
 # Copy source and build
 COPY packages/arkham-shard-shell/ ./

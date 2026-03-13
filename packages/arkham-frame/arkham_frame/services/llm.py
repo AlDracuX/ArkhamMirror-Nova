@@ -242,6 +242,12 @@ class LLMService:
         self._is_openrouter = "openrouter.ai" in endpoint.lower()
         if self._is_openrouter:
             logger.info("OpenRouter detected - fallback routing available")
+            # Load fallback models from environment (comma-separated)
+            fallback_env = os.environ.get("LLM_FALLBACK_MODELS", "")
+            if fallback_env:
+                self._fallback_models = [m.strip() for m in fallback_env.split(",") if m.strip()]
+                self._use_fallback_routing = bool(self._fallback_models)
+                logger.info(f"Fallback models configured: {self._fallback_models}")
 
         # Test connection
         try:

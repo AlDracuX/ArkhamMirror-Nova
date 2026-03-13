@@ -122,7 +122,7 @@ class BurdenMapShard(ArkhamShard):
                     element         TEXT NOT NULL,
                     legal_standard  TEXT NOT NULL DEFAULT '',
                     burden_party    TEXT NOT NULL DEFAULT 'claimant',
-                    evidence_ids    UUID[] DEFAULT '{{{{}}}}',
+                    evidence_ids    UUID[] DEFAULT ARRAY[]::UUID[],
                     status          TEXT NOT NULL DEFAULT 'unmet',
                     notes           TEXT,
                     created_at      TIMESTAMPTZ DEFAULT NOW(),

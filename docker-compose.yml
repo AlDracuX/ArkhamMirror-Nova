@@ -56,17 +56,12 @@ services:
         condition: service_healthy
     networks:
       - shattered-net
-    # GPU support for Legion (NVIDIA)
+    # Resource limits (GPU support removed — add via override if NVIDIA available)
     deploy:
       resources:
         limits:
           memory: 4G
           cpus: '4.0'
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8100/api/health"]
       interval: 30s

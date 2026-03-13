@@ -386,6 +386,141 @@ class TestAPILogic:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Domain Logic Tests (required by spec)
+# ---------------------------------------------------------------------------
+
+
+class TestDomainLogic:
+    """Required domain logic tests per shard specification."""
+
+    @pytest.fixture
+    def mock_db(self):
+        db = AsyncMock()
+        db.execute = AsyncMock()
+        db.fetch_all = AsyncMock(return_value=[])
+        db.fetch_one = AsyncMock(return_value=None)
+        return db
+
+    @pytest.fixture
+    def mock_events(self):
+        events = AsyncMock()
+        events.emit = AsyncMock()
+        return events
+
+    @pytest.fixture
+    def engine(self, mock_db, mock_events):
+        from arkham_shard_comparator.engine import ComparatorEngine
+
+        return ComparatorEngine(db=mock_db, event_bus=mock_events)
+
+    def test_divergence_score_opposite_outcomes(self, engine):
+        """Opposite outcomes (favourable vs unfavourable) must score 1.0."""
+        score = engine.score_divergence("favourable", "unfavourable")
+        assert score == 1.0
+
+    def test_divergence_score_same_outcome(self, engine):
+        """Same outcomes must score 0.0."""
+        assert engine.score_divergence("favourable", "favourable") == 0.0
+        assert engine.score_divergence("unfavourable", "unfavourable") == 0.0
+        assert engine.score_divergence("neutral", "neutral") == 0.0
+
+    @pytest.mark.asyncio
+    async def test_s13_elements_complete_when_all_met(self, engine, mock_db):
+        """s.13 checklist is complete only when all 4 elements have evidence."""
+        mock_db.fetch_one = AsyncMock(return_value={"cnt": 1})
+
+        result = await engine.check_s13_elements("case-001")
+
+        assert result["complete"] is True
+        assert len(result["elements"]) == 4
+        for el in result["elements"]:
+            assert el["status"] == "met"
+
+    @pytest.mark.asyncio
+    async def test_s26_elements_missing_one(self, engine, mock_db):
+        """s.26 checklist is incomplete when any element lacks evidence."""
+        call_count = 0
+
+        async def varying_count(query, params):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 4:
+                return {"cnt": 1}
+            return {"cnt": 0}
+
+        mock_db.fetch_one = varying_count
+
+        result = await engine.check_s26_elements("case-001")
+
+        assert result["complete"] is False
+        met = sum(1 for el in result["elements"] if el["status"] == "met")
+        unmet = sum(1 for el in result["elements"] if el["status"] == "unmet")
+        assert met == 4
+        assert unmet == 1
+
+    @pytest.mark.asyncio
+    async def test_treatment_matrix_groups_by_subject(self, engine, mock_db):
+        """Treatment matrix groups treatments by subject_id."""
+        mock_db.fetch_one = AsyncMock(return_value={"id": "inc-001", "description": "Test"})
+
+        treatments = [
+            _mock_treatment_row("t1", "inc-001", "claimant", "Excluded", "unfavourable"),
+            _mock_treatment_row("t2", "inc-001", "comp-A", "Included", "favourable"),
+            _mock_treatment_row("t3", "inc-001", "comp-B", "Included", "favourable"),
+        ]
+        mock_db.fetch_all = AsyncMock(return_value=treatments)
+
+        result = await engine.build_treatment_matrix("inc-001")
+
+        subjects = [t["subject"] for t in result["treatments"]]
+        assert "claimant" in subjects
+        assert "comp-A" in subjects
+        assert "comp-B" in subjects
+        assert len(result["treatments"]) == 3
+
+    @pytest.mark.asyncio
+    async def test_aggregate_significance_averaging(self, engine, mock_db):
+        """Aggregate significance computes correct average across incidents."""
+        mock_db.fetch_all = AsyncMock(
+            return_value=[
+                {"significance_score": 0.9},
+                {"significance_score": 0.6},
+                {"significance_score": 0.3},
+            ]
+        )
+
+        result = await engine.aggregate_significance("case-001")
+
+        assert result["incident_count"] == 3
+        assert result["avg_divergence"] == 0.6
+        assert result["max_divergence"] == 0.9
+
+
+def _mock_treatment_row(tid, incident_id, subject_id, description, outcome):
+    """Create a mock treatment row for domain logic tests.
+
+    Must support dict(row) which the engine uses, so keys/values/items are needed.
+    """
+    data = {
+        "id": tid,
+        "incident_id": incident_id,
+        "subject_id": subject_id,
+        "treatment_description": description,
+        "outcome": outcome,
+        "evidence_ids": [],
+        "tenant_id": None,
+        "created_at": None,
+    }
+    return MagicMock(
+        __getitem__=lambda self, k: data[k],
+        get=lambda k, d=None: data.get(k, d),
+        keys=lambda: data.keys(),
+        values=lambda: data.values(),
+        items=lambda: data.items(),
+    )
+
+
 class TestComparisonMatrix:
     """Test the matrix aggregation logic."""
 

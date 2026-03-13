@@ -670,6 +670,14 @@ class EntitiesShard(ArkhamShard):
             logger.warning("Database not available for relationship storage")
             return
 
+        # Cap relationships to prevent event loop blocking and OOM (460K+ relationships = minutes of blocking + GB of RAM)
+        MAX_RELATIONSHIPS = 1000
+        if len(relationships) > MAX_RELATIONSHIPS:
+            logger.warning(
+                f"Capping relationships from {len(relationships)} to {MAX_RELATIONSHIPS} for document {document_id}"
+            )
+            relationships = relationships[:MAX_RELATIONSHIPS]
+
         logger.info(f"Processing {len(relationships)} relationships for document {document_id}")
 
         for rel_data in relationships:
