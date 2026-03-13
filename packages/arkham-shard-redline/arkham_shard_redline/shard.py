@@ -284,7 +284,24 @@ class RedlineShard(ArkhamShard):
             # Create schema
             await self._db.execute("CREATE SCHEMA IF NOT EXISTS arkham_redline")
 
-            # Create comparisons table (new spec)
+            # Migration: drop legacy table if schema doesn't match (v1 had
+            # base_document_id/target_document_id; v2 uses doc_a_id/doc_b_id
+            # plus status, title, diffs, additions, deletions, modifications).
+            await self._db.execute("""
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_schema = 'arkham_redline'
+                        AND table_name = 'comparisons'
+                        AND column_name = 'base_document_id'
+                    ) THEN
+                        DROP TABLE arkham_redline.comparisons;
+                    END IF;
+                END $$
+            """)
+
+            # Create comparisons table (v2 spec)
             await self._db.execute("""
                 CREATE TABLE IF NOT EXISTS arkham_redline.comparisons (
                     id UUID PRIMARY KEY,
@@ -301,21 +318,6 @@ class RedlineShard(ArkhamShard):
                     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
-
-            # Migration: add case_id if table existed before it was added
-            await self._db.execute("""
-                DO $$
-                BEGIN
-                    IF NOT EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_schema = 'arkham_redline'
-                        AND table_name = 'comparisons'
-                        AND column_name = 'case_id'
-                    ) THEN
-                        ALTER TABLE arkham_redline.comparisons ADD COLUMN case_id UUID;
-                    END IF;
-                END $$
             """)
 
             # Indexes
