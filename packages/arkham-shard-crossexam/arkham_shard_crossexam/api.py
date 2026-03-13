@@ -381,8 +381,8 @@ async def create_exam_plan(request: CreateExamPlanRequest):
             "objectives": request.objectives,
             "approach": request.approach,
             "status": request.status,
-            "created_at": now.isoformat(),
-            "updated_at": now.isoformat(),
+            "created_at": now,
+            "updated_at": now,
         },
     )
     return {
@@ -450,7 +450,7 @@ async def update_exam_plan(plan_id: str, request: UpdateExamPlanRequest):
         raise HTTPException(status_code=422, detail="No fields to update")
 
     updates.append("updated_at = :updated_at")
-    params["updated_at"] = now.isoformat()
+    params["updated_at"] = now
 
     query = f"UPDATE arkham_crossexam.exam_plans SET {', '.join(updates)} WHERE id = :id"
     await _db.execute(query, params)
@@ -594,8 +594,8 @@ async def generate_exam_plan(request: GenerateExamPlanRequest):
             "impeachment_points": json.dumps([]),
             "approach": "standard",
             "status": "draft",
-            "created_at": now.isoformat(),
-            "updated_at": now.isoformat(),
+            "created_at": now,
+            "updated_at": now,
         },
     )
 
