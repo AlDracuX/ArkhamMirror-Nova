@@ -164,6 +164,86 @@ class TestPredictArguments:
         assert isinstance(results, list)
         assert len(results) == 0
 
+    @pytest.mark.asyncio
+    async def test_predict_arguments_empty_llm_array(self, engine, mock_llm):
+        """LLM returning empty JSON array yields empty results without error."""
+        mock_llm.generate.return_value = _make_llm_response("[]")
+
+        results = await engine.predict_arguments(project_id="proj-1")
+
+        assert isinstance(results, list)
+        assert len(results) == 0
+
+    @pytest.mark.asyncio
+    async def test_predict_arguments_db_error_still_returns_results(self, engine, mock_llm, mock_db):
+        """DB persistence failure does not prevent returning LLM results."""
+        mock_llm.generate.return_value = _make_llm_response(
+            json.dumps(
+                [
+                    {
+                        "argument": "Test argument",
+                        "confidence": 0.5,
+                        "reasoning": "Test",
+                        "likely_evidence": [],
+                    },
+                ]
+            )
+        )
+        mock_db.execute.side_effect = Exception("DB connection lost")
+
+        results = await engine.predict_arguments(project_id="proj-1")
+
+        assert len(results) == 1
+        assert results[0]["argument"] == "Test argument"
+
+    @pytest.mark.asyncio
+    async def test_predict_arguments_no_event_when_empty(self, engine, mock_llm, mock_event_bus):
+        """No event emitted when LLM returns no predictions."""
+        mock_llm.generate.return_value = _make_llm_response("[]")
+
+        await engine.predict_arguments(project_id="proj-1")
+
+        mock_event_bus.emit.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_predict_arguments_each_gets_unique_id(self, engine, mock_llm, mock_db):
+        """Each prediction in a batch receives a unique id."""
+        mock_llm.generate.return_value = _make_llm_response(
+            json.dumps(
+                [
+                    {"argument": "Arg A", "confidence": 0.5, "reasoning": "R", "likely_evidence": []},
+                    {"argument": "Arg B", "confidence": 0.6, "reasoning": "R", "likely_evidence": []},
+                ]
+            )
+        )
+
+        results = await engine.predict_arguments(project_id="proj-1")
+
+        ids = [r["id"] for r in results]
+        assert len(set(ids)) == 2, "Each prediction must have a unique id"
+
+    @pytest.mark.asyncio
+    async def test_predict_arguments_without_db(self, mock_event_bus, mock_llm):
+        """Engine operates without a database (db=None)."""
+        engine_no_db = StrategistEngine(db=None, event_bus=mock_event_bus, llm_service=mock_llm)
+        mock_llm.generate.return_value = _make_llm_response(
+            json.dumps([{"argument": "Arg", "confidence": 0.5, "reasoning": "R", "likely_evidence": []}])
+        )
+
+        results = await engine_no_db.predict_arguments(project_id="proj-1")
+
+        assert len(results) == 1
+
+    @pytest.mark.asyncio
+    async def test_predict_arguments_llm_exception_returns_empty(self, engine, mock_llm):
+        """If LLM.generate raises an exception, returns empty list gracefully."""
+        mock_llm.generate.side_effect = Exception("LLM service timeout")
+
+        results = await engine.predict_arguments(project_id="proj-1")
+
+        assert isinstance(results, list)
+        assert len(results) == 0
+
 
 # ---------------------------------------------------------------------------
 # Counterarguments
@@ -225,6 +305,85 @@ class TestCounterarguments:
 
         assert isinstance(results, list)
         assert len(results) == 0
+
+    @pytest.mark.asyncio
+    async def test_counterarguments_prediction_not_found(self, engine, mock_db):
+        """Returns empty list when prediction_id does not exist in DB."""
+        mock_db.fetch_one.return_value = None
+
+        results = await engine.generate_counterarguments(prediction_id="nonexistent")
+
+        assert isinstance(results, list)
+        assert len(results) == 0
+
+    @pytest.mark.asyncio
+    async def test_counterarguments_malformed_llm_response(self, engine, mock_llm, mock_db):
+        """Malformed LLM response returns empty list without crashing."""
+        mock_db.fetch_one.return_value = {
+            "id": "pred-1",
+            "project_id": "proj-1",
+            "predicted_argument": "Test",
+            "confidence": 0.5,
+            "reasoning": "Test",
+        }
+        mock_llm.generate.return_value = _make_llm_response("Not valid JSON")
+
+        results = await engine.generate_counterarguments(prediction_id="pred-1")
+
+        assert isinstance(results, list)
+        assert len(results) == 0
+
+    @pytest.mark.asyncio
+    async def test_counterarguments_persisted_to_db(self, engine, mock_llm, mock_db):
+        """Counterarguments are stored in the database."""
+        mock_db.fetch_one.return_value = {
+            "id": "pred-1",
+            "project_id": "proj-1",
+            "predicted_argument": "Test argument",
+            "confidence": 0.8,
+            "reasoning": "Test",
+        }
+        mock_llm.generate.return_value = _make_llm_response(
+            json.dumps(
+                [
+                    {
+                        "counterargument": "Rebuttal one",
+                        "evidence_refs": ["doc-1"],
+                        "strength": 0.9,
+                    },
+                ]
+            )
+        )
+
+        results = await engine.generate_counterarguments(prediction_id="pred-1")
+
+        assert len(results) == 1
+        # fetch_one for the prediction + execute for the insert
+        assert mock_db.execute.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_counterarguments_each_gets_unique_id(self, engine, mock_llm, mock_db):
+        """Each counterargument receives a unique id."""
+        mock_db.fetch_one.return_value = {
+            "id": "pred-1",
+            "project_id": "proj-1",
+            "predicted_argument": "Test",
+            "confidence": 0.5,
+            "reasoning": "Test",
+        }
+        mock_llm.generate.return_value = _make_llm_response(
+            json.dumps(
+                [
+                    {"counterargument": "A", "evidence_refs": [], "strength": 0.5},
+                    {"counterargument": "B", "evidence_refs": [], "strength": 0.6},
+                ]
+            )
+        )
+
+        results = await engine.generate_counterarguments(prediction_id="pred-1")
+
+        ids = [r["id"] for r in results]
+        assert len(set(ids)) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -289,6 +448,45 @@ class TestSWOT:
         assert result["weaknesses"] == []
         assert result["opportunities"] == []
         assert result["threats"] == []
+
+    @pytest.mark.asyncio
+    async def test_swot_malformed_llm_response(self, engine, mock_llm, mock_db):
+        """Malformed LLM response returns empty SWOT quadrants."""
+        mock_db.fetch_all.return_value = []
+        mock_llm.generate.return_value = _make_llm_response("Not JSON")
+
+        result = await engine.build_swot(project_id="proj-1")
+
+        assert isinstance(result, dict)
+        assert result["strengths"] == []
+        assert result["weaknesses"] == []
+        assert result["opportunities"] == []
+        assert result["threats"] == []
+
+    @pytest.mark.asyncio
+    async def test_swot_partial_llm_response(self, engine, mock_llm, mock_db):
+        """LLM response with only some quadrants still returns all four keys."""
+        mock_db.fetch_all.return_value = []
+        mock_llm.generate.return_value = _make_llm_response(json.dumps({"strengths": [{"item": "S1", "detail": "D1"}]}))
+
+        result = await engine.build_swot(project_id="proj-1")
+
+        assert "strengths" in result
+        assert "weaknesses" in result
+        assert "opportunities" in result
+        assert "threats" in result
+        assert len(result["strengths"]) == 1
+        assert result["weaknesses"] == []
+
+    @pytest.mark.asyncio
+    async def test_swot_llm_exception_returns_empty(self, engine, mock_llm, mock_db):
+        """LLM exception returns empty SWOT without crashing."""
+        mock_db.fetch_all.return_value = []
+        mock_llm.generate.side_effect = Exception("LLM timeout")
+
+        result = await engine.build_swot(project_id="proj-1")
+
+        assert result == {"strengths": [], "weaknesses": [], "opportunities": [], "threats": []}
 
 
 # ---------------------------------------------------------------------------
@@ -404,6 +602,62 @@ class TestRedTeam:
         assert result["weaknesses"] == []
         assert 0.0 <= result["overall_risk"] <= 1.0
 
+    @pytest.mark.asyncio
+    async def test_red_team_malformed_llm_response(self, engine, mock_llm, mock_db):
+        """Malformed LLM response returns empty red team result."""
+        mock_db.fetch_all.return_value = []
+        mock_llm.generate.return_value = _make_llm_response("Not valid JSON")
+
+        result = await engine.red_team(project_id="proj-1", target_id="target-1")
+
+        assert isinstance(result, dict)
+        # When LLM response is malformed, the LLM layer returns default
+        assert "weaknesses" in result
+        assert "overall_risk" in result
+
+    @pytest.mark.asyncio
+    async def test_red_team_clamps_negative_risk_score(self, engine, mock_llm, mock_db):
+        """Negative risk scores are clamped to 0.0."""
+        mock_db.fetch_all.return_value = []
+        mock_llm.generate.return_value = _make_llm_response(json.dumps({"weaknesses": [], "overall_risk": -0.5}))
+
+        result = await engine.red_team(project_id="proj-1", target_id="target-1")
+
+        assert result["overall_risk"] >= 0.0
+
+    @pytest.mark.asyncio
+    async def test_red_team_persists_report(self, engine, mock_llm, mock_db):
+        """Red team report is persisted to database."""
+        mock_db.fetch_all.return_value = []
+        mock_llm.generate.return_value = _make_llm_response(
+            json.dumps(
+                {
+                    "weaknesses": [{"area": "Test", "vulnerability": "V", "exploitation_method": "E"}],
+                    "overall_risk": 0.5,
+                }
+            )
+        )
+
+        await engine.red_team(project_id="proj-1", target_id="target-1")
+
+        # Should have at least one INSERT call for the report
+        insert_calls = [
+            c
+            for c in mock_db.execute.call_args_list
+            if "INSERT" in str(c.args[0]) and "red_team_reports" in str(c.args[0])
+        ]
+        assert len(insert_calls) == 1
+
+    @pytest.mark.asyncio
+    async def test_red_team_llm_exception_returns_empty(self, engine, mock_llm, mock_db):
+        """LLM exception returns empty red team result without crashing."""
+        mock_db.fetch_all.return_value = []
+        mock_llm.generate.side_effect = Exception("LLM error")
+
+        result = await engine.red_team(project_id="proj-1", target_id="target-1")
+
+        assert result == {"weaknesses": [], "overall_risk": 0.0}
+
 
 # ---------------------------------------------------------------------------
 # Tactical Model
@@ -481,3 +735,176 @@ class TestTacticalModel:
         await engine.build_tactical_model(project_id="proj-1", respondent_id="resp-1")
 
         assert mock_db.execute.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_tactical_model_malformed_llm_response(self, engine, mock_llm, mock_db):
+        """Malformed LLM response returns empty tactical model."""
+        mock_db.fetch_all.return_value = []
+        mock_llm.generate.return_value = _make_llm_response("Not JSON")
+
+        result = await engine.build_tactical_model(project_id="proj-1", respondent_id="resp-1")
+
+        assert isinstance(result, dict)
+        assert result["tactics"] == []
+        assert result["profile_summary"] == ""
+
+    @pytest.mark.asyncio
+    async def test_tactical_model_llm_exception_returns_empty(self, engine, mock_llm, mock_db):
+        """LLM exception returns empty tactical model without crashing."""
+        mock_db.fetch_all.return_value = []
+        mock_llm.generate.side_effect = Exception("LLM timeout")
+
+        result = await engine.build_tactical_model(project_id="proj-1", respondent_id="resp-1")
+
+        assert result == {"tactics": [], "profile_summary": ""}
+
+    @pytest.mark.asyncio
+    async def test_tactical_model_partial_response(self, engine, mock_llm, mock_db):
+        """LLM response with only tactics still returns profile_summary key."""
+        mock_db.fetch_all.return_value = []
+        mock_llm.generate.return_value = _make_llm_response(
+            json.dumps(
+                {
+                    "tactics": [
+                        {"tactic": "Delay", "likelihood": 0.7, "counter_strategy": "Push back"},
+                    ],
+                }
+            )
+        )
+
+        result = await engine.build_tactical_model(project_id="proj-1", respondent_id="resp-1")
+
+        assert "tactics" in result
+        assert "profile_summary" in result
+        assert len(result["tactics"]) == 1
+        assert result["profile_summary"] == ""
+
+
+# ---------------------------------------------------------------------------
+# LLM JSON Parsing (markdown code blocks)
+# ---------------------------------------------------------------------------
+
+
+class TestLLMJsonParsing:
+    """Tests for the LLM layer's JSON extraction from various response formats."""
+
+    def test_parse_json_from_markdown_code_block(self):
+        """LLM response wrapped in markdown code block is parsed correctly."""
+        from arkham_shard_strategist.llm import StrategistLLM
+
+        llm = StrategistLLM(llm_service=None)
+        response = MagicMock()
+        response.text = '```json\n{"strengths": ["s1"]}\n```'
+
+        parsed = llm._parse_json(response)
+        assert parsed == {"strengths": ["s1"]}
+
+    def test_parse_json_direct(self):
+        """Direct JSON is parsed without issue."""
+        from arkham_shard_strategist.llm import StrategistLLM
+
+        llm = StrategistLLM(llm_service=None)
+        response = MagicMock()
+        response.text = '[{"argument": "test"}]'
+
+        parsed = llm._parse_json(response)
+        assert isinstance(parsed, list)
+        assert parsed[0]["argument"] == "test"
+
+    def test_parse_json_empty_text(self):
+        """Empty response text returns None."""
+        from arkham_shard_strategist.llm import StrategistLLM
+
+        llm = StrategistLLM(llm_service=None)
+        response = MagicMock()
+        response.text = ""
+
+        parsed = llm._parse_json(response)
+        assert parsed is None
+
+    def test_parse_json_no_text_attribute(self):
+        """Response without .text attribute returns None."""
+        from arkham_shard_strategist.llm import StrategistLLM
+
+        llm = StrategistLLM(llm_service=None)
+        response = object()
+
+        parsed = llm._parse_json(response)
+        assert parsed is None
+
+
+# ---------------------------------------------------------------------------
+# Event Handlers
+# ---------------------------------------------------------------------------
+
+
+class TestShardEventHandlers:
+    """Tests for shard-level event handlers."""
+
+    @pytest.fixture
+    def mock_engine(self):
+        engine = AsyncMock()
+        engine.predict_arguments = AsyncMock(return_value=[])
+        engine.build_tactical_model = AsyncMock(return_value={})
+        engine.red_team = AsyncMock(return_value={})
+        return engine
+
+    @pytest.mark.asyncio
+    async def test_handle_strategy_updated_calls_predict(self, mock_engine):
+        """Strategy updated event triggers predict_arguments."""
+        from arkham_shard_strategist.shard import StrategistShard
+
+        shard = StrategistShard()
+        shard.engine = mock_engine
+
+        await shard.handle_strategy_updated({"project_id": "proj-1"})
+
+        mock_engine.predict_arguments.assert_called_once_with(project_id="proj-1")
+
+    @pytest.mark.asyncio
+    async def test_handle_profile_updated_calls_tactical_model(self, mock_engine):
+        """Profile updated event triggers build_tactical_model."""
+        from arkham_shard_strategist.shard import StrategistShard
+
+        shard = StrategistShard()
+        shard.engine = mock_engine
+
+        await shard.handle_profile_updated({"project_id": "proj-1", "respondent_id": "resp-1"})
+
+        mock_engine.build_tactical_model.assert_called_once_with(project_id="proj-1", respondent_id="resp-1")
+
+    @pytest.mark.asyncio
+    async def test_handle_statement_created_calls_red_team(self, mock_engine):
+        """Statement created event triggers red_team."""
+        from arkham_shard_strategist.shard import StrategistShard
+
+        shard = StrategistShard()
+        shard.engine = mock_engine
+
+        await shard.handle_statement_created({"project_id": "proj-1", "statement_id": "stmt-1"})
+
+        mock_engine.red_team.assert_called_once_with(project_id="proj-1", target_id="stmt-1")
+
+    @pytest.mark.asyncio
+    async def test_handle_strategy_updated_no_project_id(self, mock_engine):
+        """Missing project_id in event does not call engine."""
+        from arkham_shard_strategist.shard import StrategistShard
+
+        shard = StrategistShard()
+        shard.engine = mock_engine
+
+        await shard.handle_strategy_updated({})
+
+        mock_engine.predict_arguments.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_handle_strategy_updated_engine_error_no_crash(self, mock_engine):
+        """Engine exception in event handler does not crash the shard."""
+        from arkham_shard_strategist.shard import StrategistShard
+
+        shard = StrategistShard()
+        shard.engine = mock_engine
+        mock_engine.predict_arguments.side_effect = Exception("Engine failure")
+
+        # Should not raise
+        await shard.handle_strategy_updated({"project_id": "proj-1"})
