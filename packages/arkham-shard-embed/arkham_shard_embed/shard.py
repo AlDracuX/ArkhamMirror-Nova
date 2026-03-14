@@ -524,3 +524,158 @@ class EmbedShard(ArkhamShard):
             "loaded": model_info.loaded,
             "device": model_info.device,
         }
+
+    # --- Embedding management features ---
+
+    async def get_embedding_stats(self) -> dict:
+        """
+        Get statistics about stored embeddings.
+
+        Queries the database for embedding count, model distribution,
+        and coverage (documents with embeddings vs total documents).
+
+        Returns:
+            Dictionary with total_embeddings, model_distribution, coverage.
+            Returns {"error": ...} if database service is unavailable.
+        """
+        db_service = self.frame.get_service("database") if self.frame else None
+        if not db_service:
+            return {"error": "Database service not available"}
+
+        try:
+            # Total embedding count
+            total_row = await db_service.fetch_one("SELECT COUNT(*) as count FROM arkham_vectors.embeddings")
+            total_embeddings = total_row["count"] if total_row else 0
+
+            # Total documents
+            docs_row = await db_service.fetch_one("SELECT COUNT(*) as count FROM arkham_documents")
+            total_docs = docs_row["count"] if docs_row else 0
+
+            # Documents with embeddings
+            covered_row = await db_service.fetch_one(
+                "SELECT COUNT(DISTINCT doc_id) as count FROM arkham_vectors.embeddings"
+            )
+            docs_with_embeddings = covered_row["count"] if covered_row else 0
+
+            # Model distribution
+            model_rows = await db_service.fetch_all(
+                "SELECT model, COUNT(*) as count FROM arkham_vectors.embeddings GROUP BY model ORDER BY count DESC"
+            )
+            model_distribution = [dict(row) for row in model_rows] if model_rows else []
+
+            return {
+                "total_embeddings": total_embeddings,
+                "model_distribution": model_distribution,
+                "coverage": {
+                    "total_documents": total_docs,
+                    "documents_with_embeddings": docs_with_embeddings,
+                    "percentage": round((docs_with_embeddings / total_docs * 100) if total_docs > 0 else 0, 2),
+                },
+            }
+        except Exception as e:
+            logger.error(f"Failed to get embedding stats: {e}")
+            return {"error": str(e)}
+
+    async def find_unembedded_documents(self, limit: int = 100) -> list[dict]:
+        """
+        Find documents that have chunks but no embeddings.
+
+        Args:
+            limit: Maximum number of results to return (default 100).
+
+        Returns:
+            List of dicts with doc_id and chunk_count for each unembedded document.
+            Returns empty list if database service is unavailable.
+        """
+        db_service = self.frame.get_service("database") if self.frame else None
+        if not db_service:
+            return []
+
+        try:
+            rows = await db_service.fetch_all(
+                """
+                SELECT c.doc_id, COUNT(*) as chunk_count
+                FROM arkham_document_chunks c
+                LEFT JOIN arkham_vectors.embeddings e ON c.doc_id = e.doc_id
+                WHERE e.doc_id IS NULL
+                GROUP BY c.doc_id
+                ORDER BY chunk_count DESC
+                LIMIT $1
+                """,
+                limit,
+            )
+            return [dict(row) for row in rows] if rows else []
+        except Exception as e:
+            logger.error(f"Failed to find unembedded documents: {e}")
+            return []
+
+    async def get_similarity(self, doc_id_a: str, doc_id_b: str) -> float:
+        """
+        Compute cosine similarity between two documents using their average embeddings.
+
+        Each document may have multiple chunk embeddings. This method averages
+        all chunk vectors per document, then computes cosine similarity between
+        the two average vectors.
+
+        Args:
+            doc_id_a: First document ID.
+            doc_id_b: Second document ID.
+
+        Returns:
+            Cosine similarity as a float between -1.0 and 1.0.
+            Returns -1.0 if either document has no embeddings or on error.
+        """
+        import math
+
+        db_service = self.frame.get_service("database") if self.frame else None
+        if not db_service:
+            return -1.0
+
+        try:
+            vecs_a = await db_service.fetch_all(
+                "SELECT vector FROM arkham_vectors.embeddings WHERE doc_id = $1",
+                doc_id_a,
+            )
+            vecs_b = await db_service.fetch_all(
+                "SELECT vector FROM arkham_vectors.embeddings WHERE doc_id = $1",
+                doc_id_b,
+            )
+
+            if not vecs_a or not vecs_b:
+                return -1.0
+
+            # Average vectors for each document
+            avg_a = self._average_vectors([row["vector"] for row in vecs_a])
+            avg_b = self._average_vectors([row["vector"] for row in vecs_b])
+
+            # Cosine similarity
+            return self._cosine_similarity(avg_a, avg_b)
+
+        except Exception as e:
+            logger.error(f"Failed to compute similarity: {e}")
+            return -1.0
+
+    @staticmethod
+    def _average_vectors(vectors: list[list[float]]) -> list[float]:
+        """Average a list of vectors element-wise."""
+        if not vectors:
+            return []
+        n = len(vectors)
+        dim = len(vectors[0])
+        avg = [0.0] * dim
+        for vec in vectors:
+            for i in range(dim):
+                avg[i] += vec[i]
+        return [v / n for v in avg]
+
+    @staticmethod
+    def _cosine_similarity(a: list[float], b: list[float]) -> float:
+        """Compute cosine similarity between two vectors."""
+        import math
+
+        dot = sum(x * y for x, y in zip(a, b))
+        norm_a = math.sqrt(sum(x * x for x in a))
+        norm_b = math.sqrt(sum(x * x for x in b))
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        return dot / (norm_a * norm_b)

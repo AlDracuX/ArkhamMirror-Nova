@@ -376,6 +376,176 @@ class TestBackupMethods:
         assert result is True
 
 
+class TestSaveSettingAndGetSettingValue:
+    """Tests for simple save_setting/get_setting_value key-value API."""
+
+    @pytest.mark.asyncio
+    async def test_save_setting_creates_new(self, shard, mock_frame):
+        """save_setting inserts a new row when key does not exist."""
+        await shard.initialize(mock_frame)
+
+        # get_setting returns None (key not found), so save_setting inserts
+        await shard.save_setting("custom.key", "hello")
+
+        # Verify an INSERT was executed
+        insert_calls = [
+            call for call in mock_frame.db.execute.call_args_list if "INSERT INTO arkham_settings" in str(call)
+        ]
+        assert len(insert_calls) >= 1
+
+    @pytest.mark.asyncio
+    async def test_save_setting_updates_existing(self, shard, mock_frame):
+        """save_setting updates when key already exists."""
+        await shard.initialize(mock_frame)
+
+        # Simulate existing setting in cache
+        from arkham_shard_settings.models import Setting, SettingCategory, SettingType
+
+        existing = Setting(
+            key="existing.key",
+            value="old",
+            default_value="old",
+            category=SettingCategory.GENERAL,
+            data_type=SettingType.STRING,
+            label="Existing Key",
+        )
+        shard._settings_cache["existing.key"] = existing
+
+        # Mock the refetch after update
+        mock_frame.db.fetch_one = AsyncMock(
+            return_value={
+                "key": "existing.key",
+                "value": '"new_value"',
+                "default_value": '"old"',
+                "category": "general",
+                "data_type": "string",
+                "label": "Existing Key",
+                "description": "",
+                "validation": "{}",
+                "options": "[]",
+                "requires_restart": False,
+                "is_hidden": False,
+                "is_readonly": False,
+                "display_order": 0,
+                "modified_at": None,
+                "modified_by": None,
+            }
+        )
+
+        await shard.save_setting("existing.key", "new_value")
+
+        # Should have called UPDATE (via update_setting)
+        update_calls = [call for call in mock_frame.db.execute.call_args_list if "UPDATE arkham_settings" in str(call)]
+        assert len(update_calls) >= 1
+
+    @pytest.mark.asyncio
+    async def test_save_setting_not_initialized(self, shard):
+        """save_setting raises RuntimeError when not initialized."""
+        with pytest.raises(RuntimeError, match="not initialized"):
+            await shard.save_setting("key", "value")
+
+    @pytest.mark.asyncio
+    async def test_save_setting_json_complex_value(self, shard, mock_frame):
+        """save_setting serializes complex values as JSON."""
+        await shard.initialize(mock_frame)
+
+        complex_value = {"nested": {"key": [1, 2, 3]}}
+        await shard.save_setting("complex.key", complex_value)
+
+        # Should have inserted with JSON-serialized value
+        insert_calls = [
+            call for call in mock_frame.db.execute.call_args_list if "INSERT INTO arkham_settings" in str(call)
+        ]
+        assert len(insert_calls) >= 1
+
+    @pytest.mark.asyncio
+    async def test_get_setting_value_returns_default(self, shard, mock_frame):
+        """get_setting_value returns default when key not found."""
+        await shard.initialize(mock_frame)
+
+        result = await shard.get_setting_value("nonexistent", default="fallback")
+        assert result == "fallback"
+
+    @pytest.mark.asyncio
+    async def test_get_setting_value_returns_none_default(self, shard, mock_frame):
+        """get_setting_value returns None by default when key not found."""
+        await shard.initialize(mock_frame)
+
+        result = await shard.get_setting_value("nonexistent")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_setting_value_from_cache(self, shard, mock_frame):
+        """get_setting_value returns value from cached setting."""
+        await shard.initialize(mock_frame)
+
+        from arkham_shard_settings.models import Setting, SettingCategory, SettingType
+
+        cached = Setting(
+            key="cached.key",
+            value="cached_value",
+            default_value="default",
+            category=SettingCategory.GENERAL,
+            data_type=SettingType.STRING,
+            label="Cached",
+        )
+        shard._settings_cache["cached.key"] = cached
+
+        result = await shard.get_setting_value("cached.key")
+        assert result == "cached_value"
+
+    @pytest.mark.asyncio
+    async def test_get_all_settings_dict(self, shard, mock_frame):
+        """get_all_settings_dict returns flat key-value dict."""
+        await shard.initialize(mock_frame)
+
+        from arkham_shard_settings.models import Setting, SettingCategory, SettingType
+
+        mock_rows = [
+            {
+                "key": "a.b",
+                "value": '"val1"',
+                "default_value": '"val1"',
+                "category": "general",
+                "data_type": "string",
+                "label": "A.B",
+                "description": "",
+                "validation": "{}",
+                "options": "[]",
+                "requires_restart": False,
+                "is_hidden": False,
+                "is_readonly": False,
+                "display_order": 0,
+                "modified_at": None,
+                "modified_by": None,
+            },
+            {
+                "key": "c.d",
+                "value": "42",
+                "default_value": "0",
+                "category": "general",
+                "data_type": "integer",
+                "label": "C.D",
+                "description": "",
+                "validation": "{}",
+                "options": "[]",
+                "requires_restart": False,
+                "is_hidden": False,
+                "is_readonly": False,
+                "display_order": 1,
+                "modified_at": None,
+                "modified_by": None,
+            },
+        ]
+        mock_frame.db.fetch_all = AsyncMock(return_value=mock_rows)
+
+        result = await shard.get_all_settings_dict()
+
+        assert isinstance(result, dict)
+        assert "a.b" in result
+        assert "c.d" in result
+
+
 class TestEventHandlers:
     """Test event handlers."""
 

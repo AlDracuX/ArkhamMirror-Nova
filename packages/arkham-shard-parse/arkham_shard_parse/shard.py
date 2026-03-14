@@ -1,8 +1,11 @@
 """Parse Shard - Entity extraction and NER."""
 
 import logging
+import re
 import uuid
+from datetime import datetime
 from pathlib import Path
+from typing import Dict, List
 
 from arkham_frame.shard_interface import ArkhamShard
 
@@ -597,3 +600,272 @@ class ParseShard(ArkhamShard):
                     )
 
         return saved_count, entity_ids
+
+    # --- Regex-based NER (no spaCy dependency) ---
+
+    # Compiled regex patterns for entity extraction
+    _ENTITY_PATTERNS: list[tuple[str, re.Pattern]] = []
+
+    @staticmethod
+    def _build_entity_patterns() -> list[tuple[str, re.Pattern]]:
+        """Build compiled regex patterns for entity extraction (cached on first call)."""
+        months = (
+            r"(?:January|February|March|April|May|June|July|August|September|October|November|December"
+            r"|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+        )
+        return [
+            # REFERENCE - case references (must come before DATE to avoid partial matches)
+            (
+                "REFERENCE",
+                re.compile(
+                    r"\b(?:"
+                    r"(?:ET|UKEAT|EAT)/\d{3,7}/\d{2,4}"  # ET/1234/2024, UKEAT/0123/24
+                    r"|EA-\d{4}-\d{4,6}-[A-Z]{2}"  # EA-2025-001649-AT
+                    r"|\d{5,7}/\d{4}"  # 6013156/2024
+                    r")\b"
+                ),
+            ),
+            # DATE - ISO format
+            ("DATE", re.compile(r"\b\d{4}-\d{2}-\d{2}\b")),
+            # DATE - UK format DD/MM/YYYY
+            ("DATE", re.compile(r"\b\d{1,2}/\d{1,2}/\d{4}\b")),
+            # DATE - ordinal day + month + year (1st March 2024)
+            ("DATE", re.compile(r"\b\d{1,2}(?:st|nd|rd|th)\s+" + months + r"\s+\d{4}\b", re.IGNORECASE)),
+            # DATE - day month year (15 March 2024)
+            ("DATE", re.compile(r"\b\d{1,2}\s+" + months + r"\s+\d{4}\b", re.IGNORECASE)),
+            # DATE - month day, year (March 15, 2024)
+            ("DATE", re.compile(months + r"\s+\d{1,2},?\s+\d{4}", re.IGNORECASE)),
+            # DATE - month year (March 2024)
+            ("DATE", re.compile(months + r"\s+\d{4}\b", re.IGNORECASE)),
+            # DATE - relative
+            ("DATE", re.compile(r"\b(?:yesterday|today|tomorrow)\b", re.IGNORECASE)),
+            ("DATE", re.compile(r"\b(?:last|next)\s+(?:week|month|year)\b", re.IGNORECASE)),
+            ("DATE", re.compile(r"\b\d+\s+(?:days?|weeks?|months?|years?)\s+ago\b", re.IGNORECASE)),
+            # MONEY - pound sign with amount
+            ("MONEY", re.compile(r"\u00a3[\d,]+(?:\.\d{1,2})?")),
+            # MONEY - GBP with amount
+            ("MONEY", re.compile(r"\bGBP\s*[\d,]+(?:\.\d{1,2})?\b", re.IGNORECASE)),
+            # EMAIL
+            ("EMAIL", re.compile(r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b")),
+            # PHONE - UK formats
+            (
+                "PHONE",
+                re.compile(
+                    r"(?:"
+                    r"\+44\s*\d[\d\s]{8,12}"  # +44 7700 900123
+                    r"|\b0\d{2,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}\b"  # 07700 900123, 020 7946 0958
+                    r")"
+                ),
+            ),
+        ]
+
+    def extract_entities_regex(self, text: str) -> List[Dict]:
+        """
+        Extract named entities from text using regex patterns (no spaCy required).
+
+        Detects: DATE, MONEY, EMAIL, PHONE, PERSON, REFERENCE.
+
+        Args:
+            text: The input text to analyse.
+
+        Returns:
+            List of dicts with keys: text, type, start, end.
+        """
+        if not text:
+            return []
+
+        # Build patterns once (class-level cache)
+        if not ParseShard._ENTITY_PATTERNS:
+            ParseShard._ENTITY_PATTERNS = ParseShard._build_entity_patterns()
+
+        results: list[dict] = []
+        seen_spans: set[tuple[int, int, str]] = set()
+
+        # Apply all regex patterns
+        for entity_type, pattern in ParseShard._ENTITY_PATTERNS:
+            for match in pattern.finditer(text):
+                span_key = (match.start(), match.end(), entity_type)
+                if span_key not in seen_spans:
+                    seen_spans.add(span_key)
+                    results.append(
+                        {
+                            "text": match.group(),
+                            "type": entity_type,
+                            "start": match.start(),
+                            "end": match.end(),
+                        }
+                    )
+
+        # PERSON heuristic: capitalized word pairs NOT at sentence start
+        # Split text into sentences, then find Capitalized Pairs mid-sentence
+        sentences = re.split(r"(?<=[.!?])\s+", text)
+        offset = 0
+        for sentence in sentences:
+            # Find the sentence in the original text to get correct offsets
+            sent_start = text.find(sentence, offset)
+            if sent_start == -1:
+                continue
+            offset = sent_start + len(sentence)
+
+            # Find capitalized word pairs that are NOT at the very start of the sentence
+            # Pattern: look for two consecutive capitalized words
+            for m in re.finditer(r"(?<!\A)(?<=\s)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)", sentence):
+                abs_start = sent_start + m.start()
+                abs_end = sent_start + m.end()
+                span_key = (abs_start, abs_end, "PERSON")
+
+                # Skip if this span overlaps with an already-detected entity
+                overlaps = False
+                for existing in results:
+                    if not (abs_end <= existing["start"] or abs_start >= existing["end"]):
+                        overlaps = True
+                        break
+
+                if not overlaps and span_key not in seen_spans:
+                    seen_spans.add(span_key)
+                    results.append(
+                        {
+                            "text": m.group(),
+                            "type": "PERSON",
+                            "start": abs_start,
+                            "end": abs_end,
+                        }
+                    )
+
+        # Sort by position
+        results.sort(key=lambda r: r["start"])
+        return results
+
+    # --- Date normalisation ---
+
+    _MONTH_MAP = {
+        "january": 1,
+        "february": 2,
+        "march": 3,
+        "april": 4,
+        "may": 5,
+        "june": 6,
+        "july": 7,
+        "august": 8,
+        "september": 9,
+        "october": 10,
+        "november": 11,
+        "december": 12,
+        "jan": 1,
+        "feb": 2,
+        "mar": 3,
+        "apr": 4,
+        "jun": 6,
+        "jul": 7,
+        "aug": 8,
+        "sep": 9,
+        "oct": 10,
+        "nov": 11,
+        "dec": 12,
+    }
+
+    def normalize_dates(self, text: str) -> List[Dict]:
+        """
+        Extract all dates from text and normalize to ISO 8601 format.
+
+        Handles: ISO dates, UK DD/MM/YYYY, ordinal dates (1st March 2024),
+        written dates (March 15, 2024), month-year (March 2024).
+
+        Args:
+            text: The input text.
+
+        Returns:
+            List of dicts with keys: original, normalized, start, end.
+        """
+        if not text:
+            return []
+
+        months = (
+            r"(?:January|February|March|April|May|June|July|August|September|October|November|December"
+            r"|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+        )
+
+        results: list[dict] = []
+        seen_spans: set[tuple[int, int]] = set()
+
+        def _add(original: str, normalized: str, start: int, end: int) -> None:
+            key = (start, end)
+            if key not in seen_spans:
+                seen_spans.add(key)
+                results.append(
+                    {
+                        "original": original,
+                        "normalized": normalized,
+                        "start": start,
+                        "end": end,
+                    }
+                )
+
+        # ISO: YYYY-MM-DD
+        for m in re.finditer(r"\b(\d{4})-(\d{2})-(\d{2})\b", text):
+            try:
+                datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+                _add(m.group(), m.group(), m.start(), m.end())
+            except ValueError:
+                pass
+
+        # UK: DD/MM/YYYY
+        for m in re.finditer(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b", text):
+            try:
+                day, month, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                datetime(year, month, day)  # validate
+                normalized = f"{year:04d}-{month:02d}-{day:02d}"
+                _add(m.group(), normalized, m.start(), m.end())
+            except ValueError:
+                pass
+
+        # Ordinal: 1st March 2024
+        pat_ordinal = re.compile(r"\b(\d{1,2})(?:st|nd|rd|th)\s+(" + months + r")\s+(\d{4})\b", re.IGNORECASE)
+        for m in pat_ordinal.finditer(text):
+            try:
+                day = int(m.group(1))
+                month_num = self._MONTH_MAP[m.group(2).lower()]
+                year = int(m.group(3))
+                datetime(year, month_num, day)
+                normalized = f"{year:04d}-{month_num:02d}-{day:02d}"
+                _add(m.group(), normalized, m.start(), m.end())
+            except (ValueError, KeyError):
+                pass
+
+        # Written: March 15, 2024
+        pat_written = re.compile(r"\b(" + months + r")\s+(\d{1,2}),?\s+(\d{4})\b", re.IGNORECASE)
+        for m in pat_written.finditer(text):
+            try:
+                month_num = self._MONTH_MAP[m.group(1).lower()]
+                day = int(m.group(2))
+                year = int(m.group(3))
+                datetime(year, month_num, day)
+                normalized = f"{year:04d}-{month_num:02d}-{day:02d}"
+                _add(m.group(), normalized, m.start(), m.end())
+            except (ValueError, KeyError):
+                pass
+
+        # Month-year only: March 2024
+        pat_month_year = re.compile(r"\b(" + months + r")\s+(\d{4})\b", re.IGNORECASE)
+        for m in pat_month_year.finditer(text):
+            # Skip if this span is already covered by a more specific pattern
+            if (m.start(), m.end()) in seen_spans:
+                continue
+            # Also skip if this span is a substring of an already-matched span
+            is_subset = False
+            for existing_start, existing_end in seen_spans:
+                if m.start() >= existing_start and m.end() <= existing_end:
+                    is_subset = True
+                    break
+            if is_subset:
+                continue
+            try:
+                month_num = self._MONTH_MAP[m.group(1).lower()]
+                year = int(m.group(2))
+                normalized = f"{year:04d}-{month_num:02d}"
+                _add(m.group(), normalized, m.start(), m.end())
+            except (ValueError, KeyError):
+                pass
+
+        results.sort(key=lambda r: r["start"])
+        return results

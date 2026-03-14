@@ -727,6 +727,28 @@ class ProjectsShard(ArkhamShard):
             added_by=row.get("added_by", "system"),
         )
 
+    async def get_project_members(self, project_id: str) -> List[ProjectMember]:
+        """Get all members of a project."""
+        if not self._db:
+            return []
+
+        rows = await self._db.fetch_all(
+            "SELECT * FROM arkham_project_members WHERE project_id = ? ORDER BY added_at DESC",
+            [project_id],
+        )
+        return [self._row_to_member(row) for row in rows]
+
+    def _row_to_member(self, row: Dict[str, Any]) -> ProjectMember:
+        """Convert a database row to a ProjectMember."""
+        return ProjectMember(
+            id=row["id"],
+            project_id=row["project_id"],
+            user_id=row["user_id"],
+            role=ProjectRole(row["role"]),
+            added_at=row.get("added_at", ""),
+            added_by=row.get("added_by", "system"),
+        )
+
     async def add_document(
         self,
         project_id: str,

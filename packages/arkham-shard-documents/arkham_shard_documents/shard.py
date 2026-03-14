@@ -2,7 +2,9 @@
 
 import json
 import logging
+from collections import defaultdict
 from datetime import datetime
+from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional
 
 from arkham_frame.shard_interface import ArkhamShard
@@ -1290,3 +1292,184 @@ class DocumentsShard(ArkhamShard):
                 details.append({"id": doc_id, "error": str(e)})
 
         return {"processed": processed, "failed": failed, "details": details}
+
+    # --- Deduplication Scan Methods ---
+
+    async def scan_duplicates(self) -> List[Dict[str, Any]]:
+        """
+        Scan all documents for exact and near-duplicate groups.
+
+        Exact duplicates: documents with identical SHA-256 content hashes.
+        Near-duplicates: documents with different hashes but similar file_size
+        (within +/-5%) AND similar filenames (SequenceMatcher ratio > 0.8).
+
+        Returns:
+            List of duplicate groups:
+            [{"hash": str, "documents": [{"id": str, "filename": str}], "type": "exact"|"near"}]
+        """
+        if not self._db:
+            return []
+
+        try:
+            rows = await self._db.fetch_all(
+                """
+                SELECT ch.document_id, d.filename, ch.content_sha256, d.file_size
+                FROM arkham_documents.content_hashes ch
+                JOIN arkham_frame.documents d ON ch.document_id = d.id
+                ORDER BY ch.content_sha256
+                """
+            )
+        except Exception as e:
+            logger.error(f"Failed to scan duplicates: {e}")
+            return []
+
+        if not rows:
+            return []
+
+        result: List[Dict[str, Any]] = []
+
+        # --- Phase 1: Find exact duplicates (identical SHA-256) ---
+        hash_groups: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        for row in rows:
+            hash_groups[row["content_sha256"]].append(
+                {
+                    "id": row["document_id"],
+                    "filename": row["filename"],
+                    "file_size": row.get("file_size", 0) or 0,
+                }
+            )
+
+        exact_doc_ids: set = set()
+        for sha256, docs in hash_groups.items():
+            if len(docs) >= 2:
+                result.append(
+                    {
+                        "hash": sha256,
+                        "documents": [{"id": d["id"], "filename": d["filename"]} for d in docs],
+                        "type": "exact",
+                    }
+                )
+                for d in docs:
+                    exact_doc_ids.add(d["id"])
+
+        # --- Phase 2: Find near-duplicates among non-exact documents ---
+        candidates = []
+        for row in rows:
+            if row["document_id"] not in exact_doc_ids:
+                candidates.append(
+                    {
+                        "id": row["document_id"],
+                        "filename": row["filename"],
+                        "file_size": row.get("file_size", 0) or 0,
+                        "content_sha256": row["content_sha256"],
+                    }
+                )
+
+        near_groups: List[Dict[str, Any]] = []
+        used_in_near: set = set()
+
+        for i, doc_a in enumerate(candidates):
+            if doc_a["id"] in used_in_near:
+                continue
+
+            group_members = [doc_a]
+
+            for j in range(i + 1, len(candidates)):
+                doc_b = candidates[j]
+                if doc_b["id"] in used_in_near:
+                    continue
+
+                if doc_a["content_sha256"] == doc_b["content_sha256"]:
+                    continue
+
+                # Check file size within +/-5%
+                size_a = doc_a["file_size"]
+                size_b = doc_b["file_size"]
+                if size_a == 0 and size_b == 0:
+                    size_similar = True
+                elif size_a == 0 or size_b == 0:
+                    size_similar = False
+                else:
+                    ratio = size_b / size_a if size_a > 0 else 0
+                    size_similar = 0.95 <= ratio <= 1.05
+
+                if not size_similar:
+                    continue
+
+                # Check filename similarity using SequenceMatcher
+                name_ratio = SequenceMatcher(None, doc_a["filename"], doc_b["filename"]).ratio()
+
+                if name_ratio > 0.8:
+                    group_members.append(doc_b)
+                    used_in_near.add(doc_b["id"])
+
+            if len(group_members) >= 2:
+                used_in_near.add(doc_a["id"])
+                near_groups.append(
+                    {
+                        "hash": f"near-{doc_a['id']}",
+                        "documents": [{"id": d["id"], "filename": d["filename"]} for d in group_members],
+                        "type": "near",
+                    }
+                )
+
+        result.extend(near_groups)
+        return result
+
+    async def get_dedup_stats(self) -> Dict[str, Any]:
+        """
+        Get deduplication statistics.
+
+        Returns:
+            Dict with total_documents, unique_hashes, duplicate_count, estimated_wasted_bytes
+        """
+        if not self._db:
+            return {
+                "total_documents": 0,
+                "unique_hashes": 0,
+                "duplicate_count": 0,
+                "estimated_wasted_bytes": 0,
+            }
+
+        try:
+            row = await self._db.fetch_one(
+                """
+                SELECT
+                    COUNT(DISTINCT d.id) as total_documents,
+                    COUNT(DISTINCT ch.content_sha256) as unique_hashes,
+                    COALESCE(SUM(d.file_size), 0) as total_size
+                FROM arkham_frame.documents d
+                LEFT JOIN arkham_documents.content_hashes ch ON d.id = ch.document_id
+                """
+            )
+
+            if not row:
+                return {
+                    "total_documents": 0,
+                    "unique_hashes": 0,
+                    "duplicate_count": 0,
+                    "estimated_wasted_bytes": 0,
+                }
+
+            total_docs = row.get("total_documents", 0) or 0
+            unique_hashes = row.get("unique_hashes", 0) or 0
+            total_size = row.get("total_size", 0) or 0
+
+            duplicate_count = max(0, total_docs - unique_hashes)
+            avg_size = total_size / total_docs if total_docs > 0 else 0
+            estimated_wasted = int(avg_size * duplicate_count)
+
+            return {
+                "total_documents": total_docs,
+                "unique_hashes": unique_hashes,
+                "duplicate_count": duplicate_count,
+                "estimated_wasted_bytes": estimated_wasted if duplicate_count > 0 else 0,
+            }
+        except Exception as e:
+            logger.error(f"Failed to get dedup stats: {e}")
+            return {
+                "total_documents": 0,
+                "unique_hashes": 0,
+                "duplicate_count": 0,
+                "estimated_wasted_bytes": 0,
+            }

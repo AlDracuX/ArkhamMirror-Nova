@@ -304,6 +304,101 @@ class TestMemberManagement:
         assert success is True
         mock_frame.events.emit.assert_called()
 
+    @pytest.mark.asyncio
+    async def test_get_project_members_empty(self, initialized_shard, mock_frame):
+        """Test getting members when none exist."""
+        mock_frame.database.fetch_all.return_value = []
+
+        members = await initialized_shard.get_project_members("proj-1")
+        assert members == []
+
+    @pytest.mark.asyncio
+    async def test_get_project_members_with_data(self, initialized_shard, mock_frame):
+        """Test getting members returns real data from database."""
+        mock_frame.database.fetch_all.return_value = [
+            {
+                "id": "mem-1",
+                "project_id": "proj-1",
+                "user_id": "user-1",
+                "role": "editor",
+                "added_at": "2024-01-01T00:00:00",
+                "added_by": "owner-1",
+            },
+            {
+                "id": "mem-2",
+                "project_id": "proj-1",
+                "user_id": "user-2",
+                "role": "viewer",
+                "added_at": "2024-01-02T00:00:00",
+                "added_by": "owner-1",
+            },
+        ]
+
+        members = await initialized_shard.get_project_members("proj-1")
+
+        assert len(members) == 2
+        assert members[0].id == "mem-1"
+        assert members[0].user_id == "user-1"
+        assert members[0].role == ProjectRole.EDITOR
+        assert members[1].user_id == "user-2"
+        assert members[1].role == ProjectRole.VIEWER
+
+    @pytest.mark.asyncio
+    async def test_get_project_members_no_db(self):
+        """Test get_project_members returns empty list when no DB."""
+        shard = ProjectsShard()
+        shard._db = None
+        members = await shard.get_project_members("proj-1")
+        assert members == []
+
+    @pytest.mark.asyncio
+    async def test_row_to_member_conversion(self, initialized_shard):
+        """Test _row_to_member correctly converts DB row."""
+        row = {
+            "id": "mem-1",
+            "project_id": "proj-1",
+            "user_id": "user-1",
+            "role": "admin",
+            "added_at": "2024-06-15T10:30:00",
+            "added_by": "system",
+        }
+
+        member = initialized_shard._row_to_member(row)
+
+        assert member.id == "mem-1"
+        assert member.project_id == "proj-1"
+        assert member.user_id == "user-1"
+        assert member.role == ProjectRole.ADMIN
+        assert member.added_by == "system"
+
+    @pytest.mark.asyncio
+    async def test_add_then_get_members_roundtrip(self, initialized_shard, mock_frame):
+        """Test adding a member then retrieving members."""
+        # Add a member
+        member = await initialized_shard.add_member(
+            project_id="proj-1",
+            user_id="user-1",
+            role=ProjectRole.EDITOR,
+        )
+
+        # Set up mock to return member data as if it was saved
+        mock_frame.database.fetch_all.return_value = [
+            {
+                "id": member.id,
+                "project_id": "proj-1",
+                "user_id": "user-1",
+                "role": "editor",
+                "added_at": member.added_at.isoformat(),
+                "added_by": "system",
+            },
+        ]
+
+        # Get members
+        members = await initialized_shard.get_project_members("proj-1")
+        assert len(members) == 1
+        assert members[0].user_id == "user-1"
+        assert members[0].role == ProjectRole.EDITOR
+
 
 # === Activity Tests ===
 

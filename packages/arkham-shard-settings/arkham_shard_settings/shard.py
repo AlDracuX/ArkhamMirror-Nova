@@ -109,6 +109,91 @@ class SettingsShard(ArkhamShard):
 
         return router
 
+    # === Simple Key-Value API ===
+
+    async def save_setting(self, key: str, value: Any) -> None:
+        """
+        Save a setting value by key. Creates the setting if it doesn't exist.
+
+        Supports JSON serialization for complex values (dicts, lists, etc.).
+
+        Args:
+            key: Setting key (e.g., "llm.endpoint")
+            value: Value to store (will be JSON-serialized)
+        """
+        if not self._db:
+            raise RuntimeError("Shard not initialized")
+
+        serialized = json.dumps(value)
+        now = datetime.utcnow()
+        tenant_id = self.get_tenant_id_or_none()
+
+        # Try update first, then insert (upsert pattern)
+        existing = await self.get_setting(key)
+        if existing:
+            # Use update_setting for existing settings (handles validation, events, history)
+            await self.update_setting(key, value, validate=False)
+        else:
+            # Insert new setting as a simple key-value pair
+            params: Dict[str, Any] = {
+                "key": key,
+                "value": serialized,
+                "default_value": serialized,
+                "category": "general",
+                "data_type": "string",
+                "label": key,
+                "description": "",
+                "validation": "{}",
+                "options": "[]",
+                "requires_restart": False,
+                "is_hidden": False,
+                "is_readonly": False,
+                "display_order": 0,
+                "modified_at": now,
+            }
+            if tenant_id:
+                params["tenant_id"] = str(tenant_id)
+
+            cols = ", ".join(params.keys())
+            placeholders = ", ".join(f":{k}" for k in params.keys())
+            await self._db.execute(
+                f"INSERT INTO arkham_settings ({cols}) VALUES ({placeholders})",
+                params,
+            )
+
+            # Invalidate cache
+            if key in self._settings_cache:
+                del self._settings_cache[key]
+
+    async def get_setting_value(self, key: str, default: Any = None) -> Any:
+        """
+        Get a setting's value by key, returning a plain Python value.
+
+        This is the simple counterpart to save_setting(). Returns just
+        the value, not the full Setting object.
+
+        Args:
+            key: Setting key
+            default: Default value if setting not found
+
+        Returns:
+            The setting value, or default if not found
+        """
+        setting = await self.get_setting(key)
+        if setting is None:
+            return default
+        return setting.value
+
+    async def get_all_settings_dict(self) -> Dict[str, Any]:
+        """
+        Get all settings as a flat key-value dictionary.
+
+        Returns:
+            Dict mapping setting keys to their values
+        """
+        settings = await self.get_all_settings()
+        return {s.key: s.value for s in settings}
+
     # === Public API ===
 
     async def get_setting(self, key: str) -> Optional[Setting]:

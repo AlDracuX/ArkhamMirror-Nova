@@ -458,3 +458,168 @@ class TestEvents:
         errors = await shard.get_errors()
 
         assert errors == []
+
+
+class TestDashboardStats:
+    """Tests for get_dashboard_stats() real aggregation."""
+
+    @pytest.fixture
+    def initialized_shard(self):
+        """Create an initialized shard with mock DB."""
+        shard = DashboardShard()
+        shard.frame = MagicMock()
+        shard.frame.db = AsyncMock()
+        shard.frame.shards = {
+            "dashboard": MagicMock(version="0.1.0"),
+            "ingest": MagicMock(version="0.2.0"),
+        }
+        return shard
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_returns_all_keys(self, initialized_shard):
+        """Stats dict contains all expected top-level keys."""
+        initialized_shard.frame.db.fetch_one = AsyncMock(return_value={"count": 0})
+        initialized_shard.frame.db.fetch_all = AsyncMock(return_value=[])
+
+        stats = await initialized_shard.get_dashboard_stats()
+
+        assert "document_count" in stats
+        assert "entity_count" in stats
+        assert "claim_count" in stats
+        assert "timeline_event_count" in stats
+        assert "deadline_count" in stats
+        assert "upcoming_deadlines" in stats
+        assert "recent_activity" in stats
+        assert "shard_health" in stats
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_with_data(self, initialized_shard):
+        """Stats returns real counts from database queries."""
+        call_count = 0
+
+        async def mock_fetch_one(query, *args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if "arkham_documents" in query:
+                return {"count": 42}
+            if "arkham_entities" in query:
+                return {"count": 15}
+            if "arkham_claims" in query:
+                return {"count": 7}
+            if "arkham_timeline_events" in query:
+                return {"count": 99}
+            if "arkham_deadlines" in query:
+                return {"count": 3}
+            return {"count": 0}
+
+        initialized_shard.frame.db.fetch_one = mock_fetch_one
+        initialized_shard.frame.db.fetch_all = AsyncMock(return_value=[])
+
+        stats = await initialized_shard.get_dashboard_stats()
+
+        assert stats["document_count"] == 42
+        assert stats["entity_count"] == 15
+        assert stats["claim_count"] == 7
+        assert stats["timeline_event_count"] == 99
+        assert stats["deadline_count"] == 3
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_no_db(self):
+        """Stats returns zeros when no database available."""
+        shard = DashboardShard()
+        shard.frame = MagicMock()
+        shard.frame.db = None
+
+        stats = await shard.get_dashboard_stats()
+
+        assert stats["document_count"] == 0
+        assert stats["entity_count"] == 0
+        assert stats["claim_count"] == 0
+        assert stats["timeline_event_count"] == 0
+        assert stats["deadline_count"] == 0
+        assert stats["recent_activity"] == []
+        assert stats["shard_health"] == []
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_no_frame(self):
+        """Stats returns zeros when frame is None."""
+        shard = DashboardShard()
+        shard.frame = None
+
+        stats = await shard.get_dashboard_stats()
+
+        assert stats["document_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_shard_health(self, initialized_shard):
+        """Stats includes loaded shard info."""
+        initialized_shard.frame.db.fetch_one = AsyncMock(return_value={"count": 0})
+        initialized_shard.frame.db.fetch_all = AsyncMock(return_value=[])
+
+        stats = await initialized_shard.get_dashboard_stats()
+
+        assert len(stats["shard_health"]) == 2
+        names = [s["name"] for s in stats["shard_health"]]
+        assert "dashboard" in names
+        assert "ingest" in names
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_handles_missing_tables(self, initialized_shard):
+        """Stats gracefully handles tables that don't exist."""
+        initialized_shard.frame.db.fetch_one = AsyncMock(side_effect=Exception("relation does not exist"))
+        initialized_shard.frame.db.fetch_all = AsyncMock(side_effect=Exception("relation does not exist"))
+
+        stats = await initialized_shard.get_dashboard_stats()
+
+        # Should still return zero defaults, not crash
+        assert stats["document_count"] == 0
+        assert stats["entity_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_recent_activity(self, initialized_shard):
+        """Stats includes recent activity from jobs table."""
+        initialized_shard.frame.db.fetch_one = AsyncMock(return_value={"count": 0})
+
+        mock_jobs = [
+            {
+                "id": "j1",
+                "status": "completed",
+                "created_at": "2024-01-01",
+                "updated_at": "2024-01-01",
+                "metadata": "{}",
+            },
+            {"id": "j2", "status": "running", "created_at": "2024-01-02", "updated_at": "2024-01-02", "metadata": "{}"},
+        ]
+        initialized_shard.frame.db.fetch_all = AsyncMock(return_value=mock_jobs)
+
+        stats = await initialized_shard.get_dashboard_stats()
+
+        assert len(stats["recent_activity"]) == 2
+        assert stats["recent_activity"][0]["id"] == "j1"
+
+    @pytest.mark.asyncio
+    async def test_get_dashboard_stats_upcoming_deadlines(self, initialized_shard):
+        """Stats includes upcoming deadlines."""
+
+        async def mock_fetch_one(query, *args, **kwargs):
+            if "arkham_deadlines" in query:
+                return {"count": 2}
+            return {"count": 0}
+
+        mock_deadlines = [
+            {"id": "d1", "due_date": "2026-04-01", "title": "Filing deadline"},
+        ]
+
+        async def mock_fetch_all(query, *args, **kwargs):
+            if "arkham_deadlines" in query:
+                return mock_deadlines
+            return []
+
+        initialized_shard.frame.db.fetch_one = mock_fetch_one
+        initialized_shard.frame.db.fetch_all = mock_fetch_all
+
+        stats = await initialized_shard.get_dashboard_stats()
+
+        assert stats["deadline_count"] == 2
+        assert len(stats["upcoming_deadlines"]) == 1
+        assert stats["upcoming_deadlines"][0]["title"] == "Filing deadline"

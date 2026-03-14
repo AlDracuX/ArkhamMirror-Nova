@@ -313,6 +313,7 @@ class TestMemberEndpoints:
     def test_get_project_members(self, client, mock_shard, sample_project):
         """Test getting project members."""
         mock_shard.get_project.return_value = sample_project
+        mock_shard.get_project_members = AsyncMock(return_value=[])
 
         with patch("arkham_shard_projects.api._get_shard", return_value=mock_shard):
             response = client.get("/api/projects/proj-1/members")

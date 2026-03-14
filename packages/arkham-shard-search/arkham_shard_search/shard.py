@@ -1,6 +1,9 @@
 """Search Shard - Semantic and keyword search for documents."""
 
 import logging
+import re
+from collections import Counter
+from typing import Any
 
 from arkham_frame.shard_interface import ArkhamShard
 
@@ -36,6 +39,7 @@ class SearchShard(ArkhamShard):
         self.regex_engine = None
         self.filter_optimizer = None
         self._db = None
+        self._search_history: list[str] = []
 
     async def initialize(self, frame) -> None:
         """
@@ -548,3 +552,157 @@ class SearchShard(ArkhamShard):
             limit=limit,
             min_similarity=min_similarity,
         )
+
+    async def keyword_search(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
+        """
+        Perform keyword search using PostgreSQL ILIKE matching with simple TF scoring.
+
+        Queries arkham_frame.chunks table for each query term, ranks results
+        by number of matching terms.
+
+        Args:
+            query: Search query string
+            limit: Maximum results (default 20)
+
+        Returns:
+            List of result dicts: [{"doc_id", "chunk_id", "title", "excerpt", "score"}]
+        """
+        if not query or not query.strip():
+            return []
+
+        if not self._db:
+            return []
+
+        # Store in search history (deduplicate consecutive)
+        query_stripped = query.strip()
+        if not self._search_history or self._search_history[0] != query_stripped:
+            self._search_history.insert(0, query_stripped)
+            # Cap history at 200 entries
+            if len(self._search_history) > 200:
+                self._search_history = self._search_history[:200]
+
+        # Tokenize query into terms (lowercase, skip short/stop words)
+        stop_words = {
+            "a",
+            "an",
+            "and",
+            "are",
+            "as",
+            "at",
+            "be",
+            "by",
+            "for",
+            "from",
+            "has",
+            "he",
+            "in",
+            "is",
+            "it",
+            "its",
+            "of",
+            "on",
+            "or",
+            "that",
+            "the",
+            "to",
+            "was",
+            "were",
+            "will",
+            "with",
+            "this",
+            "they",
+            "but",
+            "have",
+            "had",
+            "what",
+            "when",
+            "where",
+            "who",
+            "which",
+        }
+        terms = [t for t in re.findall(r"\b\w+\b", query.lower()) if len(t) > 1 and t not in stop_words]
+
+        if not terms:
+            return []
+
+        try:
+            # Build ILIKE conditions for each term
+            conditions = []
+            params: dict[str, Any] = {}
+            for i, term in enumerate(terms[:10]):  # Limit to 10 terms
+                conditions.append(f"LOWER(c.text) LIKE :term{i}")
+                params[f"term{i}"] = f"%{term}%"
+
+            where_clause = " OR ".join(conditions) if conditions else "1=0"
+            params["fetch_limit"] = limit * 3  # Over-fetch for re-ranking
+
+            sql = f"""
+                SELECT
+                    c.id as chunk_id,
+                    c.document_id,
+                    c.text,
+                    c.page_number,
+                    c.chunk_index,
+                    d.filename as title,
+                    d.mime_type,
+                    d.created_at
+                FROM arkham_frame.chunks c
+                LEFT JOIN arkham_frame.documents d ON c.document_id = d.id
+                WHERE {where_clause}
+                LIMIT :fetch_limit
+            """
+
+            rows = await self._db.fetch_all(sql, params)
+        except Exception as e:
+            logger.error(f"Keyword search query failed: {e}")
+            return []
+
+        # Score results by term frequency
+        scored: list[dict[str, Any]] = []
+        for row in rows:
+            text = (row.get("text") or "").lower()
+            if not text:
+                continue
+
+            # Count matching terms (simple TF scoring)
+            match_count = 0
+            for term in terms:
+                match_count += text.count(term)
+
+            if match_count == 0:
+                continue
+
+            excerpt = (row.get("text") or "")[:300]
+            scored.append(
+                {
+                    "doc_id": row.get("document_id", ""),
+                    "chunk_id": row.get("chunk_id"),
+                    "title": row.get("title", ""),
+                    "excerpt": excerpt,
+                    "score": float(match_count),
+                }
+            )
+
+        # Sort by score descending
+        scored.sort(key=lambda x: x["score"], reverse=True)
+
+        # Normalize scores to 0-1
+        if scored:
+            max_score = scored[0]["score"]
+            if max_score > 0:
+                for item in scored:
+                    item["score"] = round(item["score"] / max_score, 4)
+
+        return scored[:limit]
+
+    async def search_history(self, limit: int = 50) -> list[str]:
+        """
+        Return recent search queries for the search suggestion feature.
+
+        Args:
+            limit: Maximum number of history entries to return (default 50)
+
+        Returns:
+            List of recent search query strings, most recent first.
+        """
+        return self._search_history[:limit]

@@ -437,8 +437,8 @@ async def get_project_members(request: Request, project_id: str):
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
-    # Stub: return empty list
-    return []
+    members = await shard.get_project_members(project_id)
+    return [_member_to_response(m) for m in members]
 
 
 @router.post("/{project_id}/members", response_model=MemberResponse, status_code=201)

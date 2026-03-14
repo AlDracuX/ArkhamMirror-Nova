@@ -51,6 +51,131 @@ class DashboardShard(ArkhamShard):
 
         return router
 
+    # === Dashboard Stats (Real Aggregation) ===
+
+    async def get_dashboard_stats(self) -> Dict[str, Any]:
+        """
+        Get aggregated dashboard statistics from real data across shards.
+
+        Queries actual database tables to provide live counts for:
+        - Documents, entities, claims, timeline events, deadlines
+        - Recent activity (last 10 ingest jobs or document updates)
+        - Shard health (loaded shards and their status)
+
+        Returns:
+            Dict with all aggregated statistics
+        """
+        stats: Dict[str, Any] = {
+            "document_count": 0,
+            "entity_count": 0,
+            "claim_count": 0,
+            "timeline_event_count": 0,
+            "deadline_count": 0,
+            "upcoming_deadlines": [],
+            "recent_activity": [],
+            "shard_health": [],
+        }
+
+        if not self.frame or not self.frame.db:
+            return stats
+
+        db = self.frame.db
+
+        # Document count from arkham_documents (ingest shard table)
+        try:
+            row = await db.fetch_one("SELECT COUNT(*) as count FROM arkham_documents")
+            if row:
+                stats["document_count"] = row["count"]
+        except Exception:
+            logger.debug("arkham_documents table not available")
+
+        # Entity count from arkham_entities
+        try:
+            row = await db.fetch_one("SELECT COUNT(*) as count FROM arkham_entities")
+            if row:
+                stats["entity_count"] = row["count"]
+        except Exception:
+            logger.debug("arkham_entities table not available")
+
+        # Claim count from arkham_claims
+        try:
+            row = await db.fetch_one("SELECT COUNT(*) as count FROM arkham_claims")
+            if row:
+                stats["claim_count"] = row["count"]
+        except Exception:
+            logger.debug("arkham_claims table not available")
+
+        # Timeline event count from arkham_timeline_events
+        try:
+            row = await db.fetch_one("SELECT COUNT(*) as count FROM arkham_timeline_events")
+            if row:
+                stats["timeline_event_count"] = row["count"]
+        except Exception:
+            logger.debug("arkham_timeline_events table not available")
+
+        # Deadline count and upcoming deadlines from arkham_deadlines
+        try:
+            row = await db.fetch_one("SELECT COUNT(*) as count FROM arkham_deadlines")
+            if row:
+                stats["deadline_count"] = row["count"]
+
+            # Upcoming deadlines (next 30 days)
+            upcoming = await db.fetch_all(
+                """
+                SELECT * FROM arkham_deadlines
+                WHERE due_date >= CURRENT_DATE
+                ORDER BY due_date ASC
+                LIMIT 10
+                """
+            )
+            stats["upcoming_deadlines"] = [dict(r) for r in (upcoming or [])]
+        except Exception:
+            logger.debug("arkham_deadlines table not available")
+
+        # Recent activity - last 10 ingest jobs or document updates
+        try:
+            rows = await db.fetch_all(
+                """
+                SELECT id, status, created_at, updated_at, metadata
+                FROM arkham_jobs
+                ORDER BY updated_at DESC
+                LIMIT 10
+                """
+            )
+            stats["recent_activity"] = [dict(r) for r in (rows or [])]
+        except Exception:
+            logger.debug("arkham_jobs table not available for recent activity")
+
+        # If no jobs table, try documents for recent activity
+        if not stats["recent_activity"]:
+            try:
+                rows = await db.fetch_all(
+                    """
+                    SELECT id, filename, status, created_at
+                    FROM arkham_documents
+                    ORDER BY created_at DESC
+                    LIMIT 10
+                    """
+                )
+                stats["recent_activity"] = [dict(r) for r in (rows or [])]
+            except Exception:
+                logger.debug("Could not fetch recent activity from documents")
+
+        # Shard health - list loaded shards and their status
+        try:
+            if hasattr(self.frame, "shards") and self.frame.shards:
+                for shard_name, shard_instance in self.frame.shards.items():
+                    shard_info = {
+                        "name": shard_name,
+                        "version": getattr(shard_instance, "version", "unknown"),
+                        "status": "loaded",
+                    }
+                    stats["shard_health"].append(shard_info)
+        except Exception:
+            logger.debug("Could not enumerate loaded shards")
+
+        return stats
+
     # === Service Health ===
 
     async def get_service_health(self) -> Dict[str, Any]:

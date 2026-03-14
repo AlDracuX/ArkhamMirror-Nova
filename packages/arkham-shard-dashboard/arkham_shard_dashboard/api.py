@@ -72,6 +72,13 @@ def get_dashboard_shard():
 # === Health ===
 
 
+@router.get("/stats")
+async def get_dashboard_stats() -> Dict[str, Any]:
+    """Get aggregated dashboard statistics from real data."""
+    shard = get_dashboard_shard()
+    return await shard.get_dashboard_stats()
+
+
 @router.get("/health")
 async def get_health() -> Dict[str, Any]:
     """Get service health status."""
