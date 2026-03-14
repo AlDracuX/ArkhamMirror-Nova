@@ -133,19 +133,19 @@ def document_to_response(doc) -> DocumentMetadata:
     """Convert DocumentRecord to API response."""
     return DocumentMetadata(
         id=doc.id,
-        title=doc.title,
-        filename=doc.filename,
-        file_type=doc.file_type,
-        file_size=doc.file_size,
-        status=doc.status.value if hasattr(doc.status, "value") else doc.status,
-        page_count=doc.page_count,
-        chunk_count=doc.chunk_count,
-        entity_count=doc.entity_count,
+        title=doc.title or doc.filename or "",
+        filename=doc.filename or "",
+        file_type=doc.file_type or "",
+        file_size=doc.file_size or 0,
+        status=doc.status.value if hasattr(doc.status, "value") else (doc.status or "unknown"),
+        page_count=doc.page_count or 0,
+        chunk_count=doc.chunk_count or 0,
+        entity_count=doc.entity_count or 0,
         created_at=doc.created_at.isoformat() if doc.created_at else "",
         updated_at=doc.updated_at.isoformat() if doc.updated_at else "",
         project_id=doc.project_id,
-        tags=doc.tags,
-        custom_metadata=doc.custom_metadata,
+        tags=doc.tags or [],
+        custom_metadata=doc.custom_metadata or {},
     )
 
 
