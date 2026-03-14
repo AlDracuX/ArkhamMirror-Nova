@@ -7,6 +7,7 @@ Uses PostgreSQL for persistence following the ACH shard pattern.
 
 import json
 import logging
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
@@ -726,6 +727,84 @@ class TemplatesShard(ArkhamShard):
             )
 
         return result
+
+    async def render_template_simple(self, template_id: str, context: dict) -> str:
+        """
+        Render a template using simple regex-based substitution.
+
+        Supports:
+        - {{variable}} placeholder replacement from context values
+        - {% if variable %}...{% endif %} conditional sections
+
+        This is a lightweight alternative to the full Jinja2 render_template
+        method, useful when you need simple string interpolation without
+        the overhead of Jinja2's template engine.
+
+        Args:
+            template_id: Template ID to load from database
+            context: Dictionary of variable names to values
+
+        Returns:
+            Rendered text string
+
+        Raises:
+            ValueError: If template not found or rendering fails
+        """
+        if not self._db:
+            raise RuntimeError("Shard not initialized")
+
+        template = await self._load_template(template_id)
+        if not template:
+            raise ValueError(f"Template {template_id} not found")
+
+        content = template.content
+
+        # Process conditional sections: {% if variable %}...{% endif %}
+        # Supports nested-safe matching by processing innermost first
+        conditional_pattern = re.compile(
+            r"\{%\s*if\s+(\w+)\s*%\}(.*?)\{%\s*endif\s*%\}",
+            re.DOTALL,
+        )
+        max_iterations = 20
+        for _ in range(max_iterations):
+            match = conditional_pattern.search(content)
+            if not match:
+                break
+            var_name = match.group(1)
+            block_content = match.group(2)
+            # Include block if variable is truthy in context
+            if context.get(var_name):
+                content = content[: match.start()] + block_content + content[match.end() :]
+            else:
+                content = content[: match.start()] + content[match.end() :]
+
+        # Replace {{variable}} placeholders with context values
+        def replace_placeholder(match: re.Match) -> str:
+            var_name = match.group(1).strip()
+            value = context.get(var_name)
+            if value is None:
+                return ""
+            return str(value)
+
+        content = re.sub(r"\{\{\s*(\w+)\s*\}\}", replace_placeholder, content)
+
+        # Increment render count
+        self._render_count += 1
+
+        # Emit event
+        if self._event_bus:
+            await self._event_bus.emit(
+                "templates.rendered",
+                {
+                    "template_id": template_id,
+                    "template_name": template.name,
+                    "output_format": "text",
+                    "render_mode": "simple",
+                },
+                source="templates-shard",
+            )
+
+        return content
 
     async def preview_template(
         self, template_id: str, data: Optional[Dict[str, Any]] = None

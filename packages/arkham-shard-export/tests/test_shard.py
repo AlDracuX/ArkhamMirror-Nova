@@ -500,3 +500,122 @@ class TestFileGeneration:
         assert shard._get_file_extension(ExportFormat.PDF) == "pdf"
         assert shard._get_file_extension(ExportFormat.DOCX) == "docx"
         assert shard._get_file_extension(ExportFormat.XLSX) == "xlsx"
+
+
+# === Direct Export Generation Tests ===
+
+
+class TestGenerateExport:
+    """Tests for the generate_export convenience method."""
+
+    @pytest.mark.asyncio
+    async def test_generate_export_json(self, initialized_shard):
+        """Test generating JSON export bytes directly."""
+        sample_data = [
+            {"id": "1", "title": "Doc One", "status": "active"},
+            {"id": "2", "title": "Doc Two", "status": "archived"},
+        ]
+        with patch.object(initialized_shard, "_fetch_data", new_callable=AsyncMock, return_value=sample_data):
+            result = await initialized_shard.generate_export(
+                format="json", target="documents", filters={"status": "active"}
+            )
+
+        import json as json_mod
+
+        assert isinstance(result, bytes)
+        parsed = json_mod.loads(result.decode("utf-8"))
+        assert "export_info" in parsed
+        assert parsed["export_info"]["target"] == "documents"
+        assert parsed["export_info"]["record_count"] == 2
+        assert len(parsed["data"]) == 2
+        assert parsed["data"][0]["title"] == "Doc One"
+
+    @pytest.mark.asyncio
+    async def test_generate_export_csv(self, initialized_shard):
+        """Test generating CSV export bytes directly."""
+        sample_data = [
+            {"id": "1", "name": "Entity A", "type": "person"},
+            {"id": "2", "name": "Entity B", "type": "org"},
+        ]
+        with patch.object(initialized_shard, "_fetch_data", new_callable=AsyncMock, return_value=sample_data):
+            result = await initialized_shard.generate_export(format="csv", target="entities")
+
+        assert isinstance(result, bytes)
+        csv_text = result.decode("utf-8")
+        # Should have header + 2 data rows
+        lines = csv_text.strip().split("\n")
+        assert len(lines) == 3  # header + 2 rows
+        assert "id" in lines[0]
+        assert "name" in lines[0]
+
+    @pytest.mark.asyncio
+    async def test_generate_export_csv_empty(self, initialized_shard):
+        """Test CSV export with no data returns empty marker."""
+        with patch.object(initialized_shard, "_fetch_data", new_callable=AsyncMock, return_value=[]):
+            result = await initialized_shard.generate_export(format="csv", target="claims")
+
+        assert b"No data" in result
+
+    @pytest.mark.asyncio
+    async def test_generate_export_invalid_format(self, initialized_shard):
+        """Test that unsupported format raises ValueError."""
+        with pytest.raises(ValueError, match="Unsupported direct export format"):
+            await initialized_shard.generate_export(format="pdf", target="documents")
+
+    @pytest.mark.asyncio
+    async def test_generate_export_invalid_target(self, initialized_shard):
+        """Test that unsupported target raises ValueError."""
+        with pytest.raises(ValueError, match="Unsupported export target"):
+            await initialized_shard.generate_export(format="json", target="nonexistent")
+
+    @pytest.mark.asyncio
+    async def test_generate_export_timeline_json(self, initialized_shard):
+        """Test JSON export for timeline target."""
+        timeline_data = [
+            {"id": "e1", "date_start": "2024-01-15", "description": "Event 1"},
+            {"id": "e2", "date_start": "2024-02-20", "description": "Event 2"},
+        ]
+        with patch.object(initialized_shard, "_fetch_data", new_callable=AsyncMock, return_value=timeline_data):
+            result = await initialized_shard.generate_export(format="json", target="timeline")
+
+        import json as json_mod
+
+        parsed = json_mod.loads(result.decode("utf-8"))
+        assert parsed["export_info"]["target"] == "timeline"
+        assert len(parsed["data"]) == 2
+
+
+# === Preview Data Tests ===
+
+
+class TestPreviewData:
+    """Tests for the preview_data method."""
+
+    @pytest.mark.asyncio
+    async def test_preview_data_documents(self, initialized_shard):
+        """Test previewing document data."""
+        sample_data = [{"id": str(i), "title": f"Doc {i}"} for i in range(20)]
+        with patch.object(initialized_shard, "_fetch_data", new_callable=AsyncMock, return_value=sample_data):
+            result = await initialized_shard.preview_data(format="json", target="documents", max_preview_records=5)
+
+        assert result["target"] == "documents"
+        assert result["estimated_record_count"] == 20
+        assert len(result["preview_records"]) == 5
+        assert result["estimated_file_size_bytes"] > 0
+
+    @pytest.mark.asyncio
+    async def test_preview_data_invalid_target(self, initialized_shard):
+        """Test preview with invalid target returns empty result."""
+        result = await initialized_shard.preview_data(format="json", target="invalid_target")
+
+        assert result["estimated_record_count"] == 0
+        assert result["preview_records"] == []
+
+    @pytest.mark.asyncio
+    async def test_preview_data_fetch_error(self, initialized_shard):
+        """Test preview handles fetch errors gracefully."""
+        with patch.object(initialized_shard, "_fetch_data", new_callable=AsyncMock, side_effect=Exception("API down")):
+            result = await initialized_shard.preview_data(format="json", target="documents")
+
+        assert result["estimated_record_count"] == 0
+        assert result["preview_records"] == []

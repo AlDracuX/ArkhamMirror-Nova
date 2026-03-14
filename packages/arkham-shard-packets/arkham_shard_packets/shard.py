@@ -468,6 +468,136 @@ class PacketsShard(ArkhamShard):
 
         return packet
 
+    async def assemble_packet(self, packet_id: str) -> Dict:
+        """
+        Assemble a packet by collecting all its contents in order.
+
+        Queries packet_contents for the given packet_id (ordered by position),
+        fetches metadata for each content item from the appropriate source
+        table, and returns the assembled packet with ordered content list.
+
+        Increments the packet version on each assembly.
+
+        Args:
+            packet_id: The packet ID to assemble
+
+        Returns:
+            Dict with packet metadata, ordered content list, and assembly info
+
+        Raises:
+            ValueError: If packet not found
+        """
+        if not self._db:
+            raise RuntimeError("Shard not initialized")
+
+        packet = await self.get_packet(packet_id)
+        if not packet:
+            raise ValueError(f"Packet {packet_id} not found")
+
+        # Get contents ordered by position (order_num, then added_at)
+        contents = await self.get_packet_contents(packet_id)
+
+        # Enrich each content item with source data where available
+        assembled_items: List[Dict[str, Any]] = []
+        for content in contents:
+            item: Dict[str, Any] = {
+                "id": content.id,
+                "content_type": content.content_type.value,
+                "content_id": content.content_id,
+                "content_title": content.content_title,
+                "order": content.order,
+                "added_at": content.added_at.isoformat() if content.added_at else None,
+                "added_by": content.added_by,
+            }
+
+            # Attempt to fetch source data based on content type
+            source_data = await self._fetch_content_source(content.content_type, content.content_id)
+            if source_data:
+                item["source_data"] = source_data
+
+            assembled_items.append(item)
+
+        # Track assembly: increment version
+        now = datetime.utcnow()
+        packet.version += 1
+        packet.updated_at = now
+        await self._save_packet(packet, update=True)
+
+        # Emit assembly event
+        if self._events:
+            await self._events.emit(
+                "packets.packet.assembled",
+                {
+                    "packet_id": packet_id,
+                    "version": packet.version,
+                    "content_count": len(assembled_items),
+                },
+                source=self.name,
+            )
+
+        return {
+            "packet_id": packet.id,
+            "name": packet.name,
+            "description": packet.description,
+            "status": packet.status.value,
+            "version": packet.version,
+            "content_count": len(assembled_items),
+            "contents": assembled_items,
+            "assembled_at": now.isoformat(),
+            "checksum": packet.checksum,
+            "metadata": packet.metadata,
+        }
+
+    async def _fetch_content_source(self, content_type: ContentType, content_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetch source data for a content item from the appropriate table.
+
+        Maps content types to their source tables and retrieves metadata.
+
+        Args:
+            content_type: Type of content (document, entity, analysis, etc.)
+            content_id: ID of the content in its source table
+
+        Returns:
+            Source metadata dict or None if not found / table unavailable
+        """
+        if not self._db:
+            return None
+
+        # Map content types to source tables
+        table_map = {
+            ContentType.DOCUMENT: "arkham_documents",
+            ContentType.ENTITY: "arkham_entities",
+            ContentType.MATRIX: "arkham_ach_matrices",
+            ContentType.TIMELINE: "arkham_timeline_events",
+            ContentType.CLAIM: "arkham_claims",
+            ContentType.EVIDENCE_CHAIN: "arkham_provenance_chains",
+            ContentType.REPORT: "arkham_reports",
+        }
+
+        table_name = table_map.get(content_type)
+        if not table_name:
+            return None
+
+        try:
+            row = await self._db.fetch_one(
+                f"SELECT * FROM {table_name} WHERE id = :id",
+                {"id": content_id},
+            )
+            if row:
+                # Convert row to dict, handling datetime fields
+                result: Dict[str, Any] = {}
+                for key, value in dict(row).items():
+                    if hasattr(value, "isoformat"):
+                        result[key] = value.isoformat()
+                    else:
+                        result[key] = value
+                return result
+        except Exception as e:
+            logger.warning(f"Failed to fetch source data for {content_type.value}/{content_id}: {e}")
+
+        return None
+
     async def add_content(
         self,
         packet_id: str,

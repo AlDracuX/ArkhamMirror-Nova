@@ -320,3 +320,141 @@ class TestHelperMethods:
 
         # Should have called database methods
         assert shard._db.fetch_one.called
+
+
+class TestAssemblePacket:
+    """Tests for packet assembly logic."""
+
+    @pytest.mark.asyncio
+    async def test_assemble_packet_not_found(self, shard):
+        """Test assembling a non-existent packet raises ValueError."""
+        with pytest.raises(ValueError, match="not found"):
+            await shard.assemble_packet("nonexistent-id")
+
+    @pytest.mark.asyncio
+    async def test_assemble_packet_with_contents(self, shard, mock_frame):
+        """Test assembling a packet with contents returns structured dict."""
+        # Create a packet first
+        packet = await shard.create_packet(
+            name="Test Assembly Packet",
+            description="Test packet for assembly",
+        )
+
+        # Mock get_packet to return our packet
+        original_get = shard.get_packet
+
+        async def mock_get(pid):
+            if pid == packet.id:
+                return packet
+            return await original_get(pid)
+
+        shard.get_packet = mock_get
+
+        # Mock get_packet_contents to return some content items
+        now_iso = datetime.utcnow().isoformat()
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "id": "content-1",
+                    "packet_id": packet.id,
+                    "content_type": "document",
+                    "content_id": "doc-abc",
+                    "content_title": "Test Document",
+                    "order_num": 1,
+                    "notes": "First item",
+                    "added_at": now_iso,
+                    "added_by": "user-1",
+                    "metadata": "{}",
+                },
+                {
+                    "id": "content-2",
+                    "packet_id": packet.id,
+                    "content_type": "claim",
+                    "content_id": "claim-xyz",
+                    "content_title": "A Claim",
+                    "order_num": 2,
+                    "notes": None,
+                    "added_at": now_iso,
+                    "added_by": "user-1",
+                    "metadata": "{}",
+                },
+            ]
+        )
+
+        result = await shard.assemble_packet(packet.id)
+
+        assert result["packet_id"] == packet.id
+        assert result["name"] == "Test Assembly Packet"
+        assert result["content_count"] == 2
+        assert len(result["contents"]) == 2
+        assert result["contents"][0]["content_title"] == "Test Document"
+        assert result["contents"][1]["content_title"] == "A Claim"
+        assert result["version"] > 0
+        assert "assembled_at" in result
+        assert "status" in result
+
+    @pytest.mark.asyncio
+    async def test_assemble_packet_empty_contents(self, shard, mock_frame):
+        """Test assembling a packet with no contents."""
+        packet = await shard.create_packet(name="Empty Packet")
+
+        original_get = shard.get_packet
+
+        async def mock_get(pid):
+            if pid == packet.id:
+                return packet
+            return await original_get(pid)
+
+        shard.get_packet = mock_get
+        shard._db.fetch_all = AsyncMock(return_value=[])
+
+        result = await shard.assemble_packet(packet.id)
+
+        assert result["packet_id"] == packet.id
+        assert result["content_count"] == 0
+        assert result["contents"] == []
+
+    @pytest.mark.asyncio
+    async def test_assemble_packet_increments_version(self, shard, mock_frame):
+        """Test that assembly increments the packet version."""
+        packet = await shard.create_packet(name="Version Test")
+        initial_version = packet.version
+
+        original_get = shard.get_packet
+
+        async def mock_get(pid):
+            if pid == packet.id:
+                return packet
+            return await original_get(pid)
+
+        shard.get_packet = mock_get
+        shard._db.fetch_all = AsyncMock(return_value=[])
+
+        result = await shard.assemble_packet(packet.id)
+
+        assert result["version"] == initial_version + 1
+
+    @pytest.mark.asyncio
+    async def test_assemble_packet_emits_event(self, shard, mock_frame):
+        """Test that assembly emits an event."""
+        packet = await shard.create_packet(name="Event Test")
+
+        original_get = shard.get_packet
+
+        async def mock_get(pid):
+            if pid == packet.id:
+                return packet
+            return await original_get(pid)
+
+        shard.get_packet = mock_get
+        shard._db.fetch_all = AsyncMock(return_value=[])
+
+        # Reset emit call count
+        mock_frame.events.emit.reset_mock()
+
+        await shard.assemble_packet(packet.id)
+
+        # Check that assembled event was emitted
+        emit_calls = mock_frame.events.emit.call_args_list
+        event_names = [call[0][0] for call in emit_calls]
+        assert "packets.packet.assembled" in event_names

@@ -364,5 +364,449 @@ class TestEntitiesShardManifest:
         assert len(shard.description) > 0
 
 
+class TestFindMergeCandidates:
+    """Test find_merge_candidates method for string-similarity deduplication."""
+
+    @pytest.mark.asyncio
+    async def test_find_merge_candidates_not_initialized(self, shard):
+        """Test find_merge_candidates fails if shard not initialized."""
+        with pytest.raises(RuntimeError, match="not initialized"):
+            await shard.find_merge_candidates()
+
+    @pytest.mark.asyncio
+    async def test_find_merge_candidates_empty_db(self, shard, mock_frame):
+        """Test find_merge_candidates returns empty list when no entities exist."""
+        await shard.initialize(mock_frame)
+        shard._db.fetch_all = AsyncMock(return_value=[])
+
+        result = await shard.find_merge_candidates()
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_find_merge_candidates_sequence_match(self, shard, mock_frame):
+        """Test finds similar names via SequenceMatcher (e.g., 'Stuart Griffiths' vs 'Stuart Griffith')."""
+        await shard.initialize(mock_frame)
+
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "id": "e1",
+                    "name": "Stuart Griffiths",
+                    "entity_type": "PERSON",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 5,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+                {
+                    "id": "e2",
+                    "name": "Stuart Griffith",
+                    "entity_type": "PERSON",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 3,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+            ]
+        )
+
+        result = await shard.find_merge_candidates(threshold=0.85)
+        assert len(result) >= 1
+        pair = result[0]
+        assert pair["similarity_score"] >= 0.85
+        assert pair["reason"] != ""
+        # Both entity names should appear in the pair
+        names = {pair["entity_a"]["name"], pair["entity_b"]["name"]}
+        assert "Stuart Griffiths" in names
+        assert "Stuart Griffith" in names
+
+    @pytest.mark.asyncio
+    async def test_find_merge_candidates_substring_match(self, shard, mock_frame):
+        """Test finds substring matches (e.g., 'Griffiths' is contained in 'Stuart Griffiths')."""
+        await shard.initialize(mock_frame)
+
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "id": "e1",
+                    "name": "Stuart Griffiths",
+                    "entity_type": "PERSON",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 5,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+                {
+                    "id": "e2",
+                    "name": "Griffiths",
+                    "entity_type": "PERSON",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 2,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+            ]
+        )
+
+        result = await shard.find_merge_candidates(threshold=0.85)
+        assert len(result) >= 1
+        # Should flag substring match
+        found_substring = any("substring" in r["reason"].lower() for r in result)
+        assert found_substring
+
+    @pytest.mark.asyncio
+    async def test_find_merge_candidates_case_insensitive(self, shard, mock_frame):
+        """Test finds case-insensitive exact matches (e.g., 'Bylor Ltd' vs 'bylor ltd')."""
+        await shard.initialize(mock_frame)
+
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "id": "e1",
+                    "name": "Bylor Ltd",
+                    "entity_type": "ORGANIZATION",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 10,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+                {
+                    "id": "e2",
+                    "name": "bylor ltd",
+                    "entity_type": "ORGANIZATION",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 1,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+            ]
+        )
+
+        result = await shard.find_merge_candidates(threshold=0.85)
+        assert len(result) >= 1
+        found_case = any("case" in r["reason"].lower() for r in result)
+        assert found_case
+
+    @pytest.mark.asyncio
+    async def test_find_merge_candidates_no_cross_type(self, shard, mock_frame):
+        """Test does NOT match entities of different types."""
+        await shard.initialize(mock_frame)
+
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "id": "e1",
+                    "name": "Bristol",
+                    "entity_type": "LOCATION",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 5,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+                {
+                    "id": "e2",
+                    "name": "Bristol",
+                    "entity_type": "ORGANIZATION",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 2,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+            ]
+        )
+
+        result = await shard.find_merge_candidates(threshold=0.85)
+        # These are different types, so should NOT be paired
+        assert len(result) == 0
+
+    @pytest.mark.asyncio
+    async def test_find_merge_candidates_filter_by_type(self, shard, mock_frame):
+        """Test entity_type filter only queries that type."""
+        await shard.initialize(mock_frame)
+
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "id": "e1",
+                    "name": "TLT Solicitors",
+                    "entity_type": "ORGANIZATION",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 5,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+                {
+                    "id": "e2",
+                    "name": "TLT Solicitor",
+                    "entity_type": "ORGANIZATION",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 2,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+            ]
+        )
+
+        result = await shard.find_merge_candidates(entity_type="ORGANIZATION", threshold=0.85)
+        assert len(result) >= 1
+
+    @pytest.mark.asyncio
+    async def test_find_merge_candidates_threshold_filtering(self, shard, mock_frame):
+        """Test threshold properly filters low-similarity pairs."""
+        await shard.initialize(mock_frame)
+
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "id": "e1",
+                    "name": "Alex Dalton",
+                    "entity_type": "PERSON",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 5,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+                {
+                    "id": "e2",
+                    "name": "John Smith",
+                    "entity_type": "PERSON",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 3,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+            ]
+        )
+
+        result = await shard.find_merge_candidates(threshold=0.85)
+        # These names are very different, should not match
+        assert len(result) == 0
+
+    @pytest.mark.asyncio
+    async def test_find_merge_candidates_skips_already_merged(self, shard, mock_frame):
+        """Test that entities with canonical_id set are excluded from comparison."""
+        await shard.initialize(mock_frame)
+
+        # The query should filter out entities with canonical_id IS NOT NULL
+        # We verify by returning only canonical entities
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "id": "e1",
+                    "name": "Stuart Griffiths",
+                    "entity_type": "PERSON",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 5,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+            ]
+        )
+
+        result = await shard.find_merge_candidates()
+        # Only one entity, no pairs possible
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_find_merge_candidates_return_structure(self, shard, mock_frame):
+        """Test returned dicts have correct structure."""
+        await shard.initialize(mock_frame)
+
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "id": "e1",
+                    "name": "Stuart Griffiths",
+                    "entity_type": "PERSON",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 5,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+                {
+                    "id": "e2",
+                    "name": "Stuart Griffith",
+                    "entity_type": "PERSON",
+                    "canonical_id": None,
+                    "aliases": "[]",
+                    "metadata": "{}",
+                    "mention_count": 3,
+                    "created_at": None,
+                    "updated_at": None,
+                },
+            ]
+        )
+
+        result = await shard.find_merge_candidates(threshold=0.80)
+        assert len(result) >= 1
+        pair = result[0]
+        # Verify structure
+        assert "entity_a" in pair
+        assert "entity_b" in pair
+        assert "id" in pair["entity_a"]
+        assert "name" in pair["entity_a"]
+        assert "id" in pair["entity_b"]
+        assert "name" in pair["entity_b"]
+        assert "similarity_score" in pair
+        assert "reason" in pair
+        assert isinstance(pair["similarity_score"], float)
+
+
+class TestAutoResolveCanonical:
+    """Test auto_resolve_canonical method for determining canonical name."""
+
+    @pytest.mark.asyncio
+    async def test_auto_resolve_not_initialized(self, shard):
+        """Test auto_resolve_canonical fails if shard not initialized."""
+        with pytest.raises(RuntimeError, match="not initialized"):
+            await shard.auto_resolve_canonical("test-id")
+
+    @pytest.mark.asyncio
+    async def test_auto_resolve_entity_not_found(self, shard, mock_frame):
+        """Test auto_resolve_canonical returns empty string for missing entity."""
+        await shard.initialize(mock_frame)
+        shard._db.fetch_one = AsyncMock(return_value=None)
+        shard._db.fetch_all = AsyncMock(return_value=[])
+
+        result = await shard.auto_resolve_canonical("nonexistent-id")
+        assert result == ""
+
+    @pytest.mark.asyncio
+    async def test_auto_resolve_prefers_longest_form(self, shard, mock_frame):
+        """Test canonical name is the longest form among mentions."""
+        await shard.initialize(mock_frame)
+
+        # Entity record
+        shard._db.fetch_one = AsyncMock(
+            return_value={
+                "id": "e1",
+                "name": "Griffiths",
+                "entity_type": "PERSON",
+                "canonical_id": None,
+                "aliases": "[]",
+                "metadata": "{}",
+                "mention_count": 5,
+                "created_at": None,
+                "updated_at": None,
+            }
+        )
+
+        # Mention texts
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {"mention_text": "Griffiths", "cnt": 3},
+                {"mention_text": "Stuart Griffiths", "cnt": 2},
+            ]
+        )
+
+        result = await shard.auto_resolve_canonical("e1")
+        # Should prefer longest form
+        assert result == "Stuart Griffiths"
+
+    @pytest.mark.asyncio
+    async def test_auto_resolve_prefers_most_frequent(self, shard, mock_frame):
+        """Test canonical name prefers most frequent form when lengths are similar."""
+        await shard.initialize(mock_frame)
+
+        shard._db.fetch_one = AsyncMock(
+            return_value={
+                "id": "e1",
+                "name": "S. Griffiths",
+                "entity_type": "PERSON",
+                "canonical_id": None,
+                "aliases": "[]",
+                "metadata": "{}",
+                "mention_count": 10,
+                "created_at": None,
+                "updated_at": None,
+            }
+        )
+
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {"mention_text": "S. Griffiths", "cnt": 8},
+                {"mention_text": "S Griffiths", "cnt": 2},
+            ]
+        )
+
+        result = await shard.auto_resolve_canonical("e1")
+        # Similar lengths, prefer most frequent
+        assert result == "S. Griffiths"
+
+    @pytest.mark.asyncio
+    async def test_auto_resolve_returns_string(self, shard, mock_frame):
+        """Test auto_resolve_canonical always returns a string."""
+        await shard.initialize(mock_frame)
+
+        shard._db.fetch_one = AsyncMock(
+            return_value={
+                "id": "e1",
+                "name": "Test Entity",
+                "entity_type": "PERSON",
+                "canonical_id": None,
+                "aliases": "[]",
+                "metadata": "{}",
+                "mention_count": 1,
+                "created_at": None,
+                "updated_at": None,
+            }
+        )
+        shard._db.fetch_all = AsyncMock(return_value=[])
+
+        result = await shard.auto_resolve_canonical("e1")
+        assert isinstance(result, str)
+
+    @pytest.mark.asyncio
+    async def test_auto_resolve_fallback_to_entity_name(self, shard, mock_frame):
+        """Test falls back to entity name when no mentions exist."""
+        await shard.initialize(mock_frame)
+
+        shard._db.fetch_one = AsyncMock(
+            return_value={
+                "id": "e1",
+                "name": "Test Entity",
+                "entity_type": "PERSON",
+                "canonical_id": None,
+                "aliases": "[]",
+                "metadata": "{}",
+                "mention_count": 0,
+                "created_at": None,
+                "updated_at": None,
+            }
+        )
+        shard._db.fetch_all = AsyncMock(return_value=[])
+
+        result = await shard.auto_resolve_canonical("e1")
+        assert result == "Test Entity"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -371,3 +371,242 @@ class TestErrorHandling:
 
         # Should not raise exception
         await shard.shutdown()
+
+
+class TestAnalyzeMetadata:
+    """Tests for document metadata forensic analysis."""
+
+    @pytest.mark.asyncio
+    async def test_analyze_metadata_document_not_found(self, initialized_shard):
+        """Test that analyzing non-existent document raises ValueError."""
+        with pytest.raises(ValueError, match="not found"):
+            await initialized_shard.analyze_metadata("nonexistent-doc")
+
+    @pytest.mark.asyncio
+    async def test_analyze_metadata_clean_document(self, initialized_shard, mock_frame):
+        """Test analyzing a document with no suspicious patterns."""
+        from datetime import datetime, timedelta
+
+        created = datetime(2026, 1, 1, 10, 0, 0)
+        updated = datetime(2026, 1, 2, 14, 0, 0)
+
+        # Mock fetch_one to return document on first call, None for provenance check
+        call_count = 0
+
+        async def mock_fetch_one(sql, params=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return {
+                    "id": "doc-1",
+                    "title": "Clean Document",
+                    "created_at": created,
+                    "updated_at": updated,
+                    "author": "alex",
+                    "metadata": '{"author": "alex", "software": "Microsoft Word"}',
+                }
+            elif "arkham_provenance_records" in sql:
+                return {"id": "prov-1", "entity_id": "doc-1", "entity_type": "document"}
+            return None
+
+        mock_frame.db.fetch_one = mock_fetch_one
+
+        result = await initialized_shard.analyze_metadata("doc-1")
+
+        assert result["document_id"] == "doc-1"
+        assert result["risk_level"] == "low"
+        assert isinstance(result["findings"], list)
+        assert "analyzed_at" in result
+
+    @pytest.mark.asyncio
+    async def test_analyze_metadata_date_anomaly(self, initialized_shard, mock_frame):
+        """Test detecting modified date before creation date."""
+        from datetime import datetime
+
+        created = datetime(2026, 3, 10, 12, 0, 0)
+        updated = datetime(2026, 1, 5, 8, 0, 0)  # Before creation!
+
+        call_count = 0
+
+        async def mock_fetch_one(sql, params=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return {
+                    "id": "doc-tampered",
+                    "created_at": created,
+                    "updated_at": updated,
+                    "metadata": "{}",
+                }
+            return None
+
+        mock_frame.db.fetch_one = mock_fetch_one
+
+        result = await initialized_shard.analyze_metadata("doc-tampered")
+
+        assert result["risk_level"] in ("medium", "high")
+        date_findings = [f for f in result["findings"] if f["type"] == "date_anomaly"]
+        assert len(date_findings) > 0
+        assert date_findings[0]["severity"] == "high"
+
+    @pytest.mark.asyncio
+    async def test_analyze_metadata_author_mismatch(self, initialized_shard, mock_frame):
+        """Test detecting author vs last modifier mismatch."""
+        from datetime import datetime
+
+        call_count = 0
+
+        async def mock_fetch_one(sql, params=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return {
+                    "id": "doc-author",
+                    "created_at": datetime(2026, 1, 1),
+                    "updated_at": datetime(2026, 1, 2),
+                    "metadata": '{"author": "alice", "last_modified_by": "bob", "software": "LibreOffice"}',
+                }
+            elif "arkham_provenance_records" in sql:
+                return {"id": "prov-1"}
+            return None
+
+        mock_frame.db.fetch_one = mock_fetch_one
+
+        result = await initialized_shard.analyze_metadata("doc-author")
+
+        author_findings = [f for f in result["findings"] if f["type"] == "author_mismatch"]
+        assert len(author_findings) == 1
+        assert author_findings[0]["details"]["author"] == "alice"
+        assert author_findings[0]["details"]["last_modified_by"] == "bob"
+
+    @pytest.mark.asyncio
+    async def test_analyze_metadata_suspicious_software(self, initialized_shard, mock_frame):
+        """Test detecting suspicious editing software."""
+        from datetime import datetime
+
+        call_count = 0
+
+        async def mock_fetch_one(sql, params=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return {
+                    "id": "doc-sus",
+                    "created_at": datetime(2026, 1, 1),
+                    "updated_at": datetime(2026, 1, 2),
+                    "metadata": '{"software": "Nitro PDF Editor Pro"}',
+                }
+            return None
+
+        mock_frame.db.fetch_one = mock_fetch_one
+
+        result = await initialized_shard.analyze_metadata("doc-sus")
+
+        sus_findings = [f for f in result["findings"] if f["type"] == "suspicious_software"]
+        assert len(sus_findings) == 1
+        assert sus_findings[0]["severity"] == "high"
+
+    @pytest.mark.asyncio
+    async def test_analyze_metadata_stripped_metadata(self, initialized_shard, mock_frame):
+        """Test detecting stripped/empty metadata."""
+        from datetime import datetime
+
+        call_count = 0
+
+        async def mock_fetch_one(sql, params=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return {
+                    "id": "doc-stripped",
+                    "created_at": datetime(2026, 1, 1),
+                    "updated_at": datetime(2026, 1, 2),
+                    "metadata": "{}",
+                }
+            return None
+
+        mock_frame.db.fetch_one = mock_fetch_one
+
+        result = await initialized_shard.analyze_metadata("doc-stripped")
+
+        stripped_findings = [f for f in result["findings"] if f["type"] == "metadata_stripped"]
+        assert len(stripped_findings) == 1
+
+    @pytest.mark.asyncio
+    async def test_analyze_metadata_no_provenance_record(self, initialized_shard, mock_frame):
+        """Test flagging document with no provenance record."""
+        from datetime import datetime
+
+        call_count = 0
+
+        async def mock_fetch_one(sql, params=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return {
+                    "id": "doc-no-prov",
+                    "created_at": datetime(2026, 1, 1),
+                    "updated_at": datetime(2026, 1, 2),
+                    "metadata": '{"software": "Microsoft Word"}',
+                }
+            # Second call (provenance check) returns None
+            return None
+
+        mock_frame.db.fetch_one = mock_fetch_one
+
+        result = await initialized_shard.analyze_metadata("doc-no-prov")
+
+        prov_findings = [f for f in result["findings"] if f["type"] == "no_provenance"]
+        assert len(prov_findings) == 1
+
+    @pytest.mark.asyncio
+    async def test_analyze_metadata_high_risk(self, initialized_shard, mock_frame):
+        """Test that multiple issues elevate risk to high."""
+        from datetime import datetime
+
+        call_count = 0
+
+        async def mock_fetch_one(sql, params=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return {
+                    "id": "doc-high-risk",
+                    "created_at": datetime(2026, 3, 10),
+                    "updated_at": datetime(2026, 1, 1),  # Before creation
+                    "metadata": '{"author": "alice", "last_modified_by": "unknown", "software": "pdf-editor v2"}',
+                }
+            return None
+
+        mock_frame.db.fetch_one = mock_fetch_one
+
+        result = await initialized_shard.analyze_metadata("doc-high-risk")
+
+        assert result["risk_level"] == "high"
+        assert result["risk_score"] >= 5
+
+    @pytest.mark.asyncio
+    async def test_analyze_metadata_returns_analyzed_metadata(self, initialized_shard, mock_frame):
+        """Test that the raw metadata is included in the response."""
+        from datetime import datetime
+
+        call_count = 0
+
+        async def mock_fetch_one(sql, params=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return {
+                    "id": "doc-meta",
+                    "created_at": datetime(2026, 1, 1),
+                    "updated_at": datetime(2026, 1, 2),
+                    "metadata": '{"author": "alex", "pages": 10}',
+                }
+            return None
+
+        mock_frame.db.fetch_one = mock_fetch_one
+
+        result = await initialized_shard.analyze_metadata("doc-meta")
+
+        assert result["metadata_analyzed"]["author"] == "alex"
+        assert result["metadata_analyzed"]["pages"] == 10

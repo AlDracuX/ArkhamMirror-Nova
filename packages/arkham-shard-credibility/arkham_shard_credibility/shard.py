@@ -824,6 +824,250 @@ Return as JSON with factors and overall score."""
             for f in STANDARD_FACTORS
         ]
 
+    # === Witness Credibility Scoring ===
+
+    async def compute_credibility_score(self, witness_id: str) -> Dict:
+        """
+        Compute a comprehensive credibility score for a witness by querying
+        cross-shard data (claims, contradictions, entities, timeline) and
+        feeding it through the CredibilityEngine.
+
+        Args:
+            witness_id: The entity ID of the witness to score.
+
+        Returns:
+            Dict with keys: overall_score (0-100), factors (list), level (str),
+            confidence (low/medium/high), and optionally error (str).
+        """
+        from .engine import CredibilityEngine
+
+        default_result = {
+            "overall_score": 0,
+            "factors": [],
+            "level": "unreliable",
+            "confidence": "low",
+        }
+
+        if not self._db:
+            return default_result
+
+        try:
+            # Gather data from cross-shard tables
+            claims = await self._query_witness_claims(witness_id)
+            contradictions = await self._query_witness_contradictions(witness_id, claims)
+            mentions = await self._query_witness_mentions(witness_id)
+            timeline_events = await self._query_witness_timeline_events(witness_id)
+
+            # Count total data points for confidence calculation
+            data_count = len(claims) + len(contradictions) + len(mentions) + len(timeline_events)
+
+            # Build inputs for the engine
+            statements = [
+                c.get("text", "") or c.get("source_context", "")
+                for c in claims
+                if c.get("text") or c.get("source_context")
+            ]
+            documents = self._build_corroboration_documents(claims, mentions)
+            events = self._build_timeline_events(timeline_events)
+
+            # Run the engine
+            engine = CredibilityEngine()
+            if events:
+                result = engine.score_witness(statements, documents, events=events)
+            else:
+                result = engine.score_witness(statements, documents)
+
+            # Determine confidence
+            if data_count < 3:
+                confidence = "low"
+            elif data_count < 10:
+                confidence = "medium"
+            else:
+                confidence = "high"
+
+            result["confidence"] = confidence
+            result["witness_id"] = witness_id
+            result["data_points"] = data_count
+
+            # Store as a CredibilityAssessment
+            try:
+                score_100 = result["overall_score"]
+                assessment_confidence = {"low": 0.3, "medium": 0.6, "high": 0.9}.get(confidence, 0.3)
+
+                factors = [
+                    CredibilityFactor(
+                        factor_type=f["name"],
+                        weight=f["weight"],
+                        score=f["score"],
+                        notes="; ".join(f.get("evidence", [])[:3]),
+                    )
+                    for f in result.get("factors", [])
+                ]
+
+                await self.create_assessment(
+                    source_type=SourceType.PERSON,
+                    source_id=witness_id,
+                    score=score_100,
+                    confidence=assessment_confidence,
+                    factors=factors,
+                    assessed_by=AssessmentMethod.AUTOMATED,
+                    notes=f"Computed credibility score for witness {witness_id} ({data_count} data points)",
+                )
+            except Exception as e:
+                logger.warning(f"Failed to store credibility assessment for {witness_id}: {e}")
+
+            # Emit event
+            if self._events:
+                await self._events.emit(
+                    "credibility.witness.scored",
+                    {
+                        "witness_id": witness_id,
+                        "overall_score": result["overall_score"],
+                        "level": result["level"],
+                        "confidence": confidence,
+                        "data_points": data_count,
+                    },
+                    source=self.name,
+                )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error computing credibility score for witness {witness_id}: {e}")
+            default_result["error"] = str(e)
+            return default_result
+
+    async def _query_witness_claims(self, witness_id: str) -> List[Dict]:
+        """Query arkham_claims for claims linked to this witness entity."""
+        try:
+            rows = await self._db.fetch_all(
+                """
+                SELECT id, text, status, entity_ids, source_document_id, source_context, confidence
+                FROM arkham_claims
+                WHERE entity_ids LIKE :witness_pattern
+                ORDER BY created_at DESC
+                """,
+                {"witness_pattern": f"%{witness_id}%"},
+            )
+            return [dict(r) if not isinstance(r, dict) else r for r in rows]
+        except Exception as e:
+            logger.debug(f"Could not query arkham_claims: {e}")
+            return []
+
+    async def _query_witness_contradictions(self, witness_id: str, claims: List[Dict]) -> List[Dict]:
+        """Query contradictions involving documents linked to the witness."""
+        if not claims:
+            return []
+
+        # Get unique document IDs from claims
+        doc_ids = list({c.get("source_document_id") for c in claims if c.get("source_document_id")})
+        if not doc_ids:
+            return []
+
+        try:
+            # Build IN clause for document IDs
+            placeholders = ", ".join(f":doc_{i}" for i in range(len(doc_ids)))
+            params = {f"doc_{i}": doc_id for i, doc_id in enumerate(doc_ids)}
+
+            rows = await self._db.fetch_all(
+                f"""
+                SELECT id, doc_a_id, doc_b_id, claim_a, claim_b, severity, contradiction_type, confidence_score
+                FROM arkham_contradictions.contradictions
+                WHERE doc_a_id IN ({placeholders}) OR doc_b_id IN ({placeholders})
+                ORDER BY created_at DESC
+                """,
+                params,
+            )
+            return [dict(r) if not isinstance(r, dict) else r for r in rows]
+        except Exception as e:
+            logger.debug(f"Could not query arkham_contradictions: {e}")
+            return []
+
+    async def _query_witness_mentions(self, witness_id: str) -> List[Dict]:
+        """Query arkham_entity_mentions for this witness entity."""
+        try:
+            rows = await self._db.fetch_all(
+                """
+                SELECT id, entity_id, document_id, mention_text, confidence
+                FROM arkham_entity_mentions
+                WHERE entity_id = :entity_id
+                ORDER BY created_at DESC
+                """,
+                {"entity_id": witness_id},
+            )
+            return [dict(r) if not isinstance(r, dict) else r for r in rows]
+        except Exception as e:
+            logger.debug(f"Could not query arkham_entity_mentions: {e}")
+            return []
+
+    async def _query_witness_timeline_events(self, witness_id: str) -> List[Dict]:
+        """Query arkham_timeline_events for events involving this witness."""
+        try:
+            rows = await self._db.fetch_all(
+                """
+                SELECT id, document_id, text, date_start, entities, event_type
+                FROM arkham_timeline_events
+                WHERE entities::text LIKE :witness_pattern
+                ORDER BY date_start DESC
+                """,
+                {"witness_pattern": f"%{witness_id}%"},
+            )
+            return [dict(r) if not isinstance(r, dict) else r for r in rows]
+        except Exception as e:
+            logger.debug(f"Could not query arkham_timeline_events: {e}")
+            return []
+
+    def _build_corroboration_documents(self, claims: List[Dict], mentions: List[Dict]) -> List[Dict]:
+        """Build document list for corroboration scoring from claims evidence."""
+        documents = []
+        seen_docs = set()
+
+        # Use verified claims as corroborating documents
+        for claim in claims:
+            if claim.get("status") == "verified" and claim.get("source_document_id"):
+                doc_id = claim["source_document_id"]
+                if doc_id not in seen_docs:
+                    seen_docs.add(doc_id)
+                    documents.append(
+                        {
+                            "title": f"Document {doc_id}",
+                            "text": claim.get("source_context", "") or claim.get("text", ""),
+                        }
+                    )
+
+        # Add mention contexts as supporting documents
+        for mention in mentions:
+            doc_id = mention.get("document_id")
+            if doc_id and doc_id not in seen_docs:
+                seen_docs.add(doc_id)
+                documents.append(
+                    {
+                        "title": f"Document {doc_id}",
+                        "text": mention.get("mention_text", ""),
+                    }
+                )
+
+        return documents
+
+    def _build_timeline_events(self, timeline_events: List[Dict]) -> List[Dict]:
+        """Build events list for timeliness scoring from timeline data."""
+        events = []
+        for ev in timeline_events:
+            date_start = ev.get("date_start")
+            if date_start:
+                # Normalize to YYYY-MM-DD string
+                if isinstance(date_start, str):
+                    date_str = date_start[:10]  # Take YYYY-MM-DD portion
+                else:
+                    date_str = str(date_start)[:10]
+                events.append(
+                    {
+                        "text": ev.get("text", ""),
+                        "date": date_str,
+                    }
+                )
+        return events
+
     # === Private Helper Methods ===
 
     async def _save_assessment(self, assessment: CredibilityAssessment, update: bool = False) -> None:

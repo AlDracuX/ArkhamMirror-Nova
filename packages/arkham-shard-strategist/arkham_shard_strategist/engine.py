@@ -1,7 +1,8 @@
 """Strategist Engine - Core domain logic for adversarial modelling.
 
 Orchestrates LLM-powered analysis with database persistence and event emission.
-All methods gracefully degrade when LLM is unavailable.
+All methods gracefully degrade when LLM is unavailable, falling back to
+template-based heuristics drawn from common UK Employment Tribunal patterns.
 """
 
 import json
@@ -9,6 +10,11 @@ import logging
 import uuid
 from typing import Any
 
+from .fallbacks import (
+    fallback_predict_arguments,
+    fallback_red_team,
+    fallback_swot,
+)
 from .llm import StrategistLLM
 
 logger = logging.getLogger(__name__)
@@ -38,8 +44,8 @@ class StrategistEngine:
         Returns empty list if LLM is unavailable.
         """
         if not self._llm.is_available:
-            logger.warning("LLM not available — skipping argument prediction")
-            return []
+            logger.info("LLM not available — using heuristic argument prediction")
+            return fallback_predict_arguments(claim_id=claim_id)
 
         # Gather context from existing predictions if available
         context = ""
@@ -64,7 +70,7 @@ class StrategistEngine:
             )
         except Exception as e:
             logger.error(f"LLM prediction failed: {e}")
-            return []
+            return fallback_predict_arguments(claim_id=claim_id)
 
         # Persist each prediction
         for pred in predictions:
@@ -167,6 +173,26 @@ class StrategistEngine:
         return counters
 
     # -------------------------------------------------------------------------
+    # Internal helpers
+    # -------------------------------------------------------------------------
+
+    async def _gather_swot_context(self, project_id: str) -> dict:
+        """Gather context data from DB for SWOT analysis (used by both LLM and fallback paths)."""
+        context_data: dict[str, Any] = {"predictions": []}
+        if self._db:
+            try:
+                preds = await self._db.fetch_all(
+                    "SELECT predicted_argument, confidence FROM arkham_strategist.predictions "
+                    "WHERE project_id = :project_id ORDER BY confidence DESC LIMIT 10",
+                    {"project_id": project_id},
+                )
+                if preds:
+                    context_data["predictions"] = [dict(row) if not isinstance(row, dict) else row for row in preds]
+            except Exception as e:
+                logger.debug(f"Could not fetch context for SWOT: {e}")
+        return context_data
+
+    # -------------------------------------------------------------------------
     # SWOT Analysis
     # -------------------------------------------------------------------------
 
@@ -179,30 +205,25 @@ class StrategistEngine:
         empty_swot = {"strengths": [], "weaknesses": [], "opportunities": [], "threats": []}
 
         if not self._llm.is_available:
-            logger.warning("LLM not available — returning empty SWOT")
-            return empty_swot
+            logger.info("LLM not available — using heuristic SWOT analysis")
+            context_data = await self._gather_swot_context(project_id)
+            return fallback_swot(context_data=context_data)
 
-        # Gather context from existing data
+        context_data = await self._gather_swot_context(project_id)
+
+        # Build text context for LLM prompt
         context = ""
-        if self._db:
-            try:
-                preds = await self._db.fetch_all(
-                    "SELECT predicted_argument, confidence FROM arkham_strategist.predictions "
-                    "WHERE project_id = :project_id ORDER BY confidence DESC LIMIT 10",
-                    {"project_id": project_id},
-                )
-                if preds:
-                    context = "Known respondent arguments:\n" + "\n".join(
-                        f"- {row['predicted_argument']} (confidence: {row['confidence']})" for row in preds
-                    )
-            except Exception as e:
-                logger.debug(f"Could not fetch context for SWOT: {e}")
+        if context_data.get("predictions"):
+            context = "Known respondent arguments:\n" + "\n".join(
+                f"- {row['predicted_argument']} (confidence: {row['confidence']})"
+                for row in context_data["predictions"]
+            )
 
         try:
             return await self._llm.build_swot(project_id=project_id, context=context)
         except Exception as e:
             logger.error(f"LLM SWOT analysis failed: {e}")
-            return empty_swot
+            return fallback_swot(context_data=context_data)
 
     # -------------------------------------------------------------------------
     # Red Team
@@ -217,8 +238,8 @@ class StrategistEngine:
         empty_result = {"weaknesses": [], "overall_risk": 0.0}
 
         if not self._llm.is_available:
-            logger.warning("LLM not available — returning empty red team result")
-            return empty_result
+            logger.info("LLM not available — using heuristic red team analysis")
+            return fallback_red_team()
 
         # Gather context
         context = ""
@@ -244,7 +265,7 @@ class StrategistEngine:
             )
         except Exception as e:
             logger.error(f"LLM red team failed: {e}")
-            return empty_result
+            return fallback_red_team()
 
         # Persist report
         report_id = str(uuid.uuid4())

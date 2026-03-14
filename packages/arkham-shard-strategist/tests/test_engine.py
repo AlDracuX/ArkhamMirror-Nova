@@ -102,12 +102,76 @@ class TestPredictArguments:
         assert "likely_evidence" in results[0]
 
     @pytest.mark.asyncio
-    async def test_predict_arguments_no_llm_fallback(self, engine_no_llm):
-        """Without LLM, predict_arguments returns empty list gracefully."""
+    async def test_predict_arguments_no_llm_fallback_with_claim_type(self, engine_no_llm):
+        """Without LLM, predict_arguments returns template arguments for known claim types."""
+        results = await engine_no_llm.predict_arguments(project_id="proj-1", claim_id="s13_discrimination")
+
+        assert isinstance(results, list)
+        assert len(results) > 0
+        for r in results:
+            assert "argument" in r
+            assert "confidence" in r
+            assert "reasoning" in r
+            assert "likely_evidence" in r
+            assert r["confidence"] > 0.0
+            assert "[heuristic]" in r.get("reasoning", "").lower() or r.get("source") == "heuristic"
+
+    @pytest.mark.asyncio
+    async def test_predict_arguments_no_llm_fallback_s26_harassment(self, engine_no_llm):
+        """Without LLM, s26 harassment returns specific template arguments."""
+        results = await engine_no_llm.predict_arguments(project_id="proj-1", claim_id="s26_harassment")
+
+        assert isinstance(results, list)
+        assert len(results) > 0
+        arguments_text = " ".join(r["argument"].lower() for r in results)
+        # Should mention typical harassment defences
+        assert any(
+            keyword in arguments_text for keyword in ["reasonable steps", "not related to", "banter", "proportionate"]
+        )
+
+    @pytest.mark.asyncio
+    async def test_predict_arguments_no_llm_fallback_s27_victimisation(self, engine_no_llm):
+        """Without LLM, s27 victimisation returns template arguments."""
+        results = await engine_no_llm.predict_arguments(project_id="proj-1", claim_id="s27_victimisation")
+
+        assert isinstance(results, list)
+        assert len(results) > 0
+
+    @pytest.mark.asyncio
+    async def test_predict_arguments_no_llm_fallback_unfair_dismissal(self, engine_no_llm):
+        """Without LLM, unfair dismissal returns template arguments."""
+        results = await engine_no_llm.predict_arguments(project_id="proj-1", claim_id="unfair_dismissal")
+
+        assert isinstance(results, list)
+        assert len(results) > 0
+        arguments_text = " ".join(r["argument"].lower() for r in results)
+        assert any(keyword in arguments_text for keyword in ["fair procedure", "reasonable", "capability", "conduct"])
+
+    @pytest.mark.asyncio
+    async def test_predict_arguments_no_llm_fallback_unknown_claim(self, engine_no_llm):
+        """Without LLM and unknown claim type, returns general fallback arguments."""
+        results = await engine_no_llm.predict_arguments(project_id="proj-1", claim_id="unknown_type_xyz")
+
+        assert isinstance(results, list)
+        assert len(results) > 0  # Should still return general arguments
+
+    @pytest.mark.asyncio
+    async def test_predict_arguments_no_llm_no_claim_id(self, engine_no_llm):
+        """Without LLM and no claim_id, returns general fallback arguments."""
         results = await engine_no_llm.predict_arguments(project_id="proj-1")
 
         assert isinstance(results, list)
-        assert len(results) == 0
+        assert len(results) > 0  # General arguments returned
+
+    @pytest.mark.asyncio
+    async def test_predict_arguments_llm_exception_uses_fallback(self, engine, mock_llm):
+        """When LLM raises exception, fallback heuristics are used instead of empty list."""
+        mock_llm.generate.side_effect = Exception("LLM service timeout")
+
+        results = await engine.predict_arguments(project_id="proj-1", claim_id="s13_discrimination")
+
+        assert isinstance(results, list)
+        assert len(results) > 0  # Fallback instead of empty
 
     @pytest.mark.asyncio
     async def test_predict_arguments_stores_to_db(self, engine, mock_llm, mock_db):
@@ -235,14 +299,14 @@ class TestPredictArguments:
         assert len(results) == 1
 
     @pytest.mark.asyncio
-    async def test_predict_arguments_llm_exception_returns_empty(self, engine, mock_llm):
-        """If LLM.generate raises an exception, returns empty list gracefully."""
+    async def test_predict_arguments_llm_exception_returns_fallback(self, engine, mock_llm):
+        """If LLM.generate raises an exception, returns heuristic fallback arguments."""
         mock_llm.generate.side_effect = Exception("LLM service timeout")
 
         results = await engine.predict_arguments(project_id="proj-1")
 
         assert isinstance(results, list)
-        assert len(results) == 0
+        assert len(results) > 0  # Fallback general arguments
 
 
 # ---------------------------------------------------------------------------
@@ -439,15 +503,59 @@ class TestSWOT:
         assert len(result["threats"]) > 0
 
     @pytest.mark.asyncio
-    async def test_swot_no_llm_fallback(self, engine_no_llm):
-        """Without LLM, SWOT returns empty quadrants."""
+    async def test_swot_no_llm_fallback_generates_heuristic(self, engine_no_llm, mock_db):
+        """Without LLM, SWOT generates heuristic analysis from DB context."""
+        mock_db.fetch_all.return_value = [
+            {"predicted_argument": "Performance defence", "confidence": 0.8},
+            {"predicted_argument": "Time limitation", "confidence": 0.6},
+            {"predicted_argument": "No knowledge of protected characteristic", "confidence": 0.7},
+        ]
+
         result = await engine_no_llm.build_swot(project_id="proj-1")
 
         assert isinstance(result, dict)
-        assert result["strengths"] == []
-        assert result["weaknesses"] == []
-        assert result["opportunities"] == []
-        assert result["threats"] == []
+        assert "strengths" in result
+        assert "weaknesses" in result
+        assert "opportunities" in result
+        assert "threats" in result
+        # At least some quadrants should be populated from heuristics
+        total_items = sum(len(result[k]) for k in ["strengths", "weaknesses", "opportunities", "threats"])
+        assert total_items > 0, "Heuristic SWOT should produce at least some items"
+
+    @pytest.mark.asyncio
+    async def test_swot_no_llm_fallback_no_db_data(self, engine_no_llm, mock_db):
+        """Without LLM and no DB data, SWOT still produces generic heuristic items."""
+        mock_db.fetch_all.return_value = []
+
+        result = await engine_no_llm.build_swot(project_id="proj-1")
+
+        assert isinstance(result, dict)
+        total_items = sum(len(result[k]) for k in ["strengths", "weaknesses", "opportunities", "threats"])
+        assert total_items > 0, "Generic heuristic SWOT should still have items"
+
+    @pytest.mark.asyncio
+    async def test_swot_llm_exception_uses_fallback(self, engine, mock_llm, mock_db):
+        """When LLM raises exception, SWOT uses heuristic fallback."""
+        mock_db.fetch_all.return_value = []
+        mock_llm.generate.side_effect = Exception("LLM timeout")
+
+        result = await engine.build_swot(project_id="proj-1")
+
+        assert isinstance(result, dict)
+        total_items = sum(len(result[k]) for k in ["strengths", "weaknesses", "opportunities", "threats"])
+        assert total_items > 0, "Fallback SWOT should produce items on LLM failure"
+
+    @pytest.mark.asyncio
+    async def test_swot_heuristic_items_have_correct_structure(self, engine_no_llm, mock_db):
+        """Heuristic SWOT items have 'item' and 'detail' fields matching LLM format."""
+        mock_db.fetch_all.return_value = []
+
+        result = await engine_no_llm.build_swot(project_id="proj-1")
+
+        for quadrant in ["strengths", "weaknesses", "opportunities", "threats"]:
+            for entry in result[quadrant]:
+                assert "item" in entry, f"Missing 'item' key in {quadrant}"
+                assert "detail" in entry, f"Missing 'detail' key in {quadrant}"
 
     @pytest.mark.asyncio
     async def test_swot_malformed_llm_response(self, engine, mock_llm, mock_db):
@@ -479,14 +587,21 @@ class TestSWOT:
         assert result["weaknesses"] == []
 
     @pytest.mark.asyncio
-    async def test_swot_llm_exception_returns_empty(self, engine, mock_llm, mock_db):
-        """LLM exception returns empty SWOT without crashing."""
+    async def test_swot_llm_exception_returns_heuristic(self, engine, mock_llm, mock_db):
+        """LLM exception returns heuristic SWOT without crashing."""
         mock_db.fetch_all.return_value = []
         mock_llm.generate.side_effect = Exception("LLM timeout")
 
         result = await engine.build_swot(project_id="proj-1")
 
-        assert result == {"strengths": [], "weaknesses": [], "opportunities": [], "threats": []}
+        assert isinstance(result, dict)
+        assert "strengths" in result
+        assert "weaknesses" in result
+        assert "opportunities" in result
+        assert "threats" in result
+        # Heuristic fallback should produce items
+        total_items = sum(len(result[k]) for k in ["strengths", "weaknesses", "opportunities", "threats"])
+        assert total_items > 0
 
 
 # ---------------------------------------------------------------------------
@@ -594,13 +709,41 @@ class TestRedTeam:
         assert result["overall_risk"] <= 1.0
 
     @pytest.mark.asyncio
-    async def test_red_team_no_llm_fallback(self, engine_no_llm):
-        """Without LLM, red team returns empty result."""
+    async def test_red_team_no_llm_fallback_returns_template_weaknesses(self, engine_no_llm):
+        """Without LLM, red team returns template vulnerability patterns."""
         result = await engine_no_llm.red_team(project_id="proj-1", target_id="target-1")
 
         assert isinstance(result, dict)
-        assert result["weaknesses"] == []
+        assert len(result["weaknesses"]) > 0, "Heuristic red team should identify template weaknesses"
         assert 0.0 <= result["overall_risk"] <= 1.0
+        for w in result["weaknesses"]:
+            assert "area" in w
+            assert "vulnerability" in w
+            assert "exploitation_method" in w
+
+    @pytest.mark.asyncio
+    async def test_red_team_llm_exception_uses_fallback(self, engine, mock_llm, mock_db):
+        """When LLM raises exception, red team uses heuristic fallback."""
+        mock_db.fetch_all.return_value = []
+        mock_llm.generate.side_effect = Exception("LLM error")
+
+        result = await engine.red_team(project_id="proj-1", target_id="target-1")
+
+        assert isinstance(result, dict)
+        assert len(result["weaknesses"]) > 0, "Fallback should produce template weaknesses"
+
+    @pytest.mark.asyncio
+    async def test_red_team_fallback_covers_key_areas(self, engine_no_llm):
+        """Heuristic red team covers burden of proof, hearsay, and timeline areas."""
+        result = await engine_no_llm.red_team(project_id="proj-1", target_id="target-1")
+
+        areas = [w["area"].lower() for w in result["weaknesses"]]
+        areas_text = " ".join(areas)
+        # Should cover at least two of: burden of proof, hearsay, timeline
+        covered = sum(
+            1 for keyword in ["burden", "hearsay", "timeline", "witness", "evidence"] if keyword in areas_text
+        )
+        assert covered >= 2, f"Expected coverage of key vulnerability areas, got: {areas}"
 
     @pytest.mark.asyncio
     async def test_red_team_malformed_llm_response(self, engine, mock_llm, mock_db):
@@ -649,14 +792,16 @@ class TestRedTeam:
         assert len(insert_calls) == 1
 
     @pytest.mark.asyncio
-    async def test_red_team_llm_exception_returns_empty(self, engine, mock_llm, mock_db):
-        """LLM exception returns empty red team result without crashing."""
+    async def test_red_team_llm_exception_returns_heuristic(self, engine, mock_llm, mock_db):
+        """LLM exception returns heuristic red team result without crashing."""
         mock_db.fetch_all.return_value = []
         mock_llm.generate.side_effect = Exception("LLM error")
 
         result = await engine.red_team(project_id="proj-1", target_id="target-1")
 
-        assert result == {"weaknesses": [], "overall_risk": 0.0}
+        assert isinstance(result, dict)
+        assert len(result["weaknesses"]) > 0  # Heuristic fallback
+        assert 0.0 <= result["overall_risk"] <= 1.0
 
 
 # ---------------------------------------------------------------------------

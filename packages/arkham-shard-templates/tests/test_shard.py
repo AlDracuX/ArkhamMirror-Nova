@@ -639,3 +639,127 @@ class TestTemplateStatistics:
         # Get active count
         active = await shard.get_count(active_only=True)
         assert active == 1
+
+
+class TestSimpleTemplateRendering:
+    """Test regex-based simple template rendering."""
+
+    @pytest.mark.asyncio
+    async def test_render_simple_placeholders(self, shard):
+        """Test simple {{variable}} placeholder replacement."""
+        template_data = TemplateCreate(
+            name="Simple Test",
+            template_type=TemplateType.LETTER,
+            content="Dear {{name}}, welcome to {{company}}.",
+        )
+        template = await shard.create_template(template_data)
+
+        result = await shard.render_template_simple(template.id, {"name": "Alex", "company": "Arkham"})
+
+        assert result == "Dear Alex, welcome to Arkham."
+
+    @pytest.mark.asyncio
+    async def test_render_simple_with_spaces_in_braces(self, shard):
+        """Test that {{ variable }} with spaces works."""
+        template_data = TemplateCreate(
+            name="Spaces Test",
+            template_type=TemplateType.LETTER,
+            content="Hello {{ name }}!",
+        )
+        template = await shard.create_template(template_data)
+
+        result = await shard.render_template_simple(template.id, {"name": "World"})
+
+        assert result == "Hello World!"
+
+    @pytest.mark.asyncio
+    async def test_render_simple_missing_variable(self, shard):
+        """Test that missing variables render as empty string."""
+        template_data = TemplateCreate(
+            name="Missing Var Test",
+            template_type=TemplateType.LETTER,
+            content="Hello {{name}}, your role is {{role}}.",
+        )
+        template = await shard.create_template(template_data)
+
+        result = await shard.render_template_simple(template.id, {"name": "Alex"})
+
+        assert result == "Hello Alex, your role is ."
+
+    @pytest.mark.asyncio
+    async def test_render_simple_conditional_truthy(self, shard):
+        """Test {% if variable %}...{% endif %} with truthy value."""
+        template_data = TemplateCreate(
+            name="Conditional Test",
+            template_type=TemplateType.LETTER,
+            content="Hello{% if premium %} Premium{% endif %} User!",
+        )
+        template = await shard.create_template(template_data)
+
+        result = await shard.render_template_simple(template.id, {"premium": True})
+
+        assert result == "Hello Premium User!"
+
+    @pytest.mark.asyncio
+    async def test_render_simple_conditional_falsy(self, shard):
+        """Test {% if variable %}...{% endif %} with falsy value."""
+        template_data = TemplateCreate(
+            name="Conditional False Test",
+            template_type=TemplateType.LETTER,
+            content="Hello{% if premium %} Premium{% endif %} User!",
+        )
+        template = await shard.create_template(template_data)
+
+        result = await shard.render_template_simple(template.id, {"premium": False})
+
+        assert result == "Hello User!"
+
+    @pytest.mark.asyncio
+    async def test_render_simple_conditional_missing(self, shard):
+        """Test {% if variable %}...{% endif %} with missing variable."""
+        template_data = TemplateCreate(
+            name="Conditional Missing Test",
+            template_type=TemplateType.LETTER,
+            content="Hello{% if premium %} Premium{% endif %} User!",
+        )
+        template = await shard.create_template(template_data)
+
+        result = await shard.render_template_simple(template.id, {})
+
+        assert result == "Hello User!"
+
+    @pytest.mark.asyncio
+    async def test_render_simple_conditional_with_placeholders(self, shard):
+        """Test conditionals combined with placeholder replacement."""
+        template_data = TemplateCreate(
+            name="Combined Test",
+            template_type=TemplateType.LETTER,
+            content="Dear {{name}},{% if urgent %}\nURGENT: Please respond immediately.{% endif %}\nBest regards.",
+        )
+        template = await shard.create_template(template_data)
+
+        result = await shard.render_template_simple(template.id, {"name": "Alex", "urgent": True})
+
+        assert "Dear Alex," in result
+        assert "URGENT: Please respond immediately." in result
+        assert "Best regards." in result
+
+    @pytest.mark.asyncio
+    async def test_render_simple_not_found(self, shard):
+        """Test render_template_simple raises ValueError for missing template."""
+        with pytest.raises(ValueError, match="not found"):
+            await shard.render_template_simple("nonexistent-id", {})
+
+    @pytest.mark.asyncio
+    async def test_render_simple_integer_values(self, shard):
+        """Test that integer values are converted to strings."""
+        template_data = TemplateCreate(
+            name="Int Test",
+            template_type=TemplateType.REPORT,
+            content="Case #{{case_number}}: {{count}} documents.",
+        )
+        template = await shard.create_template(template_data)
+
+        result = await shard.render_template_simple(template.id, {"case_number": 42, "count": 7})
+
+        assert result == "Case #42: 7 documents."

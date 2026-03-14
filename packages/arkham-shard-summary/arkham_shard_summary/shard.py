@@ -152,6 +152,46 @@ class SummaryShard(ArkhamShard):
 
         return router
 
+    # === Convenience Methods ===
+
+    async def summarize_document(self, document_id: str) -> Dict[str, Any]:
+        """
+        Generate a summary for a single document by ID.
+
+        Convenience wrapper around generate_summary that provides a simpler interface.
+        Tries LLM first, falls back to extractive summarization.
+
+        Args:
+            document_id: The document ID to summarize
+
+        Returns:
+            Dict with keys: document_id, summary_text, method ("llm"|"extractive"), created_at
+        """
+        request = SummaryRequest(
+            source_type=SourceType.DOCUMENT,
+            source_ids=[document_id],
+            summary_type=SummaryType.DETAILED,
+            target_length=SummaryLength.MEDIUM,
+            include_key_points=True,
+        )
+
+        result = await self.generate_summary(request)
+
+        method = "extractive"
+        if result.confidence and result.confidence >= 1.0:
+            method = "llm"
+
+        return {
+            "document_id": document_id,
+            "summary_text": result.content or "",
+            "key_points": result.key_points or [],
+            "method": method,
+            "created_at": datetime.utcnow().isoformat(),
+            "summary_id": result.summary_id,
+            "word_count": result.word_count or 0,
+            "status": result.status.value if result.status else "unknown",
+        }
+
     # === Core Summarization Methods ===
 
     async def generate_summary(

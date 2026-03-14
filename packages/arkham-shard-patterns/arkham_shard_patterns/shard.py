@@ -28,6 +28,7 @@ from uuid import uuid4
 
 from arkham_frame import ArkhamShard
 
+from .engine import PatternEngine
 from .models import (
     Correlation,
     CorrelationRequest,
@@ -75,6 +76,7 @@ class PatternsShard(ArkhamShard):
         self._vectors = None
         self._workers = None
         self._initialized = False
+        self._engine = PatternEngine()
 
     async def initialize(self, frame) -> None:
         """Initialize shard with frame services."""
@@ -1594,32 +1596,37 @@ Return ONLY the JSON array, no other text:
         text: str,
         min_confidence: float,
     ) -> List[Pattern]:
-        """Detect patterns using keyword analysis."""
-        # Simple keyword frequency analysis
+        """Detect patterns using the PatternEngine (n-gram analysis)."""
         patterns = []
-        words = text.lower().split()
-        word_counts = {}
 
-        for word in words:
-            if len(word) > 4:  # Skip short words
-                word_counts[word] = word_counts.get(word, 0) + 1
+        # Use engine for n-gram detection across text segments
+        # Split text into document-like segments on double newlines
+        segments = [s.strip() for s in text.split("\n\n") if s.strip()]
+        if not segments:
+            segments = [text]
 
-        # Find repeated phrases
-        for word, count in word_counts.items():
-            if count >= 5:  # Appears at least 5 times
-                confidence = min(count / 20, 1.0)  # Scale to 0-1
-                if confidence >= min_confidence:
-                    pattern = await self.create_pattern(
-                        name=f"Recurring: {word}",
-                        description=f"The term '{word}' appears {count} times",
-                        pattern_type=PatternType.RECURRING_THEME,
-                        confidence=confidence,
-                        detection_method=DetectionMethod.AUTOMATED,
-                        criteria=PatternCriteria(keywords=[word], min_occurrences=count),
-                    )
-                    patterns.append(pattern)
+        ngram_results = self._engine.detect_ngram_patterns(segments, min_occurrences=2)
 
-        return patterns[:10]  # Limit to top 10
+        for result in ngram_results:
+            confidence = result["significance"]
+            if confidence >= min_confidence:
+                pattern = await self.create_pattern(
+                    name=f"Recurring: {result['phrase']}",
+                    description=(
+                        f"The phrase '{result['phrase']}' appears {result['frequency']} times "
+                        f"across {result['doc_count']} segment(s)"
+                    ),
+                    pattern_type=PatternType.RECURRING_THEME,
+                    confidence=confidence,
+                    detection_method=DetectionMethod.AUTOMATED,
+                    criteria=PatternCriteria(
+                        keywords=result["phrase"].split(),
+                        min_occurrences=result["frequency"],
+                    ),
+                )
+                patterns.append(pattern)
+
+        return patterns[:10]
 
     async def _match_pattern_against_text(
         self,
@@ -1652,6 +1659,505 @@ Return ONLY the JSON array, no other text:
                     )
 
         return None
+
+    # === Cross-Document Pattern Detection ===
+
+    async def detect_patterns(self, project_id: str = None) -> List[Dict]:
+        """
+        Detect patterns across documents using multiple algorithms.
+
+        Runs four detection strategies:
+        1. Repeated phrases (n-gram analysis on document chunks)
+        2. Behavioral patterns (repeated action sequences from timeline)
+        3. Temporal clusters (suspicious event clustering around dates)
+        4. Communication patterns (entity co-occurrence and drop-offs)
+
+        Args:
+            project_id: Optional project/case ID to filter data
+
+        Returns:
+            List of detected pattern dicts with pattern_type, description,
+            evidence, significance, and entities_involved.
+        """
+        if not self._db:
+            return []
+
+        all_patterns: List[Dict] = []
+
+        try:
+            phrases = await self._detect_repeated_phrases(project_id)
+            all_patterns.extend(phrases)
+        except Exception as e:
+            logger.error(f"Repeated phrase detection failed: {e}")
+
+        try:
+            behavioral = await self._detect_behavioral_patterns(project_id)
+            all_patterns.extend(behavioral)
+        except Exception as e:
+            logger.error(f"Behavioral pattern detection failed: {e}")
+
+        try:
+            temporal = await self._detect_temporal_clusters(project_id)
+            all_patterns.extend(temporal)
+        except Exception as e:
+            logger.error(f"Temporal cluster detection failed: {e}")
+
+        try:
+            communication = await self._detect_communication_patterns(project_id)
+            all_patterns.extend(communication)
+        except Exception as e:
+            logger.error(f"Communication pattern detection failed: {e}")
+
+        # Sort by significance descending
+        all_patterns.sort(key=lambda p: p.get("significance", 0), reverse=True)
+
+        return all_patterns
+
+    async def _detect_repeated_phrases(self, project_id: str = None) -> List[Dict]:
+        """
+        Detect repeated phrases across documents using n-gram analysis.
+
+        Queries the chunks table for document text, extracts 3-5 word n-grams,
+        and identifies phrases appearing in multiple documents.
+        """
+        if not self._db:
+            return []
+
+        # Query chunks table for text content
+        query = "SELECT id, document_id, text FROM arkham_frame.chunks"
+        params: Dict[str, Any] = {}
+
+        if project_id:
+            query += " WHERE document_id IN (SELECT id FROM arkham_frame.documents WHERE project_id = :project_id)"
+            params["project_id"] = project_id
+
+        query += " ORDER BY document_id, chunk_index LIMIT 5000"
+
+        chunks = await self._db.fetch_all(query, params)
+        if not chunks:
+            return []
+
+        # Build n-gram index: phrase -> set of document_ids
+        phrase_docs: Dict[str, set] = {}
+        phrase_evidence: Dict[str, List[str]] = {}
+
+        stop_words = {
+            "the",
+            "and",
+            "for",
+            "are",
+            "but",
+            "not",
+            "you",
+            "all",
+            "can",
+            "had",
+            "her",
+            "was",
+            "one",
+            "our",
+            "out",
+            "has",
+            "have",
+            "been",
+            "this",
+            "that",
+            "with",
+            "they",
+            "from",
+            "will",
+            "would",
+            "there",
+            "their",
+            "what",
+            "about",
+            "which",
+            "when",
+            "make",
+            "like",
+            "time",
+            "very",
+            "your",
+            "just",
+            "know",
+            "take",
+            "come",
+            "could",
+            "than",
+            "look",
+            "only",
+            "into",
+            "year",
+            "some",
+            "them",
+            "also",
+            "after",
+            "should",
+            "well",
+            "each",
+            "does",
+        }
+
+        for chunk in chunks:
+            text = (chunk.get("text") or "").strip()
+            doc_id = chunk.get("document_id", "")
+            if not text or not doc_id:
+                continue
+
+            # Tokenize: lowercase, strip punctuation
+            words = re.findall(r"\b[a-z]+\b", text.lower())
+
+            # Extract n-grams (3, 4, 5 word phrases)
+            for n in (3, 4, 5):
+                for i in range(len(words) - n + 1):
+                    gram = tuple(words[i : i + n])
+                    # Skip if too many stop words
+                    non_stop = [w for w in gram if w not in stop_words and len(w) > 2]
+                    if len(non_stop) < 2:
+                        continue
+
+                    phrase = " ".join(gram)
+                    if phrase not in phrase_docs:
+                        phrase_docs[phrase] = set()
+                        phrase_evidence[phrase] = []
+                    phrase_docs[phrase].add(doc_id)
+                    if doc_id not in phrase_evidence[phrase]:
+                        phrase_evidence[phrase].append(doc_id)
+
+        # Filter: phrases in 2+ documents
+        patterns: List[Dict] = []
+        total_docs = len({c.get("document_id") for c in chunks if c.get("document_id")})
+
+        for phrase, doc_ids in phrase_docs.items():
+            if len(doc_ids) < 2:
+                continue
+
+            doc_count = len(doc_ids)
+            doc_fraction = doc_count / max(total_docs, 1)
+            significance = min(1.0, doc_fraction * 2 + (doc_count - 2) * 0.1)
+
+            patterns.append(
+                {
+                    "pattern_type": "phrase_repeat",
+                    "description": f"Phrase '{phrase}' repeated across {doc_count} documents",
+                    "evidence": phrase_evidence[phrase][:20],
+                    "significance": round(significance, 3),
+                    "entities_involved": [],
+                }
+            )
+
+        patterns.sort(key=lambda p: p["significance"], reverse=True)
+        return patterns[:50]
+
+    async def _detect_behavioral_patterns(self, project_id: str = None) -> List[Dict]:
+        """
+        Detect repeated behavioral sequences from timeline events.
+
+        Groups events by entity, extracts ordered event_type sequences,
+        and finds sequences that repeat across multiple entities.
+        """
+        if not self._db:
+            return []
+
+        query = """SELECT id, event_type, entity_name, event_date
+                   FROM arkham_timeline_events"""
+        params: Dict[str, Any] = {}
+
+        if project_id:
+            query += " WHERE project_id = :project_id"
+            params["project_id"] = project_id
+
+        query += " ORDER BY entity_name, event_date"
+
+        events = await self._db.fetch_all(query, params)
+        if not events:
+            return []
+
+        # Group events by entity
+        entity_sequences: Dict[str, List[Dict]] = {}
+        for event in events:
+            entity = event.get("entity_name") or "unknown"
+            if entity not in entity_sequences:
+                entity_sequences[entity] = []
+            entity_sequences[entity].append(event)
+
+        # Extract subsequences of length 2 and 3 for each entity
+        sequence_occurrences: Dict[str, List[Dict]] = {}
+
+        for entity, entity_events in entity_sequences.items():
+            event_types = [e.get("event_type", "") for e in entity_events]
+            event_ids = [e.get("id", "") for e in entity_events]
+
+            for seq_len in (2, 3):
+                for i in range(len(event_types) - seq_len + 1):
+                    seq_key = " -> ".join(event_types[i : i + seq_len])
+                    if seq_key not in sequence_occurrences:
+                        sequence_occurrences[seq_key] = []
+                    sequence_occurrences[seq_key].append(
+                        {
+                            "entity": entity,
+                            "event_ids": event_ids[i : i + seq_len],
+                        }
+                    )
+
+        # Find sequences that appear across 2+ different entities
+        patterns: List[Dict] = []
+
+        for seq_key, occurrences in sequence_occurrences.items():
+            unique_entities = list({occ["entity"] for occ in occurrences})
+            if len(unique_entities) < 2:
+                continue
+
+            all_event_ids = []
+            for occ in occurrences:
+                all_event_ids.extend(occ["event_ids"])
+
+            entity_count = len(unique_entities)
+            occurrence_count = len(occurrences)
+            significance = min(1.0, (entity_count - 1) * 0.3 + (occurrence_count - 2) * 0.1)
+
+            patterns.append(
+                {
+                    "pattern_type": "behavioral",
+                    "description": (
+                        f"Repeated sequence '{seq_key}' observed across "
+                        f"{entity_count} entities ({occurrence_count} occurrences)"
+                    ),
+                    "evidence": all_event_ids[:20],
+                    "significance": round(significance, 3),
+                    "entities_involved": unique_entities[:20],
+                }
+            )
+
+        patterns.sort(key=lambda p: p["significance"], reverse=True)
+        return patterns[:30]
+
+    async def _detect_temporal_clusters(self, project_id: str = None) -> List[Dict]:
+        """
+        Detect suspicious temporal clustering of events.
+
+        Groups events into 7-day windows and flags clusters where
+        event density significantly exceeds the baseline average.
+        """
+        from datetime import timedelta
+
+        if not self._db:
+            return []
+
+        query = """SELECT id, event_type, event_date, title
+                   FROM arkham_timeline_events"""
+        params: Dict[str, Any] = {}
+
+        if project_id:
+            query += " WHERE project_id = :project_id"
+            params["project_id"] = project_id
+
+        query += " ORDER BY event_date"
+
+        events = await self._db.fetch_all(query, params)
+        if not events:
+            return []
+
+        # Parse dates
+        dated_events: List[Dict] = []
+        for event in events:
+            date_str = event.get("event_date", "")
+            if not date_str:
+                continue
+            try:
+                event_date = datetime.fromisoformat(str(date_str).replace("Z", "+00:00").split("T")[0])
+                dated_events.append({**event, "_parsed_date": event_date})
+            except (ValueError, TypeError):
+                continue
+
+        if not dated_events:
+            return []
+
+        dates = [e["_parsed_date"] for e in dated_events]
+        min_date = min(dates)
+        max_date = max(dates)
+        total_days = (max_date - min_date).days + 1
+
+        if total_days < 7:
+            if len(dated_events) >= 3:
+                event_ids = [e.get("id", "") for e in dated_events if e.get("id")]
+                return [
+                    {
+                        "pattern_type": "temporal_cluster",
+                        "description": (
+                            f"Cluster of {len(dated_events)} events within "
+                            f"{total_days} days ({min_date.strftime('%Y-%m-%d')})"
+                        ),
+                        "evidence": event_ids[:20],
+                        "significance": min(1.0, len(dated_events) / 10.0),
+                        "entities_involved": [],
+                    }
+                ]
+            return []
+
+        # Group into 7-day windows
+        window_size = 7
+        windows: Dict[int, List[Dict]] = {}
+        for event in dated_events:
+            window_idx = (event["_parsed_date"] - min_date).days // window_size
+            if window_idx not in windows:
+                windows[window_idx] = []
+            windows[window_idx].append(event)
+
+        total_windows = max(1, total_days // window_size + 1)
+        avg_events_per_window = len(dated_events) / total_windows
+
+        # Flag windows with density > 2x baseline and >= 3 events
+        patterns: List[Dict] = []
+        threshold = max(3, avg_events_per_window * 2)
+
+        for window_idx, window_events in windows.items():
+            if len(window_events) < threshold:
+                continue
+
+            window_start = min_date + timedelta(days=window_idx * window_size)
+            window_end = window_start + timedelta(days=window_size - 1)
+
+            event_ids = [e.get("id", "") for e in window_events if e.get("id")]
+            event_types = list({e.get("event_type", "") for e in window_events if e.get("event_type")})
+
+            density_ratio = len(window_events) / max(avg_events_per_window, 1)
+            significance = min(1.0, density_ratio / 5.0)
+
+            patterns.append(
+                {
+                    "pattern_type": "temporal_cluster",
+                    "description": (
+                        f"Cluster of {len(window_events)} events between "
+                        f"{window_start.strftime('%Y-%m-%d')} and "
+                        f"{window_end.strftime('%Y-%m-%d')} "
+                        f"({density_ratio:.1f}x baseline density). "
+                        f"Event types: {', '.join(event_types[:5])}"
+                    ),
+                    "evidence": event_ids[:20],
+                    "significance": round(significance, 3),
+                    "entities_involved": [],
+                }
+            )
+
+        patterns.sort(key=lambda p: p["significance"], reverse=True)
+        return patterns[:20]
+
+    async def _detect_communication_patterns(self, project_id: str = None) -> List[Dict]:
+        """
+        Detect communication patterns from entity mentions.
+
+        Identifies:
+        1. Entities that always co-occur in the same documents
+        2. Entities that suddenly stop appearing (communication drop-off)
+        """
+        if not self._db:
+            return []
+
+        query = """SELECT entity_id, entity_name, document_id
+                   FROM arkham_entity_mentions"""
+        params: Dict[str, Any] = {}
+
+        if project_id:
+            query += " WHERE document_id IN (SELECT id FROM arkham_frame.documents WHERE project_id = :project_id)"
+            params["project_id"] = project_id
+
+        query += " ORDER BY document_id"
+
+        mentions = await self._db.fetch_all(query, params)
+        if not mentions:
+            return []
+
+        # Build entity -> set of documents mapping
+        entity_docs: Dict[str, set] = {}
+        entity_names: Dict[str, str] = {}
+        doc_entities: Dict[str, set] = {}
+
+        for mention in mentions:
+            eid = mention.get("entity_id", "")
+            ename = mention.get("entity_name", eid)
+            doc_id = mention.get("document_id", "")
+            if not eid or not doc_id:
+                continue
+
+            entity_names[eid] = ename
+            if eid not in entity_docs:
+                entity_docs[eid] = set()
+            entity_docs[eid].add(doc_id)
+
+            if doc_id not in doc_entities:
+                doc_entities[doc_id] = set()
+            doc_entities[doc_id].add(eid)
+
+        patterns: List[Dict] = []
+
+        # 1. Co-occurrence detection: entities that always appear together
+        entity_ids = list(entity_docs.keys())
+        for i in range(len(entity_ids)):
+            for j in range(i + 1, len(entity_ids)):
+                eid1 = entity_ids[i]
+                eid2 = entity_ids[j]
+                docs1 = entity_docs[eid1]
+                docs2 = entity_docs[eid2]
+                common = docs1 & docs2
+
+                if len(common) < 3:
+                    continue
+
+                union = docs1 | docs2
+                jaccard = len(common) / len(union) if union else 0
+
+                if jaccard >= 0.6:
+                    name1 = entity_names.get(eid1, eid1)
+                    name2 = entity_names.get(eid2, eid2)
+                    significance = min(1.0, jaccard * (len(common) / 5.0))
+
+                    patterns.append(
+                        {
+                            "pattern_type": "communication",
+                            "description": (
+                                f"Strong co-occurrence: '{name1}' and '{name2}' "
+                                f"appear together in {len(common)}/{len(union)} "
+                                f"documents (Jaccard={jaccard:.2f})"
+                            ),
+                            "evidence": list(common)[:20],
+                            "significance": round(significance, 3),
+                            "entities_involved": [name1, name2],
+                        }
+                    )
+
+        # 2. Drop-off detection: entities active then suddenly silent
+        all_docs_ordered = sorted(doc_entities.keys())
+        if len(all_docs_ordered) >= 4:
+            midpoint = len(all_docs_ordered) // 2
+            first_half_docs = set(all_docs_ordered[:midpoint])
+            second_half_docs = set(all_docs_ordered[midpoint:])
+
+            for eid, docs in entity_docs.items():
+                if len(docs) < 3:
+                    continue
+                first_half_count = len(docs & first_half_docs)
+                second_half_count = len(docs & second_half_docs)
+
+                if first_half_count >= 3 and second_half_count == 0:
+                    name = entity_names.get(eid, eid)
+                    significance = min(1.0, first_half_count / 5.0)
+                    patterns.append(
+                        {
+                            "pattern_type": "communication",
+                            "description": (
+                                f"Communication drop-off: '{name}' appeared in "
+                                f"{first_half_count} early documents but absent "
+                                f"from later documents"
+                            ),
+                            "evidence": list(docs)[:20],
+                            "significance": round(significance, 3),
+                            "entities_involved": [name],
+                        }
+                    )
+
+        patterns.sort(key=lambda p: p["significance"], reverse=True)
+        return patterns[:30]
 
     def _row_to_pattern(self, row: Dict[str, Any]) -> Pattern:
         """Convert database row to Pattern object."""

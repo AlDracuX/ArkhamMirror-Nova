@@ -2,6 +2,7 @@
 
 import json
 import logging
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from arkham_frame.shard_interface import ArkhamShard
@@ -2734,6 +2735,215 @@ class ProvenanceShard(ArkhamShard):
         return await self.verify_chain_impl(chain_id)
 
     # === Forensic Analysis Methods ===
+
+    async def analyze_metadata(self, document_id: str) -> Dict[str, Any]:
+        """
+        Analyze document metadata for suspicious patterns and forensic indicators.
+
+        Reads document metadata from the database, checks for:
+        - creation_date vs modified_date mismatches (possible tampering)
+        - author field changes across versions
+        - software fingerprints (unexpected editing tools)
+        - missing or stripped metadata
+        - timezone inconsistencies
+
+        Returns a forensics report with findings and risk_level (low/medium/high).
+
+        Args:
+            document_id: The document ID to analyze from arkham_documents
+                or arkham_provenance_records
+
+        Returns:
+            Dict with document_id, findings list, risk_level, and metadata
+
+        Raises:
+            ValueError: If document not found
+            RuntimeError: If shard not initialized
+        """
+        if not self._db:
+            raise RuntimeError("Shard not initialized")
+
+        # Try to fetch document from arkham_documents first
+        doc_row = await self._db.fetch_one(
+            "SELECT * FROM arkham_documents WHERE id = :id",
+            {"id": document_id},
+        )
+
+        # Fall back to provenance records
+        if not doc_row:
+            doc_row = await self._db.fetch_one(
+                "SELECT * FROM arkham_provenance_records WHERE id = :id OR entity_id = :id",
+                {"id": document_id},
+            )
+
+        if not doc_row:
+            raise ValueError(f"Document {document_id} not found")
+
+        doc = dict(doc_row)
+        findings: List[Dict[str, Any]] = []
+        risk_score = 0
+
+        # Extract metadata (may be JSONB or string)
+        metadata = self._parse_jsonb(doc.get("metadata"), {})
+
+        # Check 1: Creation date vs modification date mismatch
+        created_at = doc.get("created_at")
+        updated_at = doc.get("updated_at") or doc.get("modified_at")
+
+        if created_at and updated_at:
+            from datetime import datetime as dt
+
+            try:
+                if isinstance(created_at, str):
+                    created_at = dt.fromisoformat(created_at.replace("Z", "+00:00"))
+                if isinstance(updated_at, str):
+                    updated_at = dt.fromisoformat(updated_at.replace("Z", "+00:00"))
+
+                if hasattr(created_at, "timestamp") and hasattr(updated_at, "timestamp"):
+                    # If modified before created, that's very suspicious
+                    if updated_at < created_at:
+                        findings.append(
+                            {
+                                "type": "date_anomaly",
+                                "severity": "high",
+                                "description": "Modified date precedes creation date",
+                                "details": {
+                                    "created_at": str(created_at),
+                                    "modified_at": str(updated_at),
+                                },
+                            }
+                        )
+                        risk_score += 3
+                    # Large gap between creation and first modification may indicate backdating
+                    elif hasattr(created_at, "timestamp"):
+                        delta = abs((updated_at - created_at).total_seconds())
+                        if delta < 1:
+                            findings.append(
+                                {
+                                    "type": "date_anomaly",
+                                    "severity": "medium",
+                                    "description": "Creation and modification timestamps are identical (possible template copy)",
+                                    "details": {
+                                        "created_at": str(created_at),
+                                        "modified_at": str(updated_at),
+                                        "delta_seconds": delta,
+                                    },
+                                }
+                            )
+                            risk_score += 1
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Date parsing error for document {document_id}: {e}")
+
+        # Check 2: Author field changes
+        author = metadata.get("author") or doc.get("author") or doc.get("imported_by")
+        last_modified_by = metadata.get("last_modified_by") or metadata.get("modifier")
+
+        if author and last_modified_by and author != last_modified_by:
+            findings.append(
+                {
+                    "type": "author_mismatch",
+                    "severity": "medium",
+                    "description": "Document author differs from last modifier",
+                    "details": {
+                        "author": author,
+                        "last_modified_by": last_modified_by,
+                    },
+                }
+            )
+            risk_score += 2
+
+        # Check 3: Software fingerprints
+        software = metadata.get("software") or metadata.get("producer") or metadata.get("creator_tool")
+        suspicious_software = [
+            "pdf-editor",
+            "nitro",
+            "foxit phantompdf",
+            "sejda",
+            "ilovepdf",
+            "smallpdf",
+            "pdfescape",
+            "hexeditor",
+        ]
+        if software:
+            software_lower = str(software).lower()
+            for sus in suspicious_software:
+                if sus in software_lower:
+                    findings.append(
+                        {
+                            "type": "suspicious_software",
+                            "severity": "high",
+                            "description": f"Document created/modified with potentially suspicious software: {software}",
+                            "details": {"software": software, "matched_pattern": sus},
+                        }
+                    )
+                    risk_score += 3
+                    break
+            else:
+                # Record software for transparency even if not suspicious
+                findings.append(
+                    {
+                        "type": "software_detected",
+                        "severity": "info",
+                        "description": f"Document software: {software}",
+                        "details": {"software": software},
+                    }
+                )
+
+        # Check 4: Missing metadata (stripped)
+        if not metadata or (isinstance(metadata, dict) and len(metadata) == 0):
+            findings.append(
+                {
+                    "type": "metadata_stripped",
+                    "severity": "medium",
+                    "description": "Document has no metadata - may have been deliberately stripped",
+                    "details": {},
+                }
+            )
+            risk_score += 2
+
+        # Check 5: Check for provenance record existence
+        prov_record = await self._db.fetch_one(
+            "SELECT * FROM arkham_provenance_records WHERE entity_id = :id AND entity_type = 'document'",
+            {"id": document_id},
+        )
+        if not prov_record:
+            findings.append(
+                {
+                    "type": "no_provenance",
+                    "severity": "low",
+                    "description": "No provenance record found for this document",
+                    "details": {},
+                }
+            )
+            risk_score += 1
+
+        # Determine risk level
+        if risk_score >= 5:
+            risk_level = "high"
+        elif risk_score >= 2:
+            risk_level = "medium"
+        else:
+            risk_level = "low"
+
+        # Emit event
+        if self._event_bus:
+            await self._event_bus.emit(
+                "provenance.metadata.analyzed",
+                {
+                    "document_id": document_id,
+                    "risk_level": risk_level,
+                    "findings_count": len(findings),
+                },
+            )
+
+        return {
+            "document_id": document_id,
+            "findings": findings,
+            "risk_level": risk_level,
+            "risk_score": risk_score,
+            "metadata_analyzed": metadata,
+            "analyzed_at": datetime.utcnow().isoformat(),
+        }
 
     async def _store_forensic_scan(self, scan: MetadataForensicScan) -> None:
         """

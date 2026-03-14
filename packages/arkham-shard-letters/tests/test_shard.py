@@ -277,6 +277,176 @@ class TestTemplateApplication:
             )
 
 
+class TestDraftLetter:
+    """Test draft_letter method with built-in and stored templates."""
+
+    @pytest.mark.asyncio
+    async def test_draft_directions_response(self, shard, mock_frame):
+        """Test drafting a directions response letter."""
+        variables = {
+            "case_number": "6013156/2024",
+            "directions_date": "1 March 2026",
+            "response_body": "The Claimant has complied with paragraph 1 of the directions.",
+            "party_name": "Claimant",
+        }
+
+        result = await shard.draft_letter("directions_response", variables)
+
+        assert isinstance(result, str)
+        assert "6013156/2024" in result
+        assert "1 March 2026" in result
+        assert "Claimant" in result
+        assert "Subject:" in result
+
+    @pytest.mark.asyncio
+    async def test_draft_disclosure_request(self, shard, mock_frame):
+        """Test drafting a disclosure request letter."""
+        variables = {
+            "case_number": "6013156/2024",
+            "party_name": "Claimant",
+            "document_list": "1. Employment contract\n2. Payslips for 2023-2024",
+            "relevance_explanation": "These documents are essential to the unfair dismissal claim.",
+            "response_deadline": "14",
+        }
+
+        result = await shard.draft_letter("disclosure_request", variables)
+
+        assert "Employment contract" in result
+        assert "Rule 31" in result
+        assert "14 days" in result
+
+    @pytest.mark.asyncio
+    async def test_draft_witness_order(self, shard, mock_frame):
+        """Test drafting a witness order application."""
+        variables = {
+            "case_number": "6013156/2024",
+            "witness_name": "Jane Smith",
+            "witness_address": "123 High Street, Bristol",
+            "necessity_explanation": "The witness has direct knowledge of the dismissal meeting.",
+            "voluntary_attempts": "Three written requests were made and ignored.",
+            "hearing_dates": "7-10 July 2026",
+            "attendance_date": "8 July 2026",
+        }
+
+        result = await shard.draft_letter("witness_order", variables)
+
+        assert "Jane Smith" in result
+        assert "Rule 32" in result
+        assert "7-10 July 2026" in result
+
+    @pytest.mark.asyncio
+    async def test_draft_costs_warning(self, shard, mock_frame):
+        """Test drafting a costs warning letter."""
+        variables = {
+            "case_number": "6013156/2024",
+            "party_name": "Bylor Ltd",
+            "costs_grounds": "The response has no reasonable prospect of success.",
+            "costs_amount": "15,000 GBP",
+            "respondent_name": "Bylor Ltd",
+        }
+
+        result = await shard.draft_letter("costs_warning", variables)
+
+        assert "Rule 76" in result
+        assert "15,000 GBP" in result
+        assert "Bylor Ltd" in result
+
+    @pytest.mark.asyncio
+    async def test_draft_unknown_template_raises(self, shard, mock_frame):
+        """Test that unknown template ID raises ValueError."""
+        shard.get_template = AsyncMock(return_value=None)
+
+        with pytest.raises(ValueError, match="Template .* not found"):
+            await shard.draft_letter("nonexistent_template", {})
+
+    @pytest.mark.asyncio
+    async def test_draft_stored_template(self, shard, mock_frame):
+        """Test draft_letter falls back to stored template."""
+        stored_template = LetterTemplate(
+            id="stored-1",
+            name="Custom Template",
+            letter_type=LetterType.CUSTOM,
+            description="Test stored template",
+            content_template="Dear {{recipient}}, this is about {{topic}}.",
+            placeholders=["recipient", "topic"],
+            required_placeholders=[],
+        )
+        shard.get_template = AsyncMock(return_value=stored_template)
+
+        result = await shard.draft_letter("stored-1", {"recipient": "Judge", "topic": "costs"})
+
+        assert "Dear Judge" in result
+        assert "costs" in result
+
+    @pytest.mark.asyncio
+    async def test_draft_with_unfilled_placeholders(self, shard, mock_frame):
+        """Test that unfilled placeholders remain as-is in output."""
+        variables = {
+            "case_number": "6013156/2024",
+            # Missing: directions_date, response_body, party_name
+        }
+
+        result = await shard.draft_letter("directions_response", variables)
+
+        assert "6013156/2024" in result
+        # Unfilled placeholders remain
+        assert "{{directions_date}}" in result
+
+    @pytest.mark.asyncio
+    async def test_draft_with_llm_enhancement(self, shard, mock_frame):
+        """Test that draft_letter uses LLM enhancement when available."""
+        # Set up a mock LLM
+        mock_llm = MagicMock()
+        mock_llm.generate = AsyncMock(return_value="Enhanced letter content with better phrasing.")
+        shard._llm = mock_llm
+
+        variables = {
+            "case_number": "6013156/2024",
+            "directions_date": "1 March 2026",
+            "response_body": "Complied.",
+            "party_name": "Claimant",
+        }
+
+        result = await shard.draft_letter("directions_response", variables)
+
+        # LLM should have been called
+        mock_llm.generate.assert_called_once()
+        assert "Enhanced letter content" in result
+
+    @pytest.mark.asyncio
+    async def test_draft_llm_failure_falls_back(self, shard, mock_frame):
+        """Test that LLM failure falls back to raw template."""
+        mock_llm = MagicMock()
+        mock_llm.generate = AsyncMock(side_effect=Exception("LLM error"))
+        shard._llm = mock_llm
+
+        variables = {
+            "case_number": "6013156/2024",
+            "directions_date": "1 March 2026",
+            "response_body": "Complied.",
+            "party_name": "Claimant",
+        }
+
+        result = await shard.draft_letter("directions_response", variables)
+
+        # Should still have the raw template content
+        assert "6013156/2024" in result
+        assert "1 March 2026" in result
+
+    def test_et_templates_exist(self, shard):
+        """Test that all required ET templates are defined."""
+        expected = {"directions_response", "disclosure_request", "witness_order", "costs_warning"}
+        assert expected == set(shard.ET_LETTER_TEMPLATES.keys())
+
+    def test_et_templates_have_required_fields(self, shard):
+        """Test that all ET templates have name, letter_type, and content_template."""
+        for key, tmpl in shard.ET_LETTER_TEMPLATES.items():
+            assert "name" in tmpl, f"{key} missing name"
+            assert "letter_type" in tmpl, f"{key} missing letter_type"
+            assert "content_template" in tmpl, f"{key} missing content_template"
+            assert "{{" in tmpl["content_template"], f"{key} has no placeholders"
+
+
 class TestLetterExport:
     """Test letter export functionality."""
 

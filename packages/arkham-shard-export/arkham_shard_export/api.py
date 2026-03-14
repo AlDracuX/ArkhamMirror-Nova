@@ -376,14 +376,22 @@ async def get_targets(request: Request):
 
 @router.post("/preview", response_model=PreviewResponse)
 async def preview_export(body: PreviewRequest, request: Request):
-    """Preview export without creating a file."""
-    # Stub implementation
-    return PreviewResponse(
+    """Preview export data without creating a file."""
+    shard = get_shard(request)
+
+    result = await shard.preview_data(
         format=body.format.value,
         target=body.target.value,
-        estimated_record_count=0,
-        preview_records=[],
-        estimated_file_size_bytes=0,
+        filters=body.filters or {},
+        max_preview_records=body.max_preview_records,
+    )
+
+    return PreviewResponse(
+        format=result["format"],
+        target=result["target"],
+        estimated_record_count=result["estimated_record_count"],
+        preview_records=result["preview_records"],
+        estimated_file_size_bytes=result["estimated_file_size_bytes"],
     )
 
 

@@ -659,6 +659,177 @@ class LettersShard(ArkhamShard):
 
         return letter
 
+    # === Built-in ET Letter Templates ===
+
+    ET_LETTER_TEMPLATES = {
+        "directions_response": {
+            "name": "Directions Response",
+            "letter_type": "response",
+            "subject_template": "Re: Case No. {{case_number}} - Response to Directions",
+            "content_template": (
+                "I write in response to the Tribunal's directions dated {{directions_date}} "
+                "in the above matter.\n\n"
+                "{{response_body}}\n\n"
+                "I confirm that the {{party_name}} will comply with the directions as set out above "
+                "and within the timescales ordered.\n\n"
+                "If the Tribunal requires any further information, please do not hesitate to contact me."
+            ),
+        },
+        "disclosure_request": {
+            "name": "Disclosure Request",
+            "letter_type": "demand",
+            "subject_template": "Re: Case No. {{case_number}} - Request for Specific Disclosure",
+            "content_template": (
+                "I write on behalf of {{party_name}} in the above matter to request specific disclosure "
+                "of the following documents:\n\n"
+                "{{document_list}}\n\n"
+                "These documents are relevant and necessary to the issues in this case because:\n\n"
+                "{{relevance_explanation}}\n\n"
+                "Please confirm within {{response_deadline}} days whether the requested documents "
+                "will be disclosed voluntarily. In the absence of voluntary disclosure, an application "
+                "for specific disclosure under Rule 31 will be made to the Tribunal.\n\n"
+                "I reserve the right to draw adverse inferences from any failure to disclose."
+            ),
+        },
+        "witness_order": {
+            "name": "Witness Order Application",
+            "letter_type": "notice",
+            "subject_template": "Re: Case No. {{case_number}} - Application for Witness Order",
+            "content_template": (
+                "I write to apply for a witness order under Rule 32 of the Employment Tribunals "
+                "Rules of Procedure 2013 in respect of the following witness:\n\n"
+                "Name: {{witness_name}}\n"
+                "Address: {{witness_address}}\n\n"
+                "The evidence of this witness is necessary because:\n\n"
+                "{{necessity_explanation}}\n\n"
+                "It has not been possible to secure the voluntary attendance of this witness because:\n\n"
+                "{{voluntary_attempts}}\n\n"
+                "The final hearing is listed for {{hearing_dates}} and the witness is required to attend "
+                "on {{attendance_date}}.\n\n"
+                "I attach a draft witness order for the Tribunal's consideration."
+            ),
+        },
+        "costs_warning": {
+            "name": "Costs Warning Letter",
+            "letter_type": "demand",
+            "subject_template": "Re: Case No. {{case_number}} - Costs Warning",
+            "content_template": (
+                "I write to put you on notice that, in the event that {{party_name}} is unsuccessful "
+                "in defending this claim, an application for costs will be made under Rule 76 of the "
+                "Employment Tribunals Rules of Procedure 2013.\n\n"
+                "The grounds for the costs application will be that the response (or the manner in which "
+                "the proceedings have been conducted) has been:\n\n"
+                "{{costs_grounds}}\n\n"
+                "The costs incurred to date are approximately {{costs_amount}} and continue to accrue.\n\n"
+                "This letter serves as a formal warning under Rule 76(1). I invite {{respondent_name}} "
+                "to reconsider their position. Should the matter not be resolved, this correspondence "
+                "will be brought to the Tribunal's attention in any costs application.\n\n"
+                "I urge you to give this matter your immediate and serious consideration."
+            ),
+        },
+    }
+
+    # === Draft Letter from Template ===
+
+    async def draft_letter(
+        self,
+        template_id: str,
+        variables: Dict[str, str],
+    ) -> str:
+        """
+        Draft a letter using a built-in or stored template with variable substitution.
+
+        First checks built-in ET letter templates, then falls back to stored templates.
+        If LLM is available, enhances the draft with better phrasing.
+
+        Args:
+            template_id: Template identifier (e.g., "directions_response", "disclosure_request",
+                        "witness_order", "costs_warning") or a stored template UUID
+            variables: Dict mapping placeholder names to their values
+
+        Returns:
+            The rendered letter content as a string
+
+        Raises:
+            ValueError: If template_id is not found in built-in or stored templates
+        """
+        content = None
+        subject = None
+
+        # Check built-in ET templates first
+        if template_id in self.ET_LETTER_TEMPLATES:
+            tmpl = self.ET_LETTER_TEMPLATES[template_id]
+            content = self._render_template(tmpl["content_template"], variables)
+            if tmpl.get("subject_template"):
+                subject = self._render_template(tmpl["subject_template"], variables)
+        else:
+            # Fall back to stored template
+            stored_template = await self.get_template(template_id)
+            if not stored_template:
+                raise ValueError(
+                    f"Template '{template_id}' not found. "
+                    f"Available built-in templates: {', '.join(sorted(self.ET_LETTER_TEMPLATES.keys()))}"
+                )
+            content = self._render_template(stored_template.content_template, variables)
+            if stored_template.subject_template:
+                subject = self._render_template(stored_template.subject_template, variables)
+
+        # If LLM available, enhance the draft with better phrasing
+        if self._llm and content:
+            try:
+                enhanced = await self._enhance_with_llm(content, template_id)
+                if enhanced:
+                    content = enhanced
+            except Exception as e:
+                logger.warning(f"LLM enhancement failed, using raw template: {e}")
+
+        # Prepend subject line if present
+        if subject:
+            content = f"Subject: {subject}\n\n{content}"
+
+        return content
+
+    async def _enhance_with_llm(self, content: str, template_id: str) -> Optional[str]:
+        """
+        Enhance letter content with LLM for better phrasing.
+
+        Preserves the factual content and legal references but improves
+        clarity, tone, and professional language.
+
+        Args:
+            content: Raw template-rendered content
+            template_id: Template identifier for context
+
+        Returns:
+            Enhanced content string, or None if enhancement fails
+        """
+        prompt = (
+            "You are a legal correspondence assistant. Improve the phrasing and clarity of the "
+            "following Employment Tribunal letter while preserving ALL factual details, case numbers, "
+            "names, dates, and legal references exactly as written. Do not add new legal arguments. "
+            "Do not remove any information. Only improve clarity, grammar, and professional tone.\n\n"
+            f"Letter type: {template_id}\n\n"
+            f"Original text:\n{content}\n\n"
+            "Improved text:"
+        )
+
+        if hasattr(self._llm, "generate"):
+            response = await self._llm.generate(prompt)
+        elif hasattr(self._llm, "complete"):
+            response = await self._llm.complete(prompt)
+        else:
+            return None
+
+        # Extract text from response
+        if hasattr(response, "text"):
+            return response.text.strip()
+        elif isinstance(response, dict) and "text" in response:
+            return response["text"].strip()
+        elif isinstance(response, str):
+            return response.strip()
+
+        return None
+
     # === Export Methods ===
 
     async def export_letter(

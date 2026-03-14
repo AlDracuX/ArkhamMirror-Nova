@@ -345,7 +345,19 @@ class TestPreviewEndpoint:
     """Tests for POST /api/export/preview"""
 
     def test_preview_export(self, client, mock_shard):
-        """Test previewing an export."""
+        """Test previewing an export returns sample records."""
+        mock_shard.preview_data = AsyncMock(
+            return_value={
+                "format": "json",
+                "target": "documents",
+                "estimated_record_count": 2,
+                "preview_records": [
+                    {"id": "1", "title": "Doc A"},
+                    {"id": "2", "title": "Doc B"},
+                ],
+                "estimated_file_size_bytes": 400,
+            }
+        )
         response = client.post(
             "/api/export/preview",
             json={
@@ -358,6 +370,33 @@ class TestPreviewEndpoint:
         data = response.json()
         assert data["format"] == "json"
         assert data["target"] == "documents"
+        assert data["estimated_record_count"] == 2
+        assert len(data["preview_records"]) == 2
+        assert data["preview_records"][0]["title"] == "Doc A"
+        assert data["estimated_file_size_bytes"] == 400
+
+    def test_preview_export_empty(self, client, mock_shard):
+        """Test previewing when no data available."""
+        mock_shard.preview_data = AsyncMock(
+            return_value={
+                "format": "csv",
+                "target": "entities",
+                "estimated_record_count": 0,
+                "preview_records": [],
+                "estimated_file_size_bytes": 0,
+            }
+        )
+        response = client.post(
+            "/api/export/preview",
+            json={
+                "format": "csv",
+                "target": "entities",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["estimated_record_count"] == 0
+        assert data["preview_records"] == []
 
 
 # === Statistics Endpoint Tests ===

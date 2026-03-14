@@ -668,6 +668,52 @@ class TestPromptBuilding:
         assert "title" in prompt
 
 
+class TestSummarizeDocument:
+    """Test the summarize_document convenience method."""
+
+    @pytest.mark.asyncio
+    async def test_summarize_document_with_llm(self, shard_with_llm):
+        """Test summarizing a single document with LLM."""
+        result = await shard_with_llm.summarize_document("doc-123")
+
+        assert result["document_id"] == "doc-123"
+        assert result["summary_text"] != ""
+        assert result["method"] == "llm"
+        assert result["summary_id"] is not None
+        assert result["word_count"] > 0
+        assert result["status"] == "completed"
+        assert "created_at" in result
+
+    @pytest.mark.asyncio
+    async def test_summarize_document_without_llm(self, shard_without_llm):
+        """Test summarizing a single document with extractive fallback."""
+        result = await shard_without_llm.summarize_document("doc-123")
+
+        assert result["document_id"] == "doc-123"
+        assert result["summary_text"] != ""
+        assert result["method"] == "extractive"
+        assert result["status"] == "completed"
+
+    @pytest.mark.asyncio
+    async def test_summarize_document_returns_key_points(self, shard_with_llm):
+        """Test that summarize_document returns key_points list."""
+        result = await shard_with_llm.summarize_document("doc-123")
+
+        assert "key_points" in result
+        assert isinstance(result["key_points"], list)
+
+    @pytest.mark.asyncio
+    async def test_summarize_document_stores_in_db(self, shard_with_llm):
+        """Test that summarize_document stores the summary for later retrieval."""
+        result = await shard_with_llm.summarize_document("doc-123")
+        summary_id = result["summary_id"]
+
+        # Verify it was stored
+        stored = await shard_with_llm.get_summary(summary_id)
+        assert stored is not None
+        assert stored.id == summary_id
+
+
 class TestExtractiveSummarization:
     """Test extractive summarization fallback."""
 

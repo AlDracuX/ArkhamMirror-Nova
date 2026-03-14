@@ -381,3 +381,137 @@ class TestStatistics:
         assert stats.total_reports == 100
         assert stats.total_templates == 10
         assert stats.total_schedules == 5
+
+
+class TestGenerateReportStructured:
+    """Tests for the structured report generation method."""
+
+    @pytest.mark.asyncio
+    async def test_generate_case_status_report(self, shard):
+        """Test generating a case_status report returns sections."""
+        # Mock DB responses for case status queries
+        shard._db.fetch_one = AsyncMock(
+            side_effect=[
+                {"count": 25},  # document count
+                {"count": 10},  # claims count
+                {"count": 15},  # entity count
+            ]
+        )
+        shard._db.fetch_all = AsyncMock(
+            return_value=[
+                {"status": "processed", "count": 20},
+                {"status": "pending", "count": 5},
+            ]
+        )
+
+        result = await shard.generate_report_structured(
+            "case_status",
+            {"title": "Case Status Report"},
+        )
+
+        assert result["report_id"] is not None
+        assert result["title"] == "Case Status Report"
+        assert result["report_type"] == "case_status"
+        assert result["status"] == "completed"
+        assert len(result["sections"]) > 0
+        assert "generated_at" in result
+
+        # Check sections have title and content
+        for section in result["sections"]:
+            assert "title" in section
+            assert "content" in section
+
+    @pytest.mark.asyncio
+    async def test_generate_evidence_summary_report(self, shard):
+        """Test generating an evidence_summary report."""
+        shard._db.fetch_all = AsyncMock(
+            side_effect=[
+                # Documents
+                [
+                    {"id": "doc-1", "title": "Document 1", "status": "processed", "created_at": "2026-01-01T00:00:00"},
+                ],
+                # Claims
+                [
+                    {"id": "claim-1", "claim_text": "Test claim", "status": "verified", "confidence": 0.95},
+                ],
+            ]
+        )
+
+        result = await shard.generate_report_structured(
+            "evidence_summary",
+            {"limit": 10},
+        )
+
+        assert result["report_type"] == "evidence_summary"
+        assert len(result["sections"]) >= 2
+        section_titles = [s["title"] for s in result["sections"]]
+        assert "Recent Documents" in section_titles
+        assert "Claims" in section_titles
+
+    @pytest.mark.asyncio
+    async def test_generate_timeline_report(self, shard):
+        """Test generating a timeline_report."""
+        shard._db.fetch_all = AsyncMock(
+            side_effect=[
+                # Timeline events
+                [
+                    {
+                        "id": "evt-1",
+                        "title": "Event 1",
+                        "event_date": "2026-01-01",
+                        "event_type": "hearing",
+                        "description": "Initial hearing",
+                    },
+                ],
+                # Documents
+                [
+                    {"id": "doc-1", "title": "Doc 1", "created_at": "2026-01-01T00:00:00"},
+                ],
+            ]
+        )
+
+        result = await shard.generate_report_structured(
+            "timeline_report",
+            {"limit": 50},
+        )
+
+        assert result["report_type"] == "timeline_report"
+        assert len(result["sections"]) >= 2
+        section_titles = [s["title"] for s in result["sections"]]
+        assert "Timeline Events" in section_titles
+        assert "Document Timeline" in section_titles
+
+    @pytest.mark.asyncio
+    async def test_generate_unknown_type(self, shard):
+        """Test generating unknown report type returns fallback section."""
+        result = await shard.generate_report_structured(
+            "nonexistent_type",
+            {},
+        )
+
+        assert result["report_type"] == "nonexistent_type"
+        assert len(result["sections"]) == 1
+        assert "Unknown report type" in result["sections"][0]["content"]
+
+    @pytest.mark.asyncio
+    async def test_generate_report_emits_event(self, shard, mock_frame):
+        """Test that report generation emits an event."""
+        shard._db.fetch_one = AsyncMock(return_value={"count": 0})
+        shard._db.fetch_all = AsyncMock(return_value=[])
+        mock_frame.events.emit.reset_mock()
+
+        await shard.generate_report_structured("case_status", {})
+
+        mock_frame.events.emit.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_generate_report_handles_db_errors(self, shard):
+        """Test that DB errors produce graceful fallback sections."""
+        shard._db.fetch_one = AsyncMock(side_effect=Exception("DB error"))
+        shard._db.fetch_all = AsyncMock(side_effect=Exception("DB error"))
+
+        result = await shard.generate_report_structured("case_status", {})
+
+        assert result["status"] == "completed"
+        # Sections should still exist with error info
+        assert len(result["sections"]) > 0

@@ -281,6 +281,299 @@ class ReportsShard(ArkhamShard):
 
         return report
 
+    async def generate_report_structured(
+        self,
+        template_id: str,
+        params: dict,
+    ) -> Dict[str, Any]:
+        """
+        Generate a structured report with sections from database queries.
+
+        Supports report types: "case_status", "evidence_summary", "timeline_report".
+        Queries relevant data directly from the database based on report type,
+        formats it as sections (each with title + content), and stores the
+        generated report in the arkham_reports table.
+
+        Args:
+            template_id: Report template ID or report type string
+                ("case_status", "evidence_summary", "timeline_report")
+            params: Parameters for the report (date_range, filters, etc.)
+
+        Returns:
+            Dict with report_id, title, sections, metadata, and generated_at
+        """
+        if not self._db:
+            raise RuntimeError("Shard not initialized")
+
+        # Determine report type from template_id string
+        report_type_map = {
+            "case_status": ReportType.SUMMARY,
+            "evidence_summary": ReportType.SUMMARY,
+            "timeline_report": ReportType.TIMELINE,
+        }
+        report_type = report_type_map.get(template_id, ReportType.CUSTOM)
+        title = params.get("title", f"{template_id.replace('_', ' ').title()} Report")
+
+        # Generate sections based on report type
+        sections = await self._generate_sections(template_id, params)
+
+        # Create and save the report record
+        report_id = str(uuid4())
+        now = datetime.utcnow()
+
+        report = Report(
+            id=report_id,
+            report_type=report_type,
+            title=title,
+            status=ReportStatus.COMPLETED,
+            created_at=now,
+            completed_at=now,
+            parameters=params,
+            output_format=ReportFormat.JSON,
+        )
+        await self._save_report(report)
+
+        # Emit event
+        if self._events:
+            await self._events.emit(
+                "reports.report.generated",
+                {
+                    "report_id": report_id,
+                    "report_type": template_id,
+                    "section_count": len(sections),
+                },
+                source=self.name,
+            )
+
+        return {
+            "report_id": report_id,
+            "title": title,
+            "report_type": template_id,
+            "sections": sections,
+            "parameters": params,
+            "generated_at": now.isoformat(),
+            "status": "completed",
+        }
+
+    async def _generate_sections(
+        self,
+        report_type: str,
+        params: dict,
+    ) -> List[Dict[str, Any]]:
+        """
+        Generate report sections by querying the database directly.
+
+        Each section has a title and content field. Data comes from
+        database tables rather than HTTP API calls.
+
+        Args:
+            report_type: Type of report to generate
+            params: Report parameters
+
+        Returns:
+            List of section dicts with title and content
+        """
+        if not self._db:
+            return []
+
+        sections: List[Dict[str, Any]] = []
+
+        if report_type == "case_status":
+            sections = await self._generate_case_status_sections(params)
+        elif report_type == "evidence_summary":
+            sections = await self._generate_evidence_summary_sections(params)
+        elif report_type == "timeline_report":
+            sections = await self._generate_timeline_sections(params)
+        else:
+            sections = [{"title": "Report", "content": f"Unknown report type: {report_type}"}]
+
+        return sections
+
+    async def _generate_case_status_sections(self, params: dict) -> List[Dict[str, Any]]:
+        """Generate sections for a case status report from database."""
+        sections: List[Dict[str, Any]] = []
+
+        # Section 1: Document overview
+        try:
+            doc_count = await self._db.fetch_one("SELECT COUNT(*) as count FROM arkham_documents WHERE 1=1")
+            doc_total = doc_count["count"] if doc_count else 0
+
+            status_rows = await self._db.fetch_all(
+                "SELECT status, COUNT(*) as count FROM arkham_documents GROUP BY status"
+            )
+            status_breakdown = {row["status"]: row["count"] for row in status_rows}
+
+            sections.append(
+                {
+                    "title": "Document Overview",
+                    "content": json.dumps(
+                        {
+                            "total_documents": doc_total,
+                            "by_status": status_breakdown,
+                        }
+                    ),
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to query documents: {e}")
+            sections.append({"title": "Document Overview", "content": json.dumps({"error": str(e)})})
+
+        # Section 2: Claims summary
+        try:
+            claims_count = await self._db.fetch_one("SELECT COUNT(*) as count FROM arkham_claims WHERE 1=1")
+            claims_total = claims_count["count"] if claims_count else 0
+
+            sections.append(
+                {
+                    "title": "Claims Summary",
+                    "content": json.dumps({"total_claims": claims_total}),
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to query claims: {e}")
+            sections.append({"title": "Claims Summary", "content": json.dumps({"total_claims": 0})})
+
+        # Section 3: Entity count
+        try:
+            entity_count = await self._db.fetch_one("SELECT COUNT(*) as count FROM arkham_entities WHERE 1=1")
+            entity_total = entity_count["count"] if entity_count else 0
+
+            sections.append(
+                {
+                    "title": "Entities",
+                    "content": json.dumps({"total_entities": entity_total}),
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to query entities: {e}")
+            sections.append({"title": "Entities", "content": json.dumps({"total_entities": 0})})
+
+        return sections
+
+    async def _generate_evidence_summary_sections(self, params: dict) -> List[Dict[str, Any]]:
+        """Generate sections for an evidence summary report from database."""
+        sections: List[Dict[str, Any]] = []
+        limit = params.get("limit", 50)
+
+        # Section 1: Recent documents
+        try:
+            docs = await self._db.fetch_all(
+                "SELECT id, title, status, created_at FROM arkham_documents ORDER BY created_at DESC LIMIT :limit",
+                {"limit": limit},
+            )
+            doc_list = []
+            for doc in docs:
+                doc_list.append(
+                    {
+                        "id": doc["id"],
+                        "title": doc.get("title", "Untitled"),
+                        "status": doc.get("status", "unknown"),
+                        "created_at": doc["created_at"].isoformat()
+                        if hasattr(doc.get("created_at"), "isoformat")
+                        else str(doc.get("created_at", "")),
+                    }
+                )
+            sections.append(
+                {
+                    "title": "Recent Documents",
+                    "content": json.dumps({"documents": doc_list, "total": len(doc_list)}),
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to query documents: {e}")
+            sections.append({"title": "Recent Documents", "content": json.dumps({"documents": [], "total": 0})})
+
+        # Section 2: Claims with evidence
+        try:
+            claims = await self._db.fetch_all(
+                "SELECT id, claim_text, status, confidence FROM arkham_claims ORDER BY created_at DESC LIMIT :limit",
+                {"limit": limit},
+            )
+            claim_list = []
+            for claim in claims:
+                claim_list.append(
+                    {
+                        "id": claim["id"],
+                        "text": claim.get("claim_text", ""),
+                        "status": claim.get("status", "unknown"),
+                        "confidence": claim.get("confidence"),
+                    }
+                )
+            sections.append(
+                {
+                    "title": "Claims",
+                    "content": json.dumps({"claims": claim_list, "total": len(claim_list)}),
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to query claims: {e}")
+            sections.append({"title": "Claims", "content": json.dumps({"claims": [], "total": 0})})
+
+        return sections
+
+    async def _generate_timeline_sections(self, params: dict) -> List[Dict[str, Any]]:
+        """Generate sections for a timeline report from database."""
+        sections: List[Dict[str, Any]] = []
+        limit = params.get("limit", 100)
+
+        # Section 1: Timeline events
+        try:
+            events = await self._db.fetch_all(
+                "SELECT id, title, event_date, event_type, description FROM arkham_timeline_events ORDER BY event_date ASC LIMIT :limit",
+                {"limit": limit},
+            )
+            event_list = []
+            for evt in events:
+                event_list.append(
+                    {
+                        "id": evt["id"],
+                        "title": evt.get("title", ""),
+                        "date": evt["event_date"].isoformat()
+                        if hasattr(evt.get("event_date"), "isoformat")
+                        else str(evt.get("event_date", "")),
+                        "type": evt.get("event_type", ""),
+                        "description": evt.get("description", ""),
+                    }
+                )
+            sections.append(
+                {
+                    "title": "Timeline Events",
+                    "content": json.dumps({"events": event_list, "total": len(event_list)}),
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to query timeline events: {e}")
+            sections.append({"title": "Timeline Events", "content": json.dumps({"events": [], "total": 0})})
+
+        # Section 2: Document timeline
+        try:
+            docs = await self._db.fetch_all(
+                "SELECT id, title, created_at FROM arkham_documents ORDER BY created_at ASC LIMIT :limit",
+                {"limit": limit},
+            )
+            doc_timeline = []
+            for doc in docs:
+                doc_timeline.append(
+                    {
+                        "id": doc["id"],
+                        "title": doc.get("title", "Untitled"),
+                        "date": doc["created_at"].isoformat()
+                        if hasattr(doc.get("created_at"), "isoformat")
+                        else str(doc.get("created_at", "")),
+                    }
+                )
+            sections.append(
+                {
+                    "title": "Document Timeline",
+                    "content": json.dumps({"documents": doc_timeline, "total": len(doc_timeline)}),
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to query document timeline: {e}")
+            sections.append({"title": "Document Timeline", "content": json.dumps({"documents": [], "total": 0})})
+
+        return sections
+
     async def get_report(self, report_id: str) -> Optional[Report]:
         """Get a report by ID."""
         if not self._db:

@@ -2,7 +2,9 @@
 
 import json
 import logging
+from collections import defaultdict
 from datetime import datetime
+from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional
 
 from arkham_frame.shard_interface import ArkhamShard
@@ -1395,3 +1397,185 @@ class EntitiesShard(ArkhamShard):
             relationships.append(rel)
 
         return relationships
+
+    # --- Merge Candidate Discovery (string-similarity, no vectors) ---
+
+    async def find_merge_candidates(
+        self,
+        entity_type: str = None,
+        threshold: float = 0.85,
+    ) -> List[Dict]:
+        """
+        Find candidate entity pairs for merging using string similarity.
+
+        Works without the vectors service by comparing entity names within
+        each entity_type group using SequenceMatcher, substring detection,
+        and case-insensitive exact matching.
+
+        Args:
+            entity_type: Optional filter to only check one entity type
+            threshold: Minimum SequenceMatcher ratio to consider a match (0.0-1.0)
+
+        Returns:
+            List of dicts with entity_a, entity_b, similarity_score, and reason
+        """
+        if not self._db:
+            raise RuntimeError("Entities Shard not initialized")
+
+        # Query only canonical entities (not already merged)
+        query = "SELECT id, name, entity_type, mention_count FROM arkham_entities WHERE canonical_id IS NULL"
+        params: Dict[str, Any] = {}
+
+        if entity_type:
+            query += " AND entity_type = :entity_type"
+            params["entity_type"] = entity_type
+
+        # Add tenant filtering
+        tenant_id = self.get_tenant_id_or_none()
+        if tenant_id:
+            query += " AND tenant_id = :tenant_id"
+            params["tenant_id"] = str(tenant_id)
+
+        query += " ORDER BY entity_type, name"
+
+        rows = await self._db.fetch_all(query, params)
+
+        if not rows:
+            return []
+
+        # Group entities by type for within-type comparison only
+        by_type: Dict[str, list] = defaultdict(list)
+        for row in rows:
+            by_type[row["entity_type"]].append(row)
+
+        candidates: List[Dict] = []
+        seen_pairs: set = set()
+
+        for _etype, entities in by_type.items():
+            n = len(entities)
+            for i in range(n):
+                for j in range(i + 1, n):
+                    a = entities[i]
+                    b = entities[j]
+
+                    pair_key = tuple(sorted([a["id"], b["id"]]))
+                    if pair_key in seen_pairs:
+                        continue
+
+                    name_a = a["name"]
+                    name_b = b["name"]
+                    lower_a = name_a.lower().strip()
+                    lower_b = name_b.lower().strip()
+
+                    best_score = 0.0
+                    reason = ""
+
+                    # Check 1: Case-insensitive exact match
+                    if lower_a == lower_b and name_a != name_b:
+                        best_score = 1.0
+                        reason = "Case-insensitive exact match"
+
+                    # Check 2: Substring match (one name fully contained in the other)
+                    if not reason:
+                        if len(lower_a) != len(lower_b):
+                            shorter, longer = (lower_a, lower_b) if len(lower_a) < len(lower_b) else (lower_b, lower_a)
+                            if shorter in longer and len(shorter) >= 3:
+                                best_score = max(best_score, len(shorter) / len(longer))
+                                # Flag if substring is substantial
+                                if best_score >= threshold or len(shorter) / len(longer) >= 0.5:
+                                    best_score = max(best_score, 0.90)
+                                    reason = f"Substring match ('{shorter}' contained in '{longer}')"
+
+                    # Check 3: SequenceMatcher ratio
+                    if not reason:
+                        ratio = SequenceMatcher(None, lower_a, lower_b).ratio()
+                        if ratio >= threshold:
+                            best_score = ratio
+                            reason = f"String similarity ({ratio:.2f})"
+
+                    if best_score >= threshold and reason:
+                        seen_pairs.add(pair_key)
+                        # Put higher mention_count entity first (entity_a)
+                        if (a.get("mention_count", 0) or 0) >= (b.get("mention_count", 0) or 0):
+                            ea, eb = a, b
+                        else:
+                            ea, eb = b, a
+
+                        candidates.append(
+                            {
+                                "entity_a": {"id": ea["id"], "name": ea["name"]},
+                                "entity_b": {"id": eb["id"], "name": eb["name"]},
+                                "similarity_score": round(best_score, 4),
+                                "reason": reason,
+                            }
+                        )
+
+        # Sort by similarity score descending
+        candidates.sort(key=lambda c: c["similarity_score"], reverse=True)
+        return candidates
+
+    async def auto_resolve_canonical(self, entity_id: str) -> str:
+        """
+        Determine the canonical (best) name for an entity.
+
+        Heuristic priority:
+        1. Longest mention form (most complete name)
+        2. Most frequently used form (when lengths are similar)
+        3. Falls back to entity's stored name if no mentions exist
+
+        Args:
+            entity_id: The entity ID to resolve
+
+        Returns:
+            The canonical name string, or empty string if entity not found
+        """
+        if not self._db:
+            raise RuntimeError("Entities Shard not initialized")
+
+        # Get the entity record
+        entity_row = await self._db.fetch_one(
+            "SELECT id, name FROM arkham_entities WHERE id = :id",
+            {"id": entity_id},
+        )
+
+        if not entity_row:
+            return ""
+
+        entity_name = entity_row["name"]
+
+        # Get distinct mention texts with frequency counts
+        mention_rows = await self._db.fetch_all(
+            """
+            SELECT mention_text, COUNT(*) as cnt
+            FROM arkham_entity_mentions
+            WHERE entity_id = :entity_id
+            GROUP BY mention_text
+            ORDER BY cnt DESC
+            """,
+            {"entity_id": entity_id},
+        )
+
+        if not mention_rows:
+            # No mentions, fall back to entity name
+            return entity_name
+
+        # Build candidate list: (text, frequency)
+        forms = [(row["mention_text"], row["cnt"]) for row in mention_rows]
+
+        # Find the longest form
+        longest = max(forms, key=lambda f: len(f[0]))
+        # Find the most frequent form
+        most_frequent = max(forms, key=lambda f: f[1])
+
+        # If longest form is longer, prefer it unless extremely rare
+        longest_len = len(longest[0])
+        frequent_len = len(most_frequent[0])
+
+        if longest_len > frequent_len:
+            if longest[1] >= most_frequent[1] * 0.1:
+                return longest[0]
+            else:
+                return most_frequent[0]
+        else:
+            # Most frequent is same length or longer -- prefer most frequent
+            return most_frequent[0]

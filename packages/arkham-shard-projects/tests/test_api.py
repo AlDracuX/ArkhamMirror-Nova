@@ -34,6 +34,7 @@ def mock_shard():
     shard.get_project = AsyncMock(return_value=None)
     shard.update_project = AsyncMock(return_value=None)
     shard.delete_project = AsyncMock(return_value=True)
+    shard.get_project_documents = AsyncMock(return_value=[])
     shard.add_document = AsyncMock()
     shard.remove_document = AsyncMock(return_value=True)
     shard.add_member = AsyncMock()

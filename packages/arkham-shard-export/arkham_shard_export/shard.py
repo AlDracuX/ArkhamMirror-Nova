@@ -538,6 +538,184 @@ class ExportShard(ArkhamShard):
             ),
         ]
 
+    # === Preview ===
+
+    async def get_preview_data(
+        self,
+        target: ExportTarget,
+        filters: Optional[Dict[str, Any]] = None,
+        max_records: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch a small sample of records for preview purposes.
+
+        Args:
+            target: Which data target to preview.
+            filters: Optional filters to narrow the data.
+            max_records: Maximum number of sample records to return.
+
+        Returns:
+            List of record dicts (up to max_records).
+        """
+        options = ExportOptions(max_records=max_records)
+        try:
+            data = await self._fetch_data(target, filters or {}, options)
+        except Exception as e:
+            logger.warning(f"Preview fetch failed for {target}: {e}")
+            return []
+
+        if isinstance(data, list):
+            return data[:max_records]
+        if isinstance(data, dict) and "events" in data:
+            return data["events"][:max_records]
+        return [data] if data else []
+
+    # === Direct Export Generation ===
+
+    async def generate_export(
+        self,
+        format: str,
+        target: str,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> bytes:
+        """
+        Generate export data directly without creating a job.
+
+        Args:
+            format: Export format - "csv" or "json" (pdf/xlsx via job workflow)
+            target: Data target - "documents", "entities", "timeline", "claims"
+            filters: Optional filters to apply to the data query
+
+        Returns:
+            bytes: The serialized export data
+
+        Raises:
+            ValueError: If format or target is unsupported
+        """
+        # Validate format
+        format_lower = format.lower()
+        if format_lower not in ("csv", "json"):
+            raise ValueError(f"Unsupported direct export format: {format}. Use 'csv' or 'json'.")
+
+        # Validate target
+        target_lower = target.lower()
+        valid_targets = {"documents", "entities", "timeline", "claims"}
+        if target_lower not in valid_targets:
+            raise ValueError(f"Unsupported export target: {target}. Use one of: {', '.join(sorted(valid_targets))}")
+
+        # Convert to enums
+        export_format = ExportFormat(format_lower)
+        export_target = ExportTarget(target_lower)
+
+        # Fetch data from appropriate source
+        data = await self._fetch_data(export_target, filters or {}, None)
+
+        # Serialize based on format
+        if format_lower == "json":
+            return self._serialize_json(data, export_target)
+        else:
+            return self._serialize_csv(data)
+
+    def _serialize_json(self, data: Any, target: ExportTarget) -> bytes:
+        """Serialize data to JSON bytes with export metadata."""
+        output = {
+            "export_info": {
+                "target": target.value,
+                "exported_at": datetime.utcnow().isoformat(),
+                "record_count": len(data) if isinstance(data, list) else 1,
+            },
+            "data": data,
+        }
+        return json.dumps(output, indent=2, default=str, ensure_ascii=False).encode("utf-8")
+
+    def _serialize_csv(self, data: Any) -> bytes:
+        """Serialize list-of-dicts data to CSV bytes."""
+        if not isinstance(data, list) or not data:
+            return b"# No data to export\n"
+
+        # Flatten nested structures
+        flat_data = self._flatten_for_csv(data)
+
+        # Collect all unique keys for the header
+        all_keys: set = set()
+        for record in flat_data:
+            all_keys.update(record.keys())
+        fieldnames = sorted(all_keys)
+
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(flat_data)
+        return output.getvalue().encode("utf-8")
+
+    async def preview_data(
+        self,
+        format: str,
+        target: str,
+        filters: Optional[Dict[str, Any]] = None,
+        max_preview_records: int = 10,
+    ) -> Dict[str, Any]:
+        """
+        Preview export data without creating a file.
+
+        Args:
+            format: Export format
+            target: Data target
+            filters: Optional filters
+            max_preview_records: Maximum records to return in preview
+
+        Returns:
+            Dict with preview information and sample records
+        """
+        # Convert to enums
+        try:
+            export_target = ExportTarget(target.lower())
+        except ValueError:
+            return {
+                "format": format,
+                "target": target,
+                "estimated_record_count": 0,
+                "preview_records": [],
+                "estimated_file_size_bytes": 0,
+            }
+
+        # Fetch data with a limited option set
+        options = ExportOptions(max_records=max_preview_records)
+        try:
+            data = await self._fetch_data(export_target, filters or {}, options)
+        except Exception as e:
+            logger.warning(f"Preview data fetch failed: {e}")
+            return {
+                "format": format,
+                "target": target,
+                "estimated_record_count": 0,
+                "preview_records": [],
+                "estimated_file_size_bytes": 0,
+            }
+
+        # Calculate preview
+        if isinstance(data, list):
+            records = data[:max_preview_records]
+            total = len(data)
+        elif isinstance(data, dict) and "events" in data:
+            records = data["events"][:max_preview_records]
+            total = len(data.get("events", []))
+        else:
+            records = [data] if data else []
+            total = 1
+
+        # Rough size estimate: ~200 bytes per record for JSON, ~100 for CSV
+        size_factor = 200 if format.lower() == "json" else 100
+        estimated_size = total * size_factor
+
+        return {
+            "format": format,
+            "target": target,
+            "estimated_record_count": total,
+            "preview_records": records,
+            "estimated_file_size_bytes": estimated_size,
+        }
+
     # === Private Helper Methods ===
 
     async def _process_job(self, job: ExportJob) -> ExportResult:
