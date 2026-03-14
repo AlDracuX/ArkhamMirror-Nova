@@ -381,8 +381,17 @@ async def get_project_documents(request: Request, project_id: str):
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
-    # Stub: return empty list
-    return []
+    docs = await shard.get_project_documents(project_id)
+    return [
+        DocumentResponse(
+            id=doc.id,
+            project_id=doc.project_id,
+            document_id=doc.document_id,
+            added_at=str(doc.added_at),
+            added_by=doc.added_by,
+        )
+        for doc in docs
+    ]
 
 
 @router.post("/{project_id}/documents", response_model=DocumentResponse, status_code=201)

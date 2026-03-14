@@ -706,6 +706,27 @@ class ProjectsShard(ArkhamShard):
 
         return True
 
+    async def get_project_documents(self, project_id: str) -> List[ProjectDocument]:
+        """Get all documents in a project."""
+        if not self._db:
+            return []
+
+        rows = await self._db.fetch_all(
+            "SELECT * FROM arkham_project_documents WHERE project_id = ? ORDER BY added_at DESC",
+            [project_id],
+        )
+        return [self._row_to_project_document(row) for row in rows]
+
+    def _row_to_project_document(self, row) -> ProjectDocument:
+        """Convert a database row to a ProjectDocument."""
+        return ProjectDocument(
+            id=row["id"],
+            project_id=row["project_id"],
+            document_id=row["document_id"],
+            added_at=row.get("added_at", ""),
+            added_by=row.get("added_by", "system"),
+        )
+
     async def add_document(
         self,
         project_id: str,
