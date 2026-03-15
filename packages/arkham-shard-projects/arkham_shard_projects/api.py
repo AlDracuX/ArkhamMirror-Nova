@@ -213,6 +213,7 @@ async def get_projects_count(
     return CountResponse(count=count)
 
 
+@router.get("", response_model=ProjectListResponse)
 @router.get("/", response_model=ProjectListResponse)
 async def list_projects(
     request: Request,
