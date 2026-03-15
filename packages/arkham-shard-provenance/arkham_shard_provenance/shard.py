@@ -2945,6 +2945,106 @@ class ProvenanceShard(ArkhamShard):
             "analyzed_at": datetime.utcnow().isoformat(),
         }
 
+    @staticmethod
+    def _isoformat_or_none(dt) -> Optional[str]:
+        """Convert a datetime to ISO format string, or return None."""
+        return dt.isoformat() if dt else None
+
+    @staticmethod
+    def _serialize_exif_data(exif_data) -> dict:
+        """Serialize EXIF dataclass to a JSON-safe dictionary."""
+        if not exif_data:
+            return {}
+        return {
+            "make": exif_data.make,
+            "model": exif_data.model,
+            "serial_number": exif_data.serial_number,
+            "lens_model": exif_data.lens_model,
+            "datetime_original": ProvenanceShard._isoformat_or_none(exif_data.datetime_original),
+            "datetime_digitized": ProvenanceShard._isoformat_or_none(exif_data.datetime_digitized),
+            "datetime_modified": ProvenanceShard._isoformat_or_none(exif_data.datetime_modified),
+            "gps_latitude": exif_data.gps_latitude,
+            "gps_longitude": exif_data.gps_longitude,
+            "gps_altitude": exif_data.gps_altitude,
+            "software": exif_data.software,
+            "width": exif_data.width,
+            "height": exif_data.height,
+            "raw_data": exif_data.raw_data,
+        }
+
+    @staticmethod
+    def _serialize_pdf_metadata(pdf_meta) -> dict:
+        """Serialize PDF metadata dataclass to a JSON-safe dictionary."""
+        if not pdf_meta:
+            return {}
+        return {
+            "title": pdf_meta.title,
+            "author": pdf_meta.author,
+            "subject": pdf_meta.subject,
+            "creator": pdf_meta.creator,
+            "producer": pdf_meta.producer,
+            "creation_date": ProvenanceShard._isoformat_or_none(pdf_meta.creation_date),
+            "modification_date": ProvenanceShard._isoformat_or_none(pdf_meta.modification_date),
+            "keywords": pdf_meta.keywords,
+            "xmp_data": pdf_meta.xmp_data,
+            "page_count": pdf_meta.page_count,
+            "pdf_version": pdf_meta.pdf_version,
+            "is_encrypted": pdf_meta.is_encrypted,
+        }
+
+    @staticmethod
+    def _serialize_office_metadata(office_meta) -> dict:
+        """Serialize Office metadata dataclass to a JSON-safe dictionary."""
+        if not office_meta:
+            return {}
+        return {
+            "title": office_meta.title,
+            "author": office_meta.author,
+            "subject": office_meta.subject,
+            "company": office_meta.company,
+            "manager": office_meta.manager,
+            "created": ProvenanceShard._isoformat_or_none(office_meta.created),
+            "modified": ProvenanceShard._isoformat_or_none(office_meta.modified),
+            "last_modified_by": office_meta.last_modified_by,
+            "revision": office_meta.revision,
+            "keywords": office_meta.keywords,
+            "category": office_meta.category,
+            "comments": office_meta.comments,
+            "raw_data": office_meta.raw_data,
+        }
+
+    @staticmethod
+    def _serialize_findings(findings_list) -> list:
+        """Serialize finding dataclasses to JSON-safe dicts."""
+        return [
+            {
+                "finding_type": f.finding_type,
+                "severity": f.severity,
+                "description": f.description,
+                "evidence": f.evidence,
+                "confidence": f.confidence,
+            }
+            for f in findings_list
+        ]
+
+    @staticmethod
+    def _serialize_timeline_events(events) -> list:
+        """Serialize timeline event dataclasses to JSON-safe dicts."""
+        return [
+            {
+                "id": e.id,
+                "doc_id": e.doc_id,
+                "event_type": e.event_type,
+                "event_timestamp": ProvenanceShard._isoformat_or_none(e.event_timestamp),
+                "event_source": e.event_source,
+                "event_actor": e.event_actor,
+                "event_details": e.event_details,
+                "confidence": e.confidence,
+                "is_estimated": e.is_estimated,
+            }
+            for e in events
+        ]
+
     async def _store_forensic_scan(self, scan: MetadataForensicScan) -> None:
         """
         Store a forensic scan result in the database.
@@ -2959,96 +3059,11 @@ class ProvenanceShard(ArkhamShard):
 
         tenant_id = self.get_tenant_id_or_none()
 
-        # Convert dataclass objects to JSON dicts
-        exif_data = {}
-        if scan.exif_data:
-            exif_data = {
-                "make": scan.exif_data.make,
-                "model": scan.exif_data.model,
-                "serial_number": scan.exif_data.serial_number,
-                "lens_model": scan.exif_data.lens_model,
-                "datetime_original": scan.exif_data.datetime_original.isoformat()
-                if scan.exif_data.datetime_original
-                else None,
-                "datetime_digitized": scan.exif_data.datetime_digitized.isoformat()
-                if scan.exif_data.datetime_digitized
-                else None,
-                "datetime_modified": scan.exif_data.datetime_modified.isoformat()
-                if scan.exif_data.datetime_modified
-                else None,
-                "gps_latitude": scan.exif_data.gps_latitude,
-                "gps_longitude": scan.exif_data.gps_longitude,
-                "gps_altitude": scan.exif_data.gps_altitude,
-                "software": scan.exif_data.software,
-                "width": scan.exif_data.width,
-                "height": scan.exif_data.height,
-                "raw_data": scan.exif_data.raw_data,
-            }
-
-        pdf_metadata = {}
-        if scan.pdf_metadata:
-            pdf_metadata = {
-                "title": scan.pdf_metadata.title,
-                "author": scan.pdf_metadata.author,
-                "subject": scan.pdf_metadata.subject,
-                "creator": scan.pdf_metadata.creator,
-                "producer": scan.pdf_metadata.producer,
-                "creation_date": scan.pdf_metadata.creation_date.isoformat()
-                if scan.pdf_metadata.creation_date
-                else None,
-                "modification_date": scan.pdf_metadata.modification_date.isoformat()
-                if scan.pdf_metadata.modification_date
-                else None,
-                "keywords": scan.pdf_metadata.keywords,
-                "xmp_data": scan.pdf_metadata.xmp_data,
-                "page_count": scan.pdf_metadata.page_count,
-                "pdf_version": scan.pdf_metadata.pdf_version,
-                "is_encrypted": scan.pdf_metadata.is_encrypted,
-            }
-
-        office_metadata = {}
-        if scan.office_metadata:
-            office_metadata = {
-                "title": scan.office_metadata.title,
-                "author": scan.office_metadata.author,
-                "subject": scan.office_metadata.subject,
-                "company": scan.office_metadata.company,
-                "manager": scan.office_metadata.manager,
-                "created": scan.office_metadata.created.isoformat() if scan.office_metadata.created else None,
-                "modified": scan.office_metadata.modified.isoformat() if scan.office_metadata.modified else None,
-                "last_modified_by": scan.office_metadata.last_modified_by,
-                "revision": scan.office_metadata.revision,
-                "keywords": scan.office_metadata.keywords,
-                "category": scan.office_metadata.category,
-                "comments": scan.office_metadata.comments,
-                "raw_data": scan.office_metadata.raw_data,
-            }
-
-        findings = [
-            {
-                "finding_type": f.finding_type,
-                "severity": f.severity,
-                "description": f.description,
-                "evidence": f.evidence,
-                "confidence": f.confidence,
-            }
-            for f in scan.findings
-        ]
-
-        timeline_events = [
-            {
-                "id": e.id,
-                "doc_id": e.doc_id,
-                "event_type": e.event_type,
-                "event_timestamp": e.event_timestamp.isoformat() if e.event_timestamp else None,
-                "event_source": e.event_source,
-                "event_actor": e.event_actor,
-                "event_details": e.event_details,
-                "confidence": e.confidence,
-                "is_estimated": e.is_estimated,
-            }
-            for e in scan.timeline_events
-        ]
+        exif_data = self._serialize_exif_data(scan.exif_data)
+        pdf_metadata = self._serialize_pdf_metadata(scan.pdf_metadata)
+        office_metadata = self._serialize_office_metadata(scan.office_metadata)
+        findings = self._serialize_findings(scan.findings)
+        timeline_events = self._serialize_timeline_events(scan.timeline_events)
 
         await self._db.execute(
             """
@@ -3077,13 +3092,14 @@ class ProvenanceShard(ArkhamShard):
                 "integrity_status": scan.integrity_status.value,
                 "confidence_score": scan.confidence_score,
                 "timeline_events": json.dumps(timeline_events),
-                "scanned_at": scan.scanned_at.isoformat() if scan.scanned_at else datetime.utcnow().isoformat(),
+                "scanned_at": self._isoformat_or_none(scan.scanned_at) or datetime.utcnow().isoformat(),
                 "metadata": json.dumps(scan.metadata),
                 "tenant_id": str(tenant_id) if tenant_id else None,
             },
         )
 
         # Also store timeline events in denormalized table for fast queries
+        tenant_id_str = str(tenant_id) if tenant_id else None
         for event in scan.timeline_events:
             await self._db.execute(
                 """
@@ -3100,13 +3116,13 @@ class ProvenanceShard(ArkhamShard):
                     "doc_id": event.doc_id,
                     "scan_id": scan.id,
                     "event_type": event.event_type,
-                    "event_timestamp": event.event_timestamp.isoformat() if event.event_timestamp else None,
+                    "event_timestamp": self._isoformat_or_none(event.event_timestamp),
                     "event_source": event.event_source,
                     "event_actor": event.event_actor,
                     "event_details": json.dumps(event.event_details),
                     "confidence": event.confidence,
                     "is_estimated": event.is_estimated,
-                    "tenant_id": str(tenant_id) if tenant_id else None,
+                    "tenant_id": tenant_id_str,
                 },
             )
 

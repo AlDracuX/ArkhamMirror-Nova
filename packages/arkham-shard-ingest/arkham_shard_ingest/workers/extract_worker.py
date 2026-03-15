@@ -582,6 +582,105 @@ class ExtractWorker(BaseWorker):
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, extract)
 
+    # Header-to-metadata-key mapping for email extraction.
+    # Entries with tuple values map to multiple metadata keys.
+    _EMAIL_HEADER_MAP = {
+        "From": ("author", "email_from"),
+        "To": "email_to",
+        "Cc": "email_cc",
+        "Bcc": "email_bcc",
+        "Subject": ("title", "email_subject"),
+        "Date": ("creation_date", "email_date"),
+        "Reply-To": "email_reply_to",
+        "Message-ID": "email_message_id",
+        "In-Reply-To": "email_in_reply_to",
+        "X-Mailer": "creator",
+        "User-Agent": "creator",
+        "Organization": "organization",
+    }
+
+    @staticmethod
+    def _strip_emlx_preamble(content: bytes, path: Path) -> bytes:
+        """Strip EMLX (Apple Mail) byte-count preamble if present."""
+        if path.suffix.lower() != ".emlx":
+            return content
+        lines = content.split(b"\n", 1)
+        if len(lines) > 1:
+            try:
+                int(lines[0].strip())
+                return lines[1]
+            except ValueError:
+                pass
+        return content
+
+    @staticmethod
+    def _extract_email_metadata(msg) -> Dict[str, Any]:
+        """Extract structured metadata from email message headers."""
+        document_metadata: Dict[str, Any] = {}
+        for header, keys in ExtractWorker._EMAIL_HEADER_MAP.items():
+            value = msg.get(header)
+            if not value:
+                continue
+            if isinstance(keys, tuple):
+                for key in keys:
+                    document_metadata[key] = str(value)
+            else:
+                document_metadata[keys] = str(value)
+        return document_metadata
+
+    @staticmethod
+    def _collect_attachments(msg, document_metadata: Dict[str, Any]) -> None:
+        """Scan multipart message for attachments and update metadata."""
+        if not msg.is_multipart():
+            return
+        attachment_count = 0
+        attachment_names = []
+        for part in msg.walk():
+            if part.get_content_disposition() == "attachment":
+                attachment_count += 1
+                filename = part.get_filename()
+                if filename:
+                    attachment_names.append(filename)
+        if attachment_count > 0:
+            document_metadata["attachment_count"] = attachment_count
+            if attachment_names:
+                document_metadata["attachments"] = ", ".join(attachment_names)
+
+    @staticmethod
+    def _extract_email_body(msg) -> tuple:
+        """Extract body text parts and part count from email message."""
+        import re
+
+        parts = ["--- Body ---"]
+        part_count = 0
+
+        if msg.is_multipart():
+            for part in msg.walk():
+                content_type = part.get_content_type()
+                if content_type == "text/plain":
+                    body = part.get_content()
+                    if isinstance(body, str):
+                        parts.append(body)
+                        part_count += 1
+                elif content_type == "text/html" and part_count == 0:
+                    html = part.get_content()
+                    if isinstance(html, str):
+                        text = re.sub(r"<[^>]+>", "", html)
+                        text = re.sub(r"\s+", " ", text).strip()
+                        if text:
+                            parts.append(text)
+                            part_count += 1
+        else:
+            body = msg.get_content()
+            if isinstance(body, str):
+                parts.append(body)
+                part_count = 1
+            elif isinstance(body, bytes):
+                parts.append(body.decode("utf-8", errors="replace"))
+                part_count = 1
+
+        return parts, part_count
+
     async def _extract_eml(self, path: Path) -> Dict[str, Any]:
         """
         Extract text and metadata from EML or EMLX (Apple Mail) email file.
@@ -597,124 +696,33 @@ class ExtractWorker(BaseWorker):
 
         def extract():
             try:
-                # Read file content
                 with open(path, "rb") as f:
                     content = f.read()
 
-                # Handle EMLX format (Apple Mail)
-                # EMLX has a preamble with byte count on first line
-                if path.suffix.lower() == ".emlx":
-                    # Skip the preamble (first line is byte count)
-                    lines = content.split(b"\n", 1)
-                    if len(lines) > 1:
-                        try:
-                            # Check if first line is a number (byte count)
-                            int(lines[0].strip())
-                            content = lines[1]
-                        except ValueError:
-                            pass  # Not EMLX format, use as-is
-
-                # Parse email
+                content = self._strip_emlx_preamble(content, path)
                 msg = email.message_from_bytes(content, policy=policy.default)
 
-                # Extract email metadata (headers are the metadata for emails!)
-                document_metadata = {}
+                document_metadata = self._extract_email_metadata(msg)
+                self._collect_attachments(msg, document_metadata)
 
-                # Core email metadata
-                if msg.get("From"):
-                    document_metadata["author"] = str(msg.get("From"))
-                    document_metadata["email_from"] = str(msg.get("From"))
-                if msg.get("To"):
-                    document_metadata["email_to"] = str(msg.get("To"))
-                if msg.get("Cc"):
-                    document_metadata["email_cc"] = str(msg.get("Cc"))
-                if msg.get("Bcc"):
-                    document_metadata["email_bcc"] = str(msg.get("Bcc"))
-                if msg.get("Subject"):
-                    document_metadata["title"] = str(msg.get("Subject"))
-                    document_metadata["email_subject"] = str(msg.get("Subject"))
-                if msg.get("Date"):
-                    document_metadata["creation_date"] = str(msg.get("Date"))
-                    document_metadata["email_date"] = str(msg.get("Date"))
-
-                # Additional email metadata
-                if msg.get("Reply-To"):
-                    document_metadata["email_reply_to"] = str(msg.get("Reply-To"))
-                if msg.get("Message-ID"):
-                    document_metadata["email_message_id"] = str(msg.get("Message-ID"))
-                if msg.get("In-Reply-To"):
-                    document_metadata["email_in_reply_to"] = str(msg.get("In-Reply-To"))
-                if msg.get("X-Mailer"):
-                    document_metadata["creator"] = str(msg.get("X-Mailer"))
-                if msg.get("User-Agent"):
-                    document_metadata["creator"] = str(msg.get("User-Agent"))
-                if msg.get("Organization"):
-                    document_metadata["organization"] = str(msg.get("Organization"))
-
-                # Check for attachments
-                attachment_count = 0
-                attachment_names = []
-                if msg.is_multipart():
-                    for part in msg.walk():
-                        if part.get_content_disposition() == "attachment":
-                            attachment_count += 1
-                            filename = part.get_filename()
-                            if filename:
-                                attachment_names.append(filename)
-
-                if attachment_count > 0:
-                    document_metadata["attachment_count"] = attachment_count
-                    if attachment_names:
-                        document_metadata["attachments"] = ", ".join(attachment_names)
-
-                parts = []
-                part_count = 0
-
-                # Extract headers for text content
-                headers = []
+                # Build text header section
+                text_parts = []
+                header_lines = []
                 for header in ["From", "To", "Cc", "Subject", "Date"]:
                     value = msg.get(header)
                     if value:
-                        headers.append(f"{header}: {value}")
-
-                if headers:
-                    parts.append("--- Headers ---")
-                    parts.extend(headers)
-                    parts.append("")
+                        header_lines.append(f"{header}: {value}")
+                if header_lines:
+                    text_parts.append("--- Headers ---")
+                    text_parts.extend(header_lines)
+                    text_parts.append("")
 
                 # Extract body
-                parts.append("--- Body ---")
-
-                if msg.is_multipart():
-                    for part in msg.walk():
-                        content_type = part.get_content_type()
-                        if content_type == "text/plain":
-                            body = part.get_content()
-                            if isinstance(body, str):
-                                parts.append(body)
-                                part_count += 1
-                        elif content_type == "text/html":
-                            # Basic HTML stripping
-                            import re
-
-                            html = part.get_content()
-                            if isinstance(html, str):
-                                text = re.sub(r"<[^>]+>", "", html)
-                                text = re.sub(r"\s+", " ", text).strip()
-                                if text and part_count == 0:  # Only if no plain text
-                                    parts.append(text)
-                                    part_count += 1
-                else:
-                    body = msg.get_content()
-                    if isinstance(body, str):
-                        parts.append(body)
-                        part_count = 1
-                    elif isinstance(body, bytes):
-                        parts.append(body.decode("utf-8", errors="replace"))
-                        part_count = 1
+                body_parts, part_count = self._extract_email_body(msg)
+                text_parts.extend(body_parts)
 
                 return {
-                    "text": "\n".join(parts),
+                    "text": "\n".join(text_parts),
                     "pages": max(1, part_count),
                     "document_metadata": document_metadata,
                 }

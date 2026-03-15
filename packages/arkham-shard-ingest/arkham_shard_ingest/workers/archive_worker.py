@@ -309,6 +309,106 @@ class ArchiveWorker(BaseWorker):
         except tarfile.TarError as e:
             raise ValueError(f"Corrupt archive: {e}")
 
+    # ---- Format-specific extraction helpers ----
+
+    def _extract_zip_members(self, archive_path, output_dir, password, flatten):
+        """Extract members from a ZIP archive. Returns (files, total_size)."""
+        extracted_files = []
+        total_size = 0
+        with zipfile.ZipFile(archive_path, "r") as zf:
+            if password:
+                zf.setpassword(password.encode("utf-8"))
+            for member in zf.namelist():
+                if member.endswith("/"):
+                    continue
+                out_path = (output_dir / Path(member).name) if flatten else self._sanitize_path(output_dir, member)
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(member) as source, open(out_path, "wb") as target:
+                    data = source.read()
+                    target.write(data)
+                    total_size += len(data)
+                extracted_files.append(str(out_path))
+        return extracted_files, total_size
+
+    _TAR_MODES = {"tar": "r", "tar.gz": "r:gz", "tar.bz2": "r:bz2", "tar.xz": "r:xz"}
+
+    def _extract_tar_members(self, archive_path, output_dir, format_type, flatten):
+        """Extract members from a TAR archive (any compression). Returns (files, total_size)."""
+        extracted_files = []
+        total_size = 0
+        mode = self._TAR_MODES.get(format_type, "r")
+        with tarfile.open(archive_path, mode) as tf:
+            for member in tf.getmembers():
+                if not member.isfile():
+                    continue
+                out_path = (
+                    (output_dir / Path(member.name).name) if flatten else self._sanitize_path(output_dir, member.name)
+                )
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                with tf.extractfile(member) as source, open(out_path, "wb") as target:
+                    data = source.read()
+                    target.write(data)
+                    total_size += len(data)
+                extracted_files.append(str(out_path))
+        return extracted_files, total_size
+
+    @staticmethod
+    def _extract_single_compressed(archive_path, output_dir, opener):
+        """Extract a single-file compressed archive (gz/bz2). Returns (files, total_size)."""
+        out_path = output_dir / archive_path.stem
+        with opener(archive_path, "rb") as source, open(out_path, "wb") as target:
+            data = source.read()
+            target.write(data)
+        return [str(out_path)], len(data)
+
+    def _extract_7z_members(self, archive_path, output_dir, password, flatten):
+        """Extract members from a 7z archive. Returns (files, total_size)."""
+        if not self._has_py7zr:
+            raise ImportError("py7zr not installed. Install with: pip install py7zr")
+        import py7zr
+
+        extracted_files = []
+        total_size = 0
+        with py7zr.SevenZipFile(archive_path, mode="r", password=password) as archive:
+            for name, bio in archive.read().items():
+                out_path = (output_dir / Path(name).name) if flatten else self._sanitize_path(output_dir, name)
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                data = bio.read()
+                with open(out_path, "wb") as target:
+                    target.write(data)
+                    total_size += len(data)
+                extracted_files.append(str(out_path))
+        return extracted_files, total_size
+
+    def _extract_rar_members(self, archive_path, output_dir, password, flatten):
+        """Extract members from a RAR archive. Returns (files, total_size)."""
+        if not self._has_rarfile:
+            raise ImportError("rarfile not installed. Install with: pip install rarfile")
+        import rarfile
+
+        extracted_files = []
+        total_size = 0
+        with rarfile.RarFile(archive_path, "r") as rf:
+            if password:
+                rf.setpassword(password)
+            for member in rf.infolist():
+                if member.isdir():
+                    continue
+                out_path = (
+                    (output_dir / Path(member.filename).name)
+                    if flatten
+                    else self._sanitize_path(output_dir, member.filename)
+                )
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                with rf.open(member) as source, open(out_path, "wb") as target:
+                    data = source.read()
+                    target.write(data)
+                    total_size += len(data)
+                extracted_files.append(str(out_path))
+        return extracted_files, total_size
+
+    # ---- Main extraction orchestrator ----
+
     async def _extract_archive(self, payload: Dict[str, Any], job_id: str) -> Dict[str, Any]:
         """
         Extract all files from archive.
@@ -351,147 +451,19 @@ class ArchiveWorker(BaseWorker):
 
         # Run extraction in executor
         def extract():
-            extracted_files = []
-            total_size = 0
-
             if format_type == "zip":
-                with zipfile.ZipFile(archive_path, "r") as zf:
-                    if password:
-                        zf.setpassword(password.encode("utf-8"))
-
-                    for member in zf.namelist():
-                        # Skip directories
-                        if member.endswith("/"):
-                            continue
-
-                        # Determine output path
-                        if flatten:
-                            out_path = output_dir / Path(member).name
-                        else:
-                            out_path = self._sanitize_path(output_dir, member)
-
-                        # Create parent directories
-                        out_path.parent.mkdir(parents=True, exist_ok=True)
-
-                        # Extract file
-                        with zf.open(member) as source, open(out_path, "wb") as target:
-                            data = source.read()
-                            target.write(data)
-                            total_size += len(data)
-
-                        extracted_files.append(str(out_path))
-
-            elif format_type.startswith("tar"):
-                mode = "r"
-                if format_type == "tar.gz":
-                    mode = "r:gz"
-                elif format_type == "tar.bz2":
-                    mode = "r:bz2"
-                elif format_type == "tar.xz":
-                    mode = "r:xz"
-
-                with tarfile.open(archive_path, mode) as tf:
-                    for member in tf.getmembers():
-                        # Skip non-files
-                        if not member.isfile():
-                            continue
-
-                        # Determine output path
-                        if flatten:
-                            out_path = output_dir / Path(member.name).name
-                        else:
-                            out_path = self._sanitize_path(output_dir, member.name)
-
-                        # Create parent directories
-                        out_path.parent.mkdir(parents=True, exist_ok=True)
-
-                        # Extract file
-                        with tf.extractfile(member) as source, open(out_path, "wb") as target:
-                            data = source.read()
-                            target.write(data)
-                            total_size += len(data)
-
-                        extracted_files.append(str(out_path))
-
-            elif format_type == "gz":
-                # Single file GZIP
-                out_path = output_dir / archive_path.stem
-                with gzip.open(archive_path, "rb") as source, open(out_path, "wb") as target:
-                    data = source.read()
-                    target.write(data)
-                    total_size = len(data)
-                extracted_files.append(str(out_path))
-
-            elif format_type == "bz2":
-                # Single file BZ2
-                out_path = output_dir / archive_path.stem
-                with bz2.open(archive_path, "rb") as source, open(out_path, "wb") as target:
-                    data = source.read()
-                    target.write(data)
-                    total_size = len(data)
-                extracted_files.append(str(out_path))
-
-            elif format_type == "7z":
-                if not self._has_py7zr:
-                    raise ImportError("py7zr not installed. Install with: pip install py7zr")
-
-                import py7zr
-
-                with py7zr.SevenZipFile(archive_path, mode="r", password=password) as archive:
-                    for name, bio in archive.read().items():
-                        # Determine output path
-                        if flatten:
-                            out_path = output_dir / Path(name).name
-                        else:
-                            out_path = self._sanitize_path(output_dir, name)
-
-                        # Create parent directories
-                        out_path.parent.mkdir(parents=True, exist_ok=True)
-
-                        # Write file
-                        data = bio.read()
-                        with open(out_path, "wb") as target:
-                            target.write(data)
-                            total_size += len(data)
-
-                        extracted_files.append(str(out_path))
-
-            elif format_type == "rar":
-                if not self._has_rarfile:
-                    raise ImportError("rarfile not installed. Install with: pip install rarfile")
-
-                import rarfile
-
-                with rarfile.RarFile(archive_path, "r") as rf:
-                    if password:
-                        rf.setpassword(password)
-
-                    for member in rf.infolist():
-                        # Skip directories
-                        if member.isdir():
-                            continue
-
-                        # Determine output path
-                        if flatten:
-                            out_path = output_dir / Path(member.filename).name
-                        else:
-                            out_path = self._sanitize_path(output_dir, member.filename)
-
-                        # Create parent directories
-                        out_path.parent.mkdir(parents=True, exist_ok=True)
-
-                        # Extract file
-                        with rf.open(member) as source, open(out_path, "wb") as target:
-                            data = source.read()
-                            target.write(data)
-                            total_size += len(data)
-
-                        extracted_files.append(str(out_path))
-
-            else:
-                raise ValueError(f"Unsupported format for extraction: {format_type}")
-
-            return extracted_files, total_size
+                return self._extract_zip_members(archive_path, output_dir, password, flatten)
+            if format_type.startswith("tar"):
+                return self._extract_tar_members(archive_path, output_dir, format_type, flatten)
+            if format_type == "gz":
+                return self._extract_single_compressed(archive_path, output_dir, gzip.open)
+            if format_type == "bz2":
+                return self._extract_single_compressed(archive_path, output_dir, bz2.open)
+            if format_type == "7z":
+                return self._extract_7z_members(archive_path, output_dir, password, flatten)
+            if format_type == "rar":
+                return self._extract_rar_members(archive_path, output_dir, password, flatten)
+            raise ValueError(f"Unsupported format for extraction: {format_type}")
 
         loop = asyncio.get_event_loop()
         files, size = await loop.run_in_executor(None, extract)

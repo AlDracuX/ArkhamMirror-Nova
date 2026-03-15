@@ -1504,62 +1504,42 @@ class MediaForensicsShard(ArkhamShard):
     # Helper Methods
     # ===========================================
 
-    def _row_to_analysis_dict(self, row: Dict[str, Any]) -> Dict[str, Any]:
-        """Convert a database row to an analysis dictionary."""
-        # Parse JSON fields
-        raw_exif_data = row.get("exif_data", "{}")
-        if isinstance(raw_exif_data, str):
-            try:
-                raw_exif_data = json.loads(raw_exif_data)
-            except json.JSONDecodeError:
-                raw_exif_data = {}
+    @staticmethod
+    def _safe_json_parse(value, default):
+        """Parse a JSON string, returning default if it's already parsed or invalid."""
+        if not isinstance(value, str):
+            return value if value is not None else default
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return default
 
-        # Structure exif_data to match frontend ExifData type
-        exif_data = self._structure_exif_data(raw_exif_data, row)
+    # Warning prefix -> (category, severity) mapping for forensic findings.
+    _WARNING_CLASSIFICATION = {
+        "EXIF_": ("exif", "medium"),
+        "C2PA_": ("c2pa", "medium"),
+        "AI_GENERATED": ("c2pa", "high"),
+        "TIMESTAMP_": ("exif", "medium"),
+        "GPS_": ("exif", "medium"),
+    }
 
-        raw_c2pa_data = row.get("c2pa_data", "{}")
-        if isinstance(raw_c2pa_data, str):
-            try:
-                raw_c2pa_data = json.loads(raw_c2pa_data)
-            except json.JSONDecodeError:
-                raw_c2pa_data = {}
+    @staticmethod
+    def _classify_warning(warning_text: str) -> tuple:
+        """Determine (category, severity) from a warning string prefix."""
+        for prefix, classification in MediaForensicsShard._WARNING_CLASSIFICATION.items():
+            if warning_text.startswith(prefix):
+                return classification
+        return ("general", "medium")
 
-        # Transform C2PA data to frontend expected format
-        c2pa_data = self._transform_c2pa_for_frontend(raw_c2pa_data)
-
-        warnings = row.get("warnings", "[]")
-        if isinstance(warnings, str):
-            try:
-                warnings = json.loads(warnings)
-            except json.JSONDecodeError:
-                warnings = []
-
-        anomalies = row.get("anomalies", "[]")
-        if isinstance(anomalies, str):
-            try:
-                anomalies = json.loads(anomalies)
-            except json.JSONDecodeError:
-                anomalies = []
-
-        # Convert string warnings to ForensicFinding objects for frontend compatibility
+    def _warnings_to_findings(self, warnings: list, row: Dict[str, Any]) -> list:
+        """Convert a list of warning strings/dicts into ForensicFinding objects."""
         findings = []
+        detected_at = row["created_at"].isoformat() if row.get("created_at") else datetime.utcnow().isoformat()
         for i, warning in enumerate(warnings if isinstance(warnings, list) else []):
-            if isinstance(warning, str):
-                # Determine category and severity from warning text
-                category = "general"
-                severity = "medium"
-                if warning.startswith("EXIF_"):
-                    category = "exif"
-                elif warning.startswith("C2PA_"):
-                    category = "c2pa"
-                elif warning.startswith("AI_GENERATED"):
-                    category = "c2pa"
-                    severity = "high"
-                elif warning.startswith("TIMESTAMP_"):
-                    category = "exif"
-                elif warning.startswith("GPS_"):
-                    category = "exif"
-
+            if isinstance(warning, dict):
+                findings.append(warning)
+            elif isinstance(warning, str):
+                category, severity = self._classify_warning(warning)
                 findings.append(
                     {
                         "id": f"{row['id']}_warning_{i}",
@@ -1571,30 +1551,36 @@ class MediaForensicsShard(ArkhamShard):
                         "recommendation": None,
                         "confidence": 0.7,
                         "auto_detected": True,
-                        "detected_at": row["created_at"].isoformat()
-                        if row.get("created_at")
-                        else datetime.utcnow().isoformat(),
+                        "detected_at": detected_at,
                     }
                 )
-            elif isinstance(warning, dict):
-                # Already a finding object
-                findings.append(warning)
+        return findings
 
-        # Map integrity_status to verification_status for frontend compatibility
+    def _row_to_analysis_dict(self, row: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert a database row to an analysis dictionary."""
+        raw_exif_data = self._safe_json_parse(row.get("exif_data", "{}"), {})
+        exif_data = self._structure_exif_data(raw_exif_data, row)
+
+        raw_c2pa_data = self._safe_json_parse(row.get("c2pa_data", "{}"), {})
+        c2pa_data = self._transform_c2pa_for_frontend(raw_c2pa_data)
+
+        warnings = self._safe_json_parse(row.get("warnings", "[]"), [])
+        anomalies = self._safe_json_parse(row.get("anomalies", "[]"), [])
+
+        findings = self._warnings_to_findings(warnings, row)
+
         integrity_status = row.get("integrity_status", "unknown")
 
-        # Derive filename from document_id or file path if stored
         filename = row.get("filename")
         if not filename and row.get("document_id"):
-            # Use document_id as filename placeholder
             filename = row.get("document_id", "unknown")
 
         return {
             "id": row["id"],
-            "doc_id": row.get("document_id"),  # Frontend expects doc_id
+            "doc_id": row.get("document_id"),
             "document_id": row.get("document_id"),
             "filename": filename,
-            "file_path": row.get("file_path"),  # For ELA and other operations
+            "file_path": row.get("file_path"),
             "tenant_id": row.get("tenant_id"),
             "file_type": row.get("file_type"),
             "file_size": row.get("file_size"),
@@ -1623,23 +1609,19 @@ class MediaForensicsShard(ArkhamShard):
             "c2pa_timestamp": row.get("c2pa_timestamp"),
             "warnings": warnings,
             "anomalies": anomalies,
-            # Status fields for frontend compatibility
-            "status": "completed",  # Analysis is always completed when in DB
+            "status": "completed",
             "verification_status": integrity_status,
             "integrity_status": integrity_status,
             "confidence_score": row.get("confidence_score", 0.0),
-            # Findings fields - properly structured ForensicFinding objects
             "findings": findings,
             "findings_count": len(findings),
             "critical_findings": sum(1 for f in findings if f.get("severity") == "critical"),
             "high_findings": sum(1 for f in findings if f.get("severity") == "high"),
-            # Timestamps
             "analyzed_at": row["created_at"].isoformat() if row.get("created_at") else None,
             "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
             "updated_at": row["updated_at"].isoformat() if row.get("updated_at") else None,
             "analyzed_by": "system",
             "notes": None,
-            # Component results (null by default, populated when requested)
             "ela_result": None,
             "sun_position_result": None,
             "similar_images_result": None,

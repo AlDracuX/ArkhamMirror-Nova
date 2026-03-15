@@ -16,8 +16,15 @@ jobs:
   python-lint:
     name: Python Lint & Format
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Install ruff
         run: pip install ruff
@@ -27,6 +34,64 @@ jobs:
 
       - name: Ruff format check
         run: ruff format packages/ --check
+
+  python-test:
+    name: Python Tests & Coverage
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.12']
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: shattered
+          POSTGRES_PASSWORD: shattered  # pragma: allowlist secret
+          POSTGRES_DB: shattered
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pytest pytest-cov pytest-asyncio
+          pip install -e packages/arkham-frame/
+          # Install all shards in editable mode
+          for shard in packages/arkham-shard-*/; do
+            if [ -f "$shard/pyproject.toml" ]; then
+              pip install -e "$shard" || true
+            fi
+          done
+
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: postgresql://shattered:shattered@localhost:5432/shattered  # pragma: allowlist secret
+        run: |
+          pytest packages/ -v --tb=short \
+            --cov=packages \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term-missing \
+            -x
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   pmat-quality:
     name: PMAT Quality Gate
@@ -75,3 +140,6 @@ jobs:
 
       - name: Prettier check
         run: npm run format
+
+      - name: TypeScript build
+        run: npm run build
