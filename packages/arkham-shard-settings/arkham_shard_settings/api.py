@@ -449,7 +449,7 @@ async def get_vector_health(request: Request):
         collection_data = []
 
         for coll in collections:
-            info = await vectors.get_collection_info(coll.name if hasattr(coll, "name") else coll)
+            info = await vectors.get_collection(coll.name if hasattr(coll, "name") else coll)
             coll_vectors = info.vector_count if hasattr(info, "vector_count") else 0
             total_vectors += coll_vectors
             collection_data.append(
